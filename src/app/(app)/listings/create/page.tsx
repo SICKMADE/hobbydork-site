@@ -9,13 +9,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useFirestore, useUser } from "@/firebase";
+import { useFirestore } from "@/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash } from "lucide-react";
 import PlaceholderContent from "@/components/PlaceholderContent";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Terminal } from "lucide-react";
 
 const listingSchema = z.object({
     title: z.string().min(5, "Title must be at least 5 characters."),
@@ -67,6 +69,11 @@ export default function CreateListingPage() {
             return;
         }
 
+        if (profile.status !== 'ACTIVE') {
+            toast({ title: "Account Not Active", description: "Please verify your email before creating listings.", variant: "destructive" });
+            return;
+        }
+
         try {
             await addDoc(collection(firestore, "listings"), {
                 storefrontId: profile.storeId,
@@ -107,6 +114,22 @@ export default function CreateListingPage() {
                 />
             </AppLayout>
         )
+    }
+
+    if (profile.status === 'LIMITED') {
+        return (
+            <AppLayout>
+                <div className="flex items-center justify-center h-full">
+                    <Alert variant="destructive" className="max-w-lg">
+                      <Terminal className="h-4 w-4" />
+                      <AlertTitle>Limited Access</AlertTitle>
+                      <AlertDescription>
+                        Your account has limited access. You cannot create a new listing. Please verify your email to get full access.
+                      </AlertDescription>
+                    </Alert>
+                </div>
+            </AppLayout>
+        );
     }
 
     return (

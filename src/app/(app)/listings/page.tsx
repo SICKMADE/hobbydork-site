@@ -27,7 +27,7 @@ export default function MyListingsPage() {
             <AppLayout>
                 <PlaceholderContent 
                     title="No Store Found"
-                    description="You need to create a store before you can add listings."
+                    description="You need to create a store before you can view your listings."
                 />
             </AppLayout>
         );
