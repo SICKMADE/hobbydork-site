@@ -13,10 +13,13 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 import { Bell, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import { useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
+
 
 export function UserNav() {
   const { user } = useUser();
   const { logout, profile } = useAuth();
+  const router = useRouter();
   if (!user || !profile) return null;
 
   const getInitials = (name: string | undefined | null) => {
@@ -46,7 +49,7 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push('/profile')}>
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Profile</span>
           </DropdownMenuItem>
@@ -54,7 +57,7 @@ export function UserNav() {
             <Bell className="mr-2 h-4 w-4" />
             <span>Notifications</span>
           </DropdownMenuItem>
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push('/settings')}>
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
           </DropdownMenuItem>

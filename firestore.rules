@@ -37,6 +37,10 @@ service cloud.firestore {
       allow create, update: if isOwner(userId);
       allow delete: if false; // Users should not be able to delete their own account from the client
     }
+    
+    match /users/{userId}/notifications/{notificationId} {
+        allow read, write: if isOwner(userId);
+    }
 
     match /storefronts/{storefrontId} {
       allow get, list: if true;
@@ -67,5 +71,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

@@ -26,6 +26,7 @@ export type User = {
 };
 
 export type Store = {
+  id?: string;
   storeId: string;
   ownerUid: string;
   storeName: string;
@@ -124,4 +125,16 @@ export type ISO24 = {
     status: 'ACTIVE' | 'EXPIRED';
 }
 
+export type NotificationType = "MESSAGE" | "ORDER" | "ORDER_STATUS" | "ISO24" | "SPOTLIGHT";
+
+export type Notification = {
+    id: string;
+    userUid: string;
+    type: NotificationType;
+    title: string;
+    body: string;
+    relatedId: string; // e.g., orderId, conversationId
+    createdAt: Timestamp;
+    read: boolean;
+}
     

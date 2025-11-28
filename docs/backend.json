@@ -479,6 +479,23 @@
         "expiresAt",
         "status"
       ]
+    },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents an in-app notification for a user.",
+      "properties": {
+        "id": { "type": "string" },
+        "userUid": { "type": "string" },
+        "type": { "type": "string", "enum": ["MESSAGE", "ORDER", "ORDER_STATUS", "ISO24", "SPOTLIGHT"] },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "relatedId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "userUid", "type", "title", "body", "relatedId", "createdAt", "read"]
     }
   },
   "auth": {
@@ -501,6 +518,18 @@
               "name": "userId",
               "description": "The unique identifier of the user."
             }
+          ]
+        }
+      },
+       {
+        "path": "/users/{userId}/notifications/{notificationId}",
+        "definition": {
+          "entityName": "Notification",
+          "schema": { "$ref": "#/entities/Notification" },
+          "description": "Stores notifications for a specific user. Only readable by that user.",
+          "params": [
+            { "name": "userId", "description": "The ID of the user." },
+            { "name": "notificationId", "description": "The ID of the notification." }
           ]
         }
       },

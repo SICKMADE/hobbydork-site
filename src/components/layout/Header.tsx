@@ -17,11 +17,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '../ui/button';
 import { MessageSquare, Package, Tag } from 'lucide-react';
+import { useCart } from '@/hooks/use-cart';
+import { ShoppingCart } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function Header() {
   const [isVaultModalOpen, setIsVaultModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { revealPin, showVaultButton } = useVault();
+  const { itemCount } = useCart();
+  const router = useRouter();
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -43,7 +48,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
+      <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
         <div className="flex items-center gap-2">
           <SidebarTrigger className="md:hidden" />
           <div className="hidden md:block">
@@ -64,11 +69,19 @@ export default function Header() {
             </div>
           </form>
           
+          <Button variant="ghost" className="relative h-8 w-8 rounded-full" onClick={() => router.push('/cart')}>
+            <ShoppingCart className="h-5 w-5" />
+            {itemCount > 0 && (
+                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">{itemCount}</span>
+            )}
+            <span className="sr-only">Cart</span>
+          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                  <Bell className="h-5 w-5" />
-                 <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">{notifications.length}</span>
+                 {notifications.length > 0 && <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">{notifications.length}</span>}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-80" align="end">
