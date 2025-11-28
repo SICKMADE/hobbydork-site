@@ -12,10 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
-import { useCollection } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
-import { useMemoFirebase } from "@/firebase/provider";
 import type { Listing } from "@/lib/types";
 
 
@@ -118,7 +116,7 @@ export default function SearchPage() {
 
                     <section className="lg:col-span-3">
                         {isLoading && <p>Loading listings...</p>}
-                        {listings && (
+                        {listings && listings.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                                 {listings.map((listing) => (
                                     <ListingCard key={listing.id} listing={listing} />
