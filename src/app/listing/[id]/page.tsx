@@ -1,5 +1,5 @@
 'use client';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import AppLayout from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ import { useCart } from '@/hooks/use-cart';
 export default function ListingDetailPage({ params }: { params: { id: string } }) {
   const firestore = useFirestore();
   const { addToCart } = useCart();
+  const router = useRouter();
 
   const listingRef = useMemoFirebase(() => {
     if (!firestore || !params.id) return null;

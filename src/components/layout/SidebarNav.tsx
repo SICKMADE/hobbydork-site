@@ -56,7 +56,6 @@ export default function SidebarNav() {
   
   const handleLogout = async () => {
     await logout();
-    router.refresh();
   }
 
   return (
@@ -72,6 +71,7 @@ export default function SidebarNav() {
                 href={item.href}
                 isActive={pathname === item.href}
                 tooltip={item.label}
+                onClick={() => router.push(item.href)}
               >
                 <item.icon />
                 <span>{item.label}</span>
@@ -86,19 +86,19 @@ export default function SidebarNav() {
             {profile?.storeId ? (
               <>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href={`/store/${profile.storeId}`} tooltip="My Storefront">
+                    <SidebarMenuButton href={`/store/${profile.storeId}`} onClick={() => router.push(`/store/${profile.storeId}`)} tooltip="My Storefront">
                         <Store />
                         <span>My Storefront</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
-                    <SidebarMenuButton href="/listings" tooltip="My Listings">
+                    <SidebarMenuButton href="/listings" onClick={() => router.push('/listings')} tooltip="My Listings">
                         <LayoutList />
                         <span>My Listings</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
-                    <SidebarMenuButton href="/sales" tooltip="My Sales">
+                    <SidebarMenuButton href="/sales" onClick={() => router.push('/sales')} tooltip="My Sales">
                         <Flame />
                         <span>My Sales</span>
                     </SidebarMenuButton>
@@ -106,7 +106,7 @@ export default function SidebarNav() {
               </>
             ) : (
                 <SidebarMenuItem>
-                    <SidebarMenuButton href="/store/create" tooltip="Create Store">
+                    <SidebarMenuButton href="/store/create" onClick={() => router.push('/store/create')} tooltip="Create Store">
                         <PlusCircle />
                         <span>Create Store</span>
                     </SidebarMenuButton>
@@ -124,6 +124,7 @@ export default function SidebarNav() {
                         href={item.href}
                         isActive={pathname === item.href}
                         tooltip={item.label}
+                        onClick={() => router.push(item.href)}
                     >
                         <item.icon />
                         <span>{item.label}</span>
@@ -149,6 +150,7 @@ export default function SidebarNav() {
                 href={item.href}
                 isActive={pathname === item.href}
                 tooltip={item.label}
+                onClick={() => router.push(item.href)}
               >
                 <item.icon />
                 <span>{item.label}</span>
@@ -160,6 +162,7 @@ export default function SidebarNav() {
                 href="/help"
                 isActive={pathname === '/help'}
                 tooltip="Help & FAQ"
+                 onClick={() => router.push('/help')}
               >
                 <HelpCircle />
                 <span>Help / FAQ</span>
