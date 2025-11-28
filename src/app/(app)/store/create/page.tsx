@@ -128,7 +128,7 @@ export default function CreateStorePage() {
 
     return (
         <AppLayout>
-             <div className="w-full max-w-2xl mx-auto">
+             <div className="max-w-2xl mx-auto">
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-3xl">Create Your Storefront</CardTitle>
