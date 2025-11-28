@@ -61,7 +61,7 @@ export default function CreateStorePage() {
                 ratingCount: 0,
                 itemsSold: 0,
                 status: "ACTIVE",
-                isSpotlighted: false,
+                isSpotlighted: true, // Default to true for demo purposes
                 spotlightUntil: null,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),

@@ -21,8 +21,7 @@ export default function Dashboard() {
 
   const storesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // For now, let's get any 2 active stores. Later this can be based on isSpotlighted
-    return query(collection(firestore, 'storefronts'), where('status', '==', 'ACTIVE'), limit(2));
+    return query(collection(firestore, 'storefronts'), where('isSpotlighted', '==', true), limit(2));
   }, [firestore]);
 
   const listingsQuery = useMemoFirebase(() => {

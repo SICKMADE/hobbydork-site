@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Store } from 'lucide-react';
+import { Store, Star } from 'lucide-react';
 import type { Store as StoreType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -12,9 +12,20 @@ interface StoreCardProps {
 
 export default function StoreCard({ store }: StoreCardProps) {
   return (
-    <Card className="relative overflow-hidden group transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/20 bg-card">
-      <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 opacity-0 transition-opacity duration-1000 group-hover:opacity-75" style={{ animation: 'glow 4s linear infinite' }} />
+    <Card className={cn(
+        "relative overflow-hidden group transition-all duration-300 hover:shadow-2xl bg-card",
+        store.isSpotlighted ? "border-primary/50 hover:shadow-primary/20" : "hover:border-primary/50 hover:shadow-primary/20"
+    )}>
+      {store.isSpotlighted && (
+          <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 opacity-0 transition-opacity duration-1000 group-hover:opacity-75" style={{ animation: 'glow 4s linear infinite' }} />
+      )}
       <div className="relative">
+        {store.isSpotlighted && (
+            <div className="absolute top-2 right-2 bg-primary text-primary-foreground px-2 py-1 text-xs font-bold rounded-full flex items-center gap-1 z-10">
+                <Star className="h-3 w-3" />
+                <span>SPOTLIGHT</span>
+            </div>
+        )}
         <CardHeader className="flex flex-row items-center gap-4">
           {store.avatarUrl && (
             <Image
