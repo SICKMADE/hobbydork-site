@@ -74,7 +74,7 @@ export default function AdminUsersPage() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow key="header-row">
                 <TableHead>User</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Status</TableHead>
