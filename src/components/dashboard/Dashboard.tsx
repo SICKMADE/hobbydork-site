@@ -33,7 +33,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <section>
+        <section className="bg-slate-800 text-white -mx-8 px-8 py-8 rounded-lg shadow-inner">
           <h2 className="text-2xl font-semibold tracking-tight mb-4">Spotlight Stores</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {mockStores.map((store) => (
