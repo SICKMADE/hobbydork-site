@@ -10,23 +10,35 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
+    function isUser(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
     
+    function isActiveUser(userId) {
+        return get(/databases/$(database)/documents/users/$(userId)).data.status == 'ACTIVE';
+    }
+
     function isStoreOwner(storeId) {
       let store = get(/databases/$(database)/documents/storefronts/$(storeId));
-      return store != null && isOwner(store.data.ownerUid);
+      return store != null && isUser(store.data.ownerUid);
     }
     
-    function isOrderBuyer(order) {
-      return isOwner(order.buyerUid);
+    function isOrderParticipant(order) {
+        return isSignedIn() && (request.auth.uid == order.buyerUid || request.auth.uid == order.sellerUid);
     }
     
-    function isOrderSeller(order) {
-      return isOwner(order.sellerUid);
+    // --- Data Validation Helpers ---
+    
+    function isValidUserWrite(data) {
+        return data.containsAll(['displayName', 'email', 'avatar', 'status', 'role', 'emailVerified', 'oneAccountAcknowledged', 'goodsAndServicesAgreed', 'notificationPreferences', 'createdAt', 'updatedAt'])
+            && data.displayName is string && data.email is string && data.status in ['ACTIVE', 'LIMITED', 'SUSPENDED'];
     }
     
+    function isValidStoreWrite(data) {
+        return data.containsAll(['storeName', 'slug', 'about', 'avatarUrl', 'ownerUid', 'status', 'isSpotlighted', 'createdAt', 'updatedAt'])
+            && data.storeName is string && data.slug is string && data.about is string;
+    }
+
     // --------------------------------
     // Collection Rules
     // --------------------------------
@@ -34,31 +46,40 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isSignedIn();
       allow list: if false; // Do not allow listing all users
-      allow create, update: if isOwner(userId);
+      allow create: if isUser(userId) && isValidUserWrite(request.resource.data);
+      allow update: if isUser(userId) 
+                      // Prevent users from changing their own role, status, or email verification status
+                      && request.resource.data.role == resource.data.role
+                      && request.resource.data.status == resource.data.status
+                      && request.resource.data.emailVerified == resource.data.emailVerified;
       allow delete: if false; // Users should not be able to delete their own account from the client
     }
     
     match /users/{userId}/notifications/{notificationId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isUser(userId);
     }
 
     match /storefronts/{storefrontId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow update, delete: if isOwner(resource.data.ownerUid);
+      allow create: if isUser(request.resource.data.ownerUid) && isValidStoreWrite(request.resource.data);
+      allow update: if isUser(resource.data.ownerUid) && isValidStoreWrite(request.resource.data);
+      allow delete: if false;
     }
     
     match /listings/{listingId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && isStoreOwner(request.resource.data.storeId);
-      allow update, delete: if isOwner(resource.data.ownerUid);
+      allow create: if isUser(request.resource.data.ownerUid) 
+                      && isStoreOwner(request.resource.data.storeId)
+                      && isActiveUser(request.auth.uid);
+      allow update: if isUser(resource.data.ownerUid);
+      allow delete: if isUser(resource.data.ownerUid);
     }
 
     match /orders/{orderId} {
-      allow get: if isSignedIn() && (isOrderBuyer(resource.data) || isOrderSeller(resource.data));
+      allow get: if isOrderParticipant(resource.data);
       allow list: if false; // Users should query for their own orders, not list all.
-      allow create: if isSignedIn() && request.resource.data.buyerUid == request.auth.uid;
-      allow update: if isSignedIn() && (isOrderBuyer(resource.data) || isOrderSeller(resource.data));
+      allow create: if isUser(request.resource.data.buyerUid);
+      allow update: if isOrderParticipant(resource.data);
       allow delete: if false; // Orders should be cancelled via a status update.
     }
     
@@ -67,7 +88,28 @@ service cloud.firestore {
     }
 
     match /iso24Posts/{isoId} {
-        allow read, write: if isSignedIn(); // Simplified for now
+        allow get, list: if isSignedIn();
+        allow create: if isUser(request.resource.data.creatorUid) && isActiveUser(request.auth.uid);
+        allow update, delete: if isUser(resource.data.creatorUid);
+    }
+    
+    // Placeholder rules for features to be implemented
+    match /watchlists/{userId} {
+        allow read, write: if isUser(userId);
+    }
+    
+    match /favoriteStores/{userId} {
+        allow read, write: if isUser(userId);
+    }
+    
+     match /reports/{reportId} {
+        allow create: if isSignedIn();
+        allow read, update, delete: if false; // Admin only
+    }
+
+    match /spotlightSlots/{slotId} {
+        allow get, list: if true;
+        allow create, update, delete: if false; // Admin only
     }
   }
 }
