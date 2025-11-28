@@ -20,11 +20,11 @@ service cloud.firestore {
     }
     
     function isOrderBuyer(order) {
-      return isOwner(order.buyerId);
+      return isOwner(order.buyerUid);
     }
     
     function isOrderSeller(order) {
-      return isOwner(order.sellerId);
+      return isOwner(order.sellerUid);
     }
     
     // --------------------------------
@@ -46,14 +46,14 @@ service cloud.firestore {
     
     match /listings/{listingId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && isStoreOwner(request.resource.data.storefrontId);
-      allow update, delete: if isStoreOwner(resource.data.storefrontId);
+      allow create: if isSignedIn() && isStoreOwner(request.resource.data.storeId);
+      allow update, delete: if isOwner(resource.data.ownerUid);
     }
 
     match /orders/{orderId} {
       allow get: if isSignedIn() && (isOrderBuyer(resource.data) || isOrderSeller(resource.data));
       allow list: if false; // Users should query for their own orders, not list all.
-      allow create: if isSignedIn() && request.resource.data.buyerId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.buyerUid == request.auth.uid;
       allow update: if isSignedIn() && (isOrderBuyer(resource.data) || isOrderSeller(resource.data));
       allow delete: if false; // Orders should be cancelled via a status update.
     }
@@ -61,5 +61,11 @@ service cloud.firestore {
     match /chat/{messageId} {
         allow read, write: if isSignedIn();
     }
+
+    match /iso24Posts/{isoId} {
+        allow read, write: if isSignedIn(); // Simplified for now
+    }
   }
 }
+
+    

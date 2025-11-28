@@ -383,8 +383,6 @@
         "listingItems",
         "totalPrice",
         "state",
-        "buyerShippingAddress",
-        "paymentMethod",
         "createdAt",
         "updatedAt"
       ]
@@ -589,3 +587,5 @@
     ]
   }
 }
+
+    

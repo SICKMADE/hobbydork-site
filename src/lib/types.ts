@@ -94,7 +94,7 @@ export type Order = {
   totalPrice: number;
   state: OrderState;
   buyerShippingAddress: ShippingAddress | null;
-  paymentMethod: "PAYPAL" | "VENMO";
+  paymentMethod?: "PAYPAL" | "VENMO";
   paymentIdentifier?: string;
   trackingNumber: string | null;
   trackingCarrier: string | null;
@@ -123,3 +123,5 @@ export type ISO24 = {
     expiresAt: Timestamp;
     status: 'ACTIVE' | 'EXPIRED';
 }
+
+    
