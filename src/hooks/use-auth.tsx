@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   getAuth, 
@@ -37,6 +37,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [firestore, user]);
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  useEffect(() => {
+    // Check if the user is logged in, their email is verified, and their profile is currently 'LIMITED'
+    if (user && user.emailVerified && profile?.status === 'LIMITED' && userProfileRef) {
+      // Update the user's status to 'ACTIVE' in Firestore
+      setDoc(userProfileRef, { status: 'ACTIVE' }, { merge: true })
+        .then(() => {
+          toast({
+            title: 'Account Activated!',
+            description: 'Your account has been fully activated. Welcome!',
+          });
+        })
+        .catch((error) => {
+          console.error('Error updating user status:', error);
+          toast({
+            title: 'Activation Failed',
+            description: 'Could not update your account status. Please contact support.',
+            variant: 'destructive',
+          });
+        });
+    }
+  }, [user, profile, userProfileRef, toast]);
+
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
