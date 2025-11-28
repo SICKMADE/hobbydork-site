@@ -9,7 +9,7 @@ import {
   sendEmailVerification,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDocs, collection, query, limit } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -111,9 +111,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
     }
+    
+    // We create the user in auth first, which signs them in.
+    // The security rules can then use their auth.uid to secure the profile creation.
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
+
+      // Now that the user is created and signed in, we can check if they are the first user.
+      const usersCollectionRef = collection(firestore, "users");
+      const q = query(usersCollectionRef, limit(1));
+      const querySnapshot = await getDocs(q);
+      const isFirstUser = querySnapshot.empty;
       
       const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid'> & { createdAt: any, updatedAt: any, uid: string } = {
         uid: newUser.uid,
@@ -121,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         displayName,
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
         status: 'LIMITED',
-        role: 'user',
+        role: isFirstUser ? 'admin' : 'user', // Set role to 'admin' if first user
         emailVerified: newUser.emailVerified,
         oneAccountAcknowledged,
         goodsAndServicesAgreed,

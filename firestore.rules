@@ -15,7 +15,8 @@ service cloud.firestore {
     }
 
     function isAdmin(userId) {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
+      // Use exists() to avoid errors on non-existent documents
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(userId)) && get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
     }
     
     function isActiveUser(userId) {
@@ -54,7 +55,9 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if isAdmin(request.auth.uid); 
+      // Allow listing all users for admins.
+      // Also allow a very limited query for the signup process to check if any user exists.
+      allow list: if isAdmin(request.auth.uid) || request.query.limit == 1;
       allow create: if isUser(userId) && isValidUserWrite(request.resource.data);
       allow update: if isUser(userId) 
                       // Prevent users from changing their own role, status, or email verification status
