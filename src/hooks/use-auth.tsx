@@ -7,6 +7,7 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
+  sendEmailVerification
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -88,10 +89,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
 
       await setDoc(doc(firestore, "users", newUser.uid), userProfile);
+      await sendEmailVerification(newUser);
       
       toast({
         title: 'Signup Successful!',
-        description: `Welcome, ${name}! Your account has been created.`,
+        description: `Welcome, ${name}! A verification email has been sent to your inbox.`,
       });
       return true;
     } catch (error: any) {
