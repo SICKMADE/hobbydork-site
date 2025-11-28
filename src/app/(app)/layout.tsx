@@ -20,7 +20,7 @@ export default function AppRoutesLayout({
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading || !profile) {
+  if (isUserLoading || (user && !profile)) { // Added check for profile loading
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
   
@@ -29,7 +29,7 @@ export default function AppRoutesLayout({
     return <div className="flex items-center justify-center h-screen">Redirecting...</div>;
   }
 
-  if (profile.status === 'SUSPENDED') {
+  if (profile?.status === 'SUSPENDED') {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background text-foreground gap-4 p-4 text-center">
         <h1 className="text-2xl font-bold">Account Suspended</h1>

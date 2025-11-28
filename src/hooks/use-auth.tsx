@@ -3,14 +3,14 @@
 import React, { createContext, useContext, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  getAuth, 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
-  sendEmailVerification
+  sendEmailVerification,
+  User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
@@ -23,6 +23,7 @@ interface SignupData {
 }
 
 interface AuthContextType {
+  user: FirebaseUser | null;
   profile: UserProfile | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
@@ -34,7 +35,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
-  const auth = getAuth();
+  const auth = useFirebaseAuth();
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
@@ -92,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signOut(auth);
       router.push('/');
+      router.refresh();
     } catch (error: any) {
        console.error("Logout failed:", error);
        toast({
@@ -112,14 +114,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
       
-      const userProfile: UserProfile = {
+      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
         uid: newUser.uid,
         email: newUser.email!,
         displayName,
         avatar: `https://picsum.photos/seed/${newUser.uid}/100/100`,
         status: 'LIMITED',
-        createdAt: serverTimestamp() as Timestamp,
-        updatedAt: serverTimestamp() as Timestamp,
         role: 'user',
         emailVerified: newUser.emailVerified,
         oneAccountAcknowledged,
@@ -130,6 +130,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           notifyISO24: true,
           notifySpotlight: true,
         },
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
 
       await setDoc(doc(firestore, "users", newUser.uid), userProfile);
@@ -153,6 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth, firestore, toast]);
 
   const value = { 
+      user,
       profile: profile || null, 
       loading: isUserLoading || isProfileLoading, 
       login, 
@@ -174,5 +177,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
