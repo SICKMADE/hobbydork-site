@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { Flame } from 'lucide-react';
 import PlaceholderContent from '../PlaceholderContent';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, limit, query } from 'firebase/firestore';
+import { collection, limit, query, orderBy, where } from 'firebase/firestore';
 import type { Store, Listing } from '@/lib/types';
 
 
@@ -21,12 +21,13 @@ export default function Dashboard() {
 
   const storesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'storefronts'), limit(2));
+    // For now, let's get any 2 active stores. Later this can be based on isSpotlighted
+    return query(collection(firestore, 'storefronts'), where('status', '==', 'ACTIVE'), limit(2));
   }, [firestore]);
 
   const listingsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'listings'), limit(4));
+    return query(collection(firestore, 'listings'), orderBy('createdAt', 'desc'), limit(4));
   }, [firestore]);
 
   const { data: stores, isLoading: storesLoading } = useCollection<Store>(storesQuery);
@@ -55,12 +56,14 @@ export default function Dashboard() {
         <section className="bg-slate-800 text-white -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 py-8 rounded-lg shadow-inner">
           <h2 className="text-2xl font-semibold tracking-tight mb-4">Spotlight Stores</h2>
           {storesLoading && <p>Loading stores...</p>}
-          {stores && (
+          {stores && stores.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {stores.map((store) => (
-                <StoreCard key={store.id} store={store} />
+                <StoreCard key={store.storeId} store={store} />
               ))}
             </div>
+          ) : !storesLoading && (
+            <p>No stores available right now. Check back soon!</p>
           )}
         </section>
 
@@ -81,14 +84,15 @@ export default function Dashboard() {
         <section>
           <h2 className="text-2xl font-semibold tracking-tight mb-4">New Items</h2>
           {listingsLoading && <p>Loading new items...</p>}
-          {listings && (
+          {listings && listings.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {listings.map((listing) => (
                 <ListingCard key={listing.id} listing={listing} />
               ))}
             </div>
+          ) : !listingsLoading && (
+             <p>No new items have been listed yet. Be the first!</p>
           )}
-           {(!listings || listings.length === 0) && !listingsLoading && <p>No new items found.</p>}
         </section>
 
         <section>
@@ -102,5 +106,3 @@ export default function Dashboard() {
       </div>
   );
 }
-
-    

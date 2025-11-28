@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Store } from 'lucide-react';
 import type { Store as StoreType } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 interface StoreCardProps {
   store: StoreType;
@@ -15,25 +16,29 @@ export default function StoreCard({ store }: StoreCardProps) {
       <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 opacity-0 transition-opacity duration-1000 group-hover:opacity-75" style={{ animation: 'glow 4s linear infinite' }} />
       <div className="relative">
         <CardHeader className="flex flex-row items-center gap-4">
-          <Image
-            src={store.logo}
-            alt={`${store.name} logo`}
-            width={64}
-            height={64}
-            className="rounded-lg border-2 border-primary/50"
-            data-ai-hint="store logo"
-          />
+          {store.avatarUrl && (
+            <Image
+                src={store.avatarUrl}
+                alt={`${store.storeName} logo`}
+                width={64}
+                height={64}
+                className="rounded-lg border-2 border-primary/50"
+                data-ai-hint="store logo"
+            />
+          )}
           <div>
-            <CardTitle className="text-2xl font-bold text-card-foreground">{store.name}</CardTitle>
-            <CardDescription className="text-muted-foreground">/{store.url}</CardDescription>
+            <CardTitle className="text-2xl font-bold text-card-foreground">{store.storeName}</CardTitle>
+            <CardDescription className="text-muted-foreground">/{store.slug}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-card-foreground/80 min-h-[40px]">{store.about}</p>
-          <Button variant="outline" className="w-full">
-            <Store className="mr-2 h-4 w-4" />
-            Visit Store
-          </Button>
+          <p className="text-sm text-card-foreground/80 min-h-[40px] line-clamp-2">{store.about}</p>
+          <Link href={`/store/${store.storeId}`} passHref>
+            <Button variant="outline" className="w-full">
+              <Store className="mr-2 h-4 w-4" />
+              Visit Store
+            </Button>
+          </Link>
         </CardContent>
       </div>
       <style jsx>{`
