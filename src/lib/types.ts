@@ -24,7 +24,7 @@ export type Store = {
   itemsSold: number;
 };
 
-export type Condition = 'New' | 'Like New' | 'Used' | 'For Parts';
+export type Condition = 'New' | 'Like New' | 'Used';
 
 export type Listing = {
   id: string;
