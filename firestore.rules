@@ -14,9 +14,9 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
     
-    function isStorefrontOwner(storefrontId) {
-      let storefront = get(/databases/$(database)/documents/storefronts/$(storefrontId));
-      return storefront != null && isOwner(storefront.data.userId);
+    function isStoreOwner(storeId) {
+      let store = get(/databases/$(database)/documents/storefronts/$(storeId));
+      return store != null && isOwner(store.data.ownerUid);
     }
     
     function isOrderBuyer(order) {
@@ -40,14 +40,14 @@ service cloud.firestore {
 
     match /storefronts/{storefrontId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isOwner(resource.data.userId);
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if isOwner(resource.data.ownerUid);
     }
     
     match /listings/{listingId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && isStorefrontOwner(request.resource.data.storefrontId);
-      allow update, delete: if isStorefrontOwner(resource.data.storefrontId);
+      allow create: if isSignedIn() && isStoreOwner(request.resource.data.storefrontId);
+      allow update, delete: if isStoreOwner(resource.data.storefrontId);
     }
 
     match /orders/{orderId} {

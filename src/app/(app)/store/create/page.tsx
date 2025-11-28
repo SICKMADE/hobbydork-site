@@ -12,16 +12,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useFirestore, useUser } from "@/firebase";
-import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
 const storeSchema = z.object({
-    name: z.string().min(3, "Store name must be at least 3 characters."),
-    url: z.string().min(3, "URL must be at least 3 characters.").regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "URL can only contain lowercase letters, numbers, and hyphens."),
-    aboutMe: z.string().min(10, "About me section must be at least 10 characters long."),
-    paypal: z.string().email("Invalid PayPal email.").optional().or(z.literal('')),
-    venmo: z.string().optional(),
+    storeName: z.string().min(3, "Store name must be at least 3 characters."),
+    slug: z.string().min(3, "Slug must be at least 3 characters.").regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug can only contain lowercase letters, numbers, and hyphens."),
+    about: z.string().min(10, "About section must be at least 10 characters long."),
 });
 
 export default function CreateStorePage() {
@@ -34,11 +32,9 @@ export default function CreateStorePage() {
     const form = useForm<z.infer<typeof storeSchema>>({
         resolver: zodResolver(storeSchema),
         defaultValues: {
-            name: "",
-            url: "",
-            aboutMe: "",
-            paypal: "",
-            venmo: "",
+            storeName: "",
+            slug: "",
+            about: "",
         },
     });
 
@@ -49,22 +45,31 @@ export default function CreateStorePage() {
         }
 
         try {
-            const newStoreRef = await addDoc(collection(firestore, "storefronts"), {
-                userId: user.uid,
-                name: values.name,
-                url: values.url,
-                aboutMe: values.aboutMe,
-                logo: `https://picsum.photos/seed/${values.url}/200/200`,
-                paymentPreferences: {
-                    paypal: values.paypal,
-                    venmo: values.venmo,
-                },
-                rating: 0,
+            const batch = writeBatch(firestore);
+
+            const newStoreRef = doc(collection(firestore, "storefronts"));
+            
+            batch.set(newStoreRef, {
+                storeId: newStoreRef.id,
+                ownerUid: user.uid,
+                storeName: values.storeName,
+                slug: values.slug,
+                about: values.about,
+                avatarUrl: `https://picsum.photos/seed/${values.slug}/200/200`,
+                ratingAverage: 0,
+                ratingCount: 0,
                 itemsSold: 0,
+                status: "ACTIVE",
+                isSpotlighted: false,
+                spotlightUntil: null,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
             });
 
             const userRef = doc(firestore, "users", user.uid);
-            await updateDoc(userRef, { storeId: newStoreRef.id });
+            batch.update(userRef, { storeId: newStoreRef.id, updatedAt: serverTimestamp() });
+            
+            await batch.commit();
 
             toast({
                 title: "Store Created!",
@@ -75,9 +80,11 @@ export default function CreateStorePage() {
 
         } catch (error: any) {
             console.error("Error creating store:", error);
+            // More specific error for unique slug might require checking firestore rules errors
+            // or a pre-check, but this is a general catch-all.
             toast({
                 title: "Error creating store",
-                description: error.message || "An unexpected error occurred.",
+                description: error.code === 'permission-denied' ? 'A store with this slug might already exist.' : (error.message || "An unexpected error occurred."),
                 variant: "destructive"
             });
         }
@@ -92,7 +99,7 @@ export default function CreateStorePage() {
                       <Terminal className="h-4 w-4" />
                       <AlertTitle>Limited Access</AlertTitle>
                       <AlertDescription>
-                        Your account has limited access. You cannot create a new store. Please verify your account to get full access.
+                        Your account has limited access. You cannot create a new store. Please verify your email to get full access.
                       </AlertDescription>
                     </Alert>
                 </div>
@@ -134,7 +141,7 @@ export default function CreateStorePage() {
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                                 <FormField
                                     control={form.control}
-                                    name="name"
+                                    name="storeName"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Store Name</FormLabel>
@@ -147,26 +154,27 @@ export default function CreateStorePage() {
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="url"
+                                    name="slug"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Store URL</FormLabel>
+                                            <FormLabel>Store Slug</FormLabel>
                                             <FormControl>
                                                  <div className="flex items-center">
                                                     <span className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-l-md border border-r-0">vaultverse.com/</span>
-                                                    <Input placeholder="collectors-corner" {...field} className="rounded-l-none" />
+                                                    <Input placeholder="collectors-corner" {...field} />
                                                  </div>
                                             </FormControl>
+                                            <FormDescription>This will be your store's unique URL. Use lowercase letters, numbers, and hyphens only.</FormDescription>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                                  <FormField
                                     control={form.control}
-                                    name="aboutMe"
+                                    name="about"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>About Me / Store Policies</FormLabel>
+                                            <FormLabel>About Your Store</FormLabel>
                                             <FormControl>
                                                 <Textarea placeholder="Tell us about your store, what you sell, and any shipping/return policies." {...field} rows={5}/>
                                             </FormControl>
@@ -174,37 +182,6 @@ export default function CreateStorePage() {
                                         </FormItem>
                                     )}
                                 />
-
-                                <div className="space-y-4 rounded-lg border p-4">
-                                     <h3 className="text-lg font-medium">Payment Preferences</h3>
-                                     <p className="text-sm text-muted-foreground">Enter your usernames for P2P payments. These will be shown to buyers at checkout.</p>
-                                    <FormField
-                                        control={form.control}
-                                        name="paypal"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>PayPal Email</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="you@example.com" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                     <FormField
-                                        control={form.control}
-                                        name="venmo"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Venmo Username</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="@your-username" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
                                
                                 <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                                     {form.formState.isSubmitting ? "Creating Store..." : "Create My Store"}

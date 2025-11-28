@@ -26,18 +26,20 @@ export type User = {
 };
 
 export type Store = {
-  id: string;
-  userId: string;
-  url: string;
-  name: string;
-  logo: string;
-  aboutMe: string;
-  paymentPreferences: {
-      paypal?: string;
-      venmo?: string;
-  };
-  rating: number;
+  storeId: string;
+  ownerUid: string;
+  storeName: string;
+  slug: string;
+  about: string;
+  avatarUrl: string | null;
+  ratingAverage: number;
+  ratingCount: number;
   itemsSold: number;
+  status: "ACTIVE" | "HIDDEN" | "DISABLED";
+  isSpotlighted: boolean;
+  spotlightUntil: Timestamp | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 };
 
 export type Condition = 'New' | 'Like New' | 'Used';
@@ -94,5 +96,3 @@ export type ISO24 = {
     createdAt: Timestamp;
     expiresAt: Timestamp;
 }
-
-    

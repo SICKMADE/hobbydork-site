@@ -20,54 +20,72 @@
           "description": "The user's display name."
         },
         "avatar": {
-            "type": "string",
-            "description": "URL to the user's avatar image."
+          "type": "string",
+          "description": "URL to the user's avatar image."
         },
         "status": {
           "type": "string",
           "description": "Status of the user account (ACTIVE, LIMITED, SUSPENDED).",
-          "enum": ["ACTIVE", "LIMITED", "SUSPENDED"]
+          "enum": [
+            "ACTIVE",
+            "LIMITED",
+            "SUSPENDED"
+          ]
         },
         "createdAt": {
-            "type": "string",
-            "format": "date-time"
+          "type": "string",
+          "format": "date-time"
         },
         "updatedAt": {
-            "type": "string",
-            "format": "date-time"
+          "type": "string",
+          "format": "date-time"
         },
         "role": {
-            "type": "string",
-            "enum": ["user", "admin"]
+          "type": "string",
+          "enum": [
+            "user",
+            "admin"
+          ]
         },
         "storeId": {
-            "type": "string",
-            "description": "The ID of the store owned by the user, if any."
+          "type": "string",
+          "description": "The ID of the store owned by the user, if any."
         },
         "paymentMethod": {
-            "type": "string",
-            "enum": ["PAYPAL", "VENMO"]
+          "type": "string",
+          "enum": [
+            "PAYPAL",
+            "VENMO"
+          ]
         },
         "paymentIdentifier": {
-            "type": "string"
+          "type": "string"
         },
         "emailVerified": {
-            "type": "boolean"
+          "type": "boolean"
         },
         "oneAccountAcknowledged": {
-            "type": "boolean"
+          "type": "boolean"
         },
         "goodsAndServicesAgreed": {
-            "type": "boolean"
+          "type": "boolean"
         },
         "notificationPreferences": {
-            "type": "object",
-            "properties": {
-                "notifyMessages": {"type": "boolean"},
-                "notifyOrders": {"type": "boolean"},
-                "notifyISO24": {"type": "boolean"},
-                "notifySpotlight": {"type": "boolean"}
+          "type": "object",
+          "properties": {
+            "notifyMessages": {
+              "type": "boolean"
+            },
+            "notifyOrders": {
+              "type": "boolean"
+            },
+            "notifyISO24": {
+              "type": "boolean"
+            },
+            "notifySpotlight": {
+              "type": "boolean"
             }
+          }
         }
       },
       "required": [
@@ -81,59 +99,84 @@
         "emailVerified"
       ]
     },
-    "Storefront": {
+    "Store": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Storefront",
+      "title": "Store",
       "type": "object",
-      "description": "Represents a user's storefront within the HobbyDork VaultVerse application.",
+      "description": "Represents a user's store within the HobbyDork VaultVerse application.",
       "properties": {
-        "id": {
+        "storeId": {
           "type": "string",
-          "description": "Unique identifier for the storefront entity."
+          "description": "Unique identifier for the store entity (matches document ID)."
         },
-        "userId": {
+        "ownerUid": {
           "type": "string",
-          "description": "Reference to the User who owns the storefront. (Relationship: User 1:1 Storefront)"
+          "description": "Reference to the User who owns the store."
         },
-        "url": {
+        "storeName": {
           "type": "string",
-          "description": "Unique URL for the storefront."
+          "description": "Name of the store."
         },
-        "name": {
+        "slug": {
           "type": "string",
-          "description": "Name of the storefront."
+          "description": "Unique, lowercased, store URL slug."
         },
-        "logo": {
+        "about": {
           "type": "string",
-          "description": "URL or storage path to the storefront's logo.",
+          "description": "'About' section for the store."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "URL to the store's avatar image.",
           "format": "uri"
         },
-        "aboutMe": {
-          "type": "string",
-          "description": "'About Me' section for the storefront."
+        "ratingAverage": {
+          "type": "number",
+          "description": "Average rating of the store."
         },
-        "paymentPreferences": {
-          "type": "object",
-          "properties": {
-              "paypal": {"type": "string"},
-              "venmo": {"type": "string"}
-          },
-          "description": "Payment preferences (PayPal or Venmo)."
-        },
-        "rating": {
-            "type": "number",
-            "description": "Average rating of the store."
+        "ratingCount": {
+          "type": "number",
+          "description": "Total number of ratings."
         },
         "itemsSold": {
-            "type": "number",
-            "description": "Total number of items sold."
+          "type": "number",
+          "description": "Total number of items sold."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "HIDDEN",
+            "DISABLED"
+          ]
+        },
+        "isSpotlighted": {
+          "type": "boolean"
+        },
+        "spotlightUntil": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp until the store is spotlighted."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
         }
       },
       "required": [
-        "id",
-        "userId",
-        "url",
-        "name"
+        "storeId",
+        "ownerUid",
+        "storeName",
+        "slug",
+        "about",
+        "status",
+        "isSpotlighted",
+        "createdAt",
+        "updatedAt"
       ]
     },
     "Listing": {
@@ -189,8 +232,8 @@
           }
         },
         "createdAt": {
-            "type": "string",
-            "format": "date-time"
+          "type": "string",
+          "format": "date-time"
         }
       },
       "required": [
@@ -221,17 +264,25 @@
           "description": "Reference to the User who placed the order."
         },
         "sellerId": {
-            "type": "string",
-            "description": "Reference to the User who owns the listing."
+          "type": "string",
+          "description": "Reference to the User who owns the listing."
         },
         "listingId": {
           "type": "string",
           "description": "Reference to the Listing that was ordered."
         },
-        "listingTitle": {"type": "string"},
-        "listingImage": {"type": "string"},
-        "quantity": {"type": "number"},
-        "totalPrice": {"type": "number"},
+        "listingTitle": {
+          "type": "string"
+        },
+        "listingImage": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "totalPrice": {
+          "type": "number"
+        },
         "createdAt": {
           "type": "string",
           "description": "The date and time the order was placed.",
@@ -240,7 +291,14 @@
         "status": {
           "type": "string",
           "description": "Status of the order.",
-          "enum": ["Pending Payment", "Payment Sent", "Shipped", "Delivered", "Completed", "Cancelled"]
+          "enum": [
+            "Pending Payment",
+            "Payment Sent",
+            "Shipped",
+            "Delivered",
+            "Completed",
+            "Cancelled"
+          ]
         },
         "trackingNumber": {
           "type": "string",
@@ -269,19 +327,38 @@
       ]
     },
     "Chat": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Chat",
-        "type": "object",
-        "description": "A single message in the community chat.",
-        "properties": {
-            "id": {"type": "string"},
-            "userId": {"type": "string"},
-            "userName": {"type": "string"},
-            "userAvatar": {"type": "string"},
-            "text": {"type": "string"},
-            "timestamp": {"type": "string", "format": "date-time"}
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Chat",
+      "type": "object",
+      "description": "A single message in the community chat.",
+      "properties": {
+        "id": {
+          "type": "string"
         },
-        "required": ["id", "userId", "userName", "text", "timestamp"]
+        "userId": {
+          "type": "string"
+        },
+        "userName": {
+          "type": "string"
+        },
+        "userAvatar": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "userName",
+        "text",
+        "timestamp"
+      ]
     }
   },
   "auth": {
@@ -310,11 +387,11 @@
       {
         "path": "/storefronts/{storefrontId}",
         "definition": {
-          "entityName": "Storefront",
+          "entityName": "Store",
           "schema": {
-            "$ref": "#/entities/Storefront"
+            "$ref": "#/entities/Store"
           },
-          "description": "Stores storefront data. Publicly readable, but only the owner can edit.",
+          "description": "Stores store data. Publicly readable, but only the owner can edit.",
           "params": [
             {
               "name": "storefrontId",
@@ -374,5 +451,3 @@
     ]
   }
 }
-
-    
