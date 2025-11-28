@@ -1,7 +1,6 @@
 'use client';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/hooks/use-auth';
 import StoreCard from '../StoreCard';
-import { mockStores, mockListings } from '@/lib/data';
 import ListingCard from '../ListingCard';
 import { Button } from '../ui/button';
 import { useVault } from '@/lib/vault';
@@ -9,16 +8,34 @@ import { VaultModal } from '../VaultModal';
 import { useState } from 'react';
 import { Flame } from 'lucide-react';
 import PlaceholderContent from '../PlaceholderContent';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, limit, query } from 'firebase/firestore';
+import type { Store, Listing } from '@/lib/types';
+
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const { isVaultButtonVisible } = useVault();
   const [isVaultModalOpen, setIsVaultModalOpen] = useState(false);
+  const firestore = useFirestore();
+
+  const storesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'storefronts'), limit(2));
+  }, [firestore]);
+
+  const listingsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'listings'), limit(4));
+  }, [firestore]);
+
+  const { data: stores, isLoading: storesLoading } = useCollection<Store>(storesQuery);
+  const { data: listings, isLoading: listingsLoading } = useCollection<Listing>(listingsQuery);
 
   return (
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold tracking-tight">Welcome, {user?.name}!</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Welcome, {profile?.name}!</h1>
           {isVaultButtonVisible && (
             <Button
               variant="default"
@@ -33,11 +50,14 @@ export default function Dashboard() {
 
         <section className="bg-slate-800 text-white -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 py-8 rounded-lg shadow-inner">
           <h2 className="text-2xl font-semibold tracking-tight mb-4">Spotlight Stores</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {mockStores.map((store) => (
-              <StoreCard key={store.id} store={store} />
-            ))}
-          </div>
+          {storesLoading && <p>Loading stores...</p>}
+          {stores && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {stores.map((store) => (
+                <StoreCard key={store.id} store={store} />
+              ))}
+            </div>
+          )}
         </section>
 
         <section>
@@ -56,11 +76,15 @@ export default function Dashboard() {
 
         <section>
           <h2 className="text-2xl font-semibold tracking-tight mb-4">New Items</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {mockListings.slice(0, 4).map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
+          {listingsLoading && <p>Loading new items...</p>}
+          {listings && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {listings.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          )}
+           {(!listings || listings.length === 0) && !listingsLoading && <p>No new items found.</p>}
         </section>
 
         <section>

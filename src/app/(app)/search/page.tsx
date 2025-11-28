@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, SlidersHorizontal } from "lucide-react";
 import ListingCard from "@/components/ListingCard";
-import { mockListings } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,12 +12,26 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
+import { useCollection } from "@/firebase";
+import { collection } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
+import { useMemoFirebase } from "@/firebase/provider";
+import type { Listing } from "@/lib/types";
+
 
 const categories = ["Trading Cards", "Action Figures", "Comics", "Memorabilia", "Video Games", "Stamps"];
 const conditions = ["New", "Like New", "Used"];
 
 export default function SearchPage() {
     const [showFilters, setShowFilters] = useState(true);
+    const firestore = useFirestore();
+
+    const listingsCollection = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return collection(firestore, 'listings');
+    }, [firestore]);
+
+    const {data: listings, isLoading} = useCollection<Listing>(listingsCollection);
 
     return (
         <AppLayout>
@@ -39,7 +52,7 @@ export default function SearchPage() {
                 </div>
                 
                 <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm text-muted-foreground">Showing 1-12 of {mockListings.length} results</p>
+                    <p className="text-sm text-muted-foreground">Showing 1-{listings?.length || 0} of {listings?.length || 0} results</p>
                     <Select defaultValue="newest">
                         <SelectTrigger className="w-auto">
                             <SelectValue placeholder="Sort by" />
@@ -104,11 +117,15 @@ export default function SearchPage() {
                     </aside>
 
                     <section className="lg:col-span-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                            {mockListings.map((listing) => (
-                                <ListingCard key={listing.id} listing={listing} />
-                            ))}
-                        </div>
+                        {isLoading && <p>Loading listings...</p>}
+                        {listings && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {listings.map((listing) => (
+                                    <ListingCard key={listing.id} listing={listing} />
+                                ))}
+                            </div>
+                        )}
+                         {(!listings || listings.length === 0) && !isLoading && <p>No listings found.</p>}
                     </section>
                 </div>
             </div>

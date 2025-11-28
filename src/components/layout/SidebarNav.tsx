@@ -26,7 +26,7 @@ import {
   Tag,
 } from 'lucide-react';
 import Logo from '../Logo';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/hooks/use-auth';
 import { Badge } from '../ui/badge';
 import { usePathname } from 'next/navigation';
 
@@ -50,7 +50,7 @@ const favoritesMenuItems = [
 ]
 
 export default function SidebarNav() {
-  const { user, logout } = useAuth();
+  const { logout, profile } = useAuth();
   const pathname = usePathname();
 
   return (
@@ -77,10 +77,10 @@ export default function SidebarNav() {
         <div className="mt-4 px-2">
            <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">My Store</h3>
            <SidebarMenu>
-            {user?.storeId ? (
+            {profile?.storeId ? (
               <>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href={`/store/${user.storeId}`} tooltip="My Storefront">
+                    <SidebarMenuButton href={`/store/${profile.storeId}`} tooltip="My Storefront">
                         <Store />
                         <span>My Storefront</span>
                     </SidebarMenuButton>
@@ -131,7 +131,7 @@ export default function SidebarNav() {
       </SidebarContent>
       <SidebarFooter className="p-2">
         <SidebarMenu>
-          {user?.status === 'LIMITED' && (
+          {profile?.status === 'LIMITED' && (
              <div className="p-2 text-center bg-yellow-900/50 border border-yellow-700 rounded-lg mb-2 mx-2">
                  <Badge variant="destructive" className="bg-yellow-500 text-black mb-2">LIMITED ACCESS</Badge>
                 <p className="text-xs text-yellow-300">Verify your email to list items and get full access.</p>

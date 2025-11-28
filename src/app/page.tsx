@@ -1,15 +1,18 @@
 'use client';
 
-import { useAuth } from '@/lib/auth';
 import AuthComponent from '@/components/auth/AuthComponent';
 import Dashboard from '@/components/dashboard/Dashboard';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/components/layout/AppLayout';
+import { useUser } from '@/firebase';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function Home() {
-  const { user, logout, loading } = useAuth();
+  const { user, isUserLoading } = useUser();
+  const { logout, profile } = useAuth();
 
-  if (loading) {
+
+  if (isUserLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
@@ -17,7 +20,7 @@ export default function Home() {
     return <AuthComponent />;
   }
 
-  if (user.status === 'SUSPENDED') {
+  if (profile && profile.status === 'SUSPENDED') {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background text-foreground gap-4 p-4 text-center">
         <h1 className="text-2xl font-bold">Account Suspended</h1>
@@ -29,8 +32,6 @@ export default function Home() {
     );
   }
 
-  // All other authenticated users (ACTIVE, LIMITED) are shown the main app content.
-  // The AppLayout and its children will handle role-specific UI.
   return (
     <AppLayout>
       <Dashboard />

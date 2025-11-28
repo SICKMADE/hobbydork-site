@@ -1,7 +1,6 @@
 'use client';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import { mockListings, mockStores } from '@/lib/data';
 import AppLayout from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,15 +8,37 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Star, MessageSquare, Heart, ShoppingCart, Bolt } from 'lucide-react';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { Listing, Store } from '@/lib/types';
+
 
 export default function ListingDetailPage({ params }: { params: { id: string } }) {
-  const listing = mockListings.find((l) => l.id === params.id);
+  const firestore = useFirestore();
+
+  const listingRef = useMemoFirebase(() => {
+    if (!firestore || !params.id) return null;
+    return doc(firestore, 'listings', params.id);
+  }, [firestore, params.id]);
+  
+  const { data: listing, isLoading: isListingLoading } = useDoc<Listing>(listingRef);
+
+  const storeRef = useMemoFirebase(() => {
+    if (!firestore || !listing?.storeId) return null;
+    return doc(firestore, 'storefronts', listing.storeId);
+  }, [firestore, listing?.storeId]);
+
+  const { data: store, isLoading: isStoreLoading } = useDoc<Store>(storeRef);
+
+
+  if (isListingLoading || isStoreLoading) {
+    return <AppLayout><div>Loading...</div></AppLayout>
+  }
   
   if (!listing) {
     notFound();
   }
 
-  const store = mockStores.find((s) => s.id === listing.storeId);
 
   return (
     <AppLayout>

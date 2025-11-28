@@ -1,23 +1,3 @@
-/**
- * # Firestore Security Rules for VaultVerse
- *
- * ## Core Philosophy
- * This ruleset enforces a strict user-ownership model for core data while allowing for public discovery of marketplace items. The primary goal is to ensure that users can only modify their own data (profiles, storefronts, listings) and can only view sensitive data (orders) in which they are a direct participant. It defaults to denying access and explicitly grants permissions based on verified user identity.
- *
- * ## Data Structure
- * - `/users/{userId}`: Contains private user data, accessible only by the owner.
- * - `/storefronts/{storefrontId}`: A top-level collection of all storefronts. They are publicly readable but writable only by the owning user.
- * - `/listings/{listingId}`: A top-level collection for all item listings. Publicly readable, but writable only by the owner of the parent storefront.
- * - `/orders/{orderId}`: A top-level collection for orders. Access is restricted to the buyer and the seller of the item.
- * - `/tags/{tagId}`: A top-level collection for tags. Publicly readable by all, but currently read-only to prevent misuse, pending an admin role implementation.
- *
- * ## Key Security Decisions
- * - **No User Listing**: To protect user privacy, it is impossible for any client to list all documents in the `/users` collection.
- * - **Ownership via Denormalization**: Storefronts contain a `userId` field, and listings contain a `storefrontId` field. This denormalization is crucial for writing efficient and secure rules without needing complex joins.
- * - **Chained Authorization for Listings/Orders**: Since a `listing` document does not contain a direct `userId`, its ownership is determined by fetching the parent `storefront` document. Similarly, a seller's access to an `order` is determined by fetching the associated `listing` and then its `storefront`. This is handled by helper functions.
- * - **Restricted Order Visibility**: The `/orders` collection is not publicly listable. A user can only access an order document if they are the buyer (`userId` on the order) or the seller (owner of the storefront associated with the listing).
- * - **Admin Actions Disabled**: The application specification mentions "admin" roles for managing tags and orders. As no admin role system is defined in the data model, these write operations are explicitly disabled for maximum security. They are marked with a `TODO` for future implementation.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -26,124 +6,60 @@ service cloud.firestore {
     // Helper Functions
     // --------------------------------
 
-    /**
-     * Returns true if the user is signed in.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Returns true if the request is from the owner of a given document.
-     * @param userId The UID of the user to check against.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-
     
-    /**
-     * Checks if the requesting user owns the storefront associated with a given storefrontId.
-     * This requires one 'get' operation.
-     */
     function isStorefrontOwner(storefrontId) {
       let storefront = get(/databases/$(database)/documents/storefronts/$(storefrontId));
       return storefront != null && isOwner(storefront.data.userId);
     }
     
-    /**
-     * Checks if the requesting user is the buyer of the order being read/updated.
-     */
-    function isOrderBuyer() {
-      return isOwner(resource.data.userId);
+    function isOrderBuyer(order) {
+      return isOwner(order.buyerId);
     }
-
-    /**
-     * Checks if the requesting user is the seller of the item in the order being read/updated.
-     * This is an expensive check requiring two 'get' operations (order -> listing -> storefront).
-     */
-    function isOrderSeller() {
-      let listing = get(/databases/$(database)/documents/listings/$(resource.data.listingId));
-      return listing != null && isStorefrontOwner(listing.data.storefrontId);
+    
+    function isOrderSeller(order) {
+      return isOwner(order.sellerId);
     }
     
     // --------------------------------
     // Collection Rules
     // --------------------------------
 
-    /**
-     * @description Stores private user profile data.
-     * @path /users/{userId}
-     * @allow A user can create their own profile document, and can read, update, or delete it. (e.g., auth.uid == 'user_abc' accessing /users/user_abc)
-     * @deny A user cannot access another user's profile. (e.g., auth.uid == 'user_xyz' accessing /users/user_abc)
-     * @principle Restricts access to a user's own data tree. Enforces path and data consistency.
-     */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) && resource != null;
-      allow delete: if isOwner(userId) && resource != null;
+      allow get: if isSignedIn();
+      allow list: if false; // Do not allow listing all users
+      allow create, update: if isOwner(userId);
+      allow delete: if false; // Users should not be able to delete their own account from the client
     }
 
-    /**
-     * @description Stores storefront data. Publicly visible, but only editable by the owner.
-     * @path /storefronts/{storefrontId}
-     * @allow Any user, signed in or not, can view a storefront. The owner can create, update, or delete their own storefront.
-     * @deny A user cannot update a storefront they do not own.
-     * @principle Implements a "Public Read with Owner-Only Writes" pattern.
-     */
     match /storefronts/{storefrontId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if isOwner(resource.data.userId) && resource != null;
-      allow delete: if isOwner(resource.data.userId) && resource != null;
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isOwner(resource.data.userId);
     }
     
-    /**
-     * @description Stores listing data. Publicly visible, but only editable by the storefront owner.
-     * @path /listings/{listingId}
-     * @allow Any user, signed in or not, can view a listing. The owner of the parent storefront can create, update, or delete it.
-     * @deny A user who does not own the parent storefront cannot modify the listing.
-     * @principle Enforces ownership by checking the parent `storefront` document, a pattern required by the data model.
-     */
     match /listings/{listingId} {
-      allow get: if true;
-      allow list: if true;
+      allow get, list: if true;
       allow create: if isSignedIn() && isStorefrontOwner(request.resource.data.storefrontId);
-      allow update: if resource != null && isStorefrontOwner(resource.data.storefrontId);
-      allow delete: if resource != null && isStorefrontOwner(resource.data.storefrontId);
+      allow update, delete: if isStorefrontOwner(resource.data.storefrontId);
     }
 
-    /**
-     * @description Stores order data. Visible only to the buyer and seller.
-     * @path /orders/{orderId}
-     * @allow The buyer (`userId` on order) or the seller (owner of the listing's storefront) can view the order. A signed-in user can create an order for themselves.
-     * @deny A random user cannot view an order they are not involved in. The entire collection cannot be listed by clients.
-     * @principle Implements a "Shared Access (Closed Collaborators)" pattern for the buyer and seller.
-     */
     match /orders/{orderId} {
-      allow get: if isSignedIn() && (isOrderBuyer() || isOrderSeller());
-      allow list: if false; // CRITICAL: Prevent listing all orders. Clients must query for orders they are involved in.
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null && isOrderSeller(); // Only the seller can update (e.g., status, tracking).
-      allow delete: if false; // Orders should be cancelled via a status update, not deleted.
+      allow get: if isSignedIn() && (isOrderBuyer(resource.data) || isOrderSeller(resource.data));
+      allow list: if false; // Users should query for their own orders, not list all.
+      allow create: if isSignedIn() && request.resource.data.buyerId == request.auth.uid;
+      allow update: if isSignedIn() && (isOrderBuyer(resource.data) || isOrderSeller(resource.data));
+      allow delete: if false; // Orders should be cancelled via a status update.
     }
     
-    /**
-     * @description Stores tag data for categorizing listings.
-     * @path /tags/{tagId}
-     * @allow Any user can read tags.
-     * @deny No user can currently write to the tags collection.
-     * @principle Implements a "Public Read with Admin-Only Writes" pattern. Writes are disabled pending admin role implementation.
-     */
-    match /tags/{tagId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false; // TODO: Implement admin-only creation logic.
-      allow update: if false; // TODO: Implement admin-only update logic.
-      allow delete: if false; // TODO: Implement admin-only deletion logic.
+    match /chat/{messageId} {
+        allow read, write: if isSignedIn();
     }
   }
 }

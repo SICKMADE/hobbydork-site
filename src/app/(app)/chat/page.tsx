@@ -5,60 +5,62 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/hooks/use-auth";
 import { Send } from "lucide-react";
-import { useState } from "react";
-
-// Mock messages for UI purposes
-const mockMessages = [
-    {
-        id: 'msg-1',
-        userId: 'user-1',
-        userName: 'Active Andy',
-        userAvatar: 'https://picsum.photos/seed/user1/100/100',
-        text: 'Just listed a holographic Charizard, first edition! Check it out.',
-        timestamp: '10:30 AM'
-    },
-    {
-        id: 'msg-2',
-        userId: 'user-2',
-        userName: 'Limited Lisa',
-        userAvatar: 'https://picsum.photos/seed/user2/100/100',
-        text: 'Wow, that\'s a big one! Looking for any vintage Star Wars figures?',
-        timestamp: '10:32 AM'
-    },
-    {
-        id: 'msg-3',
-        userId: 'user-1',
-        userName: 'Active Andy',
-        userAvatar: 'https://picsum.photos/seed/user1/100/100',
-        text: 'Always! Especially Kenner originals. My store is Galactic Treasures if you want to message me directly.',
-        timestamp: '10:33 AM'
-    }
-];
+import { useState, useEffect, useRef } from "react";
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { useMemoFirebase } from "@/firebase/provider";
+import type { Chat } from '@/lib/types';
 
 
 export default function ChatPage() {
-    const { user } = useAuth();
-    const [messages, setMessages] = useState(mockMessages);
+    const { user, profile } = useAuth();
+    const firestore = useFirestore();
     const [newMessage, setNewMessage] = useState('');
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-    const handleSendMessage = (e: React.FormEvent) => {
+    const chatCollection = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return collection(firestore, 'chat');
+    }, [firestore]);
+
+    const chatQuery = useMemoFirebase(() => {
+        if (!chatCollection) return null;
+        return query(chatCollection, orderBy('timestamp', 'asc'));
+    }, [chatCollection]);
+
+    const { data: messages, isLoading } = useCollection<Chat>(chatQuery);
+
+    const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (newMessage.trim() === '' || !user) return;
+        if (newMessage.trim() === '' || !user || !profile || !chatCollection) return;
 
-        const message = {
-            id: `msg-${Date.now()}`,
-            userId: user.id,
-            userName: user.name,
-            userAvatar: user.avatar,
+        const messageData = {
+            userId: user.uid,
+            userName: profile.name,
+            userAvatar: profile.avatar || `https://picsum.photos/seed/${user.uid}/100/100`,
             text: newMessage.trim(),
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            timestamp: serverTimestamp()
         };
 
-        setMessages([...messages, message]);
-        setNewMessage('');
+        try {
+            await addDoc(chatCollection, messageData);
+            setNewMessage('');
+        } catch (error) {
+            console.error("Error sending message: ", error);
+        }
     }
+
+    useEffect(() => {
+        if (scrollAreaRef.current) {
+            scrollAreaRef.current.scrollTo({
+                top: scrollAreaRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    }, [messages]);
 
     return (
         <AppLayout>
@@ -67,18 +69,21 @@ export default function ChatPage() {
                     <h1 className="text-xl font-semibold">Community Chat</h1>
                 </div>
 
-                <ScrollArea className="flex-1 p-4">
+                <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
                     <div className="space-y-4">
-                        {messages.map((msg) => (
+                        {isLoading && <p>Loading messages...</p>}
+                        {messages && messages.map((msg) => (
                             <div key={msg.id} className="flex items-start gap-3">
                                 <Avatar className="h-10 w-10 border">
                                     <AvatarImage src={msg.userAvatar} alt={msg.userName} />
-                                    <AvatarFallback>{msg.userName.charAt(0)}</AvatarFallback>
+                                    <AvatarFallback>{msg.userName?.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1">
                                     <div className="flex items-baseline gap-2">
                                         <p className="font-semibold">{msg.userName}</p>
-                                        <p className="text-xs text-muted-foreground">{msg.timestamp}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                           {msg.timestamp ? new Date(msg.timestamp?.seconds * 1000).toLocaleTimeString() : '...'}
+                                        </p>
                                     </div>
                                     <p className="text-foreground/90">{msg.text}</p>
                                 </div>
@@ -94,8 +99,9 @@ export default function ChatPage() {
                             onChange={(e) => setNewMessage(e.target.value)}
                             placeholder="Type your message..."
                             autoComplete="off"
+                            disabled={!user || !profile}
                         />
-                        <Button type="submit" size="icon" disabled={!newMessage.trim()}>
+                        <Button type="submit" size="icon" disabled={!newMessage.trim() || !user || !profile}>
                             <Send className="h-4 w-4" />
                             <span className="sr-only">Send</span>
                         </Button>

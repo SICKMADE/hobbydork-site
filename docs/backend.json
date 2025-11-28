@@ -8,21 +8,34 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the user entity."
+          "description": "Unique identifier for the user entity (matches Firebase Auth UID)."
+        },
+        "name": {
+            "type": "string",
+            "description": "The user's display name."
         },
         "email": {
           "type": "string",
           "description": "Email address of the user.",
           "format": "email"
         },
+        "avatar": {
+            "type": "string",
+            "description": "URL to the user's avatar image."
+        },
         "status": {
           "type": "string",
           "description": "Status of the user account (ACTIVE, LIMITED, SUSPENDED).",
-          "format": "string"
+          "enum": ["ACTIVE", "LIMITED", "SUSPENDED"]
+        },
+        "storeId": {
+            "type": "string",
+            "description": "The ID of the store owned by the user, if any."
         }
       },
       "required": [
         "id",
+        "name",
         "email",
         "status"
       ]
@@ -39,7 +52,7 @@
         },
         "userId": {
           "type": "string",
-          "description": "Reference to the User who owns the storefront. (Relationship: User 1:N Storefront)"
+          "description": "Reference to the User who owns the storefront. (Relationship: User 1:1 Storefront)"
         },
         "url": {
           "type": "string",
@@ -59,16 +72,27 @@
           "description": "'About Me' section for the storefront."
         },
         "paymentPreferences": {
-          "type": "string",
+          "type": "object",
+          "properties": {
+              "paypal": {"type": "string"},
+              "venmo": {"type": "string"}
+          },
           "description": "Payment preferences (PayPal or Venmo)."
+        },
+        "rating": {
+            "type": "number",
+            "description": "Average rating of the store."
+        },
+        "itemsSold": {
+            "type": "number",
+            "description": "Total number of items sold."
         }
       },
       "required": [
         "id",
         "userId",
         "url",
-        "name",
-        "paymentPreferences"
+        "name"
       ]
     },
     "Listing": {
@@ -116,12 +140,16 @@
             "type": "string"
           }
         },
-        "tagIds": {
+        "tags": {
           "type": "array",
-          "description": "References to Tags associated with the listing. (Relationship: Listing N:N Tag)",
+          "description": "Keywords associated with the listing.",
           "items": {
             "type": "string"
           }
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time"
         }
       },
       "required": [
@@ -133,7 +161,8 @@
         "price",
         "condition",
         "quantity",
-        "images"
+        "images",
+        "createdAt"
       ]
     },
     "Order": {
@@ -146,28 +175,37 @@
           "type": "string",
           "description": "Unique identifier for the order entity."
         },
-        "userId": {
+        "buyerId": {
           "type": "string",
-          "description": "Reference to the User who placed the order. (Relationship: User 1:N Order)"
+          "description": "Reference to the User who placed the order."
+        },
+        "sellerId": {
+            "type": "string",
+            "description": "Reference to the User who owns the listing."
         },
         "listingId": {
           "type": "string",
-          "description": "Reference to the Listing that was ordered. (Relationship: Listing 1:N Order)"
+          "description": "Reference to the Listing that was ordered."
         },
-        "orderDate": {
+        "listingTitle": {"type": "string"},
+        "listingImage": {"type": "string"},
+        "quantity": {"type": "number"},
+        "totalPrice": {"type": "number"},
+        "createdAt": {
           "type": "string",
           "description": "The date and time the order was placed.",
           "format": "date-time"
         },
         "status": {
           "type": "string",
-          "description": "Status of the order (Pending Payment, Payment Sent, Shipped, Delivered, Completed, Cancelled)."
+          "description": "Status of the order.",
+          "enum": ["Pending Payment", "Payment Sent", "Shipped", "Delivered", "Completed", "Cancelled"]
         },
         "trackingNumber": {
           "type": "string",
           "description": "Tracking number for the order."
         },
-        "carrierInfo": {
+        "carrier": {
           "type": "string",
           "description": "Carrier information for the order."
         },
@@ -178,37 +216,36 @@
       },
       "required": [
         "id",
-        "userId",
+        "buyerId",
+        "sellerId",
         "listingId",
-        "orderDate",
-        "status"
+        "createdAt",
+        "status",
+        "listingTitle",
+        "listingImage",
+        "quantity",
+        "totalPrice"
       ]
     },
-    "Tag": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Tag",
-      "type": "object",
-      "description": "Represents a tag that can be associated with listings.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the tag entity."
+    "Chat": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Chat",
+        "type": "object",
+        "description": "A single message in the community chat.",
+        "properties": {
+            "id": {"type": "string"},
+            "userId": {"type": "string"},
+            "userName": {"type": "string"},
+            "userAvatar": {"type": "string"},
+            "text": {"type": "string"},
+            "timestamp": {"type": "string", "format": "date-time"}
         },
-        "name": {
-          "type": "string",
-          "description": "Name of the tag."
-        }
-      },
-      "required": [
-        "id",
-        "name"
-      ]
+        "required": ["id", "userId", "userName", "text", "timestamp"]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
@@ -218,9 +255,9 @@
         "definition": {
           "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/entities/User"
           },
-          "description": "Stores user profile data. Accessible only by the user themselves. Used for profile information, email, and status.",
+          "description": "Stores user profile data. Accessible only by the user themselves.",
           "params": [
             {
               "name": "userId",
@@ -234,9 +271,9 @@
         "definition": {
           "entityName": "Storefront",
           "schema": {
-            "$ref": "#/backend/entities/Storefront"
+            "$ref": "#/entities/Storefront"
           },
-          "description": "Stores storefront data. Includes denormalized 'userId' for authorization independence. Allows any user to view any storefront, but only the storefront owner can edit it.",
+          "description": "Stores storefront data. Publicly readable, but only the owner can edit.",
           "params": [
             {
               "name": "storefrontId",
@@ -250,9 +287,9 @@
         "definition": {
           "entityName": "Listing",
           "schema": {
-            "$ref": "#/backend/entities/Listing"
+            "$ref": "#/entities/Listing"
           },
-          "description": "Stores listing data. Includes denormalized 'storefrontId' for authorization independence. Allows anyone to view, only owner can edit.",
+          "description": "Stores listing data. Publicly readable, only owner can edit.",
           "params": [
             {
               "name": "listingId",
@@ -266,9 +303,9 @@
         "definition": {
           "entityName": "Order",
           "schema": {
-            "$ref": "#/backend/entities/Order"
+            "$ref": "#/entities/Order"
           },
-          "description": "Stores order data. Allows any user to view order details, but only admins can create or modify orders.",
+          "description": "Stores order data. Accessible only by the buyer and seller.",
           "params": [
             {
               "name": "orderId",
@@ -278,22 +315,21 @@
         }
       },
       {
-        "path": "/tags/{tagId}",
+        "path": "/chat/{messageId}",
         "definition": {
-          "entityName": "Tag",
+          "entityName": "Chat",
           "schema": {
-            "$ref": "#/backend/entities/Tag"
+            "$ref": "#/entities/Chat"
           },
-          "description": "Stores tag data. Publicly accessible and modifiable by admins.",
+          "description": "Stores community chat messages. Readable by any signed-in user.",
           "params": [
             {
-              "name": "tagId",
-              "description": "The unique identifier of the tag."
+              "name": "messageId",
+              "description": "The unique identifier of the chat message."
             }
           ]
         }
       }
-    ],
-    "reasoning": "This Firestore data structure is designed to support the HobbyDork VaultVerse application, focusing on security, scalability, and maintainability. It leverages denormalization to ensure authorization independence, enabling robust security rules and atomic operations. The structure adheres to the principles of clarity of intent and 'Rules are not Filters'.\n\n**Authorization Independence (Denormalization):**\nTo avoid hierarchical authorization dependencies, key authorization data is denormalized across collections. Specifically, the `userId` is copied into the `/storefronts` documents, and `storefrontId` is copied into `listings`. This allows direct access to authorization information without needing `get()` calls in security rules.\n\n**Structural Segregation (Homogeneous Security Posture):**\nThe structure segregates data with different access needs into separate collections. User data is stored under `/users/{userId}`, storefronts are in a top-level `/storefronts` collection, and listings under `/listings`. This simplifies security rules by ensuring all documents within a collection share the same security requirements.\n\n**Access Modeling:**\n*   **Private User Data:** User profiles are stored under `/users/{userId}`, enforcing path-based ownership. Only the authenticated user can read/write their profile.\n*   **User-Owned Storefronts:** Storefronts are stored in the `/storefronts` collection with a `userId` field, enabling querying of storefronts owned by a specific user, while also allowing global listing and discovery.\n*   **User-Owned Listings:** Listings are stored in the `/listings` collection with a `storefrontId` field, enabling querying of listings owned by a specific storefront. User can only modify listings within their storefront.\n*   **Tags:** Tags are stored in a flat `/tags` collection. This simplifies tag management and querying.\n*   **Orders:** Orders are stored in a flat `/orders` collection. All orders can be viewed and processed by admins. Users can only view their own orders.\n\n**QAPs (Rules are not Filters):**\nThe data structure supports secure list operations by avoiding the need to filter based on document content in security rules. Authorization is enforced through the data structure itself and denormalized authorization fields. For example, listing all storefronts requires no filtering based on user roles.\n\n**Invariants:**\nOwnership is enforced by the `userId` field in storefronts and `storefrontId` field in listings. Timestamps can be added as needed (though not specified in the entity definitions)."
+    ]
   }
 }

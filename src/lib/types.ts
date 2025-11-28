@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase/firestore";
+
 export type UserStatus = 'ACTIVE' | 'LIMITED' | 'SUSPENDED';
 
 export type User = {
@@ -15,7 +17,7 @@ export type Store = {
   url: string;
   logo: string;
   about: string;
-  ownerId: string;
+  userId: string;
   paymentMethods: {
     paypal?: string;
     venmo?: string;
@@ -37,7 +39,7 @@ export type Listing = {
   images: string[];
   tags: string[];
   storeId: string;
-  createdAt: string;
+  createdAt: Timestamp;
 };
 
 export type OrderStatus = 'Pending Payment' | 'Payment Sent' | 'Shipped' | 'Delivered' | 'Completed' | 'Cancelled';
@@ -55,5 +57,14 @@ export type Order = {
   shippingAddress?: string;
   trackingNumber?: string;
   carrier?: string;
-  createdAt: string;
+  createdAt: Timestamp;
+};
+
+export type Chat = {
+    id: string;
+    userId: string;
+    userName: string;
+    userAvatar: string;
+    text: string;
+    timestamp: Timestamp;
 };

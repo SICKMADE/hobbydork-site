@@ -1,14 +1,14 @@
 'use client';
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/hooks/use-auth";
 import PlaceholderContent from "@/components/PlaceholderContent";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 
 export default function CreateStorePage() {
-    const { user } = useAuth();
+    const { profile } = useAuth();
 
-    if (user?.status === 'LIMITED') {
+    if (profile?.status === 'LIMITED') {
         return (
             <AppLayout>
                 <div className="flex items-center justify-center h-full">
