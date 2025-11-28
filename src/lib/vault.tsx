@@ -7,9 +7,10 @@ interface VaultContextType {
   isPinRevealed: boolean;
   isVaultUnlocked: boolean;
   isVaultButtonVisible: boolean;
-  revealPin: () => string;
+  revealPin: () => void;
   unlockVault: (enteredPin: string) => boolean;
   showVaultButton: () => void;
+  acknowledgePin: () => void;
 }
 
 const VaultContext = createContext<VaultContextType | null>(null);
@@ -24,7 +25,6 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     const newPin = Math.floor(1000 + Math.random() * 9000).toString();
     setPin(newPin);
     setIsPinRevealed(true);
-    return newPin;
   }, []);
 
   const showVaultButton = useCallback(() => {
@@ -39,7 +39,11 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     return false;
   }, [pin]);
 
-  const value = { pin, isPinRevealed, isVaultUnlocked, isVaultButtonVisible, revealPin, unlockVault, showVaultButton };
+  const acknowledgePin = useCallback(() => {
+    setIsPinRevealed(false);
+  }, []);
+
+  const value = { pin, isPinRevealed, isVaultUnlocked, isVaultButtonVisible, revealPin, unlockVault, showVaultButton, acknowledgePin };
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>;
 }

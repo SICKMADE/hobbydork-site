@@ -67,20 +67,6 @@ export default function Dashboard() {
         </section>
 
         <section>
-          <PlaceholderContent 
-            title="In Search Of (ISO24)"
-            description="This section will show active ISO24 posts from the community. Feature coming soon!"
-          />
-        </section>
-
-        <section>
-            <PlaceholderContent 
-                title="New Users"
-                description="This section will highlight recently created or newly active stores. Feature coming soon!"
-            />
-        </section>
-
-        <section>
           <h2 className="text-2xl font-semibold tracking-tight mb-4">New Items</h2>
           {listingsLoading && <p>Loading new items...</p>}
           {listings && listings.length > 0 ? (
@@ -92,13 +78,6 @@ export default function Dashboard() {
           ) : !listingsLoading && (
              <p>No new items have been listed yet. Be the first!</p>
           )}
-        </section>
-
-        <section>
-            <PlaceholderContent 
-                title="Recommended Items"
-                description="This section will recommend items based on your interests. Feature coming soon!"
-            />
         </section>
 
         <VaultModal open={isVaultModalOpen} onOpenChange={setIsVaultModalOpen} />
