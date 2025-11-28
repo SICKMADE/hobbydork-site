@@ -16,7 +16,6 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '../ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { MessageSquare, Package, Tag } from 'lucide-react';
 
 export default function Header() {

@@ -95,5 +95,5 @@ export default {
       },
     },
   },
-  plugins: [require('tailwindcss-animate'), require("react-confetti")],
+  plugins: [require('tailwindcss-animate')],
 } satisfies Config;
