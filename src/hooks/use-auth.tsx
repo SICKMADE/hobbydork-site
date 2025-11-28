@@ -112,6 +112,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
 
       await setDoc(doc(firestore, "users", newUser.uid), userProfile);
+      
+      // Send verification email
       await sendEmailVerification(newUser);
       
       toast({
