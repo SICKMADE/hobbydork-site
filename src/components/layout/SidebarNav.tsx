@@ -24,6 +24,7 @@ import {
   Flame,
   HelpCircle,
   Tag,
+  Shield,
 } from 'lucide-react';
 import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
@@ -133,7 +134,25 @@ export default function SidebarNav() {
                 ))}
             </SidebarMenu>
         </div>
-
+        
+        {profile?.role === 'admin' && (
+          <div className="mt-4 px-2">
+            <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">Admin</h3>
+            <SidebarMenu>
+                <SidebarMenuItem>
+                <SidebarMenuButton
+                    href="/admin/users"
+                    isActive={pathname === '/admin/users'}
+                    tooltip="Manage Users"
+                    onClick={() => router.push('/admin/users')}
+                >
+                    <Shield />
+                    <span>Manage Users</span>
+                </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
+          </div>
+        )}
 
       </SidebarContent>
       <SidebarFooter className="p-2">
