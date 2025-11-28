@@ -17,6 +17,8 @@ import {
   PlusCircle,
   LogOut,
   Search,
+  Heart,
+  Star,
 } from 'lucide-react';
 import Logo from '../Logo';
 import { useAuth } from '@/lib/auth';
@@ -34,6 +36,11 @@ const userMenuItems = [
   { href: '/profile', label: 'Profile', icon: User },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
+
+const favoritesMenuItems = [
+    { href: '/watchlist', label: 'Watchlist', icon: Star },
+    { href: '/favorites', label: 'Favorite Stores', icon: Heart },
+]
 
 export default function SidebarNav() {
   const { user, logout } = useAuth();
@@ -79,6 +86,24 @@ export default function SidebarNav() {
                 </SidebarMenuItem>
             )}
            </SidebarMenu>
+        </div>
+
+        <div className="mt-4 px-2">
+           <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">My Favorites</h3>
+            <SidebarMenu>
+                {favoritesMenuItems.map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton
+                        href={item.href}
+                        isActive={pathname === item.href}
+                        tooltip={item.label}
+                    >
+                        <item.icon />
+                        <span>{item.label}</span>
+                    </SidebarMenuButton>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
         </div>
 
 
