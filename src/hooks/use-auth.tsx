@@ -9,10 +9,11 @@ import {
   sendEmailVerification,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDocs, collection, query, limit } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { placeholderImages } from '@/lib/placeholder-images';
 
 interface SignupData {
   displayName: string;
@@ -111,6 +112,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
     }
     try {
+      // Check if any user exists to determine if this is the first signup
+      const usersCollectionRef = collection(firestore, "users");
+      const q = query(usersCollectionRef, limit(1));
+      const querySnapshot = await getDocs(q);
+      const isFirstUser = querySnapshot.empty;
+      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
       
@@ -118,9 +125,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         uid: newUser.uid,
         email: newUser.email!,
         displayName,
-        avatar: `https://picsum.photos/seed/${newUser.uid}/100/100`,
+        avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
         status: 'LIMITED',
-        role: 'user',
+        role: isFirstUser ? 'admin' : 'user', // Set role to 'admin' if first user
         emailVerified: newUser.emailVerified,
         oneAccountAcknowledged,
         goodsAndServicesAgreed,
