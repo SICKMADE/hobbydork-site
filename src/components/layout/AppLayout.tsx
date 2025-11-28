@@ -9,7 +9,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="bg-background">
+      <div className="relative flex min-h-svh flex-col bg-background">
         <Sidebar>
           <SidebarNav />
         </Sidebar>
