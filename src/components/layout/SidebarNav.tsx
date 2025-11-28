@@ -19,6 +19,11 @@ import {
   Search,
   Heart,
   Star,
+  ShoppingCart,
+  LayoutList,
+  Flame,
+  HelpCircle,
+  Tag,
 } from 'lucide-react';
 import Logo from '../Logo';
 import { useAuth } from '@/lib/auth';
@@ -28,8 +33,10 @@ import { usePathname } from 'next/navigation';
 const menuItems = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/search', label: 'Search', icon: Search },
+  { href: '/cart', label: 'Cart', icon: ShoppingCart },
   { href: '/orders', label: 'My Orders', icon: Package },
   { href: '/chat', label: 'Community Chat', icon: MessageSquare },
+  { href: '/iso24', label: 'ISO24', icon: Tag },
 ];
 
 const userMenuItems = [
@@ -71,12 +78,26 @@ export default function SidebarNav() {
            <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">My Store</h3>
            <SidebarMenu>
             {user?.storeId ? (
+              <>
                 <SidebarMenuItem>
                     <SidebarMenuButton href={`/store/${user.storeId}`} tooltip="My Storefront">
                         <Store />
                         <span>My Storefront</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <SidebarMenuButton href="/listings" tooltip="My Listings">
+                        <LayoutList />
+                        <span>My Listings</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <SidebarMenuButton href="/sales" tooltip="My Sales">
+                        <Flame />
+                        <span>My Sales</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+              </>
             ) : (
                 <SidebarMenuItem>
                     <SidebarMenuButton href="/store/create" tooltip="Create Store">
@@ -128,6 +149,16 @@ export default function SidebarNav() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
+           <SidebarMenuItem>
+              <SidebarMenuButton
+                href="/help"
+                isActive={pathname === '/help'}
+                tooltip="Help & FAQ"
+              >
+                <HelpCircle />
+                <span>Help / FAQ</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={logout} tooltip="Logout">
               <LogOut />
