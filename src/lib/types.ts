@@ -42,20 +42,28 @@ export type Store = {
   updatedAt: Timestamp;
 };
 
-export type Condition = 'New' | 'Like New' | 'Used';
+export type Condition = "NEW" | "LIKE_NEW" | "VERY_GOOD" | "GOOD" | "FAIR" | "POOR";
+export type ListingState = "DRAFT" | "ACTIVE" | "HIDDEN" | "SOLD";
+
 
 export type Listing = {
-  id: string;
-  storefrontId: string;
+  id: string; // Document ID
+  listingId: string;
+  storeId: string;
+  ownerUid: string;
   title: string;
   category: string;
   description: string;
   price: number;
   condition: Condition;
-  quantity: number;
-  images: string[];
+  quantityTotal: number;
+  quantityAvailable: number;
+  state: ListingState;
   tags: string[];
+  imageUrls: string[];
+  primaryImageUrl: string | null;
   createdAt: Timestamp;
+  updatedAt: Timestamp;
 };
 
 export type OrderStatus = 'Pending Payment' | 'Payment Sent' | 'Shipped' | 'Delivered' | 'Completed' | 'Cancelled';

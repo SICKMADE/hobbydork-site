@@ -17,7 +17,7 @@ export default function MyListingsPage() {
 
     const listingsQuery = useMemoFirebase(() => {
         if (!firestore || !profile?.storeId) return null;
-        return query(collection(firestore, 'listings'), where('storefrontId', '==', profile.storeId));
+        return query(collection(firestore, 'listings'), where('storeId', '==', profile.storeId));
     }, [firestore, profile?.storeId]);
 
     const { data: listings, isLoading } = useCollection<Listing>(listingsQuery);

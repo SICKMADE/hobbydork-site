@@ -185,13 +185,17 @@
       "type": "object",
       "description": "Represents a collectible listing within the HobbyDork VaultVerse application.",
       "properties": {
-        "id": {
+        "listingId": {
           "type": "string",
-          "description": "Unique identifier for the listing entity."
+          "description": "Unique identifier for the listing entity (matches document ID)."
         },
-        "storefrontId": {
+        "storeId": {
           "type": "string",
-          "description": "Reference to the Storefront the listing belongs to. (Relationship: Storefront 1:N Listing)"
+          "description": "Reference to the Store the listing belongs to."
+        },
+        "ownerUid": {
+          "type": "string",
+          "description": "UID of the user who owns the listing."
         },
         "title": {
           "type": "string",
@@ -211,18 +215,33 @@
         },
         "condition": {
           "type": "string",
-          "description": "Condition of the collectible."
+          "description": "Condition of the collectible.",
+          "enum": [
+            "NEW",
+            "LIKE_NEW",
+            "VERY_GOOD",
+            "GOOD",
+            "FAIR",
+            "POOR"
+          ]
         },
-        "quantity": {
+        "quantityTotal": {
           "type": "number",
-          "description": "Quantity of the collectible available."
+          "description": "The initial total quantity of the item."
         },
-        "images": {
-          "type": "array",
-          "description": "URLs or storage paths to the images of the collectible.",
-          "items": {
-            "type": "string"
-          }
+        "quantityAvailable": {
+          "type": "number",
+          "description": "The current number of items available for sale."
+        },
+        "state": {
+          "type": "string",
+          "description": "The current state of the listing.",
+          "enum": [
+            "DRAFT",
+            "ACTIVE",
+            "HIDDEN",
+            "SOLD"
+          ]
         },
         "tags": {
           "type": "array",
@@ -231,22 +250,43 @@
             "type": "string"
           }
         },
+        "imageUrls": {
+          "type": "array",
+          "description": "Array of URLs for the listing images.",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "primaryImageUrl": {
+          "type": "string",
+          "description": "The primary image URL for the listing.",
+          "format": "uri"
+        },
         "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
           "type": "string",
           "format": "date-time"
         }
       },
       "required": [
-        "id",
-        "storefrontId",
+        "listingId",
+        "storeId",
+        "ownerUid",
         "title",
         "category",
         "description",
         "price",
         "condition",
-        "quantity",
-        "images",
-        "createdAt"
+        "quantityTotal",
+        "quantityAvailable",
+        "state",
+        "imageUrls",
+        "createdAt",
+        "updatedAt"
       ]
     },
     "Order": {

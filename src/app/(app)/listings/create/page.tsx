@@ -10,7 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useFirestore } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,6 +18,7 @@ import { Trash } from "lucide-react";
 import PlaceholderContent from "@/components/PlaceholderContent";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
+import type { Condition } from "@/lib/types";
 
 const listingSchema = z.object({
     title: z.string().min(5, "Title must be at least 5 characters."),
@@ -37,10 +38,17 @@ const listingSchema = z.object({
 });
 
 const categories = ["Trading Cards", "Action Figures", "Comics", "Memorabilia", "Video Games", "Stamps"];
-const conditions = ["New", "Like New", "Used"];
+const conditions: { value: Condition, label: string }[] = [
+    { value: "NEW", label: "New" },
+    { value: "LIKE_NEW", label: "Like New" },
+    { value: "VERY_GOOD", label: "Very Good" },
+    { value: "GOOD", label: "Good" },
+    { value: "FAIR", label: "Fair" },
+    { value: "POOR", label: "Poor" },
+];
 
 export default function CreateListingPage() {
-    const { profile } = useAuth();
+    const { profile, user } = useAuth();
     const firestore = useFirestore();
     const router = useRouter();
     const { toast } = useToast();
@@ -55,6 +63,7 @@ export default function CreateListingPage() {
             quantity: 1,
             condition: "",
             images: [{ value: "" }],
+            tags: "",
         },
     });
 
@@ -64,33 +73,46 @@ export default function CreateListingPage() {
     });
 
     async function onSubmit(values: z.infer<typeof listingSchema>) {
-        if (!profile?.storeId || !firestore) {
-            toast({ title: "Error", description: "You must have a store to create a listing.", variant: "destructive" });
+        if (!profile?.storeId || !firestore || !user) {
+            toast({ title: "Error", description: "You must have a store and be logged in to create a listing.", variant: "destructive" });
             return;
         }
 
         if (profile.status !== 'ACTIVE') {
-            toast({ title: "Account Not Active", description: "Please verify your email before creating listings.", variant: "destructive" });
+            toast({ title: "Account Not Active", description: "Your account must be active to create listings. Please verify your email.", variant: "destructive" });
             return;
         }
 
         try {
-            await addDoc(collection(firestore, "listings"), {
-                storefrontId: profile.storeId,
+            const batch = writeBatch(firestore);
+            const newListingRef = doc(collection(firestore, "listings"));
+            
+            const imageUrls = values.images.map(img => img.value);
+
+            batch.set(newListingRef, {
+                listingId: newListingRef.id,
+                storeId: profile.storeId,
+                ownerUid: user.uid,
                 title: values.title,
                 category: values.category,
                 description: values.description,
                 price: values.price,
-                quantity: values.quantity,
                 condition: values.condition,
-                images: values.images.map(img => img.value),
+                quantityTotal: values.quantity,
+                quantityAvailable: values.quantity,
+                state: "ACTIVE", // Default to ACTIVE as per new spec
                 tags: values.tags ? values.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
+                imageUrls: imageUrls,
+                primaryImageUrl: imageUrls[0] || null,
                 createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
             });
+
+            await batch.commit();
 
             toast({
                 title: "Listing Created!",
-                description: "Your new item is now available for sale.",
+                description: "Your new item is now active in your store.",
             });
             
             router.push('/listings');
@@ -193,7 +215,7 @@ export default function CreateListingPage() {
                                                         </SelectTrigger>
                                                     </FormControl>
                                                     <SelectContent>
-                                                        {conditions.map(con => <SelectItem key={con} value={con}>{con}</SelectItem>)}
+                                                        {conditions.map(con => <SelectItem key={con.value} value={con.value}>{con.label}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
                                                 <FormMessage />
@@ -239,6 +261,7 @@ export default function CreateListingPage() {
                                                 <FormControl>
                                                     <Input type="number" {...field} />
                                                 </FormControl>
+                                                <FormDescription>Total number of this item you have for sale.</FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}

@@ -25,9 +25,9 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
   const { data: listing, isLoading: isListingLoading } = useDoc<Listing>(listingRef);
 
   const storeRef = useMemoFirebase(() => {
-    if (!firestore || !listing?.storefrontId) return null;
-    return doc(firestore, 'storefronts', listing.storefrontId);
-  }, [firestore, listing?.storefrontId]);
+    if (!firestore || !listing?.storeId) return null;
+    return doc(firestore, 'storefronts', listing.storeId);
+  }, [firestore, listing?.storeId]);
 
   const { data: store, isLoading: isStoreLoading } = useDoc<Store>(storeRef);
 
@@ -47,7 +47,7 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
         <div>
           <Carousel className="w-full">
             <CarouselContent>
-              {listing.images.map((img, index) => (
+              {listing.imageUrls.map((img, index) => (
                 <CarouselItem key={index}>
                   <Card className="overflow-hidden">
                     <div className="aspect-square relative">
@@ -80,14 +80,14 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
 
           <div className="flex items-baseline gap-4">
              <p className="text-4xl font-bold text-primary">${listing.price.toFixed(2)}</p>
-             <p className="text-sm text-muted-foreground">{listing.quantity} available</p>
+             <p className="text-sm text-muted-foreground">{listing.quantityAvailable} available</p>
           </div>
 
           <Card>
             <CardContent className="p-4 space-y-2">
                 <div className="flex justify-between">
                     <span className="text-muted-foreground">Condition</span>
-                    <span className="font-semibold">{listing.condition}</span>
+                    <span className="font-semibold">{listing.condition.replace('_', ' ')}</span>
                 </div>
             </CardContent>
           </Card>
