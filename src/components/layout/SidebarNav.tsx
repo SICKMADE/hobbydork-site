@@ -16,6 +16,7 @@ import {
   Store,
   PlusCircle,
   LogOut,
+  Search,
 } from 'lucide-react';
 import Logo from '../Logo';
 import { useAuth } from '@/lib/auth';
@@ -24,6 +25,7 @@ import { usePathname } from 'next/navigation';
 
 const menuItems = [
   { href: '/', label: 'Dashboard', icon: Home },
+  { href: '/search', label: 'Search', icon: Search },
   { href: '/orders', label: 'My Orders', icon: Package },
   { href: '/chat', label: 'Community Chat', icon: MessageSquare },
 ];
