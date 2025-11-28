@@ -12,10 +12,12 @@ import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Listing, Store } from '@/lib/types';
 import Link from 'next/link';
+import { useCart } from '@/hooks/use-cart';
 
 
 export default function ListingDetailPage({ params }: { params: { id: string } }) {
   const firestore = useFirestore();
+  const { addToCart } = useCart();
 
   const listingRef = useMemoFirebase(() => {
     if (!firestore || !params.id) return null;
@@ -39,6 +41,12 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
   if (!listing) {
     notFound();
   }
+
+  const handleAddToCart = () => {
+    if (listing) {
+      addToCart(listing, 1); // Add one item for now
+    }
+  };
 
 
   return (
@@ -93,7 +101,7 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
           </Card>
 
           <div className="grid grid-cols-2 gap-4">
-            <Button size="lg"><ShoppingCart className="mr-2" />Add to Cart</Button>
+            <Button size="lg" onClick={handleAddToCart}><ShoppingCart className="mr-2" />Add to Cart</Button>
             <Button size="lg" variant="default"><Bolt className="mr-2"/>Buy Now</Button>
           </div>
           
