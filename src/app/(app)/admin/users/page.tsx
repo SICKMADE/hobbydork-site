@@ -24,7 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
 export default function AdminUsersPage() {
   const firestore = useFirestore();
@@ -56,12 +55,12 @@ export default function AdminUsersPage() {
     }
   };
 
-  const getStatusVariant = (status: User['status']) => {
+  const getStatusVariant = (status: User['status']): 'default' | 'secondary' | 'destructive' => {
     switch (status) {
-        case 'ACTIVE': return 'bg-green-500';
-        case 'LIMITED': return 'bg-yellow-500';
-        case 'SUSPENDED': return 'bg-red-500';
-        default: return 'bg-gray-400';
+        case 'ACTIVE': return 'default';
+        case 'LIMITED': return 'secondary';
+        case 'SUSPENDED': return 'destructive';
+        default: return 'secondary';
     }
   }
 
@@ -102,7 +101,7 @@ export default function AdminUsersPage() {
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                    <Badge className={cn("text-white", getStatusVariant(user.status))}>{user.status}</Badge>
+                    <Badge variant={getStatusVariant(user.status)}>{user.status}</Badge>
                   </TableCell>
                   <TableCell className="capitalize">{user.role}</TableCell>
                   <TableCell className="text-right">
