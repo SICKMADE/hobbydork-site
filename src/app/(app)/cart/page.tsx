@@ -8,9 +8,99 @@ import { useCart } from "@/hooks/use-cart";
 import { Trash } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useAuth } from "@/hooks/use-auth";
+import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
+import type { Listing, Order } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function CartPage() {
-    const { items, removeFromCart, subtotal, storeId } = useCart();
+    const { items, removeFromCart, subtotal, storeId, clearCart } = useCart();
+    const { profile } = useAuth();
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const router = useRouter();
+    const [isCheckingOut, setIsCheckingOut] = useState(false);
+
+    // We need to fetch one listing to get the owner UID for the order.
+    const firstListingRef = useMemoFirebase(() => {
+        if (!firestore || items.length === 0) return null;
+        return doc(firestore, 'listings', items[0].listingId);
+    }, [firestore, items]);
+
+    const { data: firstListing } = useDoc<Listing>(firstListingRef);
+
+    const handleCheckout = async () => {
+        if (!profile || !storeId || !firestore || !firstListing) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "You must be logged in and have items in your cart to checkout.",
+            });
+            return;
+        }
+
+        setIsCheckingOut(true);
+        try {
+            const batch = writeBatch(firestore);
+            const newOrderRef = doc(collection(firestore, "orders"));
+
+            const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'buyerShippingAddress' | 'paymentMethod'> & { createdAt: any, updatedAt: any } = {
+                orderId: newOrderRef.id,
+                buyerUid: profile.uid,
+                sellerUid: firstListing.ownerUid,
+                storeId: storeId,
+                listingItems: items.map(item => ({
+                    listingId: item.listingId,
+                    title: item.title,
+                    quantity: item.quantity,
+                    pricePerUnit: item.price,
+                    primaryImageUrl: item.primaryImageUrl,
+                })),
+                totalPrice: subtotal,
+                state: "PENDING_PAYMENT",
+                trackingNumber: null,
+                trackingCarrier: null,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            };
+
+            batch.set(newOrderRef, orderData);
+
+            // Decrement stock for each item in the order
+            items.forEach(item => {
+                const listingRef = doc(firestore, 'listings', item.listingId);
+                const newQuantity = item.availableQuantity - item.quantity;
+                batch.update(listingRef, { 
+                    quantityAvailable: newQuantity,
+                    // If stock is depleted, mark as SOLD
+                    ...(newQuantity === 0 && { state: 'SOLD' })
+                });
+            });
+
+            await batch.commit();
+
+            toast({
+                title: "Order Placed!",
+                description: "Your order is now pending payment.",
+            });
+
+            clearCart();
+            router.push('/orders');
+
+        } catch (error: any) {
+            console.error("Checkout failed:", error);
+            toast({
+                variant: "destructive",
+                title: "Checkout Failed",
+                description: error.message || "An unexpected error occurred.",
+            });
+        } finally {
+            setIsCheckingOut(false);
+        }
+    };
 
     return (
         <AppLayout>
@@ -60,7 +150,14 @@ export default function CartPage() {
                     </CardContent>
                     {items.length > 0 && (
                         <CardFooter>
-                            <Button className="w-full" size="lg">Proceed to Checkout</Button>
+                            <Button 
+                                className="w-full" 
+                                size="lg" 
+                                onClick={handleCheckout} 
+                                disabled={isCheckingOut || !firstListing}
+                            >
+                                {isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}
+                            </Button>
                         </CardFooter>
                     )}
                 </Card>

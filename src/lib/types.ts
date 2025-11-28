@@ -66,22 +66,40 @@ export type Listing = {
   updatedAt: Timestamp;
 };
 
-export type OrderStatus = 'Pending Payment' | 'Payment Sent' | 'Shipped' | 'Delivered' | 'Completed' | 'Cancelled';
+export type OrderState = "PENDING_PAYMENT" | "PAYMENT_SENT" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "CANCELLED";
+
+export type ShippingAddress = {
+    name: string;
+    address1: string;
+    address2: string | null;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+}
 
 export type Order = {
   id: string;
-  listingId: string;
-  listingTitle: string;
-  listingImage: string;
-  buyerId: string;
-  sellerId: string;
-  quantity: number;
+  orderId: string;
+  buyerUid: string;
+  sellerUid: string;
+  storeId: string;
+  listingItems: { 
+      listingId: string;
+      title: string;
+      quantity: number;
+      pricePerUnit: number;
+      primaryImageUrl: string | null;
+  }[];
   totalPrice: number;
-  status: OrderStatus;
-  shippingAddress?: string;
-  trackingNumber?: string;
-  carrier?: string;
+  state: OrderState;
+  buyerShippingAddress: ShippingAddress | null;
+  paymentMethod: "PAYPAL" | "VENMO";
+  paymentIdentifier?: string;
+  trackingNumber: string | null;
+  trackingCarrier: string | null;
   createdAt: Timestamp;
+  updatedAt: Timestamp;
 };
 
 export type Chat = {

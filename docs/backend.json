@@ -296,75 +296,97 @@
       "type": "object",
       "description": "Represents an order within the HobbyDork VaultVerse application.",
       "properties": {
-        "id": {
+        "orderId": {
           "type": "string",
           "description": "Unique identifier for the order entity."
         },
-        "buyerId": {
+        "buyerUid": {
           "type": "string",
           "description": "Reference to the User who placed the order."
         },
-        "sellerId": {
+        "sellerUid": {
           "type": "string",
-          "description": "Reference to the User who owns the listing."
+          "description": "Reference to the User who owns the store."
         },
-        "listingId": {
+        "storeId": {
           "type": "string",
-          "description": "Reference to the Listing that was ordered."
+          "description": "Reference to the Store where order was placed."
         },
-        "listingTitle": {
-          "type": "string"
-        },
-        "listingImage": {
-          "type": "string"
-        },
-        "quantity": {
-          "type": "number"
+        "listingItems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "listingId": { "type": "string" },
+              "title": { "type": "string" },
+              "quantity": { "type": "number" },
+              "pricePerUnit": { "type": "number" },
+              "primaryImageUrl": { "type": "string" }
+            },
+            "required": ["listingId", "title", "quantity", "pricePerUnit"]
+          }
         },
         "totalPrice": {
           "type": "number"
         },
-        "createdAt": {
+        "state": {
           "type": "string",
-          "description": "The date and time the order was placed.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "Status of the order.",
           "enum": [
-            "Pending Payment",
-            "Payment Sent",
-            "Shipped",
-            "Delivered",
-            "Completed",
-            "Cancelled"
+            "PENDING_PAYMENT",
+            "PAYMENT_SENT",
+            "SHIPPED",
+            "DELIVERED",
+            "COMPLETED",
+            "CANCELLED"
           ]
         },
+        "buyerShippingAddress": {
+            "type": ["object", "null"],
+            "properties": {
+                "name": {"type": "string"},
+                "address1": {"type": "string"},
+                "address2": {"type": ["string", "null"]},
+                "city": {"type": "string"},
+                "state": {"type": "string"},
+                "zip": {"type": "string"},
+                "country": {"type": "string"}
+            },
+            "required": ["name", "address1", "city", "state", "zip", "country"]
+        },
+        "paymentMethod": {
+            "type": "string",
+            "enum": ["PAYPAL", "VENMO"]
+        },
+        "paymentIdentifier": {
+            "type": "string"
+        },
         "trackingNumber": {
-          "type": "string",
-          "description": "Tracking number for the order."
+          "type": ["string", "null"]
         },
-        "carrier": {
-          "type": "string",
-          "description": "Carrier information for the order."
+        "trackingCarrier": {
+          "type": ["string", "null"]
         },
-        "shippingAddress": {
+        "createdAt": {
           "type": "string",
-          "description": "Shipping address provided by the user."
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
         }
       },
       "required": [
-        "id",
-        "buyerId",
-        "sellerId",
-        "listingId",
+        "orderId",
+        "buyerUid",
+        "sellerUid",
+        "storeId",
+        "listingItems",
+        "totalPrice",
+        "state",
+        "buyerShippingAddress",
+        "paymentMethod",
         "createdAt",
-        "status",
-        "listingTitle",
-        "listingImage",
-        "quantity",
-        "totalPrice"
+        "updatedAt"
       ]
     },
     "Chat": {
