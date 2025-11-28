@@ -14,7 +14,7 @@ import type { Store, Listing } from '@/lib/types';
 
 
 export default function Dashboard() {
-  const { profile } = useAuth();
+  const { profile, loading: isProfileLoading } = useAuth();
   const { isVaultButtonVisible } = useVault();
   const [isVaultModalOpen, setIsVaultModalOpen] = useState(false);
   const firestore = useFirestore();
@@ -31,6 +31,10 @@ export default function Dashboard() {
 
   const { data: stores, isLoading: storesLoading } = useCollection<Store>(storesQuery);
   const { data: listings, isLoading: listingsLoading } = useCollection<Listing>(listingsQuery);
+
+  if (isProfileLoading) {
+    return <div className="flex items-center justify-center h-full">Loading Dashboard...</div>;
+  }
 
   return (
       <div className="space-y-8">
