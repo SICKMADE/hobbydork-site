@@ -20,6 +20,8 @@ export type Store = {
     paypal?: string;
     venmo?: string;
   };
+  rating: number;
+  itemsSold: number;
 };
 
 export type Condition = 'New' | 'Like New' | 'Used' | 'For Parts';

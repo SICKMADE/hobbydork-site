@@ -19,6 +19,8 @@ export const mockStores: Store[] = [
     about: 'Your one-stop shop for collectibles from across the galaxy. We specialize in rare trading cards and interstellar artifacts.',
     ownerId: 'user-1',
     paymentMethods: { paypal: 'paypal.me/galactic', venmo: '@galactic-treasures' },
+    rating: 4.9,
+    itemsSold: 132,
   },
   {
     id: 'store-2',
@@ -28,6 +30,8 @@ export const mockStores: Store[] = [
     about: 'Bringing back the 80s and 90s! Find vintage toys, games, and memorabilia that will take you on a trip down memory lane.',
     ownerId: 'user-2',
     paymentMethods: { paypal: 'paypal.me/retro' },
+    rating: 4.8,
+    itemsSold: 88,
   },
 ];
 
