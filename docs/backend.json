@@ -285,6 +285,7 @@
         "quantityAvailable",
         "state",
         "imageUrls",
+        "primaryImageUrl",
         "createdAt",
         "updatedAt"
       ]
@@ -399,6 +400,65 @@
         "text",
         "timestamp"
       ]
+    },
+    "ISO24": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ISO24 Post",
+      "type": "object",
+      "description": "Represents an 'In Search Of' post, visible for 24 hours.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ISO post."
+        },
+        "creatorUid": {
+          "type": "string",
+          "description": "The UID of the user who created the post."
+        },
+        "userName": {
+            "type": "string"
+        },
+        "userAvatar": {
+            "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the item being sought."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the item."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the item."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the post automatically expires."
+        },
+        "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "EXPIRED"]
+        }
+      },
+      "required": [
+        "id",
+        "creatorUid",
+        "userName",
+        "userAvatar",
+        "title",
+        "category",
+        "description",
+        "createdAt",
+        "expiresAt",
+        "status"
+      ]
     }
   },
   "auth": {
@@ -484,6 +544,22 @@
             {
               "name": "messageId",
               "description": "The unique identifier of the chat message."
+            }
+          ]
+        }
+      },
+       {
+        "path": "/iso24Posts/{isoId}",
+        "definition": {
+          "entityName": "ISO24",
+          "schema": {
+            "$ref": "#/entities/ISO24"
+          },
+          "description": "Stores 'In Search Of' posts, which expire after 24 hours.",
+          "params": [
+            {
+              "name": "isoId",
+              "description": "The unique identifier of the ISO post."
             }
           ]
         }

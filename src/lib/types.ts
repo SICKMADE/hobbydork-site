@@ -95,7 +95,7 @@ export type Chat = {
 
 export type ISO24 = {
     id: string;
-    userId: string;
+    creatorUid: string;
     userName: string;
     userAvatar: string;
     title: string;
@@ -103,4 +103,5 @@ export type ISO24 = {
     description: string;
     createdAt: Timestamp;
     expiresAt: Timestamp;
+    status: 'ACTIVE' | 'EXPIRED';
 }
