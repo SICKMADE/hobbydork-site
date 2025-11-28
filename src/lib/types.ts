@@ -13,14 +13,14 @@ export type User = {
 
 export type Store = {
   id: string;
-  name: string;
-  url: string;
-  logo: string;
-  about: string;
   userId: string;
-  paymentMethods: {
-    paypal?: string;
-    venmo?: string;
+  url: string;
+  name: string;
+  logo: string;
+  aboutMe: string;
+  paymentPreferences: {
+      paypal?: string;
+      venmo?: string;
   };
   rating: number;
   itemsSold: number;
@@ -30,6 +30,7 @@ export type Condition = 'New' | 'Like New' | 'Used';
 
 export type Listing = {
   id: string;
+  storefrontId: string;
   title: string;
   category: string;
   description: string;
@@ -38,7 +39,6 @@ export type Listing = {
   quantity: number;
   images: string[];
   tags: string[];
-  storeId: string;
   createdAt: Timestamp;
 };
 
@@ -68,3 +68,15 @@ export type Chat = {
     text: string;
     timestamp: Timestamp;
 };
+
+export type ISO24 = {
+    id: string;
+    userId: string;
+    userName: string;
+    userAvatar: string;
+    title: string;
+    category: string;
+    description: string;
+    createdAt: Timestamp;
+    expiresAt: Timestamp;
+}
