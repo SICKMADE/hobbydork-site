@@ -18,17 +18,17 @@ const loginSchema = z.object({
 });
 
 const signupSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+  displayName: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   acceptTerms: z.literal(true, {
     errorMap: () => ({ message: "You must accept the terms and conditions." }),
   }),
   isOver18: z.literal(true, {
-    errorMap: () => ({ message: "You must be 18 or older." }),
+    errorMap: () => ({ message: "You must confirm you are 18 or older." }),
   }),
   acknowledge: z.literal(true, {
-    errorMap: () => ({ message: "You must acknowledge these statements." }),
+    errorMap: () => ({ message: "You must acknowledge the platform rules." }),
   }),
 });
 
@@ -43,7 +43,7 @@ export default function AuthComponent() {
 
   const signupForm = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { name: '', email: '', password: '' },
+    defaultValues: { displayName: '', email: '', password: '' },
   });
 
   function onLogin(values: z.infer<typeof loginSchema>) {
@@ -51,7 +51,13 @@ export default function AuthComponent() {
   }
 
   function onSignup(values: z.infer<typeof signupSchema>) {
-    signup(values.name, values.email, values.password);
+    signup({
+      displayName: values.displayName,
+      email: values.email,
+      password: values.password,
+      oneAccountAcknowledged: values.acknowledge,
+      goodsAndServicesAgreed: values.acknowledge
+    });
   }
 
   return (
@@ -123,7 +129,7 @@ export default function AuthComponent() {
                   <form onSubmit={signupForm.handleSubmit(onSignup)} className="space-y-6">
                     <FormField
                       control={signupForm.control}
-                      name="name"
+                      name="displayName"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Name</FormLabel>
@@ -248,3 +254,5 @@ export default function AuthComponent() {
     </div>
   );
 }
+
+    

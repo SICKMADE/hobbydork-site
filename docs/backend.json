@@ -6,18 +6,18 @@
       "type": "object",
       "description": "Represents a user within the HobbyDork VaultVerse application.",
       "properties": {
-        "id": {
+        "uid": {
           "type": "string",
           "description": "Unique identifier for the user entity (matches Firebase Auth UID)."
-        },
-        "name": {
-            "type": "string",
-            "description": "The user's display name."
         },
         "email": {
           "type": "string",
           "description": "Email address of the user.",
           "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
         },
         "avatar": {
             "type": "string",
@@ -28,16 +28,57 @@
           "description": "Status of the user account (ACTIVE, LIMITED, SUSPENDED).",
           "enum": ["ACTIVE", "LIMITED", "SUSPENDED"]
         },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "role": {
+            "type": "string",
+            "enum": ["user", "admin"]
+        },
         "storeId": {
             "type": "string",
             "description": "The ID of the store owned by the user, if any."
+        },
+        "paymentMethod": {
+            "type": "string",
+            "enum": ["PAYPAL", "VENMO"]
+        },
+        "paymentIdentifier": {
+            "type": "string"
+        },
+        "emailVerified": {
+            "type": "boolean"
+        },
+        "oneAccountAcknowledged": {
+            "type": "boolean"
+        },
+        "goodsAndServicesAgreed": {
+            "type": "boolean"
+        },
+        "notificationPreferences": {
+            "type": "object",
+            "properties": {
+                "notifyMessages": {"type": "boolean"},
+                "notifyOrders": {"type": "boolean"},
+                "notifyISO24": {"type": "boolean"},
+                "notifySpotlight": {"type": "boolean"}
+            }
         }
       },
       "required": [
-        "id",
-        "name",
+        "uid",
         "email",
-        "status"
+        "displayName",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "role",
+        "emailVerified"
       ]
     },
     "Storefront": {
@@ -333,3 +374,5 @@
     ]
   }
 }
+
+    

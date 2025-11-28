@@ -39,7 +39,7 @@ export default function Dashboard() {
   return (
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold tracking-tight">Welcome, {profile?.name}!</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Welcome, {profile?.displayName}!</h1>
           {isVaultButtonVisible && (
             <Button
               variant="default"
@@ -102,3 +102,5 @@ export default function Dashboard() {
       </div>
   );
 }
+
+    

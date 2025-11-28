@@ -3,12 +3,26 @@ import { Timestamp } from "firebase/firestore";
 export type UserStatus = 'ACTIVE' | 'LIMITED' | 'SUSPENDED';
 
 export type User = {
-  id: string;
-  name: string;
+  uid: string;
   email: string;
-  avatar: string;
+  displayName: string;
+  avatar?: string;
   status: UserStatus;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  role: "user" | "admin";
   storeId?: string;
+  paymentMethod?: "PAYPAL" | "VENMO";
+  paymentIdentifier?: string;
+  emailVerified: boolean;
+  oneAccountAcknowledged?: boolean;
+  goodsAndServicesAgreed?: boolean;
+  notificationPreferences?: {
+    notifyMessages: boolean;
+    notifyOrders: boolean;
+    notifyISO24: boolean;
+    notifySpotlight: boolean;
+  };
 };
 
 export type Store = {
@@ -80,3 +94,5 @@ export type ISO24 = {
     createdAt: Timestamp;
     expiresAt: Timestamp;
 }
+
+    

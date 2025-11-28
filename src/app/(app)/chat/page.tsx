@@ -39,7 +39,7 @@ export default function ChatPage() {
 
         const messageData = {
             userId: user.uid,
-            userName: profile.name,
+            userName: profile.displayName,
             userAvatar: profile.avatar || `https://picsum.photos/seed/${user.uid}/100/100`,
             text: newMessage.trim(),
             timestamp: serverTimestamp()
@@ -111,3 +111,5 @@ export default function ChatPage() {
         </AppLayout>
     );
 }
+
+    

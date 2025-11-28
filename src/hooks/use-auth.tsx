@@ -9,17 +9,25 @@ import {
   signOut,
   sendEmailVerification
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+
+interface SignupData {
+  displayName: string;
+  email: string;
+  password: string;
+  oneAccountAcknowledged: boolean;
+  goodsAndServicesAgreed: boolean;
+}
 
 interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<boolean>;
+  signup: (data: SignupData) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -42,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check if the user is logged in, their email is verified, and their profile is currently 'LIMITED'
     if (user && user.emailVerified && profile?.status === 'LIMITED' && userProfileRef) {
       // Update the user's status to 'ACTIVE' in Firestore
-      setDoc(userProfileRef, { status: 'ACTIVE' }, { merge: true })
+      setDoc(userProfileRef, { status: 'ACTIVE', emailVerified: true, updatedAt: serverTimestamp() }, { merge: true })
         .then(() => {
           toast({
             title: 'Account Activated!',
@@ -85,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signOut(auth);
       router.push('/');
     } catch (error: any) {
-      console.error("Logout failed:", error);
+       console.error("Logout failed:", error);
        toast({
         title: 'Logout Failed',
         description: error.message || 'Could not log you out.',
@@ -94,7 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [auth, router, toast]);
 
-  const signup = useCallback(async (name: string, email: string, password: string): Promise<boolean> => {
+  const signup = useCallback(async (data: SignupData): Promise<boolean> => {
+    const { displayName, email, password, oneAccountAcknowledged, goodsAndServicesAgreed } = data;
     if (!firestore) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
@@ -104,21 +113,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const newUser = userCredential.user;
       
       const userProfile: UserProfile = {
-        id: newUser.uid,
-        name,
+        uid: newUser.uid,
         email: newUser.email!,
+        displayName,
         avatar: `https://picsum.photos/seed/${newUser.uid}/100/100`,
-        status: 'LIMITED', // New users start as limited
+        status: 'LIMITED',
+        createdAt: serverTimestamp() as Timestamp,
+        updatedAt: serverTimestamp() as Timestamp,
+        role: 'user',
+        emailVerified: newUser.emailVerified,
+        oneAccountAcknowledged,
+        goodsAndServicesAgreed,
+        notificationPreferences: {
+          notifyMessages: true,
+          notifyOrders: true,
+          notifyISO24: true,
+          notifySpotlight: true,
+        },
       };
 
       await setDoc(doc(firestore, "users", newUser.uid), userProfile);
       
-      // Send verification email
       await sendEmailVerification(newUser);
       
       toast({
         title: 'Signup Successful!',
-        description: `Welcome, ${name}! A verification email has been sent to your inbox.`,
+        description: `Welcome, ${displayName}! A verification email has been sent to your inbox.`,
       });
       return true;
     } catch (error: any) {
@@ -154,3 +174,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
