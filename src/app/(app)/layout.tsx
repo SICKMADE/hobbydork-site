@@ -40,5 +40,7 @@ export default function AppRoutesLayout({
     );
   }
   
-  return <AppLayout>{children}</AppLayout>;
+  // The main layout for authenticated, non-suspended users.
+  // The AppLayout and its children will handle role-specific UI like for 'LIMITED' users.
+  return <>{children}</>;
 }

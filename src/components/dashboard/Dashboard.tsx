@@ -8,7 +8,6 @@ import { useVault } from '@/lib/vault';
 import { VaultModal } from '../VaultModal';
 import { useState } from 'react';
 import { Flame } from 'lucide-react';
-import AppLayout from '../layout/AppLayout';
 import PlaceholderContent from '../PlaceholderContent';
 
 export default function Dashboard() {
@@ -17,7 +16,6 @@ export default function Dashboard() {
   const [isVaultModalOpen, setIsVaultModalOpen] = useState(false);
 
   return (
-    <AppLayout>
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold tracking-tight">Welcome, {user?.name}!</h1>
@@ -33,7 +31,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <section className="bg-slate-800 text-white -mx-8 px-8 py-8 rounded-lg shadow-inner">
+        <section className="bg-slate-800 text-white -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 py-8 rounded-lg shadow-inner">
           <h2 className="text-2xl font-semibold tracking-tight mb-4">Spotlight Stores</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {mockStores.map((store) => (
@@ -74,6 +72,5 @@ export default function Dashboard() {
 
         <VaultModal open={isVaultModalOpen} onOpenChange={setIsVaultModalOpen} />
       </div>
-    </AppLayout>
   );
 }

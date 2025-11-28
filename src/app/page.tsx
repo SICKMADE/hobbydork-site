@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/auth';
 import AuthComponent from '@/components/auth/AuthComponent';
 import Dashboard from '@/components/dashboard/Dashboard';
 import { Button } from '@/components/ui/button';
-import AppLayout from './(app)/layout';
+import AppLayout from '@/components/layout/AppLayout';
 
 export default function Home() {
   const { user, logout, loading } = useAuth();
@@ -32,6 +32,8 @@ export default function Home() {
   // All other authenticated users (ACTIVE, LIMITED) are shown the main app content.
   // The AppLayout and its children will handle role-specific UI.
   return (
+    <AppLayout>
       <Dashboard />
+    </AppLayout>
   );
 }
