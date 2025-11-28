@@ -28,7 +28,7 @@ import {
 import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
 import { Badge } from '../ui/badge';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 const menuItems = [
   { href: '/', label: 'Dashboard', icon: Home },
@@ -52,6 +52,12 @@ const favoritesMenuItems = [
 export default function SidebarNav() {
   const { logout, profile } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+  
+  const handleLogout = async () => {
+    await logout();
+    router.refresh();
+  }
 
   return (
     <>
@@ -160,7 +166,7 @@ export default function SidebarNav() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={logout} tooltip="Logout">
+            <SidebarMenuButton onClick={handleLogout} tooltip="Logout">
               <LogOut />
               <span>Logout</span>
             </SidebarMenuButton>

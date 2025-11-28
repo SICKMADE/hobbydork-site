@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useFirestore, useUser } from "@/firebase";
-import { collection, addDoc, doc, updateDoc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -77,15 +77,19 @@ export default function CreateStorePage() {
                 description: "Your storefront is now live.",
             });
             
+            // Re-fetch profile data or refresh page to update UI based on new storeId
             router.push(`/store/${newStoreRef.id}`);
+            router.refresh();
+
 
         } catch (error: any) {
             console.error("Error creating store:", error);
-            // More specific error for unique slug might require checking firestore rules errors
-            // or a pre-check, but this is a general catch-all.
+            // This is a basic error. A more robust solution would check for unique slugs on the backend.
             toast({
-                title: "Error creating store",
-                description: error.code === 'permission-denied' ? 'A store with this slug might already exist.' : (error.message || "An unexpected error occurred."),
+                title: "Error Creating Store",
+                description: error.code === 'permission-denied' 
+                    ? 'A store with this name or slug might already exist.' 
+                    : (error.message || "An unexpected error occurred."),
                 variant: "destructive"
             });
         }
@@ -162,7 +166,10 @@ export default function CreateStorePage() {
                                             <FormControl>
                                                 <div className="flex items-center">
                                                     <span className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-l-md border border-r-0">vaultverse.com/</span>
-                                                    <Input placeholder="collectors-corner" {...field} />
+                                                    <Input placeholder="collectors-corner" {...field} onChange={(e) => {
+                                                        const slug = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                                                        field.onChange(slug);
+                                                    }}/>
                                                 </div>
                                             </FormControl>
                                             <FormDescription>This will be your store's unique URL. Use lowercase letters, numbers, and hyphens only.</FormDescription>
