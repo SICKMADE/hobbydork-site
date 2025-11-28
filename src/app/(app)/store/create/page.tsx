@@ -1,7 +1,29 @@
-import AppLayout from "@/components/layout/AppLayout";
+'use client';
+import { useAuth } from "@/lib/auth";
 import PlaceholderContent from "@/components/PlaceholderContent";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Terminal } from "lucide-react";
+import AppLayout from "@/components/layout/AppLayout";
 
 export default function CreateStorePage() {
+    const { user } = useAuth();
+
+    if (user?.status === 'LIMITED') {
+        return (
+            <AppLayout>
+                <div className="flex items-center justify-center h-full">
+                    <Alert variant="destructive" className="max-w-lg">
+                      <Terminal className="h-4 w-4" />
+                      <AlertTitle>Limited Access</AlertTitle>
+                      <AlertDescription>
+                        Your account has limited access. You cannot create a new store. Please verify your account to get full access.
+                      </AlertDescription>
+                    </Alert>
+                </div>
+            </AppLayout>
+        );
+    }
+
     return (
         <AppLayout>
             <PlaceholderContent 
