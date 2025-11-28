@@ -24,6 +24,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function AdminUsersPage() {
   const firestore = useFirestore();
@@ -36,23 +38,26 @@ export default function AdminUsersPage() {
 
   const { data: users, isLoading } = useCollection<User>(usersQuery);
 
-  const handleRoleChange = async (userId: string, newRole: 'user' | 'admin') => {
+  const handleRoleChange = (userId: string, newRole: 'user' | 'admin') => {
     if (!firestore) return;
-    try {
-        const userRef = doc(firestore, 'users', userId);
-        await updateDoc(userRef, { role: newRole });
-        toast({
-            title: "Role Updated",
-            description: `User role has been successfully changed to ${newRole}.`,
-        });
-    } catch (error: any) {
-        console.error("Error updating user role:", error);
-        toast({
-            variant: "destructive",
-            title: "Error Updating Role",
-            description: error.message || "An unexpected error occurred.",
-        });
-    }
+    const userRef = doc(firestore, 'users', userId);
+    const updatedData = { role: newRole };
+    
+    updateDoc(userRef, updatedData)
+      .then(() => {
+          toast({
+              title: "Role Updated",
+              description: `User role has been successfully changed to ${newRole}.`,
+          });
+      })
+      .catch((error) => {
+          const contextualError = new FirestorePermissionError({
+            path: userRef.path,
+            operation: 'update',
+            requestResourceData: updatedData,
+          });
+          errorEmitter.emit('permission-error', contextualError);
+      });
   };
 
   const getStatusVariant = (status: User['status']): 'default' | 'secondary' | 'destructive' => {
