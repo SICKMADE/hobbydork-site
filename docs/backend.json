@@ -373,6 +373,10 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "reviewId": {
+            "type": "string",
+            "description": "ID of the review associated with this order."
         }
       },
       "required": [
@@ -386,6 +390,25 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "Review": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Review",
+        "type": "object",
+        "description": "Represents a review for a completed order.",
+        "properties": {
+            "id": { "type": "string", "description": "Unique ID, same as orderId"},
+            "orderId": { "type": "string" },
+            "storeId": { "type": "string" },
+            "sellerUid": { "type": "string" },
+            "buyerUid": { "type": "string" },
+            "buyerName": { "type": "string" },
+            "buyerAvatar": { "type": "string" },
+            "rating": { "type": "number", "minimum": 1, "maximum": 5 },
+            "comment": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "orderId", "storeId", "sellerUid", "buyerUid", "buyerName", "rating", "comment", "createdAt"]
     },
     "Chat": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -550,6 +573,18 @@
         }
       },
       {
+        "path": "/storefronts/{storefrontId}/reviews/{reviewId}",
+        "definition": {
+            "entityName": "Review",
+            "schema": { "$ref": "#/entities/Review" },
+            "description": "Stores reviews for a specific store. Publicly readable.",
+            "params": [
+                { "name": "storefrontId", "description": "The ID of the store." },
+                { "name": "reviewId", "description": "The ID of the review (same as orderId)." }
+            ]
+        }
+      },
+      {
         "path": "/listings/{listingId}",
         "definition": {
           "entityName": "Listing",
@@ -616,5 +651,3 @@
     ]
   }
 }
-
-    

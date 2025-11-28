@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { format } from 'date-fns';
+import { useState } from "react";
+import ReviewDialog from "@/components/ReviewDialog";
 
 const getOrderStatusVariant = (status: Order['state']) => {
     switch (status) {
@@ -26,6 +28,7 @@ const getOrderStatusVariant = (status: Order['state']) => {
 export default function OrdersPage() {
     const { profile } = useAuth();
     const firestore = useFirestore();
+    const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
 
     const ordersQuery = useMemoFirebase(() => {
         if (!firestore || !profile) return null;
@@ -89,12 +92,30 @@ export default function OrdersPage() {
                             </div>
                         </CardContent>
                         <CardFooter className="flex justify-between items-center bg-muted/50 p-4">
-                            <span className="font-semibold">Total: ${order.totalPrice.toFixed(2)}</span>
-                            <Button variant="outline">View Order Details</Button>
+                             <div>
+                                {order.state === 'COMPLETED' && !order.reviewId && (
+                                     <Button variant="default" onClick={() => setReviewOrder(order)}>Leave a Review</Button>
+                                )}
+                                 {order.state === 'COMPLETED' && order.reviewId && (
+                                    <p className="text-sm text-green-600 font-semibold">Review Submitted</p>
+                                 )}
+                             </div>
+                             <span className="font-semibold">Total: ${order.totalPrice.toFixed(2)}</span>
                         </CardFooter>
                     </Card>
                 ))}
              </div>
+             {reviewOrder && (
+                <ReviewDialog 
+                    order={reviewOrder}
+                    open={!!reviewOrder}
+                    onOpenChange={(isOpen) => {
+                        if (!isOpen) {
+                            setReviewOrder(null);
+                        }
+                    }}
+                />
+             )}
         </AppLayout>
     );
 }

@@ -27,6 +27,11 @@ service cloud.firestore {
         return isSignedIn() && (request.auth.uid == order.buyerUid || request.auth.uid == order.sellerUid);
     }
     
+    function isOrderBuyer(orderId) {
+        let order = get(/databases/$(database)/documents/orders/$(orderId)).data;
+        return order != null && isUser(order.buyerUid);
+    }
+    
     // --- Data Validation Helpers ---
     
     function isValidUserWrite(data) {
@@ -64,6 +69,18 @@ service cloud.firestore {
       allow create: if isUser(request.resource.data.ownerUid) && isValidStoreWrite(request.resource.data);
       allow update: if isUser(resource.data.ownerUid) && isValidStoreWrite(request.resource.data);
       allow delete: if false;
+      
+      // Reviews subcollection
+      match /reviews/{reviewId} {
+          allow get, list: if true;
+          // reviewId must be the orderId
+          // Only the buyer of the order can create a review
+          // A review for the order must not already exist
+          allow create: if reviewId == request.resource.data.orderId
+                        && isOrderBuyer(reviewId)
+                        && !existsAfter(/databases/$(database)/documents/storefronts/$(storefrontId)/reviews/$(reviewId));
+          allow update, delete: if false; // Reviews are immutable in v1
+      }
     }
     
     match /listings/{listingId} {

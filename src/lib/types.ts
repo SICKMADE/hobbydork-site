@@ -101,6 +101,7 @@ export type Order = {
   trackingCarrier: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  reviewId?: string; // ID of the review associated with this order
 };
 
 export type Chat = {
@@ -136,5 +137,18 @@ export type Notification = {
     relatedId: string; // e.g., orderId, conversationId
     createdAt: Timestamp;
     read: boolean;
+}
+
+export type Review = {
+    id: string; // Should be the same as orderId
+    orderId: string;
+    storeId: string;
+    sellerUid: string;
+    buyerUid: string;
+    buyerName: string;
+    buyerAvatar: string;
+    rating: number; // 1-5
+    comment: string;
+    createdAt: Timestamp;
 }
     
