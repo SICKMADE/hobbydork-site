@@ -9,6 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Logo from '../Logo';
+import { useToast } from '@/hooks/use-toast';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -21,6 +22,8 @@ const signupSchema = z.object({
 
 export default function AuthComponent() {
   const { login, signup } = useAuth();
+  const { toast } = useToast();
+
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -130,7 +133,7 @@ export default function AuthComponent() {
           </TabsContent>
         </Tabs>
          <p className="px-8 mt-4 text-center text-sm text-muted-foreground">
-            Hint: Try logging in with <code className="bg-muted p-1 rounded">active@test.com</code> or <code className="bg-muted p-1 rounded">limited@test.com</code>.
+            Hint: Try logging in with <code className="bg-muted p-1 rounded">active@test.com</code>, <code className="bg-muted p-1 rounded">limited@test.com</code>, or <code className="bg-muted p-1 rounded">suspended@test.com</code>.
           </p>
       </div>
     </div>

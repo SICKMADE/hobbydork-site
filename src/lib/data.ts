@@ -1,6 +1,10 @@
 import type { User, Store, Listing, Order } from './types';
 
-export const mockUsers: User[] = [
+// Note: This is a mock database. In a real application, this data would be stored
+// in a database like Firestore and fetched via API calls. Changes made during
+// runtime (like new user signups) will only persist for the current session.
+
+export let mockUsers: User[] = [
   { id: 'user-1', name: 'Active Andy', email: 'active@test.com', avatar: 'https://picsum.photos/seed/user1/100/100', status: 'ACTIVE', storeId: 'store-1' },
   { id: 'user-2', name: 'Limited Lisa', email: 'limited@test.com', avatar: 'https://picsum.photos/seed/user2/100/100', status: 'LIMITED', storeId: 'store-2' },
   { id: 'user-3', name: 'Suspended Sam', email: 'suspended@test.com', avatar: 'https://picsum.photos/seed/user3/100/100', status: 'SUSPENDED' },

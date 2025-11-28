@@ -7,6 +7,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   login: (email: string) => boolean;
   logout: () => void;
   signup: (name: string, email: string) => boolean;
@@ -21,6 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
+      setLoading(true);
       const storedUser = localStorage.getItem('vaultverse-user');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
@@ -34,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback((email: string): boolean => {
-    const foundUser = mockUsers.find((u) => u.email === email);
+    const foundUser = mockUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
     if (foundUser) {
       setUser(foundUser);
       localStorage.setItem('vaultverse-user', JSON.stringify(foundUser));
@@ -46,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     toast({
       title: 'Login Failed',
-      description: 'Invalid email or password.',
+      description: 'No user found with that email.',
       variant: 'destructive',
     });
     return false;
@@ -55,14 +57,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('vaultverse-user');
-    toast({
-      title: 'Logged Out',
-      description: 'You have been successfully logged out.',
-    });
-  }, [toast]);
+    // a full page reload to ensure all state is cleared.
+    window.location.href = '/';
+  }, []);
 
   const signup = useCallback((name: string, email: string): boolean => {
-    if (mockUsers.some((u) => u.email === email)) {
+    if (mockUsers.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
       toast({
         title: 'Signup Failed',
         description: 'An account with this email already exists.',
@@ -77,21 +77,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       avatar: `https://picsum.photos/seed/${Date.now()}/100/100`,
       status: 'LIMITED', // New users start as limited
     };
-    mockUsers.push(newUser); // In a real app, this would be an API call
+    // In a real app, this would be an API call. For now, we just add to the mock array.
+    mockUsers.push(newUser); 
     setUser(newUser);
     localStorage.setItem('vaultverse-user', JSON.stringify(newUser));
     toast({
       title: 'Signup Successful!',
-      description: `Welcome, ${name}! Your account is created with limited access.`,
+      description: `Welcome, ${name}! Your account has been created.`,
     });
     return true;
   }, [toast]);
 
-  const value = { user, login, logout, signup };
+  const value = { user, loading, login, logout, signup };
 
   return (
     <AuthContext.Provider value={value}>
-      {loading ? <div className="flex items-center justify-center h-screen">Loading...</div> : children}
+      {children}
     </AuthContext.Provider>
   );
 }
