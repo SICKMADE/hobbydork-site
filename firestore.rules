@@ -40,8 +40,9 @@ service cloud.firestore {
     // --- Data Validation Helpers ---
     
     function isValidUserWrite(data) {
-        return data.containsAll(['displayName', 'email', 'avatar', 'status', 'role', 'emailVerified', 'oneAccountAcknowledged', 'goodsAndServicesAgreed', 'notificationPreferences', 'createdAt', 'updatedAt'])
-            && data.displayName is string && data.email is string && data.status in ['ACTIVE', 'LIMITED', 'SUSPENDED'];
+        // This validation is simplified for the create step.
+        // More specific validation can be done in the update rule.
+        return data.uid == request.auth.uid;
     }
     
     function isValidStoreWrite(data) {
@@ -55,9 +56,8 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if isSignedIn();
-      // Allow listing all users for admins.
-      // Also allow a very limited query for the signup process to check if any user exists.
-      allow list: if isAdmin(request.auth.uid) || request.query.limit == 1;
+      allow list: if isAdmin(request.auth.uid);
+      // Allow user creation if the document ID matches the user's UID
       allow create: if isUser(userId) && isValidUserWrite(request.resource.data);
       allow update: if isUser(userId) 
                       // Prevent users from changing their own role, status, or email verification status

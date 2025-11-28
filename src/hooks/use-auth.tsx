@@ -111,17 +111,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
     }
+    
+    // We create the user in auth first, which signs them in.
+    // The security rules can then use their auth.uid to secure the profile creation.
     try {
-      // Check if any user exists to determine if this is the first signup
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const newUser = userCredential.user;
+
+      // Now that the user is created and signed in, we can check if they are the first user.
       const usersCollectionRef = collection(firestore, "users");
       const q = query(usersCollectionRef, limit(1));
       const querySnapshot = await getDocs(q);
-      const isFirstUser = querySnapshot.empty;
+      const isFirstUser = querySnapshot.docs.length === 0 || (querySnapshot.docs.length === 1 && querySnapshot.docs[0].id === newUser.uid);
       
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const newUser = userCredential.user;
-      
-      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
+      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid'> & { createdAt: any, updatedAt: any, uid: string } = {
         uid: newUser.uid,
         email: newUser.email!,
         displayName,
