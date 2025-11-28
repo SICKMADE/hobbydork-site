@@ -10,7 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useFirestore } from "@/firebase";
-import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,6 +19,7 @@ import PlaceholderContent from "@/components/PlaceholderContent";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 import type { Condition } from "@/lib/types";
+import { placeholderImages } from "@/lib/placeholder-images";
 
 const listingSchema = z.object({
     title: z.string().min(5, "Title must be at least 5 characters."),
@@ -84,12 +85,14 @@ export default function CreateListingPage() {
         }
 
         try {
-            const batch = writeBatch(firestore);
-            const newListingRef = doc(collection(firestore, "listings"));
+            const listingsCollection = collection(firestore, "listings");
+            const newListingRef = doc(listingsCollection);
             
-            const imageUrls = values.images.map(img => img.value);
+            const imageUrls = values.images.map(img => img.value).filter(url => url);
+            const primaryImageUrl = imageUrls[0] || placeholderImages['listing-image-1']?.imageUrl;
 
-            batch.set(newListingRef, {
+
+            await setDoc(newListingRef, {
                 listingId: newListingRef.id,
                 storeId: profile.storeId,
                 ownerUid: user.uid,
@@ -102,13 +105,11 @@ export default function CreateListingPage() {
                 quantityAvailable: values.quantity,
                 state: "ACTIVE", // Default to ACTIVE as per new spec
                 tags: values.tags ? values.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
-                imageUrls: imageUrls,
-                primaryImageUrl: imageUrls[0] || null,
+                imageUrls: imageUrls.length > 0 ? imageUrls : [primaryImageUrl],
+                primaryImageUrl: primaryImageUrl,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             });
-
-            await batch.commit();
 
             toast({
                 title: "Listing Created!",
@@ -283,7 +284,7 @@ export default function CreateListingPage() {
                                                 <FormItem>
                                                     <div className="flex items-center gap-2">
                                                         <FormControl>
-                                                            <Input placeholder="https://picsum.photos/seed/1/400/400" {...field} />
+                                                            <Input placeholder="https://..." {...field} />
                                                         </FormControl>
                                                         {fields.length > 1 && (
                                                             <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>

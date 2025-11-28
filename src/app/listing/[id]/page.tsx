@@ -13,6 +13,7 @@ import { doc } from 'firebase/firestore';
 import type { Listing, Store } from '@/lib/types';
 import Link from 'next/link';
 import { useCart } from '@/hooks/use-cart';
+import { placeholderImages } from '@/lib/placeholder-images';
 
 
 export default function ListingDetailPage({ params }: { params: { id: string } }) {
@@ -56,12 +57,12 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
         <div>
           <Carousel className="w-full">
             <CarouselContent>
-              {listing.imageUrls.map((img, index) => (
+              {(listing.imageUrls.length > 0 ? listing.imageUrls : [listing.primaryImageUrl]).map((img, index) => (
                 <CarouselItem key={index}>
                   <Card className="overflow-hidden">
                     <div className="aspect-square relative">
                       <Image
-                        src={img}
+                        src={img || placeholderImages['listing-image-1']?.imageUrl}
                         alt={`${listing.title} image ${index + 1}`}
                         fill
                         className="object-cover"

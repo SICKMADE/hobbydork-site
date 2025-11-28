@@ -1,4 +1,3 @@
-
 'use client';
 import { useAuth } from "@/hooks/use-auth";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -16,6 +15,7 @@ import { useFirestore, useUser } from "@/firebase";
 import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { placeholderImages } from "@/lib/placeholder-images";
 
 const storeSchema = z.object({
     storeName: z.string().min(3, "Store name must be at least 3 characters."),
@@ -56,12 +56,12 @@ export default function CreateStorePage() {
                 storeName: values.storeName,
                 slug: values.slug,
                 about: values.about,
-                avatarUrl: `https://picsum.photos/seed/${values.slug}/200/200`,
+                avatarUrl: placeholderImages['store-logo-1']?.imageUrl || `https://picsum.photos/seed/${values.slug}/200/200`,
                 ratingAverage: 0,
                 ratingCount: 0,
                 itemsSold: 0,
                 status: "ACTIVE",
-                isSpotlighted: true, // Default to true for demo purposes
+                isSpotlighted: false, 
                 spotlightUntil: null,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
@@ -77,14 +77,12 @@ export default function CreateStorePage() {
                 description: "Your storefront is now live.",
             });
             
-            // Re-fetch profile data or refresh page to update UI based on new storeId
             router.push(`/store/${newStoreRef.id}`);
             router.refresh();
 
 
         } catch (error: any) {
             console.error("Error creating store:", error);
-            // This is a basic error. A more robust solution would check for unique slugs on the backend.
             toast({
                 title: "Error Creating Store",
                 description: error.code === 'permission-denied' 

@@ -12,6 +12,7 @@ import Image from "next/image";
 import { format } from 'date-fns';
 import { useState } from "react";
 import ReviewDialog from "@/components/ReviewDialog";
+import { placeholderImages } from "@/lib/placeholder-images";
 
 const getOrderStatusVariant = (status: Order['state']) => {
     switch (status) {
@@ -76,7 +77,7 @@ export default function OrdersPage() {
                                 {order.listingItems.map(item => (
                                      <div key={item.listingId} className="flex items-center gap-4">
                                         <Image 
-                                            src={item.primaryImageUrl || 'https://picsum.photos/seed/placeholder/100/100'} 
+                                            src={item.primaryImageUrl || placeholderImages['listing-image-1']?.imageUrl} 
                                             alt={item.title}
                                             width={60}
                                             height={60}

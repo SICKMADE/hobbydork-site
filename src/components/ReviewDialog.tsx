@@ -10,9 +10,10 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import type { Order, Store, Review } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useAuth } from '@/firebase';
+import { useFirestore, useAuth, useMemoFirebase } from '@/firebase';
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { Star } from 'lucide-react';
+import { placeholderImages } from '@/lib/placeholder-images';
 
 const reviewSchema = z.object({
     rating: z.number().min(1, 'Rating is required.').max(5),
@@ -67,16 +68,16 @@ export default function ReviewDialog({ order, open, onOpenChange }: ReviewDialog
                 const newRatingAverage = ((storeData.ratingAverage * storeData.ratingCount) + values.rating) / newRatingCount;
 
                 // 1. Create the review
-                const newReview: Omit<Review, 'id'> = {
+                const newReview: Omit<Review, 'id'| 'createdAt'> & {createdAt: any} = {
                     orderId: order.id,
                     storeId: order.storeId,
                     sellerUid: order.sellerUid,
                     buyerUid: profile.uid,
                     buyerName: profile.displayName,
-                    buyerAvatar: profile.avatar || '',
+                    buyerAvatar: profile.avatar || placeholderImages['user-avatar-1']?.imageUrl,
                     rating: values.rating,
                     comment: values.comment,
-                    createdAt: serverTimestamp() as any,
+                    createdAt: serverTimestamp(),
                 };
                 transaction.set(reviewRef, newReview);
 

@@ -18,6 +18,7 @@ import type { ISO24 } from "@/lib/types";
 import ISO24Card from "@/components/ISO24Card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
+import { placeholderImages } from "@/lib/placeholder-images";
 
 const isoSchema = z.object({
     title: z.string().min(5, "Title must be at least 5 characters."),
@@ -88,11 +89,14 @@ export default function ISO24Page() {
         try {
             const now = serverTimestamp();
             const expires = Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000);
+            const docRef = collection(firestore, "iso24Posts");
+            const newPostId = doc(docRef).id;
 
-            await addDoc(collection(firestore, "iso24Posts"), {
+            await setDoc(doc(docRef, newPostId), {
+                id: newPostId,
                 creatorUid: user.uid,
                 userName: profile.displayName,
-                userAvatar: profile.avatar,
+                userAvatar: profile.avatar || placeholderImages['user-avatar-1']?.imageUrl,
                 title: values.title,
                 category: values.category,
                 description: values.description,

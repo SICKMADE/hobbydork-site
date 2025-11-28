@@ -15,6 +15,7 @@ import type { Listing, Order } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { placeholderImages } from "@/lib/placeholder-images";
 
 export default function CartPage() {
     const { items, removeFromCart, subtotal, storeId, clearCart } = useCart();
@@ -47,7 +48,7 @@ export default function CartPage() {
             const batch = writeBatch(firestore);
             const newOrderRef = doc(collection(firestore, "orders"));
 
-            const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'buyerShippingAddress' | 'paymentMethod'> & { createdAt: any, updatedAt: any } = {
+            const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'buyerShippingAddress' | 'paymentMethod' | 'paymentIdentifier' | 'reviewId'> & { createdAt: any, updatedAt: any } = {
                 orderId: newOrderRef.id,
                 buyerUid: profile.uid,
                 sellerUid: firstListing.ownerUid,
@@ -122,7 +123,7 @@ export default function CartPage() {
                                 {items.map(item => (
                                     <div key={item.listingId} className="flex items-center gap-4">
                                         <Image 
-                                            src={item.primaryImageUrl || 'https://picsum.photos/seed/placeholder/100/100'} 
+                                            src={item.primaryImageUrl || placeholderImages['listing-image-1']?.imageUrl} 
                                             alt={item.title}
                                             width={80}
                                             height={80}
