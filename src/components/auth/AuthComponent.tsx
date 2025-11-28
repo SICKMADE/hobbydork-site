@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Logo from '../Logo';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '../ui/checkbox';
+import Link from 'next/link';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -18,6 +20,15 @@ const loginSchema = z.object({
 const signupSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
+  acceptTerms: z.literal(true, {
+    errorMap: () => ({ message: "You must accept the terms and conditions." }),
+  }),
+  isOver18: z.literal(true, {
+    errorMap: () => ({ message: "You must be 18 or older." }),
+  }),
+  acknowledge: z.literal(true, {
+    errorMap: () => ({ message: "You must acknowledge these statements." }),
+  }),
 });
 
 export default function AuthComponent() {
@@ -96,7 +107,7 @@ export default function AuthComponent() {
               </div>
               <div className="p-6 pt-0">
                 <Form {...signupForm}>
-                  <form onSubmit={signupForm.handleSubmit(onSignup)} className="space-y-4">
+                  <form onSubmit={signupForm.handleSubmit(onSignup)} className="space-y-6">
                     <FormField
                       control={signupForm.control}
                       name="name"
@@ -123,6 +134,78 @@ export default function AuthComponent() {
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={signupForm.control}
+                      name="acceptTerms"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>
+                              I accept the{' '}
+                              <Link href="/#" className="text-primary hover:underline">
+                                Terms of Service
+                              </Link>{' '}
+                              and{' '}
+                              <Link href="/#" className="text-primary hover:underline">
+                                Privacy Policy
+                              </Link>
+                              .
+                            </FormLabel>
+                             <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                    
+                     <FormField
+                      control={signupForm.control}
+                      name="isOver18"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>
+                              I confirm that I am 18 years of age or older.
+                            </FormLabel>
+                             <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={signupForm.control}
+                      name="acknowledge"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                           <div className="space-y-1 leading-none">
+                            <FormLabel>
+                              I understand that only one account is permitted per person and that I must use "Goods & Services" for all P2P payments for my own protection.
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                    
                     <Button type="submit" className="w-full">
                       Create Account
                     </Button>
