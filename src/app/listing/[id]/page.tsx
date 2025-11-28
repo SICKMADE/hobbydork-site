@@ -11,6 +11,7 @@ import { Star, MessageSquare, Heart, ShoppingCart, Bolt } from 'lucide-react';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Listing, Store } from '@/lib/types';
+import Link from 'next/link';
 
 
 export default function ListingDetailPage({ params }: { params: { id: string } }) {
@@ -24,9 +25,9 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
   const { data: listing, isLoading: isListingLoading } = useDoc<Listing>(listingRef);
 
   const storeRef = useMemoFirebase(() => {
-    if (!firestore || !listing?.storeId) return null;
-    return doc(firestore, 'storefronts', listing.storeId);
-  }, [firestore, listing?.storeId]);
+    if (!firestore || !listing?.storefrontId) return null;
+    return doc(firestore, 'storefronts', listing.storefrontId);
+  }, [firestore, listing?.storefrontId]);
 
   const { data: store, isLoading: isStoreLoading } = useDoc<Store>(storeRef);
 
@@ -101,20 +102,22 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
            {store && (
             <Card>
               <CardHeader className="flex flex-row items-center gap-4">
-                <Image
-                  src={store.logo}
-                  alt={`${store.name} logo`}
-                  width={48}
-                  height={48}
-                  className="rounded-full"
-                  data-ai-hint="store logo"
-                />
+                {store.avatarUrl && (
+                    <Image
+                      src={store.avatarUrl}
+                      alt={`${store.storeName} logo`}
+                      width={48}
+                      height={48}
+                      className="rounded-full"
+                      data-ai-hint="store logo"
+                    />
+                )}
                 <div>
-                  <p className="font-semibold">{store.name}</p>
+                  <p className="font-semibold">{store.storeName}</p>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                      <span>{store.rating}</span>
+                      <span>{store.ratingAverage.toFixed(1)}</span>
                     </div>
                     <span>&middot;</span>
                     <span>{store.itemsSold} items sold</span>
@@ -122,7 +125,9 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
                 </div>
               </CardHeader>
                <CardContent>
-                  <Button variant="outline" className="w-full">View Store</Button>
+                 <Link href={`/store/${store.storeId}`} passHref>
+                    <Button variant="outline" className="w-full">View Store</Button>
+                  </Link>
                </CardContent>
             </Card>
           )}
