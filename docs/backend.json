@@ -1,0 +1,299 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user within the HobbyDork VaultVerse application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the user account (ACTIVE, LIMITED, SUSPENDED).",
+          "format": "string"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "status"
+      ]
+    },
+    "Storefront": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Storefront",
+      "type": "object",
+      "description": "Represents a user's storefront within the HobbyDork VaultVerse application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the storefront entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns the storefront. (Relationship: User 1:N Storefront)"
+        },
+        "url": {
+          "type": "string",
+          "description": "Unique URL for the storefront."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the storefront."
+        },
+        "logo": {
+          "type": "string",
+          "description": "URL or storage path to the storefront's logo.",
+          "format": "uri"
+        },
+        "aboutMe": {
+          "type": "string",
+          "description": "'About Me' section for the storefront."
+        },
+        "paymentPreferences": {
+          "type": "string",
+          "description": "Payment preferences (PayPal or Venmo)."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "url",
+        "name",
+        "paymentPreferences"
+      ]
+    },
+    "Listing": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Listing",
+      "type": "object",
+      "description": "Represents a collectible listing within the HobbyDork VaultVerse application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the listing entity."
+        },
+        "storefrontId": {
+          "type": "string",
+          "description": "Reference to the Storefront the listing belongs to. (Relationship: Storefront 1:N Listing)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the listing."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the collectible."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the collectible."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the collectible."
+        },
+        "condition": {
+          "type": "string",
+          "description": "Condition of the collectible."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity of the collectible available."
+        },
+        "images": {
+          "type": "array",
+          "description": "URLs or storage paths to the images of the collectible.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tagIds": {
+          "type": "array",
+          "description": "References to Tags associated with the listing. (Relationship: Listing N:N Tag)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "storefrontId",
+        "title",
+        "category",
+        "description",
+        "price",
+        "condition",
+        "quantity",
+        "images"
+      ]
+    },
+    "Order": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Order",
+      "type": "object",
+      "description": "Represents an order within the HobbyDork VaultVerse application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the order entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who placed the order. (Relationship: User 1:N Order)"
+        },
+        "listingId": {
+          "type": "string",
+          "description": "Reference to the Listing that was ordered. (Relationship: Listing 1:N Order)"
+        },
+        "orderDate": {
+          "type": "string",
+          "description": "The date and time the order was placed.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the order (Pending Payment, Payment Sent, Shipped, Delivered, Completed, Cancelled)."
+        },
+        "trackingNumber": {
+          "type": "string",
+          "description": "Tracking number for the order."
+        },
+        "carrierInfo": {
+          "type": "string",
+          "description": "Carrier information for the order."
+        },
+        "shippingAddress": {
+          "type": "string",
+          "description": "Shipping address provided by the user."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "listingId",
+        "orderDate",
+        "status"
+      ]
+    },
+    "Tag": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Tag",
+      "type": "object",
+      "description": "Represents a tag that can be associated with listings.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the tag entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the tag."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile data. Accessible only by the user themselves. Used for profile information, email, and status.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/storefronts/{storefrontId}",
+        "definition": {
+          "entityName": "Storefront",
+          "schema": {
+            "$ref": "#/backend/entities/Storefront"
+          },
+          "description": "Stores storefront data. Includes denormalized 'userId' for authorization independence. Allows any user to view any storefront, but only the storefront owner can edit it.",
+          "params": [
+            {
+              "name": "storefrontId",
+              "description": "The unique identifier of the storefront."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/listings/{listingId}",
+        "definition": {
+          "entityName": "Listing",
+          "schema": {
+            "$ref": "#/backend/entities/Listing"
+          },
+          "description": "Stores listing data. Includes denormalized 'storefrontId' for authorization independence. Allows anyone to view, only owner can edit.",
+          "params": [
+            {
+              "name": "listingId",
+              "description": "The unique identifier of the listing."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
+          "description": "Stores order data. Allows any user to view order details, but only admins can create or modify orders.",
+          "params": [
+            {
+              "name": "orderId",
+              "description": "The unique identifier of the order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tags/{tagId}",
+        "definition": {
+          "entityName": "Tag",
+          "schema": {
+            "$ref": "#/backend/entities/Tag"
+          },
+          "description": "Stores tag data. Publicly accessible and modifiable by admins.",
+          "params": [
+            {
+              "name": "tagId",
+              "description": "The unique identifier of the tag."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "This Firestore data structure is designed to support the HobbyDork VaultVerse application, focusing on security, scalability, and maintainability. It leverages denormalization to ensure authorization independence, enabling robust security rules and atomic operations. The structure adheres to the principles of clarity of intent and 'Rules are not Filters'.\n\n**Authorization Independence (Denormalization):**\nTo avoid hierarchical authorization dependencies, key authorization data is denormalized across collections. Specifically, the `userId` is copied into the `/storefronts` documents, and `storefrontId` is copied into `listings`. This allows direct access to authorization information without needing `get()` calls in security rules.\n\n**Structural Segregation (Homogeneous Security Posture):**\nThe structure segregates data with different access needs into separate collections. User data is stored under `/users/{userId}`, storefronts are in a top-level `/storefronts` collection, and listings under `/listings`. This simplifies security rules by ensuring all documents within a collection share the same security requirements.\n\n**Access Modeling:**\n*   **Private User Data:** User profiles are stored under `/users/{userId}`, enforcing path-based ownership. Only the authenticated user can read/write their profile.\n*   **User-Owned Storefronts:** Storefronts are stored in the `/storefronts` collection with a `userId` field, enabling querying of storefronts owned by a specific user, while also allowing global listing and discovery.\n*   **User-Owned Listings:** Listings are stored in the `/listings` collection with a `storefrontId` field, enabling querying of listings owned by a specific storefront. User can only modify listings within their storefront.\n*   **Tags:** Tags are stored in a flat `/tags` collection. This simplifies tag management and querying.\n*   **Orders:** Orders are stored in a flat `/orders` collection. All orders can be viewed and processed by admins. Users can only view their own orders.\n\n**QAPs (Rules are not Filters):**\nThe data structure supports secure list operations by avoiding the need to filter based on document content in security rules. Authorization is enforced through the data structure itself and denormalized authorization fields. For example, listing all storefronts requires no filtering based on user roles.\n\n**Invariants:**\nOwnership is enforced by the `userId` field in storefronts and `storefrontId` field in listings. Timestamps can be added as needed (though not specified in the entity definitions)."
+  }
+}
