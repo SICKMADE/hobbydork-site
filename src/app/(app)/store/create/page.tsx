@@ -128,68 +128,70 @@ export default function CreateStorePage() {
 
     return (
         <AppLayout>
-            <div className="max-w-2xl mx-auto">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-3xl">Create Your Storefront</CardTitle>
-                        <CardDescription>
-                            Set up your own corner of the VaultVerse to start selling.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                       <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                                <FormField
-                                    control={form.control}
-                                    name="storeName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Store Name</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Collector's Corner" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="slug"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Store Slug</FormLabel>
-                                            <FormControl>
-                                                 <div className="flex items-center">
-                                                    <span className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-l-md border border-r-0">vaultverse.com/</span>
-                                                    <Input placeholder="collectors-corner" {...field} />
-                                                 </div>
-                                            </FormControl>
-                                            <FormDescription>This will be your store's unique URL. Use lowercase letters, numbers, and hyphens only.</FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                 <FormField
-                                    control={form.control}
-                                    name="about"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>About Your Store</FormLabel>
-                                            <FormControl>
-                                                <Textarea placeholder="Tell us about your store, what you sell, and any shipping/return policies." {...field} rows={5}/>
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                               
-                                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                                    {form.formState.isSubmitting ? "Creating Store..." : "Create My Store"}
-                                </Button>
-                            </form>
-                       </Form>
-                    </CardContent>
-                 </Card>
+            <div className="flex items-center justify-center h-full">
+                <div className="w-full max-w-2xl">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-3xl">Create Your Storefront</CardTitle>
+                            <CardDescription>
+                                Set up your own corner of the VaultVerse to start selling.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                        <Form {...form}>
+                                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                                    <FormField
+                                        control={form.control}
+                                        name="storeName"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Store Name</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Collector's Corner" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="slug"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Store Slug</FormLabel>
+                                                <FormControl>
+                                                    <div className="flex items-center">
+                                                        <span className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-l-md border border-r-0">vaultverse.com/</span>
+                                                        <Input placeholder="collectors-corner" {...field} />
+                                                    </div>
+                                                </FormControl>
+                                                <FormDescription>This will be your store's unique URL. Use lowercase letters, numbers, and hyphens only.</FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="about"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>About Your Store</FormLabel>
+                                                <FormControl>
+                                                    <Textarea placeholder="Tell us about your store, what you sell, and any shipping/return policies." {...field} rows={5}/>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                
+                                    <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                                        {form.formState.isSubmitting ? "Creating Store..." : "Create My Store"}
+                                    </Button>
+                                </form>
+                        </Form>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </AppLayout>
     );
