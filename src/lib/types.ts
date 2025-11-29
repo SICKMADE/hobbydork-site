@@ -1,4 +1,5 @@
 
+
 import { Timestamp } from "firebase/firestore";
 
 export type UserStatus = 'ACTIVE' | 'LIMITED' | 'SUSPENDED';
@@ -124,7 +125,7 @@ export type ISO24 = {
     status: 'ACTIVE' | 'EXPIRED';
 }
 
-export type NotificationType = "MESSAGE" | "ORDER" | "ORDER_STATUS" | "ISO24" | "SPOTLIGHT";
+export type NotificationType = "MESSAGE" | "ORDER" | "ORDER_STATUS" | "ISO24" | "SPOTLIGHT" | "GENERIC";
 
 export type Notification = {
     id: string;
@@ -132,7 +133,7 @@ export type Notification = {
     type: NotificationType;
     title: string;
     body: string;
-    relatedId: string; // e.g., orderId, conversationId
+    relatedId: string | null; // e.g., orderId, conversationId
     createdAt: Timestamp;
     read: boolean;
 }

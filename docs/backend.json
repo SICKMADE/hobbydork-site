@@ -515,10 +515,10 @@
       "properties": {
         "id": { "type": "string" },
         "userUid": { "type": "string" },
-        "type": { "type": "string", "enum": ["MESSAGE", "ORDER", "ORDER_STATUS", "ISO24", "SPOTLIGHT"] },
+        "type": { "type": "string", "enum": ["MESSAGE", "ORDER", "ORDER_STATUS", "ISO24", "SPOTLIGHT", "GENERIC"] },
         "title": { "type": "string" },
         "body": { "type": "string" },
-        "relatedId": { "type": "string" },
+        "relatedId": { "type": ["string", "null"] },
         "createdAt": { "type": "string", "format": "date-time" },
         "read": { "type": "boolean" }
       },
