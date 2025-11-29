@@ -14,9 +14,9 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isAdmin(userId) {
+    function isAdmin() {
       // Use exists() to avoid errors on non-existent documents
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(userId)) && get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
     function isActiveUser(userId) {
@@ -56,7 +56,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if isAdmin(request.auth.uid);
+      allow list: if isAdmin();
       // Allow user creation if the document ID matches the user's UID
       allow create: if isUser(userId) && isValidUserWrite(request.resource.data);
       allow update: if isUser(userId) 
@@ -65,7 +65,7 @@ service cloud.firestore {
                       && request.resource.data.status == resource.data.status
                       && request.resource.data.emailVerified == resource.data.emailVerified
                       // Allow admins to update user roles
-                      || isAdmin(request.auth.uid);
+                      || isAdmin();
       allow delete: if false; // Users should not be able to delete their own account from the client
     }
     
