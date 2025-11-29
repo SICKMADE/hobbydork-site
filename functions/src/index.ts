@@ -208,7 +208,7 @@ export const onOrderUpdate = functions
             title: "Order Update",
             body: `Your order is now: ${label}.`,
             relatedId: orderId,
-          })
+          }),
         );
       }
       if (sellerUid) {
@@ -219,7 +219,7 @@ export const onOrderUpdate = functions
             title: "Order Update",
             body: `Order ${orderId.substring(0, 7)} is now: ${label}.`,
             relatedId: orderId,
-          })
+          }),
         );
       }
     }
@@ -291,7 +291,7 @@ export const onMessageCreate = functions
           title: `New message from ${senderName}`,
           body: text ? String(text).slice(0, 80) : "You have a new message.",
           relatedId: conversationId,
-        })
+        }),
       );
     });
 
