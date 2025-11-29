@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from "@/hooks/use-auth";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -392,3 +392,5 @@ export default function OnboardingPage() {
         </div>
     );
 }
+
+    
