@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState } from 'react';
@@ -312,6 +313,7 @@ export default function OnboardingPage() {
 
                 // 2. Create the store document
                 transaction.set(newStoreRef, {
+                    id: newStoreRef.id, // Explicitly set the document ID as a field
                     storeId: newStoreRef.id,
                     ownerUid: user.uid,
                     storeName: values.storeName,

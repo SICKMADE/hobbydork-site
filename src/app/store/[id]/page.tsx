@@ -6,8 +6,8 @@ import Image from 'next/image';
 import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy, doc } from 'firebase/firestore';
 import type { Listing, Store, Review } from '@/lib/types';
 import { Star, MessageSquare, Heart } from 'lucide-react';
 import ListingCard from '@/components/ListingCard';
@@ -27,13 +27,12 @@ export default function StorefrontPage({ params }: { params: { id: string } }) {
   const resolvedParams = React.use(params);
   const firestore = useFirestore();
 
-  const storeQuery = useMemoFirebase(() => {
+  const storeRef = useMemoFirebase(() => {
     if (!firestore || !resolvedParams.id) return null;
-    return query(collection(firestore, 'storefronts'), where('slug', '==', resolvedParams.id));
+    return doc(firestore, 'storefronts', resolvedParams.id);
   }, [firestore, resolvedParams.id]);
 
-  const { data: stores, isLoading: isStoreLoading } = useCollection<Store>(storeQuery);
-  const store = stores?.[0];
+  const { data: store, isLoading: isStoreLoading } = useDoc<Store>(storeRef);
 
   const listingsQuery = useMemoFirebase(() => {
     if (!firestore || !store?.id) return null;

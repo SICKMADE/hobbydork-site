@@ -32,23 +32,11 @@ import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
 import { Badge } from '../ui/badge';
 import { usePathname, useRouter } from 'next/navigation';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import type { Store as StoreType } from '@/lib/types';
-
 
 export default function SidebarNav() {
   const { logout, profile } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const firestore = useFirestore();
-
-  const storeRef = useMemoFirebase(() => {
-    if (!firestore || !profile?.storeId) return null;
-    return doc(firestore, 'storefronts', profile.storeId);
-  }, [firestore, profile?.storeId]);
-
-  const { data: store } = useDoc<StoreType>(storeRef);
   
   const handleLogout = async () => {
     await logout();
@@ -98,10 +86,10 @@ export default function SidebarNav() {
         <div className="mt-4 px-2">
            <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">My Store</h3>
            <SidebarMenu>
-            {store && (
+            {profile?.storeId && (
               <>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href={`/store/${store.slug}`} onClick={() => router.push(`/store/${store.slug}`)} tooltip="My Storefront">
+                    <SidebarMenuButton href={`/store/${profile.storeId}`} onClick={() => router.push(`/store/${profile.storeId}`)} tooltip="My Storefront">
                         <Store />
                         <span>My Storefront</span>
                     </SidebarMenuButton>
