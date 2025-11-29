@@ -25,7 +25,7 @@ export default function Home() {
   // If user is active but hasn't completed onboarding, the AppLayout will handle the redirect.
   // We show a loading state here to prevent a flash of the dashboard.
   if (profile?.status === 'ACTIVE' && !profile.storeId) {
-     return <div className="flex items-center justify-center h-screen">Loading Onboarding...</div>;
+     return <div className="flex items-center justify-center h-screen">Redirecting to onboarding...</div>;
   }
 
   if (profile && profile.status === 'SUSPENDED') {

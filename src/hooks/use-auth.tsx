@@ -6,7 +6,6 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
-  sendEmailVerification,
   User as FirebaseUser,
   getIdTokenResult
 } from 'firebase/auth';
@@ -45,44 +44,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [firestore, user]);
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
-  useEffect(() => {
-    // This effect runs when the user object changes (e.g., on login, token refresh)
-    const handleActivation = async () => {
-      if (user && profile?.status === 'LIMITED') {
-        // Force a refresh of the ID token to get the latest email_verified status
-        const tokenResult = await getIdTokenResult(user, true);
-        
-        if (tokenResult.claims.email_verified && userProfileRef) {
-          // Update the user's status to 'ACTIVE' in Firestore
-          await updateDoc(userProfileRef, { 
-              status: 'ACTIVE', 
-              emailVerified: true, 
-              updatedAt: serverTimestamp() 
-          });
-
-          toast({
-            title: 'Account Activated!',
-            description: 'Your account has been fully activated. Welcome!',
-          });
-          
-          // Redirect to onboarding to complete setup
-          router.push('/onboarding');
-        }
-      }
-    };
-    
-    handleActivation().catch((error) => {
-        console.error('Error during account activation:', error);
-        toast({
-          title: 'Activation Failed',
-          description: 'Could not update your account status. Please try logging in again or contact support.',
-          variant: 'destructive',
-        });
-    });
-
-  }, [user, profile, userProfileRef, router, toast]);
-
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
@@ -134,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: newUser.email!,
         displayName: newUser.email, // Default display name to email
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-        status: 'LIMITED',
+        status: 'ACTIVE', // Set status to ACTIVE immediately
         role: 'user', // All new users are 'user' role by default
         emailVerified: newUser.emailVerified,
         notificationPreferences: {
@@ -149,12 +110,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await setDoc(doc(firestore, "users", newUser.uid), userProfile);
       
-      await sendEmailVerification(newUser);
-      
       toast({
         title: 'Signup Successful!',
-        description: `Welcome! A verification email has been sent to your inbox.`,
+        description: `Welcome! Let's get your store set up.`,
       });
+
+      // The redirection to onboarding will be handled by the AppLayout now
       return true;
     } catch (error: any) {
       console.error("Signup failed:", error);
