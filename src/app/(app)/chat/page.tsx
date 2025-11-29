@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Send } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, addDoc, serverTimestamp, query, orderBy, Timestamp, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, Timestamp, doc, updateDoc } from 'firebase/firestore';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import type { CommunityMessage, User } from '@/lib/types';
 
@@ -68,16 +68,15 @@ export default function ChatPage() {
         e.preventDefault();
         if (newMessage.trim() === '' || !user || !profile || !messagesCollectionRef) return;
 
-        const messageData = {
-            senderUid: user.uid,
-            text: newMessage.trim(),
-            createdAt: serverTimestamp()
-        };
-
         try {
+            const messageData = {
+                senderUid: user.uid,
+                text: newMessage.trim(),
+                createdAt: serverTimestamp()
+            };
             const docRef = await addDoc(messagesCollectionRef, messageData);
             // The messageId is now the document ID. We can add it to the document if we need it.
-            // await updateDoc(docRef, { messageId: docRef.id });
+            await updateDoc(docRef, { messageId: docRef.id });
             setNewMessage('');
         } catch (error) {
             console.error("Error sending message: ", error);
@@ -128,5 +127,3 @@ export default function ChatPage() {
         </AppLayout>
     );
 }
-
-    
