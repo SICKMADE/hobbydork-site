@@ -1,151 +1,333 @@
-
-/**
- * Import function triggers from their respective submodules:
- *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
-
-import { onDocumentWritten } from "firebase-functions/v2/firestore";
-import { onSchedule } from "firebase-functions/v2/scheduler";
-import * as logger from "firebase-functions/logger";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-// Initialize the Firebase Admin SDK.
 admin.initializeApp();
+
 const db = admin.firestore();
+const Timestamp = admin.firestore.Timestamp;
+const FieldValue = admin.firestore.FieldValue;
+
+// Collection names – MUST match your app
+const USERS = "users";
+const STORES = "storefronts";
+const LISTINGS = "listings";
+const ORDERS = "orders";
+const ISO24 = "iso24Posts";
+const SPOTLIGHT = "spotlightSlots";
+const CONVERSATIONS = "conversations";
+const COMMUNITY = "communityMessages";
 
 /**
- * A scheduled function that runs every hour to find and mark expired ISO24 posts.
+ * Helper to write an in-app notification.
  */
-export const expireISO24Posts = onSchedule("every 60 minutes", async (event) => {
-  logger.info("Running scheduled job to expire ISO24 posts...");
-  const now = admin.firestore.Timestamp.now();
+async function createNotification(params: {
+  userUid: string;
+  type: "MESSAGE" | "ORDER" | "ORDER_STATUS" | "ISO24" | "SPOTLIGHT" | "GENERIC";
+  title: string;
+  body: string;
+  relatedId?: string | null;
+}): Promise<void> {
+  const { userUid, type, title, body, relatedId = null } = params;
+  const notifRef = db.collection(USERS).doc(userUid).collection("notifications").doc();
 
-  // Query for active posts that have expired.
-  const expiredPostsQuery = db
-    .collection("iso24Posts")
-    .where("status", "==", "ACTIVE")
-    .where("expiresAt", "<", now);
+  await notifRef.set({
+    notificationId: notifRef.id,
+    userUid,
+    type,
+    title,
+    body,
+    relatedId,
+    createdAt: Timestamp.now(),
+    read: false,
+  });
+}
 
-  const snapshot = await expiredPostsQuery.get();
+/**
+ * ISO24: on create, ensure expiresAt is set to createdAt + 24h if missing.
+ */
+export const onIso24Create = functions
+  .region("us-central1")
+  .firestore.document(`${ISO24}/{isoId}`)
+  .onCreate(async (snap: functions.firestore.DocumentSnapshot, context: functions.EventContext) => {
+    const data = snap.data() || {};
+    if (data.expiresAt) return null;
 
-  if (snapshot.empty) {
-    logger.info("No expired ISO24 posts found.");
-    return;
-  }
-
-  // Use a batch to update all expired posts at once for efficiency.
-  const batch = db.batch();
-  snapshot.docs.forEach((doc) => {
-    logger.info(`Expiring post: ${doc.id}`);
-    batch.update(doc.ref, { status: "EXPIRED" });
+    const createdAt = data.createdAt || Timestamp.now();
+    const expiresAt = new Timestamp(createdAt.seconds + 24 * 60 * 60, createdAt.nanoseconds);
+    await snap.ref.update({ createdAt, expiresAt, status: "ACTIVE" });
+    return null;
   });
 
-  await batch.commit();
-  logger.info(`Successfully expired ${snapshot.size} posts.`);
-});
+/**
+ * ISO24: scheduled job – mark expired posts as EXPIRED.
+ */
+export const expireIso24Posts = functions
+  .region("us-central1")
+  .pubsub.schedule("every 10 minutes")
+  .onRun(async () => {
+    const now = Timestamp.now();
+    const q = db
+      .collection(ISO24)
+      .where("status", "==", "ACTIVE")
+      .where("expiresAt", "<=", now)
+      .limit(200);
+    const snap = await q.get();
+    const batch = db.batch();
+
+    snap.docs.forEach((doc) => batch.update(doc.ref, { status: "EXPIRED" }));
+    if (!snap.empty) await batch.commit();
+    return null;
+  });
 
 /**
- * A Firestore trigger that runs whenever a new review is created.
- * This function will recalculate the store's average rating and rating count.
- * This provides a robust, server-side alternative to the client-side calculation.
+ * Reviews: on create, incrementally update store ratingAverage, ratingCount, itemsSold.
  */
-export const onReviewCreated = onDocumentWritten(
-  "storefronts/{storeId}/reviews/{reviewId}",
-  async (event) => {
-    // We only care about new documents (create events).
-    if (!event.data?.after.exists || event.data?.before.exists) {
-      logger.info("Not a new review, exiting function.");
-      return;
-    }
+export const onReviewCreate = functions
+  .region("us-central1")
+  .firestore.document(`${STORES}/{storeId}/reviews/{reviewId}`)
+  .onCreate(async (snap: functions.firestore.DocumentSnapshot, context: functions.EventContext) => {
+    const data = snap.data() as any;
+    const { storeId, rating } = data;
+    if (!storeId || typeof rating !== "number") return null;
 
-    const storeId = event.params.storeId;
-    const newReview = event.data.after.data();
+    const storeRef = db.collection(STORES).doc(storeId);
+    await db.runTransaction(async (tx) => {
+      const storeSnap = await tx.get(storeRef);
+      if (!storeSnap.exists) return;
+      const store = storeSnap.data() || {};
 
-    if (!newReview) {
-      logger.error("New review data is missing.");
-      return;
-    }
+      const oldAvg = typeof store.ratingAverage === "number" ? store.ratingAverage : 0;
+      const oldCount = typeof store.ratingCount === "number" ? store.ratingCount : 0;
+      const newCount = oldCount + 1;
+      const newAvg = (oldAvg * oldCount + rating) / newCount;
 
-    const storeRef = db.doc(`storefronts/${storeId}`);
-
-    try {
-      await db.runTransaction(async (transaction) => {
-        const storeDoc = await transaction.get(storeRef);
-        if (!storeDoc.exists) {
-          throw new Error("Store document not found!");
-        }
-
-        const storeData = storeDoc.data();
-        if (!storeData) {
-            throw new Error("Store data is empty!");
-        }
-
-        // Calculate new rating.
-        const oldRatingTotal = (storeData.ratingAverage || 0) * (storeData.ratingCount || 0);
-        const newRatingCount = (storeData.ratingCount || 0) + 1;
-        const newAverage = (oldRatingTotal + newReview.rating) / newRatingCount;
-
-        // Update the store document within the transaction.
-        transaction.update(storeRef, {
-          ratingAverage: newAverage,
-          ratingCount: newRatingCount,
-        });
+      tx.update(storeRef, {
+        ratingAverage: newAvg,
+        ratingCount: newCount,
+        itemsSold: FieldValue.increment(1),
       });
-      logger.info(`Successfully updated ratings for store ${storeId}.`);
-    } catch (error) {
-      logger.error(`Failed to update ratings for store ${storeId}:`, error);
-    }
-  }
-);
-
+    });
+    return null;
+  });
 
 /**
- * A Firestore trigger that sends a notification to a user when their order's state changes.
+ * Spotlight: scheduled job – deactivate expired slots and clear store flags.
  */
-export const onOrderStateChange = onDocumentWritten("orders/{orderId}", async (event) => {
-    // We only care about updates, not creations or deletions.
-    if (!event.data?.before.exists || !event.data?.after.exists) {
-        logger.info("Not an order update, exiting.");
-        return;
+export const expireSpotlightSlots = functions
+  .region("us-central1")
+  .pubsub.schedule("every 15 minutes")
+  .onRun(async () => {
+    const now = Timestamp.now();
+    const q = db
+      .collection(SPOTLIGHT)
+      .where("active", "==", true)
+      .where("endAt", "<=", now)
+      .limit(200);
+
+    const snap = await q.get();
+    if (snap.empty) return null;
+
+    const batch = db.batch();
+    const storeUpdates: Record<string, FirebaseFirestore.DocumentReference> = {};
+
+    snap.docs.forEach((doc) => {
+      const data = doc.data();
+      const storeId = data.storeId as string | undefined;
+      batch.update(doc.ref, { active: false });
+      if (storeId) storeUpdates[storeId] = db.collection(STORES).doc(storeId);
+    });
+
+    Object.values(storeUpdates).forEach((storeRef) => {
+      batch.update(storeRef, { isSpotlighted: false, spotlightUntil: null });
+    });
+
+    await batch.commit();
+    return null;
+  });
+
+/**
+ * Orders: on create, send seller a notification.
+ */
+export const onOrderCreate = functions
+  .region("us-central1")
+  .firestore.document(`${ORDERS}/{orderId}`)
+  .onCreate(async (snap: functions.firestore.DocumentSnapshot, context: functions.EventContext) => {
+    const data = snap.data() as any;
+    const { sellerUid, buyerUid, totalPrice } = data;
+
+    if (sellerUid) {
+      await createNotification({
+        userUid: sellerUid,
+        type: "ORDER",
+        title: "New order received",
+        body: `You have a new order from ${buyerUid || "a buyer"} for $${Number(totalPrice || 0).toFixed(2)}.`,
+        relatedId: context.params.orderId,
+      });
     }
+    return null;
+  });
 
-    const before = event.data.before.data();
-    const after = event.data.after.data();
+/**
+ * Orders: on update, notify for status changes & inventory updates.
+ */
+export const onOrderUpdate = functions
+  .region("us-central1")
+  .firestore.document(`${ORDERS}/{orderId}`)
+  .onUpdate(async (change: functions.Change<functions.firestore.DocumentSnapshot>, context: functions.EventContext) => {
+    const before = change.before.data() as any;
+    const after = change.after.data() as any;
+    if (!before || !after) return null;
 
-    // If the state hasn't changed, do nothing.
-    if (before.state === after.state) {
-        return;
-    }
+    const prevState = before.state as string | undefined;
+    const newState = after.state as string | undefined;
+    const orderId = context.params.orderId;
+    const buyerUid = after.buyerUid as string | undefined;
+    const sellerUid = after.sellerUid as string | undefined;
 
-    const buyerUid = after.buyerUid;
+    if (prevState === newState) return null;
 
-    // Don't send a notification if the buyer UID is missing.
-    if (!buyerUid) {
-        logger.warn(`Order ${event.params.orderId} is missing a buyerUid.`);
-        return;
-    }
-
-    const notificationRef = db.collection(`users/${buyerUid}/notifications`).doc();
-
-    const newStatus = after.state.replace(/_/g, " ").toLowerCase();
-
-    const notificationPayload = {
-        id: notificationRef.id,
-        userUid: buyerUid,
-        type: "ORDER_STATUS",
-        title: "Order Update",
-        body: `Your order #${event.params.orderId.substring(0, 7)} is now ${newStatus}.`,
-        relatedId: event.params.orderId,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        read: false,
+    const stateLabelMap: Record<string, string> = {
+      PENDING_PAYMENT: "Pending payment",
+      PAYMENT_SENT: "Payment sent",
+      SHIPPED: "Shipped",
+      DELIVERED: "Delivered",
+      COMPLETED: "Completed",
+      CANCELLED: "Cancelled",
     };
-    
-    logger.info(`Sending notification to user ${buyerUid} for order ${event.params.orderId}`);
-    await notificationRef.set(notificationPayload);
-});
+    const label = stateLabelMap[newState || ""] || newState || "Updated";
 
-    
+    const notifPromises: Promise<unknown>[] = [];
+
+    if (buyerUid) {
+      notifPromises.push(
+        createNotification({
+          userUid: buyerUid,
+          type: "ORDER_STATUS",
+          title: "Order update",
+          body: `Your order ${orderId} is now: ${label}.`,
+          relatedId: orderId,
+        })
+      );
+    }
+
+    if (sellerUid) {
+      notifPromises.push(
+        createNotification({
+          userUid: sellerUid,
+          type: "ORDER_STATUS",
+          title: "Order update",
+          body: `Order ${orderId} is now: ${label}.`,
+          relatedId: orderId,
+        })
+      );
+    }
+
+    if (newState === "COMPLETED" && prevState !== "COMPLETED") {
+      const items: any[] = Array.isArray(after.items) ? after.items : [];
+      const batch = db.batch();
+      for (const item of items) {
+        const listingId = item.listingId as string | undefined;
+        const quantity = Number(item.quantity || 0);
+        if (!listingId || quantity <= 0) continue;
+        const listingRef = db.collection(LISTINGS).doc(listingId);
+        batch.update(listingRef, { quantityAvailable: FieldValue.increment(-quantity) });
+      }
+      notifPromises.push(batch.commit());
+    }
+
+    await Promise.all(notifPromises);
+    return null;
+  });
+
+/**
+ * Messaging: notify other participants on new messages.
+ */
+export const onMessageCreate = functions
+  .region("us-central1")
+  .firestore.document(`${CONVERSATIONS}/{conversationId}/messages/{messageId}`)
+  .onCreate(async (snap: functions.firestore.DocumentSnapshot, context: functions.EventContext) => {
+    const message = snap.data() as any;
+    const { senderUid, text } = message;
+    const conversationId = context.params.conversationId;
+
+    const convoRef = db.collection(CONVERSATIONS).doc(conversationId);
+    const convoSnap = await convoRef.get();
+    if (!convoSnap.exists) return null;
+
+    const convo = convoSnap.data() as any;
+    const participantUids: string[] = Array.isArray(convo.participantUids) ? convo.participantUids : [];
+
+    await convoRef.update({ lastMessageText: text || "", lastMessageAt: Timestamp.now() });
+
+    const notifPromises: Promise<unknown>[] = [];
+    participantUids.forEach((uid) => {
+      if (!uid || uid === senderUid) return;
+      notifPromises.push(
+        createNotification({
+          userUid: uid,
+          type: "MESSAGE",
+          title: "New message",
+          body: text ? String(text).slice(0, 80) : "You have a new message.",
+          relatedId: conversationId,
+        })
+      );
+    });
+
+    await Promise.all(notifPromises);
+    return null;
+  });
+
+/**
+ * Community messages stub.
+ */
+export const onCommunityMessageCreate = functions
+  .region("us-central1")
+  .firestore.document(`${COMMUNITY}/{messageId}`)
+  .onCreate(async () => null);
+
+/**
+ * ISO24 update hook stub.
+ */
+export const onIso24NotificationHook = functions
+  .region("us-central1")
+  .firestore.document(`${ISO24}/{isoId}`)
+  .onUpdate(async () => null);
+
+/**
+ * Spotlight notifications stub.
+ */
+export const onSpotlightUpdate = functions
+  .region("us-central1")
+  .firestore.document(`${SPOTLIGHT}/{slotId}`)
+  .onUpdate(async (change: functions.Change<functions.firestore.DocumentSnapshot>) => {
+    const before = change.before.data() as any;
+    const after = change.after.data() as any;
+    if (!before || !after) return null;
+
+    const justActivated = !before.active && after.active;
+    const justDeactivated = before.active && !after.active;
+    const storeId = after.storeId as string | undefined;
+    const ownerUid = after.ownerUid as string | undefined;
+    if (!ownerUid) return null;
+
+    if (justActivated) {
+      await createNotification({
+        userUid: ownerUid,
+        type: "SPOTLIGHT",
+        title: "Store spotlight activated",
+        body: "Your store is now in the Spotlight section.",
+        relatedId: storeId || null,
+      });
+    } else if (justDeactivated) {
+      await createNotification({
+        userUid: ownerUid,
+        type: "SPOTLIGHT",
+        title: "Store spotlight ended",
+        body: "Your Spotlight slot has ended.",
+        relatedId: storeId || null,
+      });
+    }
+
+    return null;
+  });
