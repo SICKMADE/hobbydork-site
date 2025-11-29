@@ -11,12 +11,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useFirestore, useUser } from "@/firebase";
-import { collection, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, serverTimestamp, runTransaction } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { placeholderImages } from "@/lib/placeholder-images";
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Checkbox } from '@/components/ui/checkbox';
+import Link from 'next/link';
 
 const storeSchema = z.object({
     storeName: z.string().min(3, "Store name must be at least 3 characters long."),
@@ -30,7 +32,15 @@ const paymentSchema = z.object({
     paymentIdentifier: z.string().min(3, "Please enter your payment username or email."),
 });
 
-const combinedSchema = storeSchema.merge(paymentSchema);
+const agreementsSchema = z.object({
+  agreeGoodsAndServices: z.literal(true, { errorMap: () => ({ message: "You must agree to use Goods & Services." })}),
+  agreeTerms: z.literal(true, { errorMap: () => ({ message: "You must agree to the Terms." })}),
+  agreeAge: z.literal(true, { errorMap: () => ({ message: "You must confirm you are 18 or older." })}),
+  agreeOneAccount: z.literal(true, { errorMap: () => ({ message: "You must acknowledge the one account rule." })}),
+});
+
+
+const combinedSchema = storeSchema.merge(paymentSchema).merge(agreementsSchema);
 
 type OnboardingValues = z.infer<typeof combinedSchema>;
 
@@ -70,7 +80,7 @@ const StepStoreDetails = () => {
                         <FormControl>
                                 <div className="flex items-center">
                                 <span className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-l-md border border-r-0">
-                                    vaultverse.com/store/
+                                    vaultverse.app/store/
                                 </span>
                                 <Input placeholder="galactic-treasures" {...field} className="rounded-l-none" />
                             </div>
@@ -80,7 +90,7 @@ const StepStoreDetails = () => {
                     </FormItem>
                 )}
             />
-            <FormField
+             <FormField
                 control={control}
                 name="about"
                 render={({ field }) => (
@@ -107,7 +117,7 @@ const StepPaymentDetails = () => {
                 render={({ field }) => (
                     <FormItem className="space-y-3">
                     <FormLabel>Preferred Payment Method</FormLabel>
-                     <FormDescription>This is how buyers will pay you. We currently support peer-to-peer payments via PayPal or Venmo.</FormDescription>
+                     <FormDescription>Required to receive payments. VaultVerse never holds funds.</FormDescription>
                     <FormControl>
                         <RadioGroup
                         onValueChange={field.onChange}
@@ -141,9 +151,9 @@ const StepPaymentDetails = () => {
                 name="paymentIdentifier"
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Payment Identifier</FormLabel>
+                        <FormLabel>PayPal Email or Venmo Handle</FormLabel>
                         <FormControl>
-                            <Input placeholder="Your PayPal.Me link, email, or Venmo username" {...field} />
+                            <Input placeholder="Your PayPal email or Venmo username" {...field} />
                         </FormControl>
                          <FormDescription>
                             This will be shown to buyers at checkout. Make sure it's correct!
@@ -156,6 +166,75 @@ const StepPaymentDetails = () => {
     )
 }
 
+const StepAgreements = () => {
+    const { control } = useFormContext<OnboardingValues>();
+    return (
+        <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="space-y-6">
+             <FormField
+                control={control}
+                name="agreeGoodsAndServices"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                        <FormLabel>I agree to use Goods & Services for all transactions for my own protection.</FormLabel>
+                        <FormMessage />
+                    </div>
+                    </FormItem>
+                )}
+            />
+             <FormField
+                control={control}
+                name="agreeTerms"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                        <FormLabel>
+                            I agree to the <Link href="#" className="text-primary hover:underline">Terms of Service</Link> and <Link href="#" className="text-primary hover:underline">Privacy Policy</Link>.
+                        </FormLabel>
+                        <FormMessage />
+                    </div>
+                    </FormItem>
+                )}
+            />
+             <FormField
+                control={control}
+                name="agreeAge"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                        <FormLabel>I confirm I am at least 18 years old.</FormLabel>
+                        <FormMessage />
+                    </div>
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="agreeOneAccount"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                        <FormLabel>I understand only one account is allowed per person.</FormLabel>
+                        <FormMessage />
+                    </div>
+                    </FormItem>
+                )}
+            />
+        </motion.div>
+    );
+}
 
 export default function OnboardingPage() {
     const { user, profile } = useAuth();
@@ -173,18 +252,27 @@ export default function OnboardingPage() {
             about: "",
             paymentMethod: undefined,
             paymentIdentifier: "",
+            agreeGoodsAndServices: undefined,
+            agreeTerms: undefined,
+            agreeAge: undefined,
+            agreeOneAccount: undefined,
         },
     });
 
     const handleNext = async () => {
-        const isStepValid = await methods.trigger(["storeName", "slug", "about"]);
-        if (isStepValid) {
-            setStep(2);
+        let isValid = false;
+        if (step === 1) {
+            isValid = await methods.trigger(["storeName", "slug", "about"]);
+        } else if (step === 2) {
+            isValid = await methods.trigger(["paymentMethod", "paymentIdentifier"]);
+        }
+        if (isValid) {
+            setStep(s => s + 1);
         }
     };
 
     const handleBack = () => {
-        setStep(1);
+        setStep(s => s - 1);
     };
 
     async function onSubmit(values: OnboardingValues) {
@@ -200,19 +288,17 @@ export default function OnboardingPage() {
 
         setIsSubmitting(true);
         try {
-            // Transaction to create store and update user
             await runTransaction(firestore, async (transaction) => {
                 const newStoreRef = doc(collection(firestore, "storefronts"));
                 const userProfileRef = doc(firestore, "users", user.uid);
 
-                // 1. Create the new store document
                 transaction.set(newStoreRef, {
                     storeId: newStoreRef.id,
                     ownerUid: user.uid,
                     storeName: values.storeName,
                     slug: values.slug,
                     about: values.about,
-                    avatarUrl: placeholderImages['store-logo-1']?.imageUrl,
+                    avatarUrl: placeholderImages['store-logo-1']?.imageUrl || `https://picsum.photos/seed/${values.slug}/128/128`,
                     ratingAverage: 0,
                     ratingCount: 0,
                     itemsSold: 0,
@@ -223,11 +309,13 @@ export default function OnboardingPage() {
                     updatedAt: serverTimestamp(),
                 });
 
-                // 2. Update the user's profile with the new storeId and payment info
                 transaction.update(userProfileRef, {
                     storeId: newStoreRef.id,
+                    displayName: values.storeName, // Set user's display name to store name
                     paymentMethod: values.paymentMethod,
                     paymentIdentifier: values.paymentIdentifier,
+                    goodsAndServicesAgreed: values.agreeGoodsAndServices,
+                    oneAccountAcknowledged: values.agreeOneAccount,
                     updatedAt: serverTimestamp(),
                 });
             });
@@ -256,15 +344,17 @@ export default function OnboardingPage() {
         if (typeof window !== 'undefined') router.push('/');
         return <div className="flex items-center justify-center h-screen">Redirecting...</div>;
     }
-
+    
+    const stepTitles = ["Set Up Your Store", "Set Up Payments", "Final Agreements"];
+    
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
             <div className="w-full max-w-2xl">
                  <Card>
                     <CardHeader>
-                        <CardTitle className="text-3xl">Welcome to VaultVerse!</CardTitle>
+                        <CardTitle className="text-3xl">{stepTitles[step - 1]}</CardTitle>
                         <CardDescription>
-                            Let's get your account and store set up. (Step {step} of 2)
+                            Welcome to VaultVerse! Let's get you set up. (Step {step} of 3)
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -273,23 +363,24 @@ export default function OnboardingPage() {
                                 <AnimatePresence mode="wait">
                                     {step === 1 && <StepStoreDetails key="step1" />}
                                     {step === 2 && <StepPaymentDetails key="step2" />}
+                                    {step === 3 && <StepAgreements key="step3" />}
                                 </AnimatePresence>
                                 <div className="flex justify-between mt-8">
-                                    {step === 1 ? (
-                                         <div></div>
-                                    ) : (
+                                    {step > 1 ? (
                                         <Button type="button" variant="outline" onClick={handleBack} disabled={isSubmitting}>
                                             Back
                                         </Button>
+                                    ) : (
+                                        <div></div> // Placeholder for alignment
                                     )}
                                     
-                                    {step === 1 ? (
+                                    {step < 3 ? (
                                         <Button type="button" onClick={handleNext}>
-                                            Next: Payment Details
+                                            Next
                                         </Button>
                                     ) : (
                                         <Button type="submit" disabled={isSubmitting}>
-                                            {isSubmitting ? "Finishing Up..." : "Complete Setup"}
+                                            {isSubmitting ? "Finishing Up..." : "Finish"}
                                         </Button>
                                     )}
                                 </div>

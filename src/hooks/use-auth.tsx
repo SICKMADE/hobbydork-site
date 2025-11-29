@@ -10,18 +10,15 @@ import {
   User as FirebaseUser,
   getIdTokenResult
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, getDocs, collection, query, limit, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { placeholderImages } from '@/lib/placeholder-images';
 
 interface SignupData {
-  displayName: string;
   email: string;
   password: string;
-  oneAccountAcknowledged: boolean;
-  goodsAndServicesAgreed: boolean;
 }
 
 interface AuthContextType {
@@ -122,33 +119,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth, router, toast]);
 
   const signup = useCallback(async (data: SignupData): Promise<boolean> => {
-    const { displayName, email, password, oneAccountAcknowledged, goodsAndServicesAgreed } = data;
+    const { email, password } = data;
     if (!firestore) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
     }
-    
-    // Check if any user exists to determine admin role *before* creating the user.
-    // This is safe because of the `list` rule with `limit(1)` in firestore.rules.
-    const usersCollectionRef = collection(firestore, "users");
-    const q = query(usersCollectionRef, limit(1));
-    const querySnapshot = await getDocs(q);
-    const isFirstUser = querySnapshot.empty;
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
       
-      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid'> & { createdAt: any, updatedAt: any, uid: string } = {
+      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid' | 'displayName'> & { createdAt: any, updatedAt: any, uid: string, displayName: string | null } = {
         uid: newUser.uid,
         email: newUser.email!,
-        displayName,
+        displayName: newUser.email, // Default display name to email
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
         status: 'LIMITED',
-        role: isFirstUser ? 'admin' : 'user',
+        role: 'user', // All new users are 'user' role by default
         emailVerified: newUser.emailVerified,
-        oneAccountAcknowledged,
-        goodsAndServicesAgreed,
         notificationPreferences: {
           notifyMessages: true,
           notifyOrders: true,
@@ -165,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       toast({
         title: 'Signup Successful!',
-        description: `Welcome, ${displayName}! A verification email has been sent to your inbox.`,
+        description: `Welcome! A verification email has been sent to your inbox.`,
       });
       return true;
     } catch (error: any) {

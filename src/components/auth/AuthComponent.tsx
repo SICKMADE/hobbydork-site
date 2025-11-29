@@ -9,7 +9,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Logo from '../Logo';
-import { Checkbox } from '../ui/checkbox';
 import Link from 'next/link';
 
 const loginSchema = z.object({
@@ -18,16 +17,14 @@ const loginSchema = z.object({
 });
 
 const signupSchema = z.object({
-  displayName: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
-  oneAccountAcknowledged: z.literal(true, {
-    errorMap: () => ({ message: "You must acknowledge the one-account rule." }),
-  }),
-  goodsAndServicesAgreed: z.literal(true, {
-    errorMap: () => ({ message: "You must agree to use Goods & Services for payments." }),
-  }),
+  confirmPassword: z.string(),
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
+
 
 export default function AuthComponent() {
   const { login, signup } = useAuth();
@@ -40,7 +37,7 @@ export default function AuthComponent() {
 
   const signupForm = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { displayName: '', email: '', password: '' },
+    defaultValues: { email: '', password: '', confirmPassword: '' },
   });
 
   function onLogin(values: z.infer<typeof loginSchema>) {
@@ -49,11 +46,8 @@ export default function AuthComponent() {
 
   function onSignup(values: z.infer<typeof signupSchema>) {
     signup({
-      displayName: values.displayName,
       email: values.email,
       password: values.password,
-      oneAccountAcknowledged: values.oneAccountAcknowledged,
-      goodsAndServicesAgreed: values.goodsAndServicesAgreed
     });
   }
 
@@ -65,7 +59,7 @@ export default function AuthComponent() {
         </div>
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="login">Log In</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
           </TabsList>
           <TabsContent value="login">
@@ -86,7 +80,7 @@ export default function AuthComponent() {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input placeholder="test@test.com" {...field} />
+                            <Input placeholder="you@example.com" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -99,14 +93,14 @@ export default function AuthComponent() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="password" {...field} />
+                            <Input type="password" placeholder="••••••••" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     <Button type="submit" className="w-full">
-                      Login
+                      Log In
                     </Button>
                   </form>
                 </Form>
@@ -126,25 +120,12 @@ export default function AuthComponent() {
                   <form onSubmit={signupForm.handleSubmit(onSignup)} className="space-y-6">
                     <FormField
                       control={signupForm.control}
-                      name="displayName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Your Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Collector Carl" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
                       name="email"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input placeholder="carl@collector.com" {...field} />
+                            <Input placeholder="you@example.com" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -163,43 +144,16 @@ export default function AuthComponent() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={signupForm.control}
-                      name="oneAccountAcknowledged"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                           <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              I acknowledge that only one account is permitted per person.
-                            </FormLabel>
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
                      <FormField
                       control={signupForm.control}
-                      name="goodsAndServicesAgreed"
+                      name="confirmPassword"
                       render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormItem>
+                          <FormLabel>Confirm Password</FormLabel>
                           <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
+                            <Input type="password" placeholder="••••••••" {...field} />
                           </FormControl>
-                           <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              I agree to use "Goods & Services" for all payments for my own protection.
-                            </FormLabel>
-                            <FormMessage />
-                          </div>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -213,14 +167,13 @@ export default function AuthComponent() {
           </TabsContent>
         </Tabs>
          <p className="px-8 mt-4 text-center text-sm text-muted-foreground">
-            By signing up, you agree to our{' '}
+            By creating an account, you agree to our{' '}
             <Link href="#" className="underline underline-offset-4 hover:text-primary">
               Terms of Service
-            </Link>
-            .
+            </Link> and <Link href="#" className="underline underline-offset-4 hover:text-primary">Privacy Policy</Link>.
           </p>
           <p className="px-8 mt-2 text-center text-sm text-muted-foreground">
-            Hint: You can sign up with any email and password (e.g. `test@test.com` / `password`).
+            Must be 18+ to create an account. One account per person.
           </p>
       </div>
     </div>

@@ -32,7 +32,7 @@ export type Store = {
   storeName: string;
   slug: string;
   about: string;
-  avatarUrl: string | null;
+  avatarUrl: string;
   ratingAverage: number;
   ratingCount: number;
   itemsSold: number;
