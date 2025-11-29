@@ -170,7 +170,7 @@ service cloud.firestore {
     }
 
     match /iso24Posts/{isoId} {
-        allow get, list: if isSignedIn();
+        allow get, list: if isActiveUser(request.auth.uid);
         // Only ACTIVE users can create posts.
         allow create: if isUser(request.resource.data.creatorUid) && isActiveUser(request.auth.uid);
         allow update, delete: if isUser(resource.data.creatorUid) || isAdmin();
@@ -202,3 +202,5 @@ service cloud.firestore {
 
   }
 }
+
+    
