@@ -79,11 +79,6 @@ export default function CreateListingPage() {
             return;
         }
 
-        if (profile.status !== 'ACTIVE') {
-            toast({ title: "Account Not Active", description: "Your account must be active to create listings.", variant: "destructive" });
-            return;
-        }
-
         try {
             const listingsCollection = collection(firestore, "listings");
             const newListingRef = doc(listingsCollection);
@@ -91,6 +86,9 @@ export default function CreateListingPage() {
             const imageUrls = values.images.map(img => img.value).filter(url => url);
             const primaryImageUrl = imageUrls[0] || placeholderImages['listing-image-1']?.imageUrl;
 
+            // Per security rules, only ACTIVE users can create ACTIVE listings.
+            // All other users' listings should start as DRAFT.
+            const initialState = profile.status === 'ACTIVE' ? "ACTIVE" : "DRAFT";
 
             await setDoc(newListingRef, {
                 listingId: newListingRef.id,
@@ -103,7 +101,7 @@ export default function CreateListingPage() {
                 condition: values.condition,
                 quantityTotal: values.quantity,
                 quantityAvailable: values.quantity,
-                state: "ACTIVE", // Default to ACTIVE as per new spec
+                state: initialState,
                 tags: values.tags ? values.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
                 imageUrls: imageUrls.length > 0 ? imageUrls : [primaryImageUrl],
                 primaryImageUrl: primaryImageUrl,
@@ -113,7 +111,7 @@ export default function CreateListingPage() {
 
             toast({
                 title: "Listing Created!",
-                description: "Your new item is now active in your store.",
+                description: `Your new item has been saved as a ${initialState.toLowerCase()}.`,
             });
             
             router.push('/listings');
@@ -145,9 +143,9 @@ export default function CreateListingPage() {
                 <div className="flex items-center justify-center h-full">
                     <Alert variant="destructive" className="max-w-lg">
                       <Terminal className="h-4 w-4" />
-                      <AlertTitle>Account Not Active</AlertTitle>
+                      <AlertTitle>Account Not Fully Active</AlertTitle>
                       <AlertDescription>
-                        Your account must be active to create a listing.
+                        Your account must be active to create listings that are immediately visible. You can still create listings, but they will be saved as drafts.
                       </AlertDescription>
                     </Alert>
                 </div>

@@ -81,7 +81,6 @@ export const expireIso24Posts = functions
 
 /**
  * Reviews: on create, incrementally update store ratingAverage, ratingCount.
- * Note: itemsSold is handled in onOrderUpdate when order is COMPLETED.
  */
 export const onReviewCreate = functions
   .region("us-central1")
@@ -227,25 +226,33 @@ export const onOrderUpdate = functions
 
     // --- Inventory & Sales Count Logic on Completion ---
     if (newState === "COMPLETED" && prevState !== "COMPLETED") {
-      const items: any[] = Array.isArray(after.items) ? after.items : [];
-      const batch = db.batch();
-      let totalQuantity = 0;
+        const items: any[] = Array.isArray(after.items) ? after.items : [];
+        const batch = db.batch();
+        let totalQuantitySold = 0;
+    
+        const listingUpdates: Promise<any>[] = items.map(async (item) => {
+            const quantity = Number(item.quantity || 0);
+            if (quantity > 0 && item.listingId) {
+                totalQuantitySold += quantity;
+                const listingRef = db.collection(LISTINGS).doc(item.listingId);
+                // Atomically decrement the quantity available.
+                batch.update(listingRef, { 
+                    quantityAvailable: FieldValue.increment(-quantity)
+                });
+            }
+        });
+    
+        await Promise.all(listingUpdates);
 
-      for (const item of items) {
-        const quantity = Number(item.quantity || 0);
-        if (quantity <= 0) continue;
-        totalQuantity += quantity;
-      }
-
-      // Increment total items sold for the store
-      if (after.storeId && totalQuantity > 0) {
-        const storeRef = db.collection(STORES).doc(after.storeId);
-        batch.update(storeRef, {itemsSold: FieldValue.increment(totalQuantity)});
-      }
-
-      if (totalQuantity > 0) {
-        notifPromises.push(batch.commit());
-      }
+        // Increment total items sold for the store
+        if (after.storeId && totalQuantitySold > 0) {
+            const storeRef = db.collection(STORES).doc(after.storeId);
+            batch.update(storeRef, { itemsSold: FieldValue.increment(totalQuantitySold) });
+        }
+    
+        if (!batch.isEmpty) {
+            notifPromises.push(batch.commit());
+        }
     }
 
     await Promise.all(notifPromises);

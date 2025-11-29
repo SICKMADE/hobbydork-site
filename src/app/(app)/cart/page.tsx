@@ -48,7 +48,17 @@ export default function CartPage() {
             const batch = writeBatch(firestore);
             const newOrderRef = doc(collection(firestore, "orders"));
 
-            const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'buyerShippingAddress' | 'reviewId' | 'cancelReason'> & { createdAt: any, updatedAt: any } = {
+            // NOTE: In a real app, you would collect this from the user.
+            const placeholderShippingAddress = {
+                name: profile.displayName || 'User',
+                address1: '123 Fake St',
+                city: 'Anytown',
+                state: 'CA',
+                zip: '12345',
+                country: 'USA',
+            };
+
+            const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'reviewId' | 'cancelReason'> & { createdAt: any, updatedAt: any } = {
                 orderId: newOrderRef.id,
                 buyerUid: profile.uid,
                 sellerUid: firstListing.ownerUid,
@@ -61,6 +71,7 @@ export default function CartPage() {
                 })),
                 totalPrice: subtotal,
                 state: "PENDING_PAYMENT",
+                buyerShippingAddress: placeholderShippingAddress,
                 trackingNumber: null,
                 trackingCarrier: null,
                 paymentMethod: profile.paymentMethod,
@@ -70,23 +81,16 @@ export default function CartPage() {
             };
 
             batch.set(newOrderRef, orderData);
-
-            // Decrement stock for each item in the order
-            items.forEach(item => {
-                const listingRef = doc(firestore, 'listings', item.listingId);
-                const newQuantity = item.availableQuantity - item.quantity;
-                batch.update(listingRef, { 
-                    quantityAvailable: newQuantity,
-                    // If stock is depleted, mark as SOLD
-                    ...(newQuantity === 0 && { state: 'SOLD' })
-                });
-            });
+            
+            // Client does NOT decrement stock. This is handled by a Cloud Function
+            // when the order state moves to COMPLETED to prevent race conditions
+            // and ensure transactional integrity.
 
             await batch.commit();
 
             toast({
                 title: "Order Placed!",
-                description: "Your order is now pending payment.",
+                description: "Your order is now pending payment. You will be notified of status updates.",
             });
 
             clearCart();

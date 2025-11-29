@@ -8,7 +8,7 @@ import {
   signOut,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -47,14 +47,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    // This effect is to transition a user from 'LIMITED' to 'ACTIVE' status,
-    // which happens after they complete onboarding.
-    // The onboarding flow itself handles setting the user's status.
-    // For now, this just serves as a potential hook for future status changes.
-    if (user && profile?.status === 'LIMITED' && userProfileRef) {
-        // A user might be in a LIMITED state until they verify their email or complete onboarding.
-        // The logic for upgrading their status should be handled where that action completes.
-        // e.g., in the onboarding form submission or after email verification link is clicked.
+    if (user && profile?.status === 'LIMITED' && user.emailVerified && userProfileRef) {
+        updateDoc(userProfileRef, { status: 'ACTIVE' }).then(() => {
+            toast({
+                title: 'Account Activated!',
+                description: 'Your email has been verified and your account is now fully active.',
+            });
+        }).catch(err => console.error("Failed to activate account", err));
     }
   }, [user, profile, userProfileRef, toast]);
 
@@ -110,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         displayName: null, 
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
         status: 'LIMITED',
-        role: 'user',
+        role: 'USER',
         emailVerified: false,
         oneAccountAcknowledged: false,
         goodsAndServicesAgreed: false,

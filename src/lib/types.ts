@@ -1,6 +1,3 @@
-
-
-
 import { Timestamp } from "firebase/firestore";
 
 export type UserStatus = 'ACTIVE' | 'LIMITED' | 'SUSPENDED';
@@ -13,7 +10,7 @@ export type User = {
   status: UserStatus;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  role: "USER" | "ADMIN";
+  role: string;
   storeId?: string;
   paymentMethod: "PAYPAL" | "VENMO" | null;
   paymentIdentifier: string | null;

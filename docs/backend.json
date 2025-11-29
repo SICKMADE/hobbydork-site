@@ -402,7 +402,8 @@
         "paymentMethod",
         "paymentIdentifier",
         "createdAt",
-        "updatedAt"
+        "updatedAt",
+        "buyerShippingAddress"
       ]
     },
     "Review": {

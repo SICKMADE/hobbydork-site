@@ -38,7 +38,7 @@ export default function AdminUsersPage() {
 
   const { data: users, isLoading } = useCollection<User>(usersQuery);
 
-  const handleRoleChange = (userId: string, newRole: 'user' | 'admin') => {
+  const handleRoleChange = (userId: string, newRole: 'USER' | 'ADMIN') => {
     if (!firestore) return;
     const userRef = doc(firestore, 'users', userId);
     const updatedData = { role: newRole };
@@ -107,7 +107,7 @@ export default function AdminUsersPage() {
                   <TableCell>
                     <Badge variant={getStatusVariant(user.status)}>{user.status}</Badge>
                   </TableCell>
-                  <TableCell className="capitalize">{user.role}</TableCell>
+                  <TableCell className="capitalize">{user.role.toLowerCase()}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -116,10 +116,10 @@ export default function AdminUsersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => handleRoleChange(user.uid, 'user')}>
+                        <DropdownMenuItem onSelect={() => handleRoleChange(user.uid, 'USER')}>
                           Make User
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleRoleChange(user.uid, 'admin')}>
+                        <DropdownMenuItem onSelect={() => handleRoleChange(user.uid, 'ADMIN')}>
                           Make Admin
                         </DropdownMenuItem>
                       </DropdownMenuContent>
