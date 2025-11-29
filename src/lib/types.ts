@@ -160,4 +160,20 @@ export type SpotlightSlot = {
     active: boolean;
 }
 
+export type Conversation = {
+    conversationId: string;
+    participantUids: string[];
+    lastMessageText: string;
+    lastMessageAt: Timestamp;
+    createdAt: Timestamp;
+}
+
+export type Message = {
+    messageId: string;
+    conversationId: string;
+    senderUid: string;
+    text: string;
+    createdAt: Timestamp;
+}
+
     

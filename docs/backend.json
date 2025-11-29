@@ -545,6 +545,34 @@
         "active": { "type": "boolean", "description": "Whether the spotlight slot is currently active." }
       },
       "required": ["slotId", "storeId", "ownerUid", "startAt", "endAt", "active"]
+    },
+    "Conversation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Conversation",
+      "type": "object",
+      "description": "Represents a direct message conversation between two users.",
+      "properties": {
+        "conversationId": { "type": "string" },
+        "participantUids": { "type": "array", "items": { "type": "string" } },
+        "lastMessageText": { "type": "string" },
+        "lastMessageAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["conversationId", "participantUids", "lastMessageText", "lastMessageAt", "createdAt"]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a single message within a conversation.",
+      "properties": {
+        "messageId": { "type": "string" },
+        "conversationId": { "type": "string" },
+        "senderUid": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["messageId", "conversationId", "senderUid", "text", "createdAt"]
     }
   },
   "auth": {
@@ -687,6 +715,29 @@
               "name": "slotId",
               "description": "The unique identifier of the spotlight slot."
             }
+          ]
+        }
+      },
+      {
+        "path": "/conversations/{conversationId}",
+        "definition": {
+          "entityName": "Conversation",
+          "schema": { "$ref": "#/entities/Conversation" },
+          "description": "Top-level document for a direct message conversation.",
+          "params": [
+            { "name": "conversationId", "description": "The unique ID for the conversation." }
+          ]
+        }
+      },
+      {
+        "path": "/conversations/{conversationId}/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": { "$ref": "#/entities/Message" },
+          "description": "Subcollection for messages within a conversation.",
+          "params": [
+            { "name": "conversationId", "description": "The ID of the parent conversation." },
+            { "name": "messageId", "description": "The unique ID for the message." }
           ]
         }
       }
