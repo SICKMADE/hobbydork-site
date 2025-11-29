@@ -49,7 +49,7 @@ async function createNotification(params: {
 export const onIso24Create = functions
   .region("us-central1")
   .firestore.document(`${ISO24}/{isoId}`)
-  .onCreate(async (snap: functions.firestore.DocumentSnapshot, context: functions.EventContext) => {
+  .onCreate(async (snap: functions.firestore.DocumentSnapshot) => {
     const data = snap.data() || {};
     if (data.expiresAt) return null;
 
@@ -81,12 +81,13 @@ export const expireIso24Posts = functions
   });
 
 /**
- * Reviews: on create, incrementally update store ratingAverage, ratingCount, itemsSold.
+ * Reviews: on create, incrementally update store ratingAverage, ratingCount.
+ * Note: itemsSold is handled in onOrderUpdate when order is COMPLETED.
  */
 export const onReviewCreate = functions
   .region("us-central1")
   .firestore.document(`${STORES}/{storeId}/reviews/{reviewId}`)
-  .onCreate(async (snap: functions.firestore.DocumentSnapshot, context: functions.EventContext) => {
+  .onCreate(async (snap: functions.firestore.DocumentSnapshot) => {
     const data = snap.data() as any;
     const { storeId, rating } = data;
     if (!storeId || typeof rating !== "number") return null;
@@ -105,7 +106,6 @@ export const onReviewCreate = functions
       tx.update(storeRef, {
         ratingAverage: newAvg,
         ratingCount: newCount,
-        itemsSold: FieldValue.increment(1),
       });
     });
     return null;
@@ -157,11 +157,14 @@ export const onOrderCreate = functions
     const { sellerUid, buyerUid, totalPrice } = data;
 
     if (sellerUid) {
+      const buyerDoc = await db.collection(USERS).doc(buyerUid).get();
+      const buyerName = buyerDoc.data()?.displayName || "A buyer";
+
       await createNotification({
         userUid: sellerUid,
         type: "ORDER",
-        title: "New order received",
-        body: `You have a new order from ${buyerUid || "a buyer"} for $${Number(totalPrice || 0).toFixed(2)}.`,
+        title: "New order received!",
+        body: `You have a new order from ${buyerName} for $${Number(totalPrice || 0).toFixed(2)}.`,
         relatedId: context.params.orderId,
       });
     }
@@ -185,54 +188,67 @@ export const onOrderUpdate = functions
     const buyerUid = after.buyerUid as string | undefined;
     const sellerUid = after.sellerUid as string | undefined;
 
-    if (prevState === newState) return null;
-
-    const stateLabelMap: Record<string, string> = {
-      PENDING_PAYMENT: "Pending payment",
-      PAYMENT_SENT: "Payment sent",
-      SHIPPED: "Shipped",
-      DELIVERED: "Delivered",
-      COMPLETED: "Completed",
-      CANCELLED: "Cancelled",
-    };
-    const label = stateLabelMap[newState || ""] || newState || "Updated";
-
     const notifPromises: Promise<unknown>[] = [];
 
-    if (buyerUid) {
-      notifPromises.push(
-        createNotification({
-          userUid: buyerUid,
-          type: "ORDER_STATUS",
-          title: "Order update",
-          body: `Your order ${orderId} is now: ${label}.`,
-          relatedId: orderId,
-        })
-      );
+    // --- State Change Notifications ---
+    if (prevState !== newState) {
+      const stateLabelMap: Record<string, string> = {
+        PENDING_PAYMENT: "Pending Payment",
+        PAYMENT_SENT: "Payment Sent",
+        SHIPPED: "Shipped",
+        DELIVERED: "Delivered",
+        COMPLETED: "Completed",
+        CANCELLED: "Cancelled",
+      };
+      const label = stateLabelMap[newState || ""] || newState || "Updated";
+
+      if (buyerUid) {
+        notifPromises.push(
+          createNotification({
+            userUid: buyerUid,
+            type: "ORDER_STATUS",
+            title: "Order Update",
+            body: `Your order is now: ${label}.`,
+            relatedId: orderId,
+          })
+        );
+      }
+      if (sellerUid) {
+        notifPromises.push(
+          createNotification({
+            userUid: sellerUid,
+            type: "ORDER_STATUS",
+            title: "Order Update",
+            body: `Order ${orderId.substring(0,7)} is now: ${label}.`,
+            relatedId: orderId,
+          })
+        );
+      }
     }
 
-    if (sellerUid) {
-      notifPromises.push(
-        createNotification({
-          userUid: sellerUid,
-          type: "ORDER_STATUS",
-          title: "Order update",
-          body: `Order ${orderId} is now: ${label}.`,
-          relatedId: orderId,
-        })
-      );
-    }
-
+    // --- Inventory & Sales Count Logic on Completion ---
     if (newState === "COMPLETED" && prevState !== "COMPLETED") {
       const items: any[] = Array.isArray(after.items) ? after.items : [];
       const batch = db.batch();
+      let totalQuantity = 0;
+
       for (const item of items) {
         const listingId = item.listingId as string | undefined;
         const quantity = Number(item.quantity || 0);
         if (!listingId || quantity <= 0) continue;
+
+        totalQuantity += quantity;
         const listingRef = db.collection(LISTINGS).doc(listingId);
-        batch.update(listingRef, { quantityAvailable: FieldValue.increment(-quantity) });
+        // We decrement quantity available from cart checkout, not here.
+        // If we did it here, the stock would be held until order completion.
       }
+      
+      // Increment total items sold for the store
+      if (after.storeId && totalQuantity > 0) {
+        const storeRef = db.collection(STORES).doc(after.storeId);
+        batch.update(storeRef, { itemsSold: FieldValue.increment(totalQuantity) });
+      }
+
       notifPromises.push(batch.commit());
     }
 
@@ -257,6 +273,10 @@ export const onMessageCreate = functions
 
     const convo = convoSnap.data() as any;
     const participantUids: string[] = Array.isArray(convo.participantUids) ? convo.participantUids : [];
+    
+    const senderDoc = await db.collection(USERS).doc(senderUid).get();
+    const senderName = senderDoc.data()?.displayName || "Someone";
+
 
     await convoRef.update({ lastMessageText: text || "", lastMessageAt: Timestamp.now() });
 
@@ -267,7 +287,7 @@ export const onMessageCreate = functions
         createNotification({
           userUid: uid,
           type: "MESSAGE",
-          title: "New message",
+          title: `New message from ${senderName}`,
           body: text ? String(text).slice(0, 80) : "You have a new message.",
           relatedId: conversationId,
         })
@@ -278,24 +298,9 @@ export const onMessageCreate = functions
     return null;
   });
 
-/**
- * Community messages stub.
- */
-export const onCommunityMessageCreate = functions
-  .region("us-central1")
-  .firestore.document(`${COMMUNITY}/{messageId}`)
-  .onCreate(async () => null);
 
 /**
- * ISO24 update hook stub.
- */
-export const onIso24NotificationHook = functions
-  .region("us-central1")
-  .firestore.document(`${ISO24}/{isoId}`)
-  .onUpdate(async () => null);
-
-/**
- * Spotlight notifications stub.
+ * Spotlight notifications.
  */
 export const onSpotlightUpdate = functions
   .region("us-central1")
@@ -315,18 +320,12 @@ export const onSpotlightUpdate = functions
       await createNotification({
         userUid: ownerUid,
         type: "SPOTLIGHT",
-        title: "Store spotlight activated",
-        body: "Your store is now in the Spotlight section.",
+        title: "You're in the Spotlight!",
+        body: "Your store is now being featured on the homepage.",
         relatedId: storeId || null,
       });
     } else if (justDeactivated) {
-      await createNotification({
-        userUid: ownerUid,
-        type: "SPOTLIGHT",
-        title: "Store spotlight ended",
-        body: "Your Spotlight slot has ended.",
-        relatedId: storeId || null,
-      });
+      // We don't notify on deactivation to reduce noise.
     }
 
     return null;
