@@ -17,7 +17,6 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // Use exists() to avoid errors on non-existent documents
       return isSignedIn() 
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
     }
@@ -26,12 +25,18 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(userId));
     }
 
+    function isUserStatus(userId, status) {
+        let user = getUser(userId);
+        return user != null && user.data.status == status;
+    }
+
     function isActiveUser(userId) {
-      return getUser(userId).data.status == 'ACTIVE';
+        return isUserStatus(userId, 'ACTIVE');
     }
     
     function isEmailVerified(userId) {
-      return getUser(userId).data.emailVerified == true;
+      let user = getUser(userId);
+      return user != null && user.data.emailVerified == true;
     }
 
     function isStoreOwner(storeId) {
@@ -54,30 +59,43 @@ service cloud.firestore {
     
     // --- Data Validation Helpers ---
     
+    // On listing create/update, check if user is allowed to make it active.
     function isValidListingWrite() {
-      // Ensure that if a listing is being made active, the user is also active and verified.
       let isCreatingActive = request.resource.data.state == 'ACTIVE';
+      // Only active, email-verified users can create active listings
       let canCreateActive = isActiveUser(request.auth.uid) && isEmailVerified(request.auth.uid);
+      // Allow if not creating an active listing, OR if user is permitted to.
       return !isCreatingActive || canCreateActive;
     }
     
+    // Checks valid state transitions for an order update.
     function isValidOrderUpdate(existingOrder, newOrder) {
-        // Buyer can mark as payment sent
-        let isBuyerSendingPayment = existingOrder.state == 'PENDING_PAYMENT' 
+        // Buyer can mark as payment sent if they are providing a shipping address.
+        let isBuyerSendingPayment = isUser(existingOrder.buyerUid)
+                                  && existingOrder.state == 'PENDING_PAYMENT' 
                                   && newOrder.state == 'PAYMENT_SENT'
-                                  && isUser(existingOrder.buyerUid)
                                   && newOrder.buyerShippingAddress != null;
         
-        // Seller can mark as shipped
-        let isSellerShipping = existingOrder.state == 'PAYMENT_SENT'
+        // Seller can mark as shipped if they provide a tracking number.
+        let isSellerShipping = isUser(existingOrder.sellerUid)
+                               && existingOrder.state == 'PAYMENT_SENT'
                                && newOrder.state == 'SHIPPED'
-                               && isUser(existingOrder.sellerUid)
                                && newOrder.trackingNumber != null;
-                               
-        // Anyone can cancel a pending order
+        
+        // Seller can mark as delivered
+        let isSellerDelivering = isUser(existingOrder.sellerUid)
+                                 && existingOrder.state == 'SHIPPED'
+                                 && newOrder.state == 'DELIVERED';
+
+        // Buyer can mark as complete
+        let isBuyerCompleting = isUser(existingOrder.buyerUid)
+                                && existingOrder.state == 'DELIVERED'
+                                && newOrder.state == 'COMPLETED';
+
+        // Any participant can cancel before it's shipped.
         let isCancelling = newOrder.state == 'CANCELLED' && existingOrder.state in ['PENDING_PAYMENT', 'PAYMENT_SENT'];
 
-        return isBuyerSendingPayment || isSellerShipping || isCancelling;
+        return isBuyerSendingPayment || isSellerShipping || isSellerDelivering || isBuyerCompleting || isCancelling;
     }
 
 
@@ -85,25 +103,33 @@ service cloud.firestore {
     // Collection Rules
     // --------------------------------
 
-    match /users/{userId} {
-      allow get, list: if isSignedIn();
-      allow create: if isUser(userId); // Allow user creation if the doc ID matches the user's UID
-      allow update: if (isUser(userId) 
-                      // Prevent users from changing their own role, status, or email verification
-                      && request.resource.data.role == resource.data.role
-                      && request.resource.data.status == resource.data.status
-                      && request.resource.data.emailVerified == resource.data.emailVerified)
-                      || isAdmin(); // Admins can update anything
-      allow delete: if false;
+    // Global deny-all for reads/writes unless explicitly allowed by a sub-rule.
+    // This is safer than a global allow.
+    match /{path=**} {
+      allow read, write: if false;
+    }
 
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn(); // For mentions, searches, etc.
+      
+      // Allow user creation if the doc ID matches the user's UID.
+      allow create: if isUser(userId);
+      
+      // A user can update their own doc, but cannot change their role or status.
+      // Admins can update anything.
+      allow update: if (isUser(userId) 
+                      && request.resource.data.role == resource.data.role
+                      && request.resource.data.status == resource.data.status)
+                      || isAdmin();
+                      
+      // Subcollections are owned by the user.
       match /notifications/{notificationId} {
         allow read, write: if isUser(userId);
       }
-
       match /watchlist/{listingId} {
-          allow read, write: if isUser(userId);
+        allow read, write: if isUser(userId);
       }
-
       match /favoriteStores/{storeId} {
         allow read, write: if isUser(userId);
       }
@@ -113,14 +139,14 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create: if isUser(request.resource.data.ownerUid);
       allow update: if isStoreOwner(storeId) || isAdmin();
-      allow delete: if false;
       
       match /reviews/{reviewId} {
           allow get, list: if isSignedIn();
-          // reviewId must be the orderId & only the buyer can create a review
+          // The buyer of the corresponding order can create one review.
           allow create: if isOrderBuyer(request.resource.data.orderId)
                         && !existsAfter(/databases/$(database)/documents/storefronts/$(storeId)/reviews/$(request.resource.data.orderId));
-          allow update, delete: if false; // Reviews are immutable
+          // Reviews are immutable by users.
+          allow update, delete: if isAdmin();
       }
     }
     
@@ -133,42 +159,44 @@ service cloud.firestore {
 
     match /orders/{orderId} {
       allow get: if isOrderParticipant(resource.data) || isAdmin();
-      allow list: if false; // Users should query for their own orders
       allow create: if isUser(request.resource.data.buyerUid) && isActiveUser(request.auth.uid);
       allow update: if (isOrderParticipant(resource.data) && isValidOrderUpdate(resource.data, request.resource.data)) || isAdmin();
-      allow delete: if false;
     }
     
     match /communityMessages/{messageId} {
         allow read: if isSignedIn();
-        allow write: if isSignedIn() && isActiveUser(request.auth.uid);
+        // Only ACTIVE users can write new messages.
+        allow create, update, delete: if isActiveUser(request.auth.uid);
     }
 
     match /iso24Posts/{isoId} {
         allow get, list: if isSignedIn();
+        // Only ACTIVE users can create posts.
         allow create: if isUser(request.resource.data.creatorUid) && isActiveUser(request.auth.uid);
         allow update, delete: if isUser(resource.data.creatorUid) || isAdmin();
     }
     
     match /spotlightSlots/{slotId} {
         allow get, list: if isSignedIn();
+        // Only Admins can manage spotlight slots.
         allow create, update, delete: if isAdmin();
     }
 
     match /conversations/{conversationId} {
-      allow get, list, update: if isConversationParticipant(resource.data);
-      allow create: if isConversationParticipant(request.resource.data);
+      allow get, list, create, update: if isConversationParticipant(resource.data);
       
       match /messages/{messageId} {
         allow get, list: if isConversationParticipant(get(/databases/$(database)/documents/conversations/$(conversationId)).data);
-        allow create: if isUser(request.resource.data.senderUid) && isConversationParticipant(get(/databases/$(database)/documents/conversations/$(conversationId)).data);
-        allow update, delete: if false;
+        allow create: if isUser(request.resource.data.senderUid);
+        allow update, delete: if false; // Messages are immutable.
       }
     }
     
      match /reports/{reportId} {
         allow create: if isSignedIn();
+        // Users can read their own submitted reports.
         allow get: if isUser(resource.data.reporterUid) || isAdmin();
+        // Only admins can list, update, or delete reports.
         allow list, update, delete: if isAdmin();
     }
 
