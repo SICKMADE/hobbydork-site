@@ -238,9 +238,8 @@ export const onOrderUpdate = functions
         if (!listingId || quantity <= 0) continue;
 
         totalQuantity += quantity;
-        const listingRef = db.collection(LISTINGS).doc(listingId);
-        // We decrement quantity available from cart checkout, not here.
-        // If we did it here, the stock would be held until order completion.
+        // We no longer decrement stock here. Stock is decremented at checkout.
+        // This function's role on completion is to update store-level stats.
       }
       
       // Increment total items sold for the store
@@ -249,7 +248,9 @@ export const onOrderUpdate = functions
         batch.update(storeRef, { itemsSold: FieldValue.increment(totalQuantity) });
       }
 
-      notifPromises.push(batch.commit());
+      if (totalQuantity > 0) {
+        notifPromises.push(batch.commit());
+      }
     }
 
     await Promise.all(notifPromises);
@@ -277,8 +278,14 @@ export const onMessageCreate = functions
     const senderDoc = await db.collection(USERS).doc(senderUid).get();
     const senderName = senderDoc.data()?.displayName || "Someone";
 
-
-    await convoRef.update({ lastMessageText: text || "", lastMessageAt: Timestamp.now() });
+    const updatePayload: { [key: string]: any } = {
+      lastMessageAt: Timestamp.now(),
+    };
+    if (text) {
+      updatePayload.lastMessageText = text;
+    }
+    
+    await convoRef.update(updatePayload);
 
     const notifPromises: Promise<unknown>[] = [];
     participantUids.forEach((uid) => {
@@ -298,7 +305,6 @@ export const onMessageCreate = functions
     return null;
   });
 
-
 /**
  * Spotlight notifications.
  */
@@ -311,7 +317,6 @@ export const onSpotlightUpdate = functions
     if (!before || !after) return null;
 
     const justActivated = !before.active && after.active;
-    const justDeactivated = before.active && !after.active;
     const storeId = after.storeId as string | undefined;
     const ownerUid = after.ownerUid as string | undefined;
     if (!ownerUid) return null;
@@ -324,8 +329,6 @@ export const onSpotlightUpdate = functions
         body: "Your store is now being featured on the homepage.",
         relatedId: storeId || null,
       });
-    } else if (justDeactivated) {
-      // We don't notify on deactivation to reduce noise.
     }
 
     return null;
