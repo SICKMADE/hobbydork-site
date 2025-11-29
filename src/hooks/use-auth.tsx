@@ -6,7 +6,6 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
-  sendEmailVerification,
   User as FirebaseUser
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -48,17 +47,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    if (user && user.emailVerified && profile?.status === 'LIMITED' && userProfileRef) {
-      setDoc(userProfileRef, { status: 'ACTIVE', emailVerified: true, updatedAt: serverTimestamp() }, { merge: true })
-        .catch((error) => {
-          console.error('Error updating user status:', error);
-          const contextualError = new FirestorePermissionError({
-            path: userProfileRef.path,
-            operation: 'update',
-            requestResourceData: { status: 'ACTIVE', emailVerified: true },
-          });
-          errorEmitter.emit('permission-error', contextualError);
-        });
+    if (user && profile?.status === 'ACTIVE' && userProfileRef) {
+      // This is just a placeholder for potential future logic.
+      // For now, we don't need to do anything when a user is active.
     }
   }, [user, profile, userProfileRef, toast]);
 
@@ -108,30 +99,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
       
-      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt'> = {
+      const userProfile: UserProfile = {
         uid: newUser.uid,
         email: newUser.email!,
-        displayName: "", // This is set during onboarding
+        displayName: "", 
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
         status: 'ACTIVE',
         role: 'user',
-        emailVerified: true, // We are not doing email verification
-        oneAccountAcknowledged: false, // Set during onboarding
-        goodsAndServicesAgreed: false, // Set during onboarding
+        emailVerified: false,
+        oneAccountAcknowledged: false,
+        goodsAndServicesAgreed: false,
         notificationPreferences: {
           notifyMessages: true,
           notifyOrders: true,
           notifyISO24: true,
           notifySpotlight: true,
         },
+        createdAt: serverTimestamp() as any, // Cast to any to satisfy type temporarily
+        updatedAt: serverTimestamp() as any, // Cast to any to satisfy type temporarily
       };
 
       const newUserRef = doc(firestore, "users", newUser.uid);
       
       await setDoc(newUserRef, {
-        ...userProfile,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        ...userProfile
       }).catch(error => {
           const contextualError = new FirestorePermissionError({
             path: newUserRef.path,
@@ -142,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw error;
       });
       
-      // No toast on success, as the user will be redirected immediately
+      router.push('/onboarding');
       return true;
     } catch (error: any) {
       console.error("Signup failed:", error);
@@ -155,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return false;
     }
-  }, [auth, firestore, toast]);
+  }, [auth, firestore, toast, router]);
 
   const value = { 
       user,
