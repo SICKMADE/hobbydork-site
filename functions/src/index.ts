@@ -17,7 +17,7 @@ const ORDERS = "orders";
 const ISO24 = "iso24Posts";
 const SPOTLIGHT = "spotlightSlots";
 const CONVERSATIONS = "conversations";
-const COMMUNITY = "communityMessages";
+// const COMMUNITY = "communityMessages"; // This was unused, removing to clear lint error.
 
 /**
  * Helper to write an in-app notification.
@@ -242,7 +242,7 @@ export const onOrderUpdate = functions
         // We no longer decrement stock here. Stock is decremented at checkout.
         // This function's role on completion is to update store-level stats.
       }
-      
+
       // Increment total items sold for the store
       if (after.storeId && totalQuantity > 0) {
         const storeRef = db.collection(STORES).doc(after.storeId);
@@ -275,7 +275,7 @@ export const onMessageCreate = functions
 
     const convo = convoSnap.data() as any;
     const participantUids: string[] = Array.isArray(convo.participantUids) ? convo.participantUids : [];
-    
+
     const senderDoc = await db.collection(USERS).doc(senderUid).get();
     const senderName = senderDoc.data()?.displayName || "Someone";
 
@@ -285,7 +285,7 @@ export const onMessageCreate = functions
     if (text) {
       updatePayload.lastMessageText = text;
     }
-    
+
     await convoRef.update(updatePayload);
 
     const notifPromises: Promise<unknown>[] = [];
@@ -334,5 +334,3 @@ export const onSpotlightUpdate = functions
 
     return null;
   });
-
-    
