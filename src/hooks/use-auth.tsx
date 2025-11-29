@@ -8,7 +8,7 @@ import {
   signOut,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, getDocs, collection, query, limit } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -87,23 +87,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-        // Check if this is the first user to determine admin role
-        const usersCollectionRef = collection(firestore, "users");
-        const q = query(usersCollectionRef, limit(1));
-        
-        const querySnapshot = await getDocs(q).catch(error => {
-            // This is the point of failure. We emit a contextual error here.
-            const contextualError = new FirestorePermissionError({
-                path: usersCollectionRef.path,
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', contextualError);
-            // We must re-throw the original error to stop execution.
-            throw error;
-        });
-
-        const isFirstUser = querySnapshot.empty;
-
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const newUser = userCredential.user;
 
@@ -113,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             displayName: newUser.email!,
             avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
             status: 'ACTIVE',
-            role: isFirstUser ? 'admin' : 'user',
+            role: 'user', // All new users are regular users
             emailVerified: true, // No verification step
             notificationPreferences: {
                 notifyMessages: true,
