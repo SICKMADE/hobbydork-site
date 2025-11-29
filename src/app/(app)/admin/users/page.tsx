@@ -60,12 +60,11 @@ export default function AdminUsersPage() {
       });
   };
 
-  const getStatusVariant = (status: User['status']): 'default' | 'secondary' | 'destructive' => {
+  const getStatusVariant = (status: User['status']): 'default' | 'destructive' => {
     switch (status) {
         case 'ACTIVE': return 'default';
-        case 'LIMITED': return 'secondary';
         case 'SUSPENDED': return 'destructive';
-        default: return 'secondary';
+        default: return 'default';
     }
   }
 

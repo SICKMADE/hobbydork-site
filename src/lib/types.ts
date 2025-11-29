@@ -1,5 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 
+// User status is now simplified. 'LIMITED' is removed.
 export type UserStatus = 'ACTIVE' | 'SUSPENDED';
 
 export type User = {
@@ -151,4 +152,3 @@ export type Review = {
     comment: string;
     createdAt: Timestamp;
 }
-    

@@ -6,6 +6,7 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
+  sendEmailVerification,
   User as FirebaseUser
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -17,8 +18,11 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 interface SignupData {
+  displayName: string;
   email: string;
   password: string;
+  oneAccountAcknowledged: boolean;
+  goodsAndServicesAgreed: boolean;
 }
 
 interface AuthContextType {
@@ -47,11 +51,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    // This logic handles a corner case for email verification, which is currently not used,
-    // but is kept minimal to avoid interference.
-    if (user && profile?.status === 'LIMITED' && user.emailVerified && userProfileRef) {
+    // Check if the user is logged in, their email is verified, and their profile is currently 'LIMITED'
+    // This logic is now mostly legacy but kept minimal. The primary driver for onboarding is the AppLayout check.
+    if (user && user.emailVerified && profile?.status === 'LIMITED' && userProfileRef) {
+      // Update the user's status to 'ACTIVE' in Firestore
       const updateData = { status: 'ACTIVE', emailVerified: true, updatedAt: serverTimestamp() };
       setDoc(userProfileRef, updateData, { merge: true })
+        .then(() => {
+          toast({
+            title: 'Account Activated!',
+            description: 'Your account has been fully activated. Welcome!',
+          });
+        })
         .catch((error) => {
           console.error('Error updating user status:', error);
           const contextualError = new FirestorePermissionError({
@@ -62,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           errorEmitter.emit('permission-error', contextualError);
         });
     }
-  }, [user, profile, userProfileRef]);
+  }, [user, profile, userProfileRef, toast]);
 
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
@@ -100,26 +111,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth, router, toast]);
 
   const signup = useCallback(async (data: SignupData): Promise<boolean> => {
-    const { email, password } = data;
+    const { email, password, oneAccountAcknowledged, goodsAndServicesAgreed } = data;
     if (!firestore) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
     }
     
+    // We create the user in auth first, which signs them in.
+    // The security rules can then use their auth.uid to secure the profile creation.
     try {
-      // Step 1: Create user in Auth. This also signs them in.
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
 
-      // Step 2: Create the user profile in Firestore.
-      // The user role is ALWAYS 'user'. No admin check.
-      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid' | 'storeId' | 'displayName' | 'goodsAndServicesAgreed' | 'oneAccountAcknowledged'> & { createdAt: any, updatedAt: any, uid: string } = {
+      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid' | 'storeId' | 'displayName'> & { createdAt: any, updatedAt: any, uid: string } = {
         uid: newUser.uid,
         email: newUser.email!,
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-        status: 'ACTIVE', 
-        role: 'user', // ALWAYS 'user'
-        emailVerified: true, // Skipping verification as requested
+        status: 'ACTIVE', // No 'LIMITED' status, user is active immediately for onboarding.
+        role: 'user', // All new users are 'user'
+        emailVerified: true, // Skipping email verification as requested
+        oneAccountAcknowledged,
+        goodsAndServicesAgreed,
         notificationPreferences: {
           notifyMessages: true,
           notifyOrders: true,
@@ -129,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
-
+      
       const newUserRef = doc(firestore, "users", newUser.uid);
       await setDoc(newUserRef, userProfile);
       
@@ -137,8 +149,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: 'Account Created!',
         description: `Welcome! Let's get your store set up.`,
       });
-
-      // The redirect to onboarding is handled by the AppLayout component
+      // IMPORTANT: The redirect to onboarding is now handled by the AppLayout component
+      // which checks if the profile is missing a storeId.
       return true;
     } catch (error: any) {
       console.error("Signup failed:", error);

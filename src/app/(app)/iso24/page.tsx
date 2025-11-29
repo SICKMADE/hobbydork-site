@@ -12,7 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, addDoc, serverTimestamp, query, where, Timestamp, orderBy } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, Timestamp, orderBy, doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { ISO24 } from "@/lib/types";
 import ISO24Card from "@/components/ISO24Card";
@@ -89,11 +89,11 @@ export default function ISO24Page() {
         try {
             const now = serverTimestamp();
             const expires = Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000);
-            const docRef = collection(firestore, "iso24Posts");
-            const newPostId = doc(docRef).id;
+            const docRefCollection = collection(firestore, "iso24Posts");
+            const newDocRef = doc(docRefCollection)
 
-            await setDoc(doc(docRef, newPostId), {
-                id: newPostId,
+            await setDoc(newDocRef, {
+                id: newDocRef.id,
                 creatorUid: user.uid,
                 userName: profile.displayName,
                 userAvatar: profile.avatar || placeholderImages['user-avatar-1']?.imageUrl,
@@ -122,15 +122,15 @@ export default function ISO24Page() {
         }
     }
     
-    if (profile?.status === 'LIMITED') {
+    if (profile?.status !== 'ACTIVE') {
         return (
             <AppLayout>
                 <div className="flex items-center justify-center h-full">
                     <Alert variant="destructive" className="max-w-lg">
                       <Terminal className="h-4 w-4" />
-                      <AlertTitle>Limited Access</AlertTitle>
+                      <AlertTitle>Account Not Active</AlertTitle>
                       <AlertDescription>
-                        Your account has limited access. You cannot create an ISO post. Please verify your email to get full access.
+                        Your account must be active to perform this action. This might be because your email is not verified or your account is suspended.
                       </AlertDescription>
                     </Alert>
                 </div>

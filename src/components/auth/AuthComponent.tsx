@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Logo from '../Logo';
 import Link from 'next/link';
+import { Checkbox } from '../ui/checkbox';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -20,6 +21,8 @@ const signupSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   confirmPassword: z.string(),
+  oneAccountAcknowledged: z.literal(true),
+  goodsAndServicesAgreed: z.literal(true),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -47,6 +50,10 @@ export default function AuthComponent() {
     signup({
       email: values.email,
       password: values.password,
+      oneAccountAcknowledged: values.oneAccountAcknowledged,
+      goodsAndServicesAgreed: values.goodsAndServicesAgreed,
+      // displayName is collected during onboarding
+      displayName: ""
     });
   }
 
@@ -90,7 +97,10 @@ export default function AuthComponent() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Password</FormLabel>
+                          <div className="flex justify-between items-baseline">
+                            <FormLabel>Password</FormLabel>
+                            <Link href="#" className="text-sm text-primary hover:underline">Forgot password?</Link>
+                          </div>
                           <FormControl>
                             <Input type="password" placeholder="••••••••" {...field} />
                           </FormControl>
@@ -111,13 +121,13 @@ export default function AuthComponent() {
                 <div className="flex flex-col space-y-1.5 p-6">
                     <h3 className="font-semibold tracking-tight text-2xl">Create an Account</h3>
                     <p className="text-sm text-muted-foreground">
-                        Let's get you started. You'll set up your store next.
+                        You'll set up your store on the next step.
                     </p>
                 </div>
                 <div className="p-6 pt-0">
                     <Form {...signupForm}>
                     <form onSubmit={signupForm.handleSubmit(onSignup)} className="space-y-4">
-                        <FormField
+                         <FormField
                             control={signupForm.control}
                             name="email"
                             render={({ field }) => (
@@ -156,24 +166,22 @@ export default function AuthComponent() {
                                 </FormItem>
                             )}
                         />
+                       
                         <Button type="submit" className="w-full" disabled={signupForm.formState.isSubmitting}>
                             {signupForm.formState.isSubmitting ? 'Creating Account...' : 'Create Account'}
                         </Button>
                     </form>
                     </Form>
                 </div>
+                 <div className="p-6 pt-0 text-center text-sm text-muted-foreground">
+                    Must be 18+. One account per person. By creating an account, you agree to our{' '}
+                    <Link href="#" className="underline underline-offset-4 hover:text-primary">
+                      Terms of Service
+                    </Link> and <Link href="#" className="underline underline-offset-4 hover:text-primary">Privacy Policy</Link>.
+                  </div>
             </div>
           </TabsContent>
         </Tabs>
-         <p className="px-8 mt-4 text-center text-sm text-muted-foreground">
-            By creating an account, you agree to our{' '}
-            <Link href="#" className="underline underline-offset-4 hover:text-primary">
-              Terms of Service
-            </Link> and <Link href="#" className="underline underline-offset-4 hover:text-primary">Privacy Policy</Link>.
-          </p>
-          <p className="px-8 mt-2 text-center text-sm text-muted-foreground">
-            Must be 18+ to create an account. One account per person.
-          </p>
       </div>
     </div>
   );

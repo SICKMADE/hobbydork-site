@@ -80,7 +80,7 @@ export default function CreateListingPage() {
         }
 
         if (profile.status !== 'ACTIVE') {
-            toast({ title: "Account Not Active", description: "Your account must be active to create listings. Please verify your email.", variant: "destructive" });
+            toast({ title: "Account Not Active", description: "Your account must be active to create listings.", variant: "destructive" });
             return;
         }
 
@@ -139,15 +139,15 @@ export default function CreateListingPage() {
         )
     }
 
-    if (profile.status === 'LIMITED') {
+    if (profile.status !== 'ACTIVE') {
         return (
             <AppLayout>
                 <div className="flex items-center justify-center h-full">
                     <Alert variant="destructive" className="max-w-lg">
                       <Terminal className="h-4 w-4" />
-                      <AlertTitle>Limited Access</AlertTitle>
+                      <AlertTitle>Account Not Active</AlertTitle>
                       <AlertDescription>
-                        Your account has limited access. You cannot create a new listing. Please verify your email to get full access.
+                        Your account must be active to create a listing.
                       </AlertDescription>
                     </Alert>
                 </div>
