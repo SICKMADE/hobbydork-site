@@ -6,10 +6,9 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
-  sendEmailVerification,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, getDocs, collection, query, limit } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -18,11 +17,8 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 interface SignupData {
-  displayName: string;
   email: string;
   password: string;
-  oneAccountAcknowledged: boolean;
-  goodsAndServicesAgreed: boolean;
 }
 
 interface AuthContextType {
@@ -51,14 +47,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
+    // This logic handles a corner case for email verification, which is currently not used,
+    // but is kept minimal to avoid interference.
     if (user && profile?.status === 'LIMITED' && user.emailVerified && userProfileRef) {
-      setDoc(userProfileRef, { status: 'ACTIVE', emailVerified: true, updatedAt: serverTimestamp() }, { merge: true })
+      const updateData = { status: 'ACTIVE', emailVerified: true, updatedAt: serverTimestamp() };
+      setDoc(userProfileRef, updateData, { merge: true })
         .catch((error) => {
           console.error('Error updating user status:', error);
           const contextualError = new FirestorePermissionError({
             path: userProfileRef.path,
             operation: 'update',
-            requestResourceData: { status: 'ACTIVE', emailVerified: true },
+            requestResourceData: updateData,
           });
           errorEmitter.emit('permission-error', contextualError);
         });
@@ -101,24 +100,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth, router, toast]);
 
   const signup = useCallback(async (data: SignupData): Promise<boolean> => {
-    const { displayName, email, password } = data;
+    const { email, password } = data;
     if (!firestore) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
     }
     
     try {
+      // Step 1: Create user in Auth. This also signs them in.
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
 
-      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid' | 'storeId'> & { createdAt: any, updatedAt: any, uid: string } = {
+      // Step 2: Create the user profile in Firestore.
+      // The user role is ALWAYS 'user'. No admin check.
+      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid' | 'storeId' | 'displayName' | 'goodsAndServicesAgreed' | 'oneAccountAcknowledged'> & { createdAt: any, updatedAt: any, uid: string } = {
         uid: newUser.uid,
         email: newUser.email!,
-        displayName, // Will be updated in onboarding
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-        status: 'ACTIVE', // Default to ACTIVE
-        role: 'user', // All new users are 'user'
-        emailVerified: true, // Skipping verification
+        status: 'ACTIVE', 
+        role: 'user', // ALWAYS 'user'
+        emailVerified: true, // Skipping verification as requested
         notificationPreferences: {
           notifyMessages: true,
           notifyOrders: true,
@@ -133,19 +134,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await setDoc(newUserRef, userProfile);
       
       toast({
-        title: 'Signup Successful!',
-        description: `Welcome, ${displayName}! Let's set up your store.`,
+        title: 'Account Created!',
+        description: `Welcome! Let's get your store set up.`,
       });
 
-      // The redirect is now handled by the AppLayout component
+      // The redirect to onboarding is handled by the AppLayout component
       return true;
     } catch (error: any) {
       console.error("Signup failed:", error);
-      if (error.code === 'permission-denied' || error.name === 'FirebaseError') {
+      // Check for permission errors specifically during the setDoc call
+      if (error.code === 'permission-denied' || (error.name === 'FirebaseError' && error.message.includes('permission-denied'))) {
             const contextualError = new FirestorePermissionError({
-                path: `users/<new_user_uid>`,
+                path: `users/${auth.currentUser?.uid || '<new-user-id>'}`,
                 operation: 'create',
-                requestResourceData: { email: data.email, role: 'user' /* other fields */ }
+                requestResourceData: { email: data.email, role: 'user' }
             });
             errorEmitter.emit('permission-error', contextualError);
       } else {
