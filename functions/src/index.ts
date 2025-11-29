@@ -1,3 +1,4 @@
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
@@ -333,3 +334,5 @@ export const onSpotlightUpdate = functions
 
     return null;
   });
+
+    
