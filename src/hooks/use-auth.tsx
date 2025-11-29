@@ -1,23 +1,30 @@
 'use client';
 
-import React, { createContext, useContext, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
-  User as FirebaseUser,
-  getIdTokenResult
+  User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, runTransaction, collection } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { placeholderImages } from '@/lib/placeholder-images';
 
-interface SignupData {
+
+export interface SignupData {
   email: string;
   password: string;
+  storeName: string;
+  slug: string;
+  about: string;
+  paymentMethod: "PAYPAL" | "VENMO";
+  paymentIdentifier: string;
+  agreeGoodsAndServices: boolean;
+  agreeOneAccount: boolean;
 }
 
 interface AuthContextType {
@@ -80,51 +87,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth, router, toast]);
 
   const signup = useCallback(async (data: SignupData): Promise<boolean> => {
-    const { email, password } = data;
-    if (!firestore) {
-        toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
+    const { email, password, storeName, slug, about, paymentMethod, paymentIdentifier, agreeGoodsAndServices, agreeOneAccount } = data;
+    if (!firestore || !auth) {
+        toast({ title: 'Signup Failed', description: 'Authentication service is not available.', variant: 'destructive' });
         return false;
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const newUser = userCredential.user;
-      
-      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid' | 'displayName'> & { createdAt: any, updatedAt: any, uid: string, displayName: string | null } = {
-        uid: newUser.uid,
-        email: newUser.email!,
-        displayName: newUser.email, // Default display name to email
-        avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-        status: 'ACTIVE', // Set status to ACTIVE immediately
-        role: 'user', // All new users are 'user' role by default
-        emailVerified: newUser.emailVerified,
-        notificationPreferences: {
-          notifyMessages: true,
-          notifyOrders: true,
-          notifyISO24: true,
-          notifySpotlight: true,
-        },
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
+        // Step 1: Create the user in Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const newUser = userCredential.user;
 
-      await setDoc(doc(firestore, "users", newUser.uid), userProfile);
-      
-      toast({
-        title: 'Signup Successful!',
-        description: `Welcome! Let's get your store set up.`,
-      });
+        // Step 2: Run a transaction to create the user profile and the store
+        await runTransaction(firestore, async (transaction) => {
+            const newStoreRef = doc(collection(firestore, "storefronts"));
+            const userProfileRef = doc(firestore, "users", newUser.uid);
 
-      // The redirection to onboarding will be handled by the AppLayout now
-      return true;
+            // a. Create the user profile document
+            const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
+                uid: newUser.uid,
+                email: newUser.email!,
+                displayName: storeName, // Default user's display name to the store name
+                avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
+                status: 'ACTIVE',
+                role: 'user', 
+                emailVerified: true, // No verification step, so default to true
+                storeId: newStoreRef.id, // Link user to the new store
+                paymentMethod: paymentMethod,
+                paymentIdentifier: paymentIdentifier,
+                goodsAndServicesAgreed: agreeGoodsAndServices,
+                oneAccountAcknowledged: agreeOneAccount,
+                notificationPreferences: {
+                    notifyMessages: true,
+                    notifyOrders: true,
+                    notifyISO24: true,
+                    notifySpotlight: true,
+                },
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            };
+            transaction.set(userProfileRef, userProfile);
+
+            // b. Create the store document
+            transaction.set(newStoreRef, {
+                storeId: newStoreRef.id,
+                ownerUid: newUser.uid,
+                storeName: storeName,
+                slug: slug,
+                about: about,
+                avatarUrl: placeholderImages['store-logo-1']?.imageUrl || `https://picsum.photos/seed/${slug}/128/128`,
+                ratingAverage: 0,
+                ratingCount: 0,
+                itemsSold: 0,
+                status: "ACTIVE",
+                isSpotlighted: false,
+                spotlightUntil: null,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            });
+        });
+
+        toast({
+            title: 'Account Created!',
+            description: "Welcome to VaultVerse! Your store is now live.",
+        });
+
+        return true;
     } catch (error: any) {
-      console.error("Signup failed:", error);
-      toast({
-        title: 'Signup Failed',
-        description: error.message || 'An unexpected error occurred during sign up.',
-        variant: 'destructive',
-      });
-      return false;
+        console.error("Signup failed:", error);
+        toast({
+            title: 'Signup Failed',
+            description: error.message || 'An unexpected error occurred during sign up.',
+            variant: 'destructive',
+        });
+        return false;
     }
   }, [auth, firestore, toast]);
 
