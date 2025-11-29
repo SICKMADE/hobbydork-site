@@ -7,9 +7,10 @@ import {
   signInWithEmailAndPassword,
   signOut,
   sendEmailVerification,
-  User as FirebaseUser
+  User as FirebaseUser,
+  getIdTokenResult
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, getDocs, collection, query, limit } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDocs, collection, query, limit, updateDoc } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -49,26 +50,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    // Check if the user is logged in, their email is verified, and their profile is currently 'LIMITED'
-    if (user && user.emailVerified && profile?.status === 'LIMITED' && userProfileRef) {
-      // Update the user's status to 'ACTIVE' in Firestore
-      setDoc(userProfileRef, { status: 'ACTIVE', emailVerified: true, updatedAt: serverTimestamp() }, { merge: true })
-        .then(() => {
+    // This effect runs when the user object changes (e.g., on login, token refresh)
+    const handleActivation = async () => {
+      if (user && profile?.status === 'LIMITED') {
+        // Force a refresh of the ID token to get the latest email_verified status
+        const tokenResult = await getIdTokenResult(user, true);
+        
+        if (tokenResult.claims.email_verified && userProfileRef) {
+          // Update the user's status to 'ACTIVE' in Firestore
+          await updateDoc(userProfileRef, { 
+              status: 'ACTIVE', 
+              emailVerified: true, 
+              updatedAt: serverTimestamp() 
+          });
+
           toast({
             title: 'Account Activated!',
             description: 'Your account has been fully activated. Welcome!',
           });
-        })
-        .catch((error) => {
-          console.error('Error updating user status:', error);
-          toast({
-            title: 'Activation Failed',
-            description: 'Could not update your account status. Please contact support.',
-            variant: 'destructive',
-          });
+          
+          // Redirect to onboarding to complete setup
+          router.push('/onboarding');
+        }
+      }
+    };
+    
+    handleActivation().catch((error) => {
+        console.error('Error during account activation:', error);
+        toast({
+          title: 'Activation Failed',
+          description: 'Could not update your account status. Please try logging in again or contact support.',
+          variant: 'destructive',
         });
-    }
-  }, [user, profile, userProfileRef, toast]);
+    });
+
+  }, [user, profile, userProfileRef, router, toast]);
 
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
@@ -112,17 +128,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
     }
     
-    // We create the user in auth first, which signs them in.
-    // The security rules can then use their auth.uid to secure the profile creation.
+    // Check if any user exists to determine admin role *before* creating the user.
+    // This is safe because of the `list` rule with `limit(1)` in firestore.rules.
+    const usersCollectionRef = collection(firestore, "users");
+    const q = query(usersCollectionRef, limit(1));
+    const querySnapshot = await getDocs(q);
+    const isFirstUser = querySnapshot.empty;
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
-
-      // Now that the user is created and signed in, we can check if they are the first user.
-      const usersCollectionRef = collection(firestore, "users");
-      const q = query(usersCollectionRef, limit(1));
-      const querySnapshot = await getDocs(q);
-      const isFirstUser = querySnapshot.empty;
       
       const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid'> & { createdAt: any, updatedAt: any, uid: string } = {
         uid: newUser.uid,
@@ -130,7 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         displayName,
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
         status: 'LIMITED',
-        role: isFirstUser ? 'admin' : 'user', // Set role to 'admin' if first user
+        role: isFirstUser ? 'admin' : 'user',
         emailVerified: newUser.emailVerified,
         oneAccountAcknowledged,
         goodsAndServicesAgreed,

@@ -11,7 +11,7 @@ export default function AppRoutesLayout({
   children: React.ReactNode;
 }) {
   const { user, isUserLoading } = useUser();
-  const { logout, profile } = useAuth();
+  const { logout, profile, loading: isProfileLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -20,7 +20,15 @@ export default function AppRoutesLayout({
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading || (user && !profile)) { // Added check for profile loading
+  useEffect(() => {
+    // Redirect to onboarding if user is active but has no storeId yet
+    if (profile?.status === 'ACTIVE' && !profile.storeId) {
+      router.push('/onboarding');
+    }
+  }, [profile, router]);
+
+
+  if (isUserLoading || isProfileLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
   
@@ -41,5 +49,10 @@ export default function AppRoutesLayout({
     );
   }
   
+  // Do not render children if user is active but not onboarded yet, as they will be redirected.
+  if (profile?.status === 'ACTIVE' && !profile.storeId) {
+    return <div className="flex items-center justify-center h-screen">Redirecting to onboarding...</div>;
+  }
+
   return <>{children}</>;
 }
