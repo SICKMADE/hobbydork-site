@@ -9,7 +9,7 @@ import {
   User as FirebaseUser
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, getDocs, collection, query, limit } from 'firebase/firestore';
-import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
+import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { placeholderImages } from '@/lib/placeholder-images';
@@ -86,54 +86,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
     }
     
+    // Check if this is the first user to determine admin role
+    const usersCollectionRef = collection(firestore, "users");
+    const q = query(usersCollectionRef, limit(1));
+    const querySnapshot = await getDocs(q);
+    const isFirstUser = querySnapshot.empty;
+
     try {
-      // Check if this is the first user to determine admin role
-      const usersCollectionRef = collection(firestore, "users");
-      const q = query(usersCollectionRef, limit(1));
-      const querySnapshot = await getDocs(q);
-      const isFirstUser = querySnapshot.empty;
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const newUser = userCredential.user;
 
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const newUser = userCredential.user;
+        const userProfileData = {
+            uid: newUser.uid,
+            email: newUser.email!,
+            displayName: newUser.email!,
+            avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
+            status: 'ACTIVE',
+            role: isFirstUser ? 'admin' : 'user',
+            emailVerified: true,
+            notificationPreferences: {
+                notifyMessages: true,
+                notifyOrders: true,
+                notifyISO24: true,
+                notifySpotlight: true,
+            },
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        };
 
-      // Create a user profile. The user is active but has no storeId, which will trigger onboarding.
-      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid' | 'storeId'> & { createdAt: any, updatedAt: any, uid: string } = {
-        uid: newUser.uid,
-        email: newUser.email!,
-        displayName: newUser.email!, // Use email as a temporary display name
-        avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-        status: 'ACTIVE', // User is active from the start.
-        role: isFirstUser ? 'admin' : 'user', // Assign admin role only if it's the very first user.
-        emailVerified: true, // We are skipping the email verification step.
-        notificationPreferences: {
-          notifyMessages: true,
-          notifyOrders: true,
-          notifyISO24: true,
-          notifySpotlight: true,
-        },
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
+        const newUserDocRef = doc(firestore, "users", newUser.uid);
+        
+        // Use non-blocking setDoc with error emitter
+        setDoc(newUserDocRef, userProfileData).catch(error => {
+            const contextualError = new FirestorePermissionError({
+                path: newUserDocRef.path,
+                operation: 'create',
+                requestResourceData: userProfileData,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        });
 
-      await setDoc(doc(firestore, "users", newUser.uid), userProfile);
-      
-      toast({
-        title: 'Account Created!',
-        description: `Welcome! Let's get your store set up.`,
-      });
-      
-      // The layout effect will now see an active user without a storeId
-      // and redirect to '/onboarding'.
-      return true;
+        toast({
+            title: 'Account Created!',
+            description: `Welcome! Let's get your store set up.`,
+        });
 
-    } catch (error: any) {
-      console.error("Signup failed:", error);
-      toast({
-        title: 'Signup Failed',
-        description: error.message || 'An unexpected error occurred during sign up.',
-        variant: 'destructive',
-      });
-      return false;
+        return true;
+
+    } catch (authError: any) {
+        // This catch block handles errors from createUserWithEmailAndPassword
+        toast({
+            title: 'Signup Failed',
+            description: authError.message || 'An unexpected error occurred during authentication.',
+            variant: 'destructive',
+        });
+        return false;
     }
   }, [auth, firestore, toast]);
 
