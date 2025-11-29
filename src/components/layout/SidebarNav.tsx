@@ -24,6 +24,7 @@ import {
   HelpCircle,
   Tag,
   Shield,
+  PlusCircle,
 } from 'lucide-react';
 import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
@@ -106,9 +107,9 @@ export default function SidebarNav() {
               </>
             ) : (
                 <SidebarMenuItem>
-                    <SidebarMenuButton tooltip="Your store is being created!" aria-disabled="true">
-                        <Store />
-                        <span>My Store</span>
+                    <SidebarMenuButton tooltip="Create Your Store" onClick={() => router.push('/store/create')}>
+                        <PlusCircle />
+                        <span>Create Your Store</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             )}

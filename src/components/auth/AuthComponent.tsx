@@ -7,12 +7,10 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Logo from '../Logo';
 import { Checkbox } from '../ui/checkbox';
 import Link from 'next/link';
-import { Separator } from '../ui/separator';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -23,16 +21,11 @@ const signupSchema = z.object({
   displayName: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
-  storeName: z.string().min(3, "Store name must be at least 3 characters."),
-  storeAbout: z.string().min(10, "About section must be at least 10 characters long."),
-  acceptTerms: z.literal(true, {
-    errorMap: () => ({ message: "You must accept the terms and conditions." }),
+  oneAccountAcknowledged: z.literal(true, {
+    errorMap: () => ({ message: "You must acknowledge the one-account rule." }),
   }),
-  isOver18: z.literal(true, {
-    errorMap: () => ({ message: "You must confirm you are 18 or older." }),
-  }),
-  acknowledge: z.literal(true, {
-    errorMap: () => ({ message: "You must acknowledge the platform rules." }),
+  goodsAndServicesAgreed: z.literal(true, {
+    errorMap: () => ({ message: "You must agree to use Goods & Services for payments." }),
   }),
 });
 
@@ -47,7 +40,7 @@ export default function AuthComponent() {
 
   const signupForm = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { displayName: '', email: '', password: '', storeName: '', storeAbout: '' },
+    defaultValues: { displayName: '', email: '', password: '' },
   });
 
   function onLogin(values: z.infer<typeof loginSchema>) {
@@ -55,16 +48,12 @@ export default function AuthComponent() {
   }
 
   function onSignup(values: z.infer<typeof signupSchema>) {
-    const slug = values.storeName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     signup({
       displayName: values.displayName,
       email: values.email,
       password: values.password,
-      storeName: values.storeName,
-      storeSlug: slug,
-      storeAbout: values.storeAbout,
-      oneAccountAcknowledged: values.acknowledge,
-      goodsAndServicesAgreed: values.acknowledge
+      oneAccountAcknowledged: values.oneAccountAcknowledged,
+      goodsAndServicesAgreed: values.goodsAndServicesAgreed
     });
   }
 
@@ -174,90 +163,9 @@ export default function AuthComponent() {
                         </FormItem>
                       )}
                     />
-                    <Separator />
-                     <h4 className="text-sm font-medium">Your Store Details</h4>
-                     <FormField
-                        control={signupForm.control}
-                        name="storeName"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Store Name</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Carl's Collectibles" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={signupForm.control}
-                        name="storeAbout"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>About Your Store</FormLabel>
-                                <FormControl>
-                                    <Textarea placeholder="Tell everyone what makes your store special..." {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    <Separator />
-
                     <FormField
                       control={signupForm.control}
-                      name="acceptTerms"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              I accept the{' '}
-                              <Link href="/#" className="text-primary hover:underline">
-                                Terms of Service
-                              </Link>{' '}
-                              and{' '}
-                              <Link href="/#" className="text-primary hover:underline">
-                                Privacy Policy
-                              </Link>
-                              .
-                            </FormLabel>
-                             <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                     <FormField
-                      control={signupForm.control}
-                      name="isOver18"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              I confirm that I am 18 years of age or older.
-                            </FormLabel>
-                             <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={signupForm.control}
-                      name="acknowledge"
+                      name="oneAccountAcknowledged"
                       render={({ field }) => (
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                           <FormControl>
@@ -268,16 +176,35 @@ export default function AuthComponent() {
                           </FormControl>
                            <div className="space-y-1 leading-none">
                             <FormLabel>
-                              I understand that only one account is permitted per person and that I must use "Goods & Services" for all P2P payments for my own protection.
+                              I acknowledge that only one account is permitted per person.
                             </FormLabel>
                             <FormMessage />
                           </div>
                         </FormItem>
                       )}
                     />
-                    
+                     <FormField
+                      control={signupForm.control}
+                      name="goodsAndServicesAgreed"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                           <div className="space-y-1 leading-none">
+                            <FormLabel>
+                              I agree to use "Goods & Services" for all payments for my own protection.
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
                     <Button type="submit" className="w-full">
-                      Create Account & Store
+                      Create Account
                     </Button>
                   </form>
                 </Form>
@@ -286,6 +213,13 @@ export default function AuthComponent() {
           </TabsContent>
         </Tabs>
          <p className="px-8 mt-4 text-center text-sm text-muted-foreground">
+            By signing up, you agree to our{' '}
+            <Link href="#" className="underline underline-offset-4 hover:text-primary">
+              Terms of Service
+            </Link>
+            .
+          </p>
+          <p className="px-8 mt-2 text-center text-sm text-muted-foreground">
             Hint: You can sign up with any email and password (e.g. `test@test.com` / `password`).
           </p>
       </div>
