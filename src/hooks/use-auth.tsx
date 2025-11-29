@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   createUserWithEmailAndPassword, 
@@ -8,23 +8,15 @@ import {
   signOut,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, serverTimestamp, runTransaction, collection } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDocs, collection, query, limit } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { placeholderImages } from '@/lib/placeholder-images';
 
-
-export interface SignupData {
+interface SignupData {
   email: string;
   password: string;
-  storeName: string;
-  slug: string;
-  about: string;
-  paymentMethod: "PAYPAL" | "VENMO";
-  paymentIdentifier: string;
-  agreeGoodsAndServices: boolean;
-  agreeOneAccount: boolean;
 }
 
 interface AuthContextType {
@@ -59,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: 'Login Successful',
         description: `Welcome back!`,
       });
+      // Successful login will trigger onAuthStateChanged, which will load the profile and redirect if needed.
       return true;
     } catch (error: any) {
       console.error("Login failed:", error);
@@ -87,80 +80,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth, router, toast]);
 
   const signup = useCallback(async (data: SignupData): Promise<boolean> => {
-    const { email, password, storeName, slug, about, paymentMethod, paymentIdentifier, agreeGoodsAndServices, agreeOneAccount } = data;
-    if (!firestore || !auth) {
-        toast({ title: 'Signup Failed', description: 'Authentication service is not available.', variant: 'destructive' });
+    const { email, password } = data;
+    if (!firestore) {
+        toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
     }
-
+    
     try {
-        // Step 1: Create the user in Firebase Auth
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const newUser = userCredential.user;
+      // Check if this is the first user to determine admin role
+      const usersCollectionRef = collection(firestore, "users");
+      const q = query(usersCollectionRef, limit(1));
+      const querySnapshot = await getDocs(q);
+      const isFirstUser = querySnapshot.empty;
 
-        // Step 2: Run a transaction to create the user profile and the store
-        await runTransaction(firestore, async (transaction) => {
-            const newStoreRef = doc(collection(firestore, "storefronts"));
-            const userProfileRef = doc(firestore, "users", newUser.uid);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const newUser = userCredential.user;
 
-            // a. Create the user profile document
-            const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
-                uid: newUser.uid,
-                email: newUser.email!,
-                displayName: storeName, // Default user's display name to the store name
-                avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-                status: 'ACTIVE',
-                role: 'user', 
-                emailVerified: true, // No verification step, so default to true
-                storeId: newStoreRef.id, // Link user to the new store
-                paymentMethod: paymentMethod,
-                paymentIdentifier: paymentIdentifier,
-                goodsAndServicesAgreed: agreeGoodsAndServices,
-                oneAccountAcknowledged: agreeOneAccount,
-                notificationPreferences: {
-                    notifyMessages: true,
-                    notifyOrders: true,
-                    notifyISO24: true,
-                    notifySpotlight: true,
-                },
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-            };
-            transaction.set(userProfileRef, userProfile);
+      // Create a user profile. The user is active but has no storeId, which will trigger onboarding.
+      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid' | 'storeId'> & { createdAt: any, updatedAt: any, uid: string } = {
+        uid: newUser.uid,
+        email: newUser.email!,
+        displayName: newUser.email!, // Use email as a temporary display name
+        avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
+        status: 'ACTIVE', // User is active from the start.
+        role: isFirstUser ? 'admin' : 'user', // Assign admin role only if it's the very first user.
+        emailVerified: true, // We are skipping the email verification step.
+        notificationPreferences: {
+          notifyMessages: true,
+          notifyOrders: true,
+          notifyISO24: true,
+          notifySpotlight: true,
+        },
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
 
-            // b. Create the store document
-            transaction.set(newStoreRef, {
-                storeId: newStoreRef.id,
-                ownerUid: newUser.uid,
-                storeName: storeName,
-                slug: slug,
-                about: about,
-                avatarUrl: placeholderImages['store-logo-1']?.imageUrl || `https://picsum.photos/seed/${slug}/128/128`,
-                ratingAverage: 0,
-                ratingCount: 0,
-                itemsSold: 0,
-                status: "ACTIVE",
-                isSpotlighted: false,
-                spotlightUntil: null,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-            });
-        });
+      await setDoc(doc(firestore, "users", newUser.uid), userProfile);
+      
+      toast({
+        title: 'Account Created!',
+        description: `Welcome! Let's get your store set up.`,
+      });
+      
+      // The layout effect will now see an active user without a storeId
+      // and redirect to '/onboarding'.
+      return true;
 
-        toast({
-            title: 'Account Created!',
-            description: "Welcome to VaultVerse! Your store is now live.",
-        });
-
-        return true;
     } catch (error: any) {
-        console.error("Signup failed:", error);
-        toast({
-            title: 'Signup Failed',
-            description: error.message || 'An unexpected error occurred during sign up.',
-            variant: 'destructive',
-        });
-        return false;
+      console.error("Signup failed:", error);
+      toast({
+        title: 'Signup Failed',
+        description: error.message || 'An unexpected error occurred during sign up.',
+        variant: 'destructive',
+      });
+      return false;
     }
   }, [auth, firestore, toast]);
 

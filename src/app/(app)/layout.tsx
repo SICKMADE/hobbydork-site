@@ -1,6 +1,6 @@
 'use client';
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/firebase';
@@ -13,20 +13,41 @@ export default function AppRoutesLayout({
   const { user, isUserLoading } = useUser();
   const { logout, profile, loading: isProfileLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
+    // If done loading and there's no user, go to login screen
     if (!isUserLoading && !user) {
       router.push('/');
     }
   }, [user, isUserLoading, router]);
+
+  useEffect(() => {
+    // If the profile is loaded and the user is active but has no storeId,
+    // they need to be onboarded. Redirect them unless they are already there.
+    if (profile && !profile.storeId && pathname !== '/onboarding') {
+      router.replace('/onboarding');
+    }
+  }, [profile, pathname, router]);
 
   if (isUserLoading || isProfileLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
   
   if (!user) {
-    // This will be briefly shown before the redirect happens
+    // This will be briefly shown before the redirect happens from the effect above
     return <div className="flex items-center justify-center h-screen">Redirecting...</div>;
+  }
+  
+  // If the user has no storeId but is on the onboarding page, allow it.
+  if (!profile?.storeId && pathname === '/onboarding') {
+    return <>{children}</>;
+  }
+  
+  // If user has no storeId and is NOT on onboarding, show a loading/redirecting state
+  // while the effect above does its work.
+  if (!profile?.storeId) {
+      return <div className="flex items-center justify-center h-screen">Redirecting to onboarding...</div>;
   }
 
   if (profile?.status === 'SUSPENDED') {
@@ -41,5 +62,6 @@ export default function AppRoutesLayout({
     );
   }
 
+  // If user is logged in, has a store, and is not suspended, show the app.
   return <>{children}</>;
 }

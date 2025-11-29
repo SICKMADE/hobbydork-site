@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm, FormProvider, useFormContext } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -16,83 +16,36 @@ import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import Logo from '@/components/Logo';
+import { useFirestore } from '@/firebase';
+import { doc, runTransaction, serverTimestamp, collection } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { placeholderImages } from '@/lib/placeholder-images';
 
-const step1Schema = z.object({
-  email: z.string().email({ message: 'Invalid email address.' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
-  confirmPassword: z.string(),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-const step2Schema = z.object({
+const storeSchema = z.object({
     storeName: z.string().min(3, "Store name must be at least 3 characters long."),
     slug: z.string().min(3, "URL slug must be at least 3 characters long.")
       .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens."),
     about: z.string().min(10, "About section must be at least 10 characters long."),
+});
+
+const paymentSchema = z.object({
     paymentMethod: z.enum(["PAYPAL", "VENMO"], { required_error: "Please select a payment method." }),
     paymentIdentifier: z.string().min(3, "Please enter your payment username or email."),
+});
+
+const agreementsSchema = z.object({
     agreeGoodsAndServices: z.literal(true, { errorMap: () => ({ message: "You must agree to use Goods & Services." })}),
     agreeTerms: z.literal(true, { errorMap: () => ({ message: "You must agree to the Terms." })}),
     agreeAge: z.literal(true, { errorMap: () => ({ message: "You must confirm you are 18 or older." })}),
     agreeOneAccount: z.literal(true, { errorMap: () => ({ message: "You must acknowledge the one account rule." })}),
 });
 
-const combinedSchema = step1Schema.merge(step2Schema);
+const onboardingSchema = storeSchema.merge(paymentSchema).merge(agreementsSchema);
 
-type SignupFormValues = z.infer<typeof combinedSchema>;
+type OnboardingFormValues = z.infer<typeof onboardingSchema>;
 
-const Step1 = () => {
-    const { control } = useFormContext<SignupFormValues>();
-    return (
-        <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="space-y-6">
-            <FormField
-                control={control}
-                name="email"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                    <Input placeholder="you@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={control}
-                name="password"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-                <FormField
-                control={control}
-                name="confirmPassword"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-        </motion.div>
-    );
-};
-
-
-const Step2 = () => {
-    const { control, watch, setValue } = useFormContext<SignupFormValues>();
+const Step1Store = () => {
+    const { control, watch, setValue } = useFormContext<OnboardingFormValues>();
     const storeNameValue = watch("storeName");
 
     React.useEffect(() => {
@@ -127,7 +80,7 @@ const Step2 = () => {
                     <FormItem>
                         <FormLabel>Store URL</FormLabel>
                         <FormControl>
-                                <div className="flex items-center">
+                            <div className="flex items-center">
                                 <span className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-l-md border border-r-0">
                                     vaultverse.app/store/
                                 </span>
@@ -152,6 +105,14 @@ const Step2 = () => {
                     </FormItem>
                 )}
             />
+        </motion.div>
+    );
+}
+
+const Step2Payment = () => {
+    const { control } = useFormContext<OnboardingFormValues>();
+    return (
+        <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="space-y-8">
              <FormField
                 control={control}
                 name="paymentMethod"
@@ -203,6 +164,14 @@ const Step2 = () => {
                     </FormItem>
                 )}
             />
+        </motion.div>
+    );
+};
+
+const Step3Agreements = () => {
+    const { control } = useFormContext<OnboardingFormValues>();
+    return (
+        <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="space-y-6">
             <div className="space-y-4">
                  <FormField
                     control={control}
@@ -269,57 +238,111 @@ const Step2 = () => {
             </div>
         </motion.div>
     );
-}
+};
 
-export default function SignupPage() {
-    const { signup } = useAuth();
+export default function OnboardingPage() {
+    const { user } = useAuth();
+    const firestore = useFirestore();
     const router = useRouter();
+    const { toast } = useToast();
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const methods = useForm<SignupFormValues>({
-        resolver: zodResolver(step === 1 ? step1Schema : combinedSchema),
+    const methods = useForm<OnboardingFormValues>({
+        resolver: zodResolver(
+            step === 1 ? storeSchema :
+            step === 2 ? paymentSchema :
+            onboardingSchema
+        ),
         mode: "onChange",
-        defaultValues: {
-            email: "",
-            password: "",
-            confirmPassword: "",
-            storeName: "",
-            slug: "",
-            about: "",
-            paymentMethod: undefined,
-            paymentIdentifier: "",
-            agreeGoodsAndServices: undefined,
-            agreeTerms: undefined,
-            agreeAge: undefined,
-            agreeOneAccount: undefined,
-        },
     });
 
     const handleNext = async () => {
-        const isValid = await methods.trigger(["email", "password", "confirmPassword"]);
+        let fieldsToValidate: (keyof OnboardingFormValues)[] = [];
+        if (step === 1) {
+            fieldsToValidate = ['storeName', 'slug', 'about'];
+        } else if (step === 2) {
+            fieldsToValidate = ['paymentMethod', 'paymentIdentifier'];
+        }
+
+        const isValid = await methods.trigger(fieldsToValidate);
         if (isValid) {
-            setStep(2);
+            setStep(s => s + 1);
         }
     };
 
     const handleBack = () => {
-        setStep(1);
+        setStep(s => s - 1);
     };
 
-    async function onSubmit(values: SignupFormValues) {
+    async function onSubmit(values: OnboardingFormValues) {
+        if (!user || !firestore) {
+            toast({ variant: 'destructive', title: 'Error', description: 'You are not properly signed in.' });
+            return;
+        }
+
         setIsSubmitting(true);
-        const success = await signup(values);
-        if (success) {
+        try {
+            await runTransaction(firestore, async (transaction) => {
+                const newStoreRef = doc(collection(firestore, "storefronts"));
+                const userProfileRef = doc(firestore, "users", user.uid);
+                
+                // 1. Update the user document
+                transaction.update(userProfileRef, {
+                    displayName: values.storeName,
+                    storeId: newStoreRef.id,
+                    paymentMethod: values.paymentMethod,
+                    paymentIdentifier: values.paymentIdentifier,
+                    goodsAndServicesAgreed: values.agreeGoodsAndServices,
+                    oneAccountAcknowledged: values.agreeOneAccount,
+                    status: 'ACTIVE', // Activate the user
+                    updatedAt: serverTimestamp(),
+                });
+
+                // 2. Create the store document
+                transaction.set(newStoreRef, {
+                    storeId: newStoreRef.id,
+                    ownerUid: user.uid,
+                    storeName: values.storeName,
+                    slug: values.slug,
+                    about: values.about,
+                    avatarUrl: placeholderImages['store-logo-1']?.imageUrl || `https://picsum.photos/seed/${values.slug}/128/128`,
+                    ratingAverage: 0,
+                    ratingCount: 0,
+                    itemsSold: 0,
+                    status: "ACTIVE",
+                    isSpotlighted: false,
+                    spotlightUntil: null,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                });
+            });
+
+            toast({
+                title: 'Welcome to VaultVerse!',
+                description: 'Your store is now live. Happy selling!',
+            });
+            
             router.push('/');
             router.refresh();
-        } else {
+
+        } catch (error: any) {
+             console.error("Onboarding failed:", error);
+            toast({
+                title: 'Onboarding Failed',
+                description: error.message || 'An unexpected error occurred.',
+                variant: 'destructive',
+            });
+        } finally {
             setIsSubmitting(false);
         }
     }
 
-    const stepTitles = ["Create Your Account", "Set Up Your Store"];
-    const stepDescriptions = ["Start by setting up your login credentials.", "Now, let's get your store and payment details sorted."];
+    const stepDetails = [
+        { title: "Set Up Your Store", description: "This will be your public identity on VaultVerse.", schema: storeSchema },
+        { title: "Set Up Payments", description: "Choose how you want to get paid by buyers.", schema: paymentSchema },
+        { title: "Final Agreements", description: "Please review and agree to the following terms.", schema: agreementsSchema },
+    ];
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
@@ -329,35 +352,33 @@ export default function SignupPage() {
                 </div>
                  <Card>
                     <CardHeader>
-                        <CardTitle className="text-3xl">{stepTitles[step - 1]}</CardTitle>
+                        <CardTitle className="text-3xl">{stepDetails[step - 1].title}</CardTitle>
                         <CardDescription>
-                            Welcome to VaultVerse! {stepDescriptions[step - 1]} (Step {step} of 2)
+                            Step {step} of 3: {stepDetails[step - 1].description}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                        <FormProvider {...methods}>
                             <form onSubmit={methods.handleSubmit(onSubmit)}>
                                 <AnimatePresence mode="wait">
-                                    {step === 1 ? <Step1 key="step1" /> : <Step2 key="step2" />}
+                                    {step === 1 && <Step1Store key="step1" />}
+                                    {step === 2 && <Step2Payment key="step2" />}
+                                    {step === 3 && <Step3Agreements key="step3" />}
                                 </AnimatePresence>
                                 <div className="flex justify-between mt-8">
-                                    {step === 2 ? (
+                                    {step > 1 ? (
                                         <Button type="button" variant="outline" onClick={handleBack} disabled={isSubmitting}>
                                             Back
                                         </Button>
-                                    ) : (
-                                       <Button asChild variant="link">
-                                            <Link href="/">Back to Login</Link>
-                                       </Button>
-                                    )}
+                                    ) : <div />}
                                     
-                                    {step === 1 ? (
+                                    {step < 3 ? (
                                         <Button type="button" onClick={handleNext}>
                                             Next
                                         </Button>
                                     ) : (
-                                        <Button type="submit" disabled={isSubmitting}>
-                                            {isSubmitting ? "Creating Account..." : "Create Account"}
+                                        <Button type="submit" disabled={isSubmitting || !methods.formState.isValid}>
+                                            {isSubmitting ? "Finishing..." : "Finish"}
                                         </Button>
                                     )}
                                 </div>
