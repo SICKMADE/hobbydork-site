@@ -105,6 +105,7 @@ export type Order = {
 };
 
 export type CommunityMessage = {
+    id: string; // Document ID from useCollection
     messageId: string;
     senderUid: string;
     text: string;

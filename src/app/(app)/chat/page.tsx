@@ -1,3 +1,4 @@
+
 'use client';
 
 import AppLayout from "@/components/layout/AppLayout";
@@ -9,10 +10,39 @@ import { useAuth } from "@/hooks/use-auth";
 import { Send } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, addDoc, serverTimestamp, query, orderBy, Timestamp } from 'firebase/firestore';
-import { useFirestore, useUser } from '@/firebase';
-import { useMemoFirebase } from "@/firebase/provider";
-import type { Chat } from '@/lib/types';
+import { collection, addDoc, serverTimestamp, query, orderBy, Timestamp, doc } from 'firebase/firestore';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import type { CommunityMessage, User } from '@/lib/types';
+
+
+const MessageItem = ({ message }: { message: CommunityMessage & { id: string } }) => {
+    const firestore = useFirestore();
+
+    const userRef = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return doc(firestore, 'users', message.senderUid);
+    }, [firestore, message.senderUid]);
+
+    const { data: user } = useDoc<User>(userRef);
+
+    return (
+        <div className="flex items-start gap-3">
+            <Avatar className="h-10 w-10 border">
+                <AvatarImage src={user?.avatar} alt={user?.displayName || 'User'} />
+                <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+                <div className="flex items-baseline gap-2">
+                    <p className="font-semibold">{user?.displayName || 'Loading...'}</p>
+                    <p className="text-xs text-muted-foreground">
+                        {message.createdAt ? new Date((message.createdAt as Timestamp)?.seconds * 1000).toLocaleTimeString() : '...'}
+                    </p>
+                </div>
+                <p className="text-foreground/90">{message.text}</p>
+            </div>
+        </div>
+    );
+};
 
 
 export default function ChatPage() {
@@ -22,32 +52,32 @@ export default function ChatPage() {
     const [newMessage, setNewMessage] = useState('');
     const scrollAreaViewport = useRef<HTMLDivElement>(null);
 
-    const chatCollection = useMemoFirebase(() => {
+    const messagesCollectionRef = useMemoFirebase(() => {
         if (!firestore) return null;
-        return collection(firestore, 'chat');
+        return collection(firestore, 'communityMessages');
     }, [firestore]);
 
-    const chatQuery = useMemoFirebase(() => {
-        if (!chatCollection) return null;
-        return query(chatCollection, orderBy('timestamp', 'asc'));
-    }, [chatCollection]);
+    const messagesQuery = useMemoFirebase(() => {
+        if (!messagesCollectionRef) return null;
+        return query(messagesCollectionRef, orderBy('createdAt', 'asc'));
+    }, [messagesCollectionRef]);
 
-    const { data: messages, isLoading } = useCollection<Chat>(chatQuery);
+    const { data: messages, isLoading } = useCollection<CommunityMessage>(messagesQuery);
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (newMessage.trim() === '' || !user || !profile || !chatCollection) return;
+        if (newMessage.trim() === '' || !user || !profile || !messagesCollectionRef) return;
 
         const messageData = {
-            userId: user.uid,
-            userName: profile.displayName,
-            userAvatar: profile.avatar || `https://picsum.photos/seed/${user.uid}/100/100`,
+            senderUid: user.uid,
             text: newMessage.trim(),
-            timestamp: serverTimestamp()
+            createdAt: serverTimestamp()
         };
 
         try {
-            await addDoc(chatCollection, messageData);
+            const docRef = await addDoc(messagesCollectionRef, messageData);
+            // The messageId is now the document ID. We can add it to the document if we need it.
+            // await updateDoc(docRef, { messageId: docRef.id });
             setNewMessage('');
         } catch (error) {
             console.error("Error sending message: ", error);
@@ -74,21 +104,7 @@ export default function ChatPage() {
                     <div className="space-y-4">
                         {isLoading && <p>Loading messages...</p>}
                         {messages && messages.map((msg) => (
-                            <div key={msg.id} className="flex items-start gap-3">
-                                <Avatar className="h-10 w-10 border">
-                                    <AvatarImage src={msg.userAvatar} alt={msg.userName} />
-                                    <AvatarFallback>{msg.userName?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1">
-                                    <div className="flex items-baseline gap-2">
-                                        <p className="font-semibold">{msg.userName}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                           {msg.timestamp ? new Date((msg.timestamp as Timestamp)?.seconds * 1000).toLocaleTimeString() : '...'}
-                                        </p>
-                                    </div>
-                                    <p className="text-foreground/90">{msg.text}</p>
-                                </div>
-                            </div>
+                            <MessageItem key={msg.id} message={msg} />
                         ))}
                     </div>
                 </ScrollArea>
@@ -112,3 +128,5 @@ export default function ChatPage() {
         </AppLayout>
     );
 }
+
+    
