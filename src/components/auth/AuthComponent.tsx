@@ -39,14 +39,17 @@ export default function AuthComponent() {
     defaultValues: { email: '', password: '', confirmPassword: '' },
   });
 
-  function onLogin(values: z.infer<typeof loginSchema>) {
-    login(values.email, values.password);
+  async function onLogin(values: z.infer<typeof loginSchema>) {
+    await login(values.email, values.password);
   }
 
-  function onSignup(values: z.infer<typeof signupSchema>) {
-    signup({
+  async function onSignup(values: z.infer<typeof signupSchema>) {
+    // The use-auth hook will handle the redirect logic after successful signup.
+    await signup({
       email: values.email,
       password: values.password,
+      oneAccountAcknowledged: true, // These are agreed to in onboarding, but needed for type.
+      goodsAndServicesAgreed: true,  // We'll set them to a default true here as they are covered in onboarding.
     });
   }
 
