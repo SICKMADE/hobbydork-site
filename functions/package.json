@@ -7,8 +7,9 @@
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
-    "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "deploy": "npm run clean && firebase deploy --only functions",
+    "logs": "firebase functions:log",
+    "clean": "firebase functions:delete onIso24Create expireIso24Posts onReviewCreate expireSpotlightSlots onOrderCreate onOrderUpdate onMessageCreate onSpotlightUpdate --force --region us-central1"
   },
   "engines": {
     "node": "20"
