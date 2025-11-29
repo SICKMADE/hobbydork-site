@@ -11,7 +11,7 @@ export type User = {
   status: UserStatus;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  role: "user" | "admin";
+  role: "USER" | "ADMIN";
   storeId?: string;
   paymentMethod: "PAYPAL" | "VENMO" | null;
   paymentIdentifier: string | null;
@@ -72,7 +72,7 @@ export type OrderState = "PENDING_PAYMENT" | "PAYMENT_SENT" | "SHIPPED" | "DELIV
 export type ShippingAddress = {
     name: string;
     address1: string;
-    address2: string | null;
+    address2?: string | null;
     city: string;
     state: string;
     zip: string;
@@ -85,20 +85,20 @@ export type Order = {
   buyerUid: string;
   sellerUid: string;
   storeId: string;
-  listingItems: { 
+  items: { 
       listingId: string;
       title: string;
       quantity: number;
       pricePerUnit: number;
-      primaryImageUrl: string;
   }[];
   totalPrice: number;
   state: OrderState;
   buyerShippingAddress: ShippingAddress | null;
-  paymentMethod?: "PAYPAL" | "VENMO";
-  paymentIdentifier?: string;
+  paymentMethod: "PAYPAL" | "VENMO";
+  paymentIdentifier: string;
   trackingNumber: string | null;
   trackingCarrier: string | null;
+  cancelReason: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   reviewId?: string; // ID of the review associated with this order
@@ -151,7 +151,5 @@ export type Review = {
     comment: string;
     createdAt: Timestamp;
 }
-
-    
 
     

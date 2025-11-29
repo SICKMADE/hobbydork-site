@@ -34,11 +34,11 @@ export default function CartPage() {
     const { data: firstListing } = useDoc<Listing>(firstListingRef);
 
     const handleCheckout = async () => {
-        if (!profile || !storeId || !firestore || !firstListing) {
+        if (!profile || !storeId || !firestore || !firstListing || !profile.paymentMethod || !profile.paymentIdentifier) {
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: "You must be logged in and have items in your cart to checkout.",
+                description: "You must be logged in, have items in your cart, and have payment info configured to checkout.",
             });
             return;
         }
@@ -48,22 +48,23 @@ export default function CartPage() {
             const batch = writeBatch(firestore);
             const newOrderRef = doc(collection(firestore, "orders"));
 
-            const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'buyerShippingAddress' | 'paymentMethod' | 'paymentIdentifier' | 'reviewId'> & { createdAt: any, updatedAt: any } = {
+            const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'buyerShippingAddress' | 'reviewId' | 'cancelReason'> & { createdAt: any, updatedAt: any } = {
                 orderId: newOrderRef.id,
                 buyerUid: profile.uid,
                 sellerUid: firstListing.ownerUid,
                 storeId: storeId,
-                listingItems: items.map(item => ({
+                items: items.map(item => ({
                     listingId: item.listingId,
                     title: item.title,
                     quantity: item.quantity,
                     pricePerUnit: item.price,
-                    primaryImageUrl: item.primaryImageUrl,
                 })),
                 totalPrice: subtotal,
                 state: "PENDING_PAYMENT",
                 trackingNumber: null,
                 trackingCarrier: null,
+                paymentMethod: profile.paymentMethod,
+                paymentIdentifier: profile.paymentIdentifier,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             };
@@ -166,3 +167,5 @@ export default function CartPage() {
         </AppLayout>
     );
 }
+
+    

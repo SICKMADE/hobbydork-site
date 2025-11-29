@@ -74,10 +74,10 @@ export default function OrdersPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {order.listingItems.map(item => (
+                                {order.items.map(item => (
                                      <div key={item.listingId} className="flex items-center gap-4">
                                         <Image 
-                                            src={item.primaryImageUrl || placeholderImages['listing-image-1']?.imageUrl} 
+                                            src={placeholderImages['listing-image-1']?.imageUrl} 
                                             alt={item.title}
                                             width={60}
                                             height={60}
@@ -120,3 +120,5 @@ export default function OrdersPage() {
         </AppLayout>
     );
 }
+
+    

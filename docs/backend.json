@@ -44,8 +44,8 @@
         "role": {
           "type": "string",
           "enum": [
-            "user",
-            "admin"
+            "USER",
+            "ADMIN"
           ]
         },
         "storeId": {
@@ -322,7 +322,7 @@
           "type": "string",
           "description": "Reference to the Store where order was placed."
         },
-        "listingItems": {
+        "items": {
           "type": "array",
           "items": {
             "type": "object",
@@ -330,8 +330,7 @@
               "listingId": { "type": "string" },
               "title": { "type": "string" },
               "quantity": { "type": "number" },
-              "pricePerUnit": { "type": "number" },
-              "primaryImageUrl": { "type": "string" }
+              "pricePerUnit": { "type": "number" }
             },
             "required": ["listingId", "title", "quantity", "pricePerUnit"]
           }
@@ -376,6 +375,9 @@
         "trackingCarrier": {
           "type": ["string", "null"]
         },
+        "cancelReason": {
+          "type": ["string", "null"]
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"
@@ -394,9 +396,11 @@
         "buyerUid",
         "sellerUid",
         "storeId",
-        "listingItems",
+        "items",
         "totalPrice",
         "state",
+        "paymentMethod",
+        "paymentIdentifier",
         "createdAt",
         "updatedAt"
       ]
