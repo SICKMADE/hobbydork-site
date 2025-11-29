@@ -16,7 +16,7 @@
           "format": "email"
         },
         "displayName": {
-          "type": "string",
+          "type": ["string", "null"],
           "description": "The user's display name."
         },
         "avatar": {
@@ -52,14 +52,15 @@
           "description": "The ID of the store owned by the user, if any."
         },
         "paymentMethod": {
-          "type": "string",
+          "type": ["string", "null"],
           "enum": [
             "PAYPAL",
-            "VENMO"
+            "VENMO",
+            null
           ]
         },
         "paymentIdentifier": {
-          "type": "string"
+          "type": ["string", "null"]
         },
         "emailVerified": {
           "type": "boolean"
@@ -70,22 +71,23 @@
         "goodsAndServicesAgreed": {
           "type": "boolean"
         },
-        "notificationPreferences": {
-          "type": "object",
-          "properties": {
-            "notifyMessages": {
-              "type": "boolean"
-            },
-            "notifyOrders": {
-              "type": "boolean"
-            },
-            "notifyISO24": {
-              "type": "boolean"
-            },
-            "notifySpotlight": {
-              "type": "boolean"
+        "notifyMessages": {
+          "type": "boolean"
+        },
+        "notifyOrders": {
+          "type": "boolean"
+        },
+        "notifyISO24": {
+          "type": "boolean"
+        },
+        "notifySpotlight": {
+          "type": "boolean"
+        },
+        "blockedUsers": {
+            "type": "array",
+            "items": {
+                "type": "string"
             }
-          }
         }
       },
       "required": [
@@ -96,7 +98,14 @@
         "createdAt",
         "updatedAt",
         "role",
-        "emailVerified"
+        "emailVerified",
+        "oneAccountAcknowledged",
+        "goodsAndServicesAgreed",
+        "notifyMessages",
+        "notifyOrders",
+        "notifyISO24",
+        "notifySpotlight",
+        "blockedUsers"
       ]
     },
     "Store": {

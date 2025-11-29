@@ -47,9 +47,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    if (user && profile?.status === 'ACTIVE' && userProfileRef) {
-      // This is just a placeholder for potential future logic.
-      // For now, we don't need to do anything when a user is active.
+    // This effect is to transition a user from 'LIMITED' to 'ACTIVE' status,
+    // which happens after they complete onboarding.
+    // The onboarding flow itself handles setting the user's status.
+    // For now, this just serves as a potential hook for future status changes.
+    if (user && profile?.status === 'LIMITED' && userProfileRef) {
+        // A user might be in a LIMITED state until they verify their email or complete onboarding.
+        // The logic for upgrading their status should be handled where that action completes.
+        // e.g., in the onboarding form submission or after email verification link is clicked.
     }
   }, [user, profile, userProfileRef, toast]);
 
@@ -99,31 +104,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
       
-      const userProfile: UserProfile = {
+      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
         uid: newUser.uid,
         email: newUser.email!,
-        displayName: "", 
+        displayName: null, 
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-        status: 'ACTIVE',
+        status: 'LIMITED',
         role: 'user',
         emailVerified: false,
         oneAccountAcknowledged: false,
         goodsAndServicesAgreed: false,
-        notificationPreferences: {
-          notifyMessages: true,
-          notifyOrders: true,
-          notifyISO24: true,
-          notifySpotlight: true,
-        },
-        createdAt: serverTimestamp() as any, // Cast to any to satisfy type temporarily
-        updatedAt: serverTimestamp() as any, // Cast to any to satisfy type temporarily
+        paymentMethod: null,
+        paymentIdentifier: null,
+        notifyMessages: true,
+        notifyOrders: true,
+        notifyISO24: true,
+        notifySpotlight: true,
+        blockedUsers: [],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
 
       const newUserRef = doc(firestore, "users", newUser.uid);
       
-      await setDoc(newUserRef, {
-        ...userProfile
-      }).catch(error => {
+      await setDoc(newUserRef, userProfile).catch(error => {
           const contextualError = new FirestorePermissionError({
             path: newUserRef.path,
             operation: 'create',

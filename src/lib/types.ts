@@ -1,28 +1,27 @@
 import { Timestamp } from "firebase/firestore";
 
-export type UserStatus = 'ACTIVE' | 'SUSPENDED';
+export type UserStatus = 'ACTIVE' | 'LIMITED' | 'SUSPENDED';
 
 export type User = {
   uid: string;
   email: string;
-  displayName: string;
+  displayName: string | null;
   avatar?: string;
   status: UserStatus;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   role: "user" | "admin";
   storeId?: string;
-  paymentMethod?: "PAYPAL" | "VENMO";
-  paymentIdentifier?: string;
+  paymentMethod: "PAYPAL" | "VENMO" | null;
+  paymentIdentifier: string | null;
   emailVerified: boolean;
-  oneAccountAcknowledged?: boolean;
-  goodsAndServicesAgreed?: boolean;
-  notificationPreferences?: {
-    notifyMessages: boolean;
-    notifyOrders: boolean;
-    notifyISO24: boolean;
-    notifySpotlight: boolean;
-  };
+  oneAccountAcknowledged: boolean;
+  goodsAndServicesAgreed: boolean;
+  notifyMessages: boolean;
+  notifyOrders: boolean;
+  notifyISO24: boolean;
+  notifySpotlight: boolean;
+  blockedUsers: string[];
 };
 
 export type Store = {
