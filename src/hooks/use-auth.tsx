@@ -6,7 +6,6 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
-  sendEmailVerification,
   User as FirebaseUser
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -18,11 +17,8 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 interface SignupData {
-  displayName: string;
   email: string;
   password: string;
-  oneAccountAcknowledged: boolean;
-  goodsAndServicesAgreed: boolean;
 }
 
 interface AuthContextType {
@@ -50,32 +46,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  useEffect(() => {
-    // Check if the user is logged in, their email is verified, and their profile is currently 'LIMITED'
-    // This logic is now mostly legacy but kept minimal. The primary driver for onboarding is the AppLayout check.
-    if (user && user.emailVerified && profile?.status === 'LIMITED' && userProfileRef) {
-      // Update the user's status to 'ACTIVE' in Firestore
-      const updateData = { status: 'ACTIVE', emailVerified: true, updatedAt: serverTimestamp() };
-      setDoc(userProfileRef, updateData, { merge: true })
-        .then(() => {
-          toast({
-            title: 'Account Activated!',
-            description: 'Your account has been fully activated. Welcome!',
-          });
-        })
-        .catch((error) => {
-          console.error('Error updating user status:', error);
-          const contextualError = new FirestorePermissionError({
-            path: userProfileRef.path,
-            operation: 'update',
-            requestResourceData: updateData,
-          });
-          errorEmitter.emit('permission-error', contextualError);
-        });
-    }
-  }, [user, profile, userProfileRef, toast]);
-
-
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -83,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: 'Login Successful',
         description: `Welcome back!`,
       });
+      // The AppLayout will handle redirection based on profile state
       return true;
     } catch (error: any) {
       console.error("Login failed:", error);
@@ -111,35 +82,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth, router, toast]);
 
   const signup = useCallback(async (data: SignupData): Promise<boolean> => {
-    const { email, password, oneAccountAcknowledged, goodsAndServicesAgreed } = data;
+    const { email, password } = data;
     if (!firestore) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
     }
     
-    // We create the user in auth first, which signs them in.
-    // The security rules can then use their auth.uid to secure the profile creation.
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
 
-      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid' | 'storeId' | 'displayName'> & { createdAt: any, updatedAt: any, uid: string } = {
+      // Create a minimal user profile that will trigger the needsOnboarding check
+      const userProfile: UserProfile = {
         uid: newUser.uid,
         email: newUser.email!,
+        displayName: "", // Will be set during onboarding
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-        status: 'ACTIVE', // No 'LIMITED' status, user is active immediately for onboarding.
+        status: 'ACTIVE',
         role: 'user', // All new users are 'user'
+        storeId: '', // Empty storeId to trigger onboarding
         emailVerified: true, // Skipping email verification as requested
-        oneAccountAcknowledged,
-        goodsAndServicesAgreed,
-        notificationPreferences: {
-          notifyMessages: true,
-          notifyOrders: true,
-          notifyISO24: true,
-          notifySpotlight: true,
-        },
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        oneAccountAcknowledged: false, // Set to false to trigger onboarding
+        goodsAndServicesAgreed: false, // Set to false to trigger onboarding
+        createdAt: serverTimestamp() as any, // Cast to any to handle serverTimestamp
+        updatedAt: serverTimestamp() as any,
       };
       
       const newUserRef = doc(firestore, "users", newUser.uid);
@@ -149,26 +115,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: 'Account Created!',
         description: `Welcome! Let's get your store set up.`,
       });
-      // IMPORTANT: The redirect to onboarding is now handled by the AppLayout component
+      // The redirect to onboarding is now handled by the AppLayout component
       // which checks if the profile is missing a storeId.
       return true;
     } catch (error: any) {
       console.error("Signup failed:", error);
-      // Check for permission errors specifically during the setDoc call
-      if (error.code === 'permission-denied' || (error.name === 'FirebaseError' && error.message.includes('permission-denied'))) {
-            const contextualError = new FirestorePermissionError({
-                path: `users/${auth.currentUser?.uid || '<new-user-id>'}`,
-                operation: 'create',
-                requestResourceData: { email: data.email, role: 'user' }
-            });
-            errorEmitter.emit('permission-error', contextualError);
-      } else {
         toast({
             title: 'Signup Failed',
             description: error.message || 'An unexpected error occurred during sign up.',
             variant: 'destructive',
         });
-      }
       return false;
     }
   }, [auth, firestore, toast]);

@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Logo from '../Logo';
 import Link from 'next/link';
-import { Checkbox } from '../ui/checkbox';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -21,8 +20,6 @@ const signupSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   confirmPassword: z.string(),
-  oneAccountAcknowledged: z.literal(true),
-  goodsAndServicesAgreed: z.literal(true),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -50,10 +47,6 @@ export default function AuthComponent() {
     signup({
       email: values.email,
       password: values.password,
-      oneAccountAcknowledged: values.oneAccountAcknowledged,
-      goodsAndServicesAgreed: values.goodsAndServicesAgreed,
-      // displayName is collected during onboarding
-      displayName: ""
     });
   }
 

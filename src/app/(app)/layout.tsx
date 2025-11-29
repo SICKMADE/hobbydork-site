@@ -3,73 +3,89 @@ import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { useUser } from '@/firebase';
 
 export default function AppRoutesLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isUserLoading } = useUser();
-  const { logout, profile, loading: isProfileLoading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // Wait until both user and profile loading is complete
-    if (isUserLoading || isProfileLoading) {
-      return;
+    if (loading) {
+      return; // Don't do anything while auth state is resolving
     }
 
-    // If no user, redirect to the root/login page
+    // If there's no user, they should be redirected to the login page.
+    // This is handled by the root page logic, but as a fallback:
     if (!user) {
       router.replace('/');
       return;
     }
 
-    // If a user and profile are loaded, check for onboarding completion
-    if (profile && !profile.storeId && pathname !== '/onboarding') {
+    // This is the key logic based on your instructions.
+    // A new user has a profile but is missing a storeId.
+    const needsOnboarding = profile && !profile.storeId;
+    
+    // If onboarding is needed and we are NOT on the onboarding page, redirect.
+    if (needsOnboarding && pathname !== '/onboarding') {
       router.replace('/onboarding');
+      return; // Stop further execution
     }
-  }, [user, profile, isUserLoading, isProfileLoading, pathname, router]);
 
-  // Unified loading state
-  if (isUserLoading || isProfileLoading) {
+    // If a user has completed onboarding (has a storeId) but somehow lands on the onboarding page,
+    // redirect them to the dashboard.
+    if (profile && profile.storeId && pathname === '/onboarding') {
+        router.replace('/');
+        return;
+    }
+
+  }, [user, profile, loading, pathname, router]);
+
+  // Display a loading indicator while auth state is being determined.
+  if (loading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
-
-  // If we are still here and there's no user, show a redirecting message
-  // while the effect cleans up.
-  if (!user) {
-    return <div className="flex items-center justify-center h-screen">Redirecting to login...</div>;
+  
+  // If the user is logged in but their profile is still loading, or if they need onboarding,
+  // we render children only for the '/onboarding' page, otherwise show a redirecting message.
+  // This prevents the main app layout from flashing before the redirect happens.
+  const needsOnboarding = profile && !profile.storeId;
+  if (needsOnboarding) {
+      if (pathname === '/onboarding') {
+          return <>{children}</>;
+      }
+      return <div className="flex items-center justify-center h-screen">Redirecting to onboarding...</div>;
   }
   
-  // If a profile exists but onboarding is not complete, show a message while redirecting.
-  // This also allows the onboarding page itself to render.
-  if (profile && !profile.storeId) {
-    if (pathname === '/onboarding') {
-        return <>{children}</>;
-    }
-    return <div className="flex items-center justify-center h-screen">Redirecting to onboarding...</div>;
-  }
-
+  // Handle suspended users
   if (profile?.status === 'SUSPENDED') {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background text-foreground gap-4 p-4 text-center">
         <h1 className="text-2xl font-bold">Account Suspended</h1>
         <p>Your account has been suspended. Please contact support.</p>
-         <Button onClick={() => logout()} variant="destructive">
+         <Button onClick={() => {
+             // We need access to the logout function here. Let's assume a full-page reload after logout is fine.
+             // A better implementation would have logout available globally without the full useAuth context if needed.
+             // For now, this is a simple solution.
+             const authModule = require('firebase/auth');
+             const { initializeFirebase } = require('@/firebase');
+             const { auth } = initializeFirebase();
+             authModule.signOut(auth).then(() => window.location.href = '/');
+         }} variant="destructive">
           Logout
         </Button>
       </div>
     );
   }
 
-  // If user is fully loaded, onboarded, and not suspended, show the app content.
+  // If the user is authenticated and has completed onboarding, render the main app content.
   if (user && profile && profile.storeId) {
     return <>{children}</>;
   }
 
-  // Fallback loading state
-  return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  // Fallback for any other edge cases while redirecting.
+  return <div className="flex items-center justify-center h-screen">Loading application...</div>;
 }
