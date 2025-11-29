@@ -1,6 +1,6 @@
 'use client';
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/firebase';
@@ -13,6 +13,7 @@ export default function AppRoutesLayout({
   const { user, isUserLoading } = useUser();
   const { logout, profile, loading: isProfileLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -21,11 +22,11 @@ export default function AppRoutesLayout({
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
-    // Redirect to onboarding if user is active but has no storeId yet
-    if (profile?.status === 'ACTIVE' && !profile.storeId) {
+    // Redirect to onboarding if user is active, has no storeId, and is NOT already on the onboarding page.
+    if (profile?.status === 'ACTIVE' && !profile.storeId && pathname !== '/onboarding') {
       router.push('/onboarding');
     }
-  }, [profile, router]);
+  }, [profile, router, pathname]);
 
 
   if (isUserLoading || isProfileLoading) {
@@ -50,7 +51,7 @@ export default function AppRoutesLayout({
   }
   
   // Do not render children if user is active but not onboarded yet, as they will be redirected.
-  if (profile?.status === 'ACTIVE' && !profile.storeId) {
+  if (profile?.status === 'ACTIVE' && !profile.storeId && pathname !== '/onboarding') {
     return <div className="flex items-center justify-center h-screen">Redirecting to onboarding...</div>;
   }
 
