@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -257,6 +258,14 @@ export default function OnboardingPage() {
         mode: "onChange",
         defaultValues: {
             storeName: profile?.displayName || "",
+            slug: "",
+            about: "",
+            paymentMethod: "PAYPAL",
+            paymentIdentifier: "",
+            agreeGoodsAndServices: false,
+            agreeTerms: false,
+            agreeAge: false,
+            agreeOneAccount: false,
         }
     });
 
@@ -298,7 +307,6 @@ export default function OnboardingPage() {
                     paymentIdentifier: values.paymentIdentifier,
                     goodsAndServicesAgreed: values.agreeGoodsAndServices,
                     oneAccountAcknowledged: values.agreeOneAccount,
-                    status: 'ACTIVE', // Move user to ACTIVE status upon completing onboarding
                     updatedAt: serverTimestamp(),
                 });
 
@@ -393,3 +401,5 @@ export default function OnboardingPage() {
         </div>
     );
 }
+
+    
