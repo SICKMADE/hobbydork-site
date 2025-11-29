@@ -25,6 +25,7 @@ import {
   Tag,
   Shield,
   PlusCircle,
+  Award,
 } from 'lucide-react';
 import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
@@ -141,6 +142,17 @@ export default function SidebarNav() {
                 >
                     <Shield />
                     <span>Manage Users</span>
+                </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                <SidebarMenuButton
+                    href="/admin/spotlight"
+                    isActive={pathname === '/admin/spotlight'}
+                    tooltip="Manage Spotlight"
+                    onClick={() => router.push('/admin/spotlight')}
+                >
+                    <Award />
+                    <span>Manage Spotlight</span>
                 </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
