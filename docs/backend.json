@@ -424,38 +424,31 @@
         },
         "required": ["reviewId", "orderId", "storeId", "sellerUid", "buyerUid", "buyerName", "rating", "comment", "createdAt"]
     },
-    "Chat": {
+    "CommunityMessage": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Chat",
+      "title": "CommunityMessage",
       "type": "object",
       "description": "A single message in the community chat.",
       "properties": {
-        "id": {
+        "messageId": {
           "type": "string"
         },
-        "userId": {
-          "type": "string"
-        },
-        "userName": {
-          "type": "string"
-        },
-        "userAvatar": {
+        "senderUid": {
           "type": "string"
         },
         "text": {
           "type": "string"
         },
-        "timestamp": {
+        "createdAt": {
           "type": "string",
           "format": "date-time"
         }
       },
       "required": [
-        "id",
-        "userId",
-        "userName",
+        "messageId",
+        "senderUid",
         "text",
-        "timestamp"
+        "createdAt"
       ]
     },
     "ISO24": {
@@ -577,6 +570,17 @@
         }
       },
       "required": ["messageId", "senderUid", "text", "createdAt", "readBy"]
+    },
+    "WatchlistItem": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "WatchlistItem",
+        "type": "object",
+        "description": "Represents a single item in a user's watchlist.",
+        "properties": {
+            "listingId": { "type": "string" },
+            "addedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["listingId", "addedAt"]
     }
   },
   "auth": {
@@ -611,6 +615,18 @@
           "params": [
             { "name": "userId", "description": "The ID of the user." },
             { "name": "notificationId", "description": "The ID of the notification." }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/watchlist/{listingId}",
+        "definition": {
+          "entityName": "WatchlistItem",
+          "schema": { "$ref": "#/entities/WatchlistItem" },
+          "description": "Stores a single listing in a user's watchlist.",
+          "params": [
+            { "name": "userId", "description": "The ID of the user." },
+            { "name": "listingId", "description": "The ID of the listing being watched." }
           ]
         }
       },
@@ -675,11 +691,11 @@
         }
       },
       {
-        "path": "/chat/{messageId}",
+        "path": "/communityMessages/{messageId}",
         "definition": {
-          "entityName": "Chat",
+          "entityName": "CommunityMessage",
           "schema": {
-            "$ref": "#/entities/Chat"
+            "$ref": "#/entities/CommunityMessage"
           },
           "description": "Stores community chat messages. Readable by any signed-in user.",
           "params": [
@@ -748,3 +764,5 @@
     ]
   }
 }
+
+    

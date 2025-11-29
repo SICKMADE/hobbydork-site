@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -69,10 +70,14 @@ service cloud.firestore {
                       // Allow admins to update user roles
                       || isAdmin();
       allow delete: if false; // Users should not be able to delete their own account from the client
-    }
-    
-    match /users/{userId}/notifications/{notificationId} {
+      
+      match /notifications/{notificationId} {
         allow read, write: if isUser(userId);
+      }
+
+      match /watchlist/{listingId} {
+          allow read, write: if isUser(userId);
+      }
     }
 
     match /storefronts/{storefrontId} {
@@ -111,7 +116,7 @@ service cloud.firestore {
       allow delete: if false; // Orders should be cancelled via a status update.
     }
     
-    match /chat/{messageId} {
+    match /communityMessages/{messageId} {
         allow read, write: if isSignedIn();
     }
 
@@ -139,10 +144,6 @@ service cloud.firestore {
     }
     
     // Placeholder rules for features to be implemented
-    match /watchlists/{userId} {
-        allow read, write: if isUser(userId);
-    }
-    
     match /favoriteStores/{userId} {
         allow read, write: if isUser(userId);
     }

@@ -104,13 +104,11 @@ export type Order = {
   reviewId?: string; // ID of the review associated with this order
 };
 
-export type Chat = {
-    id: string;
-    userId: string;
-    userName: string;
-    userAvatar: string;
+export type CommunityMessage = {
+    messageId: string;
+    senderUid: string;
     text: string;
-    timestamp: Timestamp;
+    createdAt: Timestamp;
 };
 
 export type ISO24 = {
@@ -175,3 +173,10 @@ export type Message = {
     createdAt: Timestamp;
     readBy: string[];
 }
+
+export type WatchlistItem = {
+    listingId: string;
+    addedAt: Timestamp;
+}
+
+    
