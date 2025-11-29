@@ -11,11 +11,26 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
-import type { Listing, Order } from "@/lib/types";
+import type { Listing, Order, ShippingAddress } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { placeholderImages } from "@/lib/placeholder-images";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+
+const shippingSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    address1: z.string().min(1, "Address is required"),
+    address2: z.string().optional(),
+    city: z.string().min(1, "City is required"),
+    state: z.string().min(1, "State is required"),
+    zip: z.string().min(1, "ZIP code is required"),
+    country: z.string().min(1, "Country is required"),
+});
 
 export default function CartPage() {
     const { items, removeFromCart, subtotal, storeId, clearCart } = useCart();
@@ -24,8 +39,21 @@ export default function CartPage() {
     const { toast } = useToast();
     const router = useRouter();
     const [isCheckingOut, setIsCheckingOut] = useState(false);
+    const [showShippingForm, setShowShippingForm] = useState(false);
 
-    // We need to fetch one listing to get the owner UID for the order.
+    const form = useForm<z.infer<typeof shippingSchema>>({
+        resolver: zodResolver(shippingSchema),
+        defaultValues: {
+            name: profile?.displayName || "",
+            address1: "",
+            address2: "",
+            city: "",
+            state: "",
+            zip: "",
+            country: "USA",
+        },
+    });
+
     const firstListingRef = useMemoFirebase(() => {
         if (!firestore || items.length === 0) return null;
         return doc(firestore, 'listings', items[0].listingId);
@@ -33,13 +61,30 @@ export default function CartPage() {
 
     const { data: firstListing } = useDoc<Listing>(firstListingRef);
 
-    const handleCheckout = async () => {
-        if (!profile || !storeId || !firestore || !firstListing || !profile.paymentMethod || !profile.paymentIdentifier) {
+    const handleProceedToShipping = () => {
+        if (!profile || !storeId || !firstListing) {
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: "You must be logged in, have items in your cart, and have payment info configured to checkout.",
+                description: "You must be logged in and have items in your cart to checkout.",
             });
+            return;
+        }
+         if (!profile.paymentMethod || !profile.paymentIdentifier) {
+            toast({
+                variant: "destructive",
+                title: "Payment Info Missing",
+                description: "Please set up your payment information in Settings before checking out.",
+            });
+             router.push('/settings');
+            return;
+        }
+        setShowShippingForm(true);
+    };
+
+    const handleCheckout = async (shippingValues: z.infer<typeof shippingSchema>) => {
+        if (!profile || !storeId || !firestore || !firstListing || !profile.paymentMethod || !profile.paymentIdentifier) {
+            // This check is redundant if handleProceedToShipping is used, but good for safety
             return;
         }
 
@@ -47,16 +92,6 @@ export default function CartPage() {
         try {
             const batch = writeBatch(firestore);
             const newOrderRef = doc(collection(firestore, "orders"));
-
-            // NOTE: In a real app, you would collect this from the user.
-            const placeholderShippingAddress = {
-                name: profile.displayName || 'User',
-                address1: '123 Fake St',
-                city: 'Anytown',
-                state: 'CA',
-                zip: '12345',
-                country: 'USA',
-            };
 
             const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'reviewId' | 'cancelReason'> & { createdAt: any, updatedAt: any } = {
                 orderId: newOrderRef.id,
@@ -71,7 +106,7 @@ export default function CartPage() {
                 })),
                 totalPrice: subtotal,
                 state: "PENDING_PAYMENT",
-                buyerShippingAddress: placeholderShippingAddress,
+                buyerShippingAddress: shippingValues,
                 trackingNumber: null,
                 trackingCarrier: null,
                 paymentMethod: profile.paymentMethod,
@@ -82,10 +117,6 @@ export default function CartPage() {
 
             batch.set(newOrderRef, orderData);
             
-            // Client does NOT decrement stock. This is handled by a Cloud Function
-            // when the order state moves to COMPLETED to prevent race conditions
-            // and ensure transactional integrity.
-
             await batch.commit();
 
             toast({
@@ -116,7 +147,29 @@ export default function CartPage() {
                         <CardTitle className="text-3xl">Shopping Cart</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {items.length === 0 ? (
+                        {showShippingForm ? (
+                            <div>
+                                <h3 className="text-xl font-semibold mb-4">Shipping Address</h3>
+                                <Form {...form}>
+                                    <form onSubmit={form.handleSubmit(handleCheckout)} className="space-y-4">
+                                        <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="address1" render={({ field }) => (<FormItem><FormLabel>Address Line 1</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="address2" render={({ field }) => (<FormItem><FormLabel>Address Line 2 (Optional)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <FormField control={form.control} name="city" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name="state" render={({ field }) => (<FormItem><FormLabel>State / Province</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name="zip" render={({ field }) => (<FormItem><FormLabel>ZIP / Postal Code</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        </div>
+                                        <FormField control={form.control} name="country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        
+                                        <div className="flex justify-between pt-4">
+                                            <Button variant="outline" onClick={() => setShowShippingForm(false)}>Back to Cart</Button>
+                                            <Button type="submit" disabled={isCheckingOut}>{isCheckingOut ? 'Placing Order...' : `Place Order ($${subtotal.toFixed(2)})`}</Button>
+                                        </div>
+                                    </form>
+                                </Form>
+                            </div>
+                        ) : items.length === 0 ? (
                             <div className="text-center py-12">
                                 <p className="text-muted-foreground mb-4">Your cart is empty.</p>
                                 <Button asChild>
@@ -154,12 +207,12 @@ export default function CartPage() {
                             </div>
                         )}
                     </CardContent>
-                    {items.length > 0 && (
+                    {items.length > 0 && !showShippingForm && (
                         <CardFooter>
                             <Button 
                                 className="w-full" 
                                 size="lg" 
-                                onClick={handleCheckout} 
+                                onClick={handleProceedToShipping} 
                                 disabled={isCheckingOut || !firstListing}
                             >
                                 {isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}
@@ -171,4 +224,6 @@ export default function CartPage() {
         </AppLayout>
     );
 }
+    
+
     
