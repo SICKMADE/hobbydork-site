@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ const combinedSchema = step1Schema.merge(step2Schema);
 type SignupFormValues = z.infer<typeof combinedSchema>;
 
 const Step1 = () => {
-    const { control } = useForm<SignupFormValues>();
+    const { control } = useFormContext<SignupFormValues>();
     return (
         <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="space-y-6">
             <FormField
@@ -92,7 +92,7 @@ const Step1 = () => {
 
 
 const Step2 = () => {
-    const { control, watch, setValue } = useForm<SignupFormValues>();
+    const { control, watch, setValue } = useFormContext<SignupFormValues>();
     const storeNameValue = watch("storeName");
 
     React.useEffect(() => {
