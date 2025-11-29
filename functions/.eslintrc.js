@@ -33,6 +33,6 @@ module.exports = {
     "require-jsdoc": "off",
     "valid-jsdoc": "off",
     "@typescript-eslint/no-explicit-any": "off",
-    "max-len": ["error", { "code": 120 }],
+    "max-len": ["error", {"code": 120}],
   },
 };
