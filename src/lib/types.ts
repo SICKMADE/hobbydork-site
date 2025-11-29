@@ -1,5 +1,6 @@
 
 
+
 import { Timestamp } from "firebase/firestore";
 
 export type UserStatus = 'ACTIVE' | 'LIMITED' | 'SUSPENDED';
@@ -184,6 +185,17 @@ export type WatchlistItem = {
 export type FavoriteStoreItem = {
     storeId: string;
     addedAt: Timestamp;
+}
+
+export type Report = {
+    reportId: string;
+    reporterUid: string;
+    targetType: "USER" | "LISTING" | "ORDER";
+    targetId: string;
+    reason: string;
+    details: string;
+    createdAt: Timestamp;
+    status: "OPEN" | "REVIEWED" | "RESOLVED";
 }
 
     
