@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -163,7 +164,7 @@
           "type": "boolean"
         },
         "spotlightUntil": {
-          "type": "string",
+          "type": ["string", "null"],
           "format": "date-time",
           "description": "Timestamp until the store is spotlighted."
         },
@@ -182,6 +183,7 @@
         "storeName",
         "slug",
         "about",
+        "avatarUrl",
         "status",
         "isSpotlighted",
         "createdAt",
@@ -660,3 +662,5 @@
     ]
   }
 }
+
+    

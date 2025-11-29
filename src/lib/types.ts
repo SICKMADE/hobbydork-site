@@ -1,3 +1,4 @@
+
 import { Timestamp } from "firebase/firestore";
 
 export type UserStatus = 'ACTIVE' | 'LIMITED' | 'SUSPENDED';
@@ -61,7 +62,7 @@ export type Listing = {
   state: ListingState;
   tags: string[];
   imageUrls: string[];
-  primaryImageUrl: string | null;
+  primaryImageUrl: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 };
@@ -89,7 +90,7 @@ export type Order = {
       title: string;
       quantity: number;
       pricePerUnit: number;
-      primaryImageUrl: string | null;
+      primaryImageUrl: string;
   }[];
   totalPrice: number;
   state: OrderState;
@@ -150,3 +151,5 @@ export type Review = {
     comment: string;
     createdAt: Timestamp;
 }
+
+    
