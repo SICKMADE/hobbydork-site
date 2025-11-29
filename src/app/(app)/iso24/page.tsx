@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,6 +24,7 @@ const isoSchema = z.object({
     title: z.string().min(5, "Title must be at least 5 characters."),
     category: z.string().min(1, "Please select a category."),
     description: z.string().min(10, "Description must be at least 10 characters."),
+    imageUrl: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
 });
 
 const categories = ["Trading Cards", "Action Figures", "Comics", "Memorabilia", "Video Games", "Stamps"];
@@ -40,6 +41,7 @@ export default function ISO24Page() {
             title: "",
             category: "",
             description: "",
+            imageUrl: "",
         },
     });
 
@@ -98,6 +100,7 @@ export default function ISO24Page() {
                 title: values.title,
                 category: values.category,
                 description: values.description,
+                imageUrl: values.imageUrl || null,
                 createdAt: now,
                 expiresAt: expires,
                 status: 'ACTIVE',
@@ -194,6 +197,20 @@ export default function ISO24Page() {
                                             </FormItem>
                                         )}
                                     />
+                                    <FormField
+                                        control={form.control}
+                                        name="imageUrl"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Image URL (Optional)</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="https://example.com/image.png" {...field} />
+                                                </FormControl>
+                                                <FormDescription>A direct link to an image of the item.</FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
                                     <Button type="submit" className="w-full" disabled={isSubmitting}>
                                         {isSubmitting ? "Posting..." : "Create Post"}
                                     </Button>
@@ -218,3 +235,5 @@ export default function ISO24Page() {
         </AppLayout>
     );
 }
+
+    

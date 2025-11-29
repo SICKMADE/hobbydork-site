@@ -484,6 +484,11 @@
           "type": "string",
           "description": "Detailed description of the item."
         },
+        "imageUrl": {
+            "type": ["string", "null"],
+            "description": "Optional URL of an image for the item being sought.",
+            "format": "uri"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"
@@ -657,3 +662,5 @@
     ]
   }
 }
+
+    

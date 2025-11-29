@@ -119,6 +119,7 @@ export type ISO24 = {
     title: string;
     category: string;
     description: string;
+    imageUrl?: string | null;
     createdAt: Timestamp;
     expiresAt: Timestamp;
     status: 'ACTIVE' | 'EXPIRED';
@@ -149,5 +150,7 @@ export type Review = {
     comment: string;
     createdAt: Timestamp;
 }
+
+    
 
     
