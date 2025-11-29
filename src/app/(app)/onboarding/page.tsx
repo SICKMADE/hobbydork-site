@@ -295,7 +295,6 @@ export default function OnboardingPage() {
                     paymentIdentifier: values.paymentIdentifier,
                     goodsAndServicesAgreed: values.agreeGoodsAndServices,
                     oneAccountAcknowledged: values.agreeOneAccount,
-                    // No need to update status here, as the layout handles the redirect logic based on storeId
                     updatedAt: serverTimestamp(),
                 });
 
