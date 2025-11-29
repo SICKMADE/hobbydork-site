@@ -1,15 +1,27 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ISO24 } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 import { MessageSquare } from "lucide-react";
+import { useDoc, useFirestore, useMemoFirebase } from "@/firebase";
+import type { User } from "@/lib/types";
+import { doc } from "firebase/firestore";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 interface ISO24CardProps {
     post: ISO24;
 }
 
 export default function ISO24Card({ post }: ISO24CardProps) {
+    const firestore = useFirestore();
+    
+    const userRef = useMemoFirebase(() => {
+        if (!firestore || !post.creatorUid) return null;
+        return doc(firestore, 'users', post.creatorUid);
+    }, [firestore, post.creatorUid]);
+
+    const { data: user } = useDoc<User>(userRef);
     
     const expiresAt = post.expiresAt.toDate();
     const expiresIn = formatDistanceToNow(expiresAt, { addSuffix: true });
@@ -17,14 +29,16 @@ export default function ISO24Card({ post }: ISO24CardProps) {
     return (
         <Card>
             <CardHeader className="flex flex-row items-start gap-4 space-y-0">
-                 <Avatar className="h-12 w-12 border">
-                    <AvatarImage src={post.userAvatar} alt={post.userName} />
-                    <AvatarFallback>{post.userName?.charAt(0)}</AvatarFallback>
-                </Avatar>
+                 {user && (
+                    <Avatar className="h-12 w-12 border">
+                        <AvatarImage src={user.avatar} alt={user.displayName || ''} />
+                        <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                 )}
                 <div className="flex-1">
                     <CardTitle>{post.title}</CardTitle>
                     <CardDescription>
-                        Posted by {post.userName} &bull; Expires {expiresIn}
+                        Posted by {user?.displayName || '...'} &bull; Expires {expiresIn}
                     </CardDescription>
                 </div>
             </CardHeader>

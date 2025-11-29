@@ -116,8 +116,6 @@ export type Chat = {
 export type ISO24 = {
     id: string;
     creatorUid: string;
-    userName: string;
-    userAvatar: string;
     title: string;
     category: string;
     description: string;

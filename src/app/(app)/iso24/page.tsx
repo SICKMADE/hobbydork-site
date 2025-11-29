@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,7 +19,6 @@ import type { ISO24 } from "@/lib/types";
 import ISO24Card from "@/components/ISO24Card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
-import { placeholderImages } from "@/lib/placeholder-images";
 
 const isoSchema = z.object({
     title: z.string().min(5, "Title must be at least 5 characters."),
@@ -95,8 +95,6 @@ export default function ISO24Page() {
             await setDoc(newDocRef, {
                 id: newDocRef.id,
                 creatorUid: user.uid,
-                userName: profile.displayName,
-                userAvatar: profile.avatar || placeholderImages['user-avatar-1']?.imageUrl,
                 title: values.title,
                 category: values.category,
                 description: values.description,

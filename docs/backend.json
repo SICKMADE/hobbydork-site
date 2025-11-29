@@ -472,12 +472,6 @@
           "type": "string",
           "description": "The UID of the user who created the post."
         },
-        "userName": {
-            "type": "string"
-        },
-        "userAvatar": {
-            "type": "string"
-        },
         "title": {
           "type": "string",
           "description": "Title of the item being sought."
@@ -507,8 +501,6 @@
       "required": [
         "id",
         "creatorUid",
-        "userName",
-        "userAvatar",
         "title",
         "category",
         "description",
@@ -665,5 +657,3 @@
     ]
   }
 }
-
-    
