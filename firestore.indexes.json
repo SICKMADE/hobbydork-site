@@ -1,0 +1,84 @@
+{
+    "indexes": [
+      {
+        "collectionGroup": "listings",
+        "queryScope": "COLLECTION",
+        "fields": [
+          { "fieldPath": "state", "order": "ASCENDING" },
+          { "fieldPath": "createdAt", "order": "DESCENDING" }
+        ]
+      },
+      {
+        "collectionGroup": "listings",
+        "queryScope": "COLLECTION",
+        "fields": [
+          { "fieldPath": "state", "order": "ASCENDING" },
+          { "fieldPath": "category", "order": "ASCENDING" },
+          { "fieldPath": "createdAt", "order": "DESCENDING" }
+        ]
+      },
+      {
+        "collectionGroup": "listings",
+        "queryScope": "COLLECTION",
+        "fields": [
+          { "fieldPath": "storeId", "order": "ASCENDING" },
+          { "fieldPath": "state", "order": "ASCENDING" },
+          { "fieldPath": "createdAt", "order": "DESCENDING" }
+        ]
+      },
+      {
+        "collectionGroup": "stores",
+        "queryScope": "COLLECTION",
+        "fields": [
+          { "fieldPath": "createdAt", "order": "DESCENDING" }
+        ]
+      },
+      {
+        "collectionGroup": "stores",
+        "queryScope": "COLLECTION",
+        "fields": [
+          { "fieldPath": "isSpotlighted", "order": "ASCENDING" },
+          { "fieldPath": "spotlightUntil", "order": "ASCENDING" }
+        ]
+      },
+      {
+        "collectionGroup": "orders",
+        "queryScope": "COLLECTION",
+        "fields": [
+          { "fieldPath": "buyerUid", "order": "ASCENDING" },
+          { "fieldPath": "createdAt", "order": "DESCENDING" }
+        ]
+      },
+      {
+        "collectionGroup": "orders",
+        "queryScope": "COLLECTION",
+        "fields": [
+          { "fieldPath": "sellerUid", "order": "ASCENDING" },
+          { "fieldPath": "createdAt", "order": "DESCENDING" }
+        ]
+      },
+      {
+        "collectionGroup": "iso24Posts",
+        "queryScope": "COLLECTION",
+        "fields": [
+          { "fieldPath": "status", "order": "ASCENDING" },
+          { "fieldPath": "expiresAt", "order": "DESCENDING" }
+        ]
+      },
+      {
+        "collectionGroup": "reviews",
+        "queryScope": "COLLECTION_GROUP",
+        "fields": [
+          { "fieldPath": "storeId", "order": "ASCENDING" },
+          { "fieldPath": "createdAt", "order": "DESCENDING" }
+        ]
+      },
+      {
+        "collectionGroup": "communityMessages",
+        "queryScope": "COLLECTION",
+        "fields": [
+          { "fieldPath": "createdAt", "order": "ASCENDING" }
+        ]
+      }
+    ]
+  }
