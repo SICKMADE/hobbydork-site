@@ -121,7 +121,7 @@ export default function StorefrontPage({ params }: { params: { id: string } }) {
                 <h2 className="text-2xl font-semibold tracking-tight">Store Reviews</h2>
                 {reviews && reviews.length > 0 ? (
                     reviews.map(review => (
-                        <Card key={review.id}>
+                        <Card key={review.reviewId}>
                            <CardContent className="p-4 space-y-3">
                                 <div className="flex items-start gap-3">
                                     <Avatar className="h-10 w-10 border">

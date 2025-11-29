@@ -65,7 +65,7 @@ export default function OrdersPage() {
                     <Card key={order.id}>
                         <CardHeader className="flex flex-row justify-between items-start">
                             <div>
-                                <CardTitle>Order #{order.id.substring(0, 7)}</CardTitle>
+                                <CardTitle>Order #{order.orderId.substring(0, 7)}</CardTitle>
                                 <CardDescription>
                                     Placed on {order.createdAt ? format(order.createdAt.toDate(), 'PPP') : '...'}
                                 </CardDescription>

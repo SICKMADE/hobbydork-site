@@ -68,12 +68,13 @@ export default function ReviewDialog({ order, open, onOpenChange }: ReviewDialog
                 const newRatingAverage = ((storeData.ratingAverage * storeData.ratingCount) + values.rating) / newRatingCount;
 
                 // 1. Create the review
-                const newReview: Omit<Review, 'id'| 'createdAt'> & {createdAt: any} = {
+                const newReview: Omit<Review, 'createdAt'> & {createdAt: any} = {
+                    reviewId: order.id,
                     orderId: order.id,
                     storeId: order.storeId,
                     sellerUid: order.sellerUid,
                     buyerUid: profile.uid,
-                    buyerName: profile.displayName,
+                    buyerName: profile.displayName || 'Anonymous',
                     buyerAvatar: profile.avatar || placeholderImages['user-avatar-1']?.imageUrl,
                     rating: values.rating,
                     comment: values.comment,
