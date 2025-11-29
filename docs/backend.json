@@ -270,7 +270,7 @@
           }
         },
         "primaryImageUrl": {
-          "type": "string",
+          "type": ["string", "null"],
           "description": "The primary image URL for the listing.",
           "format": "uri"
         },
@@ -296,7 +296,6 @@
         "quantityAvailable",
         "state",
         "imageUrls",
-        "primaryImageUrl",
         "createdAt",
         "updatedAt"
       ]

@@ -62,7 +62,7 @@ export type Listing = {
   state: ListingState;
   tags: string[];
   imageUrls: string[];
-  primaryImageUrl: string;
+  primaryImageUrl: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 };
@@ -151,5 +151,7 @@ export type Review = {
     comment: string;
     createdAt: Timestamp;
 }
+
+    
 
     
