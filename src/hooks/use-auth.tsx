@@ -6,17 +6,21 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
+  sendEmailVerification,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { placeholderImages } from '@/lib/placeholder-images';
 
 interface SignupData {
+  displayName: string;
   email: string;
   password: string;
+  oneAccountAcknowledged: boolean;
+  goodsAndServicesAgreed: boolean;
 }
 
 interface AuthContextType {
@@ -25,7 +29,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  signup: (data: SignupData) => Promise<boolean>;
+  signup: (data: Omit<SignupData, 'displayName' | 'oneAccountAcknowledged' | 'goodsAndServicesAgreed'>) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -44,6 +48,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
+  useEffect(() => {
+    // Check if the user is logged in, their email is verified, and their profile is currently 'LIMITED'
+    if (user && user.emailVerified && profile?.status === 'LIMITED' && userProfileRef) {
+      // Update the user's status to 'ACTIVE' in Firestore
+      setDoc(userProfileRef, { status: 'ACTIVE', emailVerified: true, updatedAt: serverTimestamp() }, { merge: true })
+        .then(() => {
+          toast({
+            title: 'Account Activated!',
+            description: 'Your account is now active. Please complete onboarding.',
+          });
+        })
+        .catch((error) => {
+          console.error('Error updating user status:', error);
+          toast({
+            title: 'Activation Failed',
+            description: 'Could not update your account status. Please contact support.',
+            variant: 'destructive',
+          });
+        });
+    }
+  }, [user, profile, userProfileRef, toast]);
+
+
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -51,7 +78,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: 'Login Successful',
         description: `Welcome back!`,
       });
-      // Successful login will trigger onAuthStateChanged, which will load the profile and redirect if needed.
       return true;
     } catch (error: any) {
       console.error("Login failed:", error);
@@ -79,64 +105,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [auth, router, toast]);
 
-  const signup = useCallback(async (data: SignupData): Promise<boolean> => {
+  const signup = useCallback(async (data: Omit<SignupData, 'displayName' | 'oneAccountAcknowledged' | 'goodsAndServicesAgreed'>): Promise<boolean> => {
     const { email, password } = data;
     if (!firestore) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
     }
-
+    
+    // We create the user in auth first, which signs them in.
+    // The security rules can then use their auth.uid to secure the profile creation.
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const newUser = userCredential.user;
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const newUser = userCredential.user;
 
-        const userProfileData = {
-            uid: newUser.uid,
-            email: newUser.email!,
-            displayName: newUser.email!,
-            avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-            status: 'ACTIVE',
-            role: 'user', // All new users are regular users
-            emailVerified: true, // No verification step
-            notificationPreferences: {
-                notifyMessages: true,
-                notifyOrders: true,
-                notifyISO24: true,
-                notifySpotlight: true,
-            },
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-        };
+      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid'> & { createdAt: any, updatedAt: any, uid: string } = {
+        uid: newUser.uid,
+        email: newUser.email!,
+        displayName: newUser.email!, // Use email as placeholder display name
+        avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
+        status: 'LIMITED', // User starts as LIMITED
+        role: 'user', 
+        emailVerified: false, // Email is not verified yet
+        notificationPreferences: {
+          notifyMessages: true,
+          notifyOrders: true,
+          notifyISO24: true,
+          notifySpotlight: true,
+        },
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
 
-        const newUserDocRef = doc(firestore, "users", newUser.uid);
-        
-        await setDoc(newUserDocRef, userProfileData).catch(error => {
-            const contextualError = new FirestorePermissionError({
-                path: newUserDocRef.path,
-                operation: 'create',
-                requestResourceData: userProfileData,
-            });
-            errorEmitter.emit('permission-error', contextualError);
-            throw error;
-        });
-
-        toast({
-            title: 'Account Created!',
-            description: `Welcome! Let's get your store set up.`,
-        });
-
-        return true;
-
+      await setDoc(doc(firestore, "users", newUser.uid), userProfile);
+      
+      await sendEmailVerification(newUser);
+      
+      toast({
+        title: 'Signup Successful!',
+        description: `Welcome! A verification email has been sent to your inbox. Please verify to continue.`,
+      });
+      return true;
     } catch (error: any) {
-        // This catch block handles errors from createUserWithEmailAndPassword or the re-thrown Firestore errors
-        if (!error.message.includes('permission-error')) { // Avoid double-toasting
-            toast({
-                title: 'Signup Failed',
-                description: error.message || 'An unexpected error occurred during signup.',
-                variant: 'destructive',
-            });
-        }
-        return false;
+      console.error("Signup failed:", error);
+      toast({
+        title: 'Signup Failed',
+        description: error.message || 'An unexpected error occurred during sign up.',
+        variant: 'destructive',
+      });
+      return false;
     }
   }, [auth, firestore, toast]);
 

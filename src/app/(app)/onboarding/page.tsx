@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -295,7 +295,7 @@ export default function OnboardingPage() {
                     paymentIdentifier: values.paymentIdentifier,
                     goodsAndServicesAgreed: values.agreeGoodsAndServices,
                     oneAccountAcknowledged: values.agreeOneAccount,
-                    status: 'ACTIVE', // Activate the user
+                    // No need to update status here, as the layout handles the redirect logic based on storeId
                     updatedAt: serverTimestamp(),
                 });
 
