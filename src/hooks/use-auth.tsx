@@ -9,7 +9,7 @@ import {
   sendEmailVerification,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, getDocs, collection, query, limit } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -20,8 +20,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
 interface SignupData {
   email: string;
   password: string;
-  oneAccountAcknowledged: boolean;
-  goodsAndServicesAgreed: boolean;
 }
 
 interface AuthContextType {
@@ -50,16 +48,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    // Check if the user is logged in, their email is verified, and their profile is currently 'LIMITED'
     if (user && user.emailVerified && profile?.status === 'LIMITED' && userProfileRef) {
-      // Update the user's status to 'ACTIVE' in Firestore
       setDoc(userProfileRef, { status: 'ACTIVE', emailVerified: true, updatedAt: serverTimestamp() }, { merge: true })
-        .then(() => {
-          toast({
-            title: 'Account Activated!',
-            description: 'Your account has been fully activated. Welcome!',
-          });
-        })
         .catch((error) => {
           console.error('Error updating user status:', error);
           const contextualError = new FirestorePermissionError({
@@ -68,11 +58,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             requestResourceData: { status: 'ACTIVE', emailVerified: true },
           });
           errorEmitter.emit('permission-error', contextualError);
-          toast({
-            title: 'Activation Failed',
-            description: 'Could not update your account status. Please contact support.',
-            variant: 'destructive',
-          });
         });
     }
   }, [user, profile, userProfileRef, toast]);
@@ -113,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth, router, toast]);
 
   const signup = useCallback(async (data: SignupData): Promise<boolean> => {
-    const { email, password, oneAccountAcknowledged, goodsAndServicesAgreed } = data;
+    const { email, password } = data;
     if (!firestore) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
@@ -123,46 +108,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
       
-      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid' | 'displayName'> & { createdAt: any, updatedAt: any, uid: string, displayName: string } = {
+      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt'> = {
         uid: newUser.uid,
         email: newUser.email!,
-        displayName: "", // Display name is set during onboarding
+        displayName: "", // This is set during onboarding
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-        status: 'ACTIVE', 
+        status: 'ACTIVE',
         role: 'user',
-        emailVerified: true,
-        oneAccountAcknowledged,
-        goodsAndServicesAgreed,
+        emailVerified: true, // We are not doing email verification
+        oneAccountAcknowledged: false, // Set during onboarding
+        goodsAndServicesAgreed: false, // Set during onboarding
         notificationPreferences: {
           notifyMessages: true,
           notifyOrders: true,
           notifyISO24: true,
           notifySpotlight: true,
         },
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
       };
 
       const newUserRef = doc(firestore, "users", newUser.uid);
-      await setDoc(newUserRef, userProfile).catch(error => {
+      
+      await setDoc(newUserRef, {
+        ...userProfile,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }).catch(error => {
           const contextualError = new FirestorePermissionError({
             path: newUserRef.path,
             operation: 'create',
             requestResourceData: userProfile,
           });
           errorEmitter.emit('permission-error', contextualError);
-          throw error; // re-throw to be caught by outer catch
+          throw error;
       });
       
-      toast({
-        title: 'Signup Successful!',
-        description: `Welcome! Let's get your store set up.`,
-      });
-      // The redirect is handled by the AppLayout now
+      // No toast on success, as the user will be redirected immediately
       return true;
     } catch (error: any) {
       console.error("Signup failed:", error);
-      // Don't show a toast if it's a permission error, as it's handled globally
       if (!(error instanceof FirestorePermissionError)) {
           toast({
             title: 'Signup Failed',

@@ -15,28 +15,21 @@ export default function AppRoutesLayout({
 
   useEffect(() => {
     if (loading) {
-      return; // Don't do anything while auth state is resolving
+      return; // Wait until auth state is resolved.
     }
 
-    // If there's no user, they should be redirected to the login page.
-    // This is handled by the root page logic, but as a fallback:
     if (!user) {
-      router.replace('/');
+      router.replace('/'); // Not logged in, go to auth page.
+      return;
+    }
+    
+    // Once user and profile are loaded, check for onboarding.
+    if (profile && !profile.storeId && pathname !== '/onboarding') {
+      router.replace('/onboarding');
       return;
     }
 
-    // This is the key logic based on your instructions.
-    // A new user has a profile but is missing a storeId.
-    const needsOnboarding = profile && !profile.storeId;
-    
-    // If onboarding is needed and we are NOT on the onboarding page, redirect.
-    if (needsOnboarding && pathname !== '/onboarding') {
-      router.replace('/onboarding');
-      return; // Stop further execution
-    }
-
-    // If a user has completed onboarding (has a storeId) but somehow lands on the onboarding page,
-    // redirect them to the dashboard.
+    // If user is onboarded but lands on the onboarding page, send to dashboard.
     if (profile && profile.storeId && pathname === '/onboarding') {
         router.replace('/');
         return;
@@ -44,32 +37,37 @@ export default function AppRoutesLayout({
 
   }, [user, profile, loading, pathname, router]);
 
-  // Display a loading indicator while auth state is being determined.
+  // While loading, show a full-screen loader.
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
   
-  // If the user is logged in but their profile is still loading, or if they need onboarding,
-  // we render children only for the '/onboarding' page, otherwise show a redirecting message.
-  // This prevents the main app layout from flashing before the redirect happens.
-  const needsOnboarding = profile && !profile.storeId;
-  if (needsOnboarding) {
-      if (pathname === '/onboarding') {
-          return <>{children}</>;
-      }
-      return <div className="flex items-center justify-center h-screen">Redirecting to onboarding...</div>;
-  }
+  // If user is logged in but profile is still resolving, it's covered by `loading` state.
+  // The useEffect will handle the redirect once `loading` is false.
   
-  // Handle suspended users
+  // Define the condition for needing onboarding.
+  const needsOnboarding = user && profile && !profile.storeId;
+  
+  // If the user needs onboarding, we must block the main app from rendering
+  // unless they are on the onboarding page itself.
+  if (needsOnboarding) {
+    if (pathname === '/onboarding') {
+      // Allow the onboarding page to render.
+      return <>{children}</>;
+    } else {
+      // For any other page, show a redirecting message and wait for useEffect to fire.
+      // This prevents the dashboard or other pages from flashing.
+      return <div className="flex items-center justify-center h-screen">Redirecting to onboarding...</div>;
+    }
+  }
+
+  // Handle suspended users.
   if (profile?.status === 'SUSPENDED') {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background text-foreground gap-4 p-4 text-center">
         <h1 className="text-2xl font-bold">Account Suspended</h1>
         <p>Your account has been suspended. Please contact support.</p>
          <Button onClick={() => {
-             // We need access to the logout function here. Let's assume a full-page reload after logout is fine.
-             // A better implementation would have logout available globally without the full useAuth context if needed.
-             // For now, this is a simple solution.
              const authModule = require('firebase/auth');
              const { initializeFirebase } = require('@/firebase');
              const { auth } = initializeFirebase();
@@ -81,11 +79,12 @@ export default function AppRoutesLayout({
     );
   }
 
-  // If the user is authenticated and has completed onboarding, render the main app content.
+  // If we've passed all checks (user is logged in, profile is loaded, and they have a storeId),
+  // then render the main application content.
   if (user && profile && profile.storeId) {
     return <>{children}</>;
   }
 
-  // Fallback for any other edge cases while redirecting.
+  // Fallback loading state for any other transitional conditions.
   return <div className="flex items-center justify-center h-screen">Loading application...</div>;
 }
