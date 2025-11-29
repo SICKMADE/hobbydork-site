@@ -28,7 +28,7 @@ async function createNotification(params: {
   body: string;
   relatedId?: string | null;
 }): Promise<void> {
-  const { userUid, type, title, body, relatedId = null } = params;
+  const {userUid, type, title, body, relatedId = null} = params;
   const notifRef = db.collection(USERS).doc(userUid).collection("notifications").doc();
 
   await notifRef.set({
@@ -55,7 +55,7 @@ export const onIso24Create = functions
 
     const createdAt = data.createdAt || Timestamp.now();
     const expiresAt = new Timestamp(createdAt.seconds + 24 * 60 * 60, createdAt.nanoseconds);
-    await snap.ref.update({ createdAt, expiresAt, status: "ACTIVE" });
+    await snap.ref.update({createdAt, expiresAt, status: "ACTIVE"});
     return null;
   });
 
@@ -75,7 +75,7 @@ export const expireIso24Posts = functions
     const snap = await q.get();
     const batch = db.batch();
 
-    snap.docs.forEach((doc) => batch.update(doc.ref, { status: "EXPIRED" }));
+    snap.docs.forEach((doc) => batch.update(doc.ref, {status: "EXPIRED"}));
     if (!snap.empty) await batch.commit();
     return null;
   });
@@ -89,7 +89,7 @@ export const onReviewCreate = functions
   .firestore.document(`${STORES}/{storeId}/reviews/{reviewId}`)
   .onCreate(async (snap: functions.firestore.DocumentSnapshot) => {
     const data = snap.data() as any;
-    const { storeId, rating } = data;
+    const {storeId, rating} = data;
     if (!storeId || typeof rating !== "number") return null;
 
     const storeRef = db.collection(STORES).doc(storeId);
@@ -134,12 +134,12 @@ export const expireSpotlightSlots = functions
     snap.docs.forEach((doc) => {
       const data = doc.data();
       const storeId = data.storeId as string | undefined;
-      batch.update(doc.ref, { active: false });
+      batch.update(doc.ref, {active: false});
       if (storeId) storeUpdates[storeId] = db.collection(STORES).doc(storeId);
     });
 
     Object.values(storeUpdates).forEach((storeRef) => {
-      batch.update(storeRef, { isSpotlighted: false, spotlightUntil: null });
+      batch.update(storeRef, {isSpotlighted: false, spotlightUntil: null});
     });
 
     await batch.commit();
@@ -154,7 +154,7 @@ export const onOrderCreate = functions
   .firestore.document(`${ORDERS}/{orderId}`)
   .onCreate(async (snap: functions.firestore.DocumentSnapshot, context: functions.EventContext) => {
     const data = snap.data() as any;
-    const { sellerUid, buyerUid, totalPrice } = data;
+    const {sellerUid, buyerUid, totalPrice} = data;
 
     if (sellerUid) {
       const buyerDoc = await db.collection(USERS).doc(buyerUid).get();
@@ -219,7 +219,7 @@ export const onOrderUpdate = functions
             userUid: sellerUid,
             type: "ORDER_STATUS",
             title: "Order Update",
-            body: `Order ${orderId.substring(0,7)} is now: ${label}.`,
+            body: `Order ${orderId.substring(0, 7)} is now: ${label}.`,
             relatedId: orderId,
           })
         );
@@ -245,7 +245,7 @@ export const onOrderUpdate = functions
       // Increment total items sold for the store
       if (after.storeId && totalQuantity > 0) {
         const storeRef = db.collection(STORES).doc(after.storeId);
-        batch.update(storeRef, { itemsSold: FieldValue.increment(totalQuantity) });
+        batch.update(storeRef, {itemsSold: FieldValue.increment(totalQuantity)});
       }
 
       if (totalQuantity > 0) {
@@ -265,7 +265,7 @@ export const onMessageCreate = functions
   .firestore.document(`${CONVERSATIONS}/{conversationId}/messages/{messageId}`)
   .onCreate(async (snap: functions.firestore.DocumentSnapshot, context: functions.EventContext) => {
     const message = snap.data() as any;
-    const { senderUid, text } = message;
+    const {senderUid, text} = message;
     const conversationId = context.params.conversationId;
 
     const convoRef = db.collection(CONVERSATIONS).doc(conversationId);
