@@ -7,10 +7,12 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Logo from '../Logo';
 import { Checkbox } from '../ui/checkbox';
 import Link from 'next/link';
+import { Separator } from '../ui/separator';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -21,6 +23,8 @@ const signupSchema = z.object({
   displayName: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  storeName: z.string().min(3, "Store name must be at least 3 characters."),
+  storeAbout: z.string().min(10, "About section must be at least 10 characters long."),
   acceptTerms: z.literal(true, {
     errorMap: () => ({ message: "You must accept the terms and conditions." }),
   }),
@@ -43,7 +47,7 @@ export default function AuthComponent() {
 
   const signupForm = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { displayName: '', email: '', password: '' },
+    defaultValues: { displayName: '', email: '', password: '', storeName: '', storeAbout: '' },
   });
 
   function onLogin(values: z.infer<typeof loginSchema>) {
@@ -51,10 +55,14 @@ export default function AuthComponent() {
   }
 
   function onSignup(values: z.infer<typeof signupSchema>) {
+    const slug = values.storeName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     signup({
       displayName: values.displayName,
       email: values.email,
       password: values.password,
+      storeName: values.storeName,
+      storeSlug: slug,
+      storeAbout: values.storeAbout,
       oneAccountAcknowledged: values.acknowledge,
       goodsAndServicesAgreed: values.acknowledge
     });
@@ -132,7 +140,7 @@ export default function AuthComponent() {
                       name="displayName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Name</FormLabel>
+                          <FormLabel>Your Name</FormLabel>
                           <FormControl>
                             <Input placeholder="Collector Carl" {...field} />
                           </FormControl>
@@ -166,6 +174,36 @@ export default function AuthComponent() {
                         </FormItem>
                       )}
                     />
+                    <Separator />
+                     <h4 className="text-sm font-medium">Your Store Details</h4>
+                     <FormField
+                        control={signupForm.control}
+                        name="storeName"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Store Name</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Carl's Collectibles" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={signupForm.control}
+                        name="storeAbout"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>About Your Store</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="Tell everyone what makes your store special..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <Separator />
 
                     <FormField
                       control={signupForm.control}
@@ -239,7 +277,7 @@ export default function AuthComponent() {
                     />
                     
                     <Button type="submit" className="w-full">
-                      Create Account
+                      Create Account & Store
                     </Button>
                   </form>
                 </Form>
@@ -254,5 +292,3 @@ export default function AuthComponent() {
     </div>
   );
 }
-
-    

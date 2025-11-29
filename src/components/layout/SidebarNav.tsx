@@ -14,7 +14,6 @@ import {
   User,
   Settings,
   Store,
-  PlusCircle,
   LogOut,
   Search,
   Heart,
@@ -107,9 +106,9 @@ export default function SidebarNav() {
               </>
             ) : (
                 <SidebarMenuItem>
-                    <SidebarMenuButton href="/store/create" onClick={() => router.push('/store/create')} tooltip="Create Store">
-                        <PlusCircle />
-                        <span>Create Store</span>
+                    <SidebarMenuButton tooltip="Your store is being created!" aria-disabled="true">
+                        <Store />
+                        <span>My Store</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             )}

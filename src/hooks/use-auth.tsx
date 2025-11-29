@@ -9,7 +9,7 @@ import {
   sendEmailVerification,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, getDocs, collection, query, limit } from 'firebase/firestore';
+import { doc, serverTimestamp, getDocs, collection, query, writeBatch, limit } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -19,6 +19,9 @@ interface SignupData {
   displayName: string;
   email: string;
   password: string;
+  storeName: string;
+  storeSlug: string;
+  storeAbout: string;
   oneAccountAcknowledged: boolean;
   goodsAndServicesAgreed: boolean;
 }
@@ -106,31 +109,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth, router, toast]);
 
   const signup = useCallback(async (data: SignupData): Promise<boolean> => {
-    const { displayName, email, password, oneAccountAcknowledged, goodsAndServicesAgreed } = data;
+    const { displayName, email, password, storeName, storeSlug, storeAbout, oneAccountAcknowledged, goodsAndServicesAgreed } = data;
     if (!firestore) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
     }
     
-    // We create the user in auth first, which signs them in.
-    // The security rules can then use their auth.uid to secure the profile creation.
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const newUser = userCredential.user;
-
-      // Now that the user is created and signed in, we can check if they are the first user.
+      // Check if any users exist to determine role.
       const usersCollectionRef = collection(firestore, "users");
       const q = query(usersCollectionRef, limit(1));
       const querySnapshot = await getDocs(q);
       const isFirstUser = querySnapshot.empty;
+
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const newUser = userCredential.user;
+
+      const batch = writeBatch(firestore);
+
+      // 1. Create the Store document
+      const newStoreRef = doc(collection(firestore, "storefronts"));
+      batch.set(newStoreRef, {
+          storeId: newStoreRef.id,
+          ownerUid: newUser.uid,
+          storeName,
+          slug: storeSlug,
+          about: storeAbout,
+          avatarUrl: placeholderImages['store-logo-1']?.imageUrl || `https://picsum.photos/seed/${storeSlug}/200/200`,
+          ratingAverage: 0,
+          ratingCount: 0,
+          itemsSold: 0,
+          status: "ACTIVE",
+          isSpotlighted: false, 
+          spotlightUntil: null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+      });
       
+      // 2. Create the User profile document
+      const userProfileRef = doc(firestore, "users", newUser.uid);
       const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid'> & { createdAt: any, updatedAt: any, uid: string } = {
         uid: newUser.uid,
         email: newUser.email!,
         displayName,
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
         status: 'LIMITED',
-        role: isFirstUser ? 'admin' : 'user', // Set role to 'admin' if first user
+        role: isFirstUser ? 'admin' : 'user',
+        storeId: newStoreRef.id,
         emailVerified: newUser.emailVerified,
         oneAccountAcknowledged,
         goodsAndServicesAgreed,
@@ -143,16 +168,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
+      batch.set(userProfileRef, userProfile);
 
-      await setDoc(doc(firestore, "users", newUser.uid), userProfile);
+      // Commit the batch
+      await batch.commit();
       
       await sendEmailVerification(newUser);
       
       toast({
         title: 'Signup Successful!',
-        description: `Welcome, ${displayName}! A verification email has been sent to your inbox.`,
+        description: `Welcome, ${displayName}! Your account and store are ready. A verification email has been sent.`,
       });
       return true;
+
     } catch (error: any) {
       console.error("Signup failed:", error);
       toast({
