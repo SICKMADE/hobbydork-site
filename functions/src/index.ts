@@ -1,4 +1,3 @@
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
@@ -12,12 +11,10 @@ const FieldValue = admin.firestore.FieldValue;
 // Collection names – MUST match your app
 const USERS = "users";
 const STORES = "storefronts";
-const LISTINGS = "listings";
 const ORDERS = "orders";
 const ISO24 = "iso24Posts";
 const SPOTLIGHT = "spotlightSlots";
 const CONVERSATIONS = "conversations";
-// const COMMUNITY = "communityMessages"; // This was unused, removing to clear lint error.
 
 /**
  * Helper to write an in-app notification.
@@ -234,13 +231,9 @@ export const onOrderUpdate = functions
       let totalQuantity = 0;
 
       for (const item of items) {
-        const listingId = item.listingId as string | undefined;
         const quantity = Number(item.quantity || 0);
-        if (!listingId || quantity <= 0) continue;
-
+        if (quantity <= 0) continue;
         totalQuantity += quantity;
-        // We no longer decrement stock here. Stock is decremented at checkout.
-        // This function's role on completion is to update store-level stats.
       }
 
       // Increment total items sold for the store
