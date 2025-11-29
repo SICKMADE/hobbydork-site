@@ -6,9 +6,10 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
+  sendEmailVerification,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDocs, collection, query, limit } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -17,8 +18,11 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 interface SignupData {
+  displayName: string;
   email: string;
   password: string;
+  oneAccountAcknowledged: boolean;
+  goodsAndServicesAgreed: boolean;
 }
 
 interface AuthContextType {
@@ -45,6 +49,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [firestore, user]);
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  useEffect(() => {
+    if (user && profile?.status === 'LIMITED' && user.emailVerified && userProfileRef) {
+      setDoc(userProfileRef, { status: 'ACTIVE', emailVerified: true, updatedAt: serverTimestamp() }, { merge: true })
+        .catch((error) => {
+          console.error('Error updating user status:', error);
+          const contextualError = new FirestorePermissionError({
+            path: userProfileRef.path,
+            operation: 'update',
+            requestResourceData: { status: 'ACTIVE', emailVerified: true },
+          });
+          errorEmitter.emit('permission-error', contextualError);
+        });
+    }
+  }, [user, profile, userProfileRef]);
+
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
@@ -81,25 +101,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth, router, toast]);
 
   const signup = useCallback(async (data: SignupData): Promise<boolean> => {
-    const { email, password } = data;
+    const { displayName, email, password } = data;
     if (!firestore) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
     }
-
+    
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
-      const newUserRef = doc(firestore, "users", newUser.uid);
 
-      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid' | 'status'> & { createdAt: any, updatedAt: any, uid: string, status: 'ACTIVE' } = {
+      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid' | 'storeId'> & { createdAt: any, updatedAt: any, uid: string } = {
         uid: newUser.uid,
         email: newUser.email!,
-        displayName: newUser.email!,
+        displayName, // Will be updated in onboarding
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-        status: 'ACTIVE', // User is ACTIVE immediately
-        role: 'user', 
-        emailVerified: true, // We are skipping email verification
+        status: 'ACTIVE', // Default to ACTIVE
+        role: 'user', // All new users are 'user'
+        emailVerified: true, // Skipping verification
         notificationPreferences: {
           notifyMessages: true,
           notifyOrders: true,
@@ -110,30 +129,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updatedAt: serverTimestamp(),
       };
 
+      const newUserRef = doc(firestore, "users", newUser.uid);
       await setDoc(newUserRef, userProfile);
       
       toast({
-        title: 'Account Created!',
-        description: `Welcome! Let's get your store set up.`,
+        title: 'Signup Successful!',
+        description: `Welcome, ${displayName}! Let's set up your store.`,
       });
-      // The redirect to onboarding is handled by the AppLayout now.
+
+      // The redirect is now handled by the AppLayout component
       return true;
     } catch (error: any) {
       console.error("Signup failed:", error);
-       if (error.code === 'permission-denied') {
-            const userProfileRef = doc(firestore, "users", "temp-id-for-path");
+      if (error.code === 'permission-denied' || error.name === 'FirebaseError') {
             const contextualError = new FirestorePermissionError({
-                path: userProfileRef.path.replace('temp-id-for-path', '<new_user_uid>'),
+                path: `users/<new_user_uid>`,
                 operation: 'create',
-                requestResourceData: { email: data.email, role: 'user' /*...other fields*/ }
+                requestResourceData: { email: data.email, role: 'user' /* other fields */ }
             });
             errorEmitter.emit('permission-error', contextualError);
       } else {
-          toast({
+        toast({
             title: 'Signup Failed',
             description: error.message || 'An unexpected error occurred during sign up.',
             variant: 'destructive',
-          });
+        });
       }
       return false;
     }

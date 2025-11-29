@@ -16,38 +16,41 @@ export default function AppRoutesLayout({
   const pathname = usePathname();
 
   useEffect(() => {
-    // If done loading and there's no user, go to login screen
-    if (!isUserLoading && !user) {
-      router.push('/');
+    // Wait until both user and profile loading is complete
+    if (isUserLoading || isProfileLoading) {
+      return;
     }
-  }, [user, isUserLoading, router]);
 
-  useEffect(() => {
-    // If the profile is loaded and the user does not have a storeId,
-    // they need to be onboarded. Redirect them unless they are already there.
+    // If no user, redirect to the root/login page
+    if (!user) {
+      router.replace('/');
+      return;
+    }
+
+    // If a user and profile are loaded, check for onboarding completion
     if (profile && !profile.storeId && pathname !== '/onboarding') {
       router.replace('/onboarding');
     }
-  }, [profile, pathname, router]);
+  }, [user, profile, isUserLoading, isProfileLoading, pathname, router]);
 
+  // Unified loading state
   if (isUserLoading || isProfileLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
-  
+
+  // If we are still here and there's no user, show a redirecting message
+  // while the effect cleans up.
   if (!user) {
-    // This will be briefly shown before the redirect happens from the effect above
-    return <div className="flex items-center justify-center h-screen">Redirecting...</div>;
+    return <div className="flex items-center justify-center h-screen">Redirecting to login...</div>;
   }
   
-  // If the user has no storeId but is on the onboarding page, allow it.
-  if (profile && !profile.storeId && pathname === '/onboarding') {
-    return <>{children}</>;
-  }
-  
-  // If user has no storeId and is NOT on onboarding, show a loading/redirecting state
-  // while the effect above does its work.
+  // If a profile exists but onboarding is not complete, show a message while redirecting.
+  // This also allows the onboarding page itself to render.
   if (profile && !profile.storeId) {
-      return <div className="flex items-center justify-center h-screen">Redirecting to onboarding...</div>;
+    if (pathname === '/onboarding') {
+        return <>{children}</>;
+    }
+    return <div className="flex items-center justify-center h-screen">Redirecting to onboarding...</div>;
   }
 
   if (profile?.status === 'SUSPENDED') {
@@ -62,6 +65,11 @@ export default function AppRoutesLayout({
     );
   }
 
-  // If user is logged in, has a store, and is not suspended, show the app.
-  return <>{children}</>;
+  // If user is fully loaded, onboarded, and not suspended, show the app content.
+  if (user && profile && profile.storeId) {
+    return <>{children}</>;
+  }
+
+  // Fallback loading state
+  return <div className="flex items-center justify-center h-screen">Loading...</div>;
 }
