@@ -180,4 +180,9 @@ export type WatchlistItem = {
     addedAt: Timestamp;
 }
 
+export type FavoriteStoreItem = {
+    storeId: string;
+    addedAt: Timestamp;
+}
+
     

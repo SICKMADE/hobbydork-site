@@ -581,6 +581,17 @@
             "addedAt": { "type": "string", "format": "date-time" }
         },
         "required": ["listingId", "addedAt"]
+    },
+    "FavoriteStoreItem": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "FavoriteStoreItem",
+        "type": "object",
+        "description": "Represents a single store in a user's favorite stores list.",
+        "properties": {
+            "storeId": { "type": "string" },
+            "addedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["storeId", "addedAt"]
     }
   },
   "auth": {
@@ -627,6 +638,18 @@
           "params": [
             { "name": "userId", "description": "The ID of the user." },
             { "name": "listingId", "description": "The ID of the listing being watched." }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/favoriteStores/{storeId}",
+        "definition": {
+          "entityName": "FavoriteStoreItem",
+          "schema": { "$ref": "#/entities/FavoriteStoreItem" },
+          "description": "Stores a single store in a user's favorite list.",
+          "params": [
+            { "name": "userId", "description": "The ID of the user." },
+            { "name": "storeId", "description": "The ID of the favorited store." }
           ]
         }
       },
