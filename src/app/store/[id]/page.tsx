@@ -12,6 +12,7 @@ import { Star, MessageSquare, Heart } from 'lucide-react';
 import ListingCard from '@/components/ListingCard';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
+import React from 'react';
 
 const StarRating = ({ rating }: { rating: number }) => (
     <div className="flex items-center">
@@ -22,26 +23,27 @@ const StarRating = ({ rating }: { rating: number }) => (
 );
 
 export default function StorefrontPage({ params }: { params: { id: string } }) {
+  const resolvedParams = React.use(params);
   const firestore = useFirestore();
 
   const storeRef = useMemoFirebase(() => {
-    if (!firestore || !params.id) return null;
-    return doc(firestore, 'storefronts', params.id);
-  }, [firestore, params.id]);
+    if (!firestore || !resolvedParams.id) return null;
+    return doc(firestore, 'storefronts', resolvedParams.id);
+  }, [firestore, resolvedParams.id]);
 
   const listingsQuery = useMemoFirebase(() => {
-    if (!firestore || !params.id) return null;
+    if (!firestore || !resolvedParams.id) return null;
     return query(
       collection(firestore, 'listings'),
-      where('storeId', '==', params.id),
+      where('storeId', '==', resolvedParams.id),
       where('state', '==', 'ACTIVE')
     );
-  }, [firestore, params.id]);
+  }, [firestore, resolvedParams.id]);
 
   const reviewsQuery = useMemoFirebase(() => {
-      if (!firestore || !params.id) return null;
-      return query(collection(firestore, `storefronts/${params.id}/reviews`), orderBy('createdAt', 'desc'));
-  }, [firestore, params.id]);
+      if (!firestore || !resolvedParams.id) return null;
+      return query(collection(firestore, `storefronts/${resolvedParams.id}/reviews`), orderBy('createdAt', 'desc'));
+  }, [firestore, resolvedParams.id]);
 
   const { data: store, isLoading: isStoreLoading } = useDoc<Store>(storeRef);
   const { data: listings, isLoading: areListingsLoading } = useCollection<Listing>(listingsQuery);

@@ -14,17 +14,19 @@ import type { Listing, Store } from '@/lib/types';
 import Link from 'next/link';
 import { useCart } from '@/hooks/use-cart';
 import { placeholderImages } from '@/lib/placeholder-images';
+import React from 'react';
 
 
 export default function ListingDetailPage({ params }: { params: { id: string } }) {
+  const resolvedParams = React.use(params);
   const firestore = useFirestore();
   const { addToCart } = useCart();
   const router = useRouter();
 
   const listingRef = useMemoFirebase(() => {
-    if (!firestore || !params.id) return null;
-    return doc(firestore, 'listings', params.id);
-  }, [firestore, params.id]);
+    if (!firestore || !resolvedParams.id) return null;
+    return doc(firestore, 'listings', resolvedParams.id);
+  }, [firestore, resolvedParams.id]);
   
   const { data: listing, isLoading: isListingLoading } = useDoc<Listing>(listingRef);
 
