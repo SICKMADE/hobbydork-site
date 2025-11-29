@@ -6,21 +6,19 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
-  sendEmailVerification,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { placeholderImages } from '@/lib/placeholder-images';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface SignupData {
-  displayName: string;
   email: string;
   password: string;
-  oneAccountAcknowledged: boolean;
-  goodsAndServicesAgreed: boolean;
 }
 
 interface AuthContextType {
@@ -29,7 +27,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  signup: (data: Omit<SignupData, 'displayName' | 'oneAccountAcknowledged' | 'goodsAndServicesAgreed'>) => Promise<boolean>;
+  signup: (data: SignupData) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -47,29 +45,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [firestore, user]);
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
-  useEffect(() => {
-    // Check if the user is logged in, their email is verified, and their profile is currently 'LIMITED'
-    if (user && user.emailVerified && profile?.status === 'LIMITED' && userProfileRef) {
-      // Update the user's status to 'ACTIVE' in Firestore
-      setDoc(userProfileRef, { status: 'ACTIVE', emailVerified: true, updatedAt: serverTimestamp() }, { merge: true })
-        .then(() => {
-          toast({
-            title: 'Account Activated!',
-            description: 'Your account is now active. Please complete onboarding.',
-          });
-        })
-        .catch((error) => {
-          console.error('Error updating user status:', error);
-          toast({
-            title: 'Activation Failed',
-            description: 'Could not update your account status. Please contact support.',
-            variant: 'destructive',
-          });
-        });
-    }
-  }, [user, profile, userProfileRef, toast]);
-
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
@@ -105,27 +80,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [auth, router, toast]);
 
-  const signup = useCallback(async (data: Omit<SignupData, 'displayName' | 'oneAccountAcknowledged' | 'goodsAndServicesAgreed'>): Promise<boolean> => {
+  const signup = useCallback(async (data: SignupData): Promise<boolean> => {
     const { email, password } = data;
     if (!firestore) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
     }
-    
-    // We create the user in auth first, which signs them in.
-    // The security rules can then use their auth.uid to secure the profile creation.
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
+      const newUserRef = doc(firestore, "users", newUser.uid);
 
-      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid'> & { createdAt: any, updatedAt: any, uid: string } = {
+      const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid' | 'status'> & { createdAt: any, updatedAt: any, uid: string, status: 'ACTIVE' } = {
         uid: newUser.uid,
         email: newUser.email!,
-        displayName: newUser.email!, // Use email as placeholder display name
+        displayName: newUser.email!,
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-        status: 'LIMITED', // User starts as LIMITED
+        status: 'ACTIVE', // User is ACTIVE immediately
         role: 'user', 
-        emailVerified: false, // Email is not verified yet
+        emailVerified: true, // We are skipping email verification
         notificationPreferences: {
           notifyMessages: true,
           notifyOrders: true,
@@ -136,22 +110,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updatedAt: serverTimestamp(),
       };
 
-      await setDoc(doc(firestore, "users", newUser.uid), userProfile);
-      
-      await sendEmailVerification(newUser);
+      await setDoc(newUserRef, userProfile);
       
       toast({
-        title: 'Signup Successful!',
-        description: `Welcome! A verification email has been sent to your inbox. Please verify to continue.`,
+        title: 'Account Created!',
+        description: `Welcome! Let's get your store set up.`,
       });
+      // The redirect to onboarding is handled by the AppLayout now.
       return true;
     } catch (error: any) {
       console.error("Signup failed:", error);
-      toast({
-        title: 'Signup Failed',
-        description: error.message || 'An unexpected error occurred during sign up.',
-        variant: 'destructive',
-      });
+       if (error.code === 'permission-denied') {
+            const userProfileRef = doc(firestore, "users", "temp-id-for-path");
+            const contextualError = new FirestorePermissionError({
+                path: userProfileRef.path.replace('temp-id-for-path', '<new_user_uid>'),
+                operation: 'create',
+                requestResourceData: { email: data.email, role: 'user' /*...other fields*/ }
+            });
+            errorEmitter.emit('permission-error', contextualError);
+      } else {
+          toast({
+            title: 'Signup Failed',
+            description: error.message || 'An unexpected error occurred during sign up.',
+            variant: 'destructive',
+          });
+      }
       return false;
     }
   }, [auth, firestore, toast]);

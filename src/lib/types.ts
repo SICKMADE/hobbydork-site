@@ -1,6 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 
-export type UserStatus = 'ACTIVE' | 'LIMITED' | 'SUSPENDED';
+export type UserStatus = 'ACTIVE' | 'SUSPENDED';
 
 export type User = {
   uid: string;

@@ -44,8 +44,6 @@ export default function AuthComponent() {
   }
 
   function onSignup(values: z.infer<typeof signupSchema>) {
-    // Only email and password are needed for initial account creation.
-    // The rest of the data will be collected in the mandatory onboarding flow.
     signup({
       email: values.email,
       password: values.password,
