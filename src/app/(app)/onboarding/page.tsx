@@ -241,7 +241,7 @@ const Step3Agreements = () => {
 };
 
 export default function OnboardingPage() {
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const firestore = useFirestore();
     const router = useRouter();
     const { toast } = useToast();
@@ -255,6 +255,9 @@ export default function OnboardingPage() {
             onboardingSchema
         ),
         mode: "onChange",
+        defaultValues: {
+            storeName: profile?.displayName || "",
+        }
     });
 
     const handleNext = async () => {
@@ -295,6 +298,7 @@ export default function OnboardingPage() {
                     paymentIdentifier: values.paymentIdentifier,
                     goodsAndServicesAgreed: values.agreeGoodsAndServices,
                     oneAccountAcknowledged: values.agreeOneAccount,
+                    status: 'ACTIVE', // Move user to ACTIVE status upon completing onboarding
                     updatedAt: serverTimestamp(),
                 });
 
