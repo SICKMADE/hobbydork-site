@@ -567,12 +567,16 @@
       "description": "Represents a single message within a conversation.",
       "properties": {
         "messageId": { "type": "string" },
-        "conversationId": { "type": "string" },
         "senderUid": { "type": "string" },
         "text": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "readBy": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "An array of user UIDs who have read the message."
+        }
       },
-      "required": ["messageId", "conversationId", "senderUid", "text", "createdAt"]
+      "required": ["messageId", "senderUid", "text", "createdAt", "readBy"]
     }
   },
   "auth": {
@@ -744,5 +748,3 @@
     ]
   }
 }
-
-    
