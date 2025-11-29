@@ -1,3 +1,4 @@
+
 'use client';
 import {
   SidebarHeader,
@@ -31,34 +32,46 @@ import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
 import { Badge } from '../ui/badge';
 import { usePathname, useRouter } from 'next/navigation';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { Store as StoreType } from '@/lib/types';
 
-const menuItems = [
-  { href: '/', label: 'Dashboard', icon: Home },
-  { href: '/search', label: 'Search', icon: Search },
-  { href: '/cart', label: 'Cart', icon: ShoppingCart },
-  { href: '/orders', label: 'My Orders', icon: Package },
-  { href: '/chat', label: 'Community Chat', icon: MessageSquare },
-  { href: '/iso24', label: 'ISO24', icon: Tag },
-];
-
-const userMenuItems = [
-  { href: '/profile', label: 'Profile', icon: User },
-  { href: '/settings', label: 'Settings', icon: Settings },
-];
-
-const favoritesMenuItems = [
-    { href: '/watchlist', label: 'Watchlist', icon: Star },
-    { href: '/favorites', label: 'Favorite Stores', icon: Heart },
-]
 
 export default function SidebarNav() {
   const { logout, profile } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const firestore = useFirestore();
+
+  const storeRef = useMemoFirebase(() => {
+    if (!firestore || !profile?.storeId) return null;
+    return doc(firestore, 'storefronts', profile.storeId);
+  }, [firestore, profile?.storeId]);
+
+  const { data: store } = useDoc<StoreType>(storeRef);
   
   const handleLogout = async () => {
     await logout();
   }
+
+  const menuItems = [
+    { href: '/', label: 'Dashboard', icon: Home },
+    { href: '/search', label: 'Search', icon: Search },
+    { href: '/cart', label: 'Cart', icon: ShoppingCart },
+    { href: '/orders', label: 'My Orders', icon: Package },
+    { href: '/chat', label: 'Community Chat', icon: MessageSquare },
+    { href: '/iso24', label: 'ISO24', icon: Tag },
+  ];
+  
+  const userMenuItems = [
+    { href: '/profile', label: 'Profile', icon: User },
+    { href: '/settings', label: 'Settings', icon: Settings },
+  ];
+  
+  const favoritesMenuItems = [
+      { href: '/watchlist', label: 'Watchlist', icon: Star },
+      { href: '/favorites', label: 'Favorite Stores', icon: Heart },
+  ]
 
   return (
     <>
@@ -85,10 +98,10 @@ export default function SidebarNav() {
         <div className="mt-4 px-2">
            <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">My Store</h3>
            <SidebarMenu>
-            {profile?.storeId && (
+            {store && (
               <>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href={`/store/${profile.storeId}`} onClick={() => router.push(`/store/${profile.storeId}`)} tooltip="My Storefront">
+                    <SidebarMenuButton href={`/store/${store.slug}`} onClick={() => router.push(`/store/${store.slug}`)} tooltip="My Storefront">
                         <Store />
                         <span>My Storefront</span>
                     </SidebarMenuButton>
@@ -129,7 +142,7 @@ export default function SidebarNav() {
             </SidebarMenu>
         </div>
         
-        {profile?.role === 'admin' && (
+        {profile?.role === 'ADMIN' && (
           <div className="mt-4 px-2">
             <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">Admin</h3>
             <SidebarMenu>

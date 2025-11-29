@@ -1,3 +1,4 @@
+
 'use client';
 
 import { notFound } from 'next/navigation';
@@ -5,8 +6,8 @@ import Image from 'next/image';
 import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, orderBy } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import type { Listing, Store, Review } from '@/lib/types';
 import { Star, MessageSquare, Heart } from 'lucide-react';
 import ListingCard from '@/components/ListingCard';
@@ -26,26 +27,29 @@ export default function StorefrontPage({ params }: { params: { id: string } }) {
   const resolvedParams = React.use(params);
   const firestore = useFirestore();
 
-  const storeRef = useMemoFirebase(() => {
+  const storeQuery = useMemoFirebase(() => {
     if (!firestore || !resolvedParams.id) return null;
-    return doc(firestore, 'storefronts', resolvedParams.id);
+    return query(collection(firestore, 'storefronts'), where('slug', '==', resolvedParams.id));
   }, [firestore, resolvedParams.id]);
+
+  const { data: stores, isLoading: isStoreLoading } = useCollection<Store>(storeQuery);
+  const store = stores?.[0];
 
   const listingsQuery = useMemoFirebase(() => {
-    if (!firestore || !resolvedParams.id) return null;
+    if (!firestore || !store?.id) return null;
     return query(
       collection(firestore, 'listings'),
-      where('storeId', '==', resolvedParams.id),
+      where('storeId', '==', store.id),
       where('state', '==', 'ACTIVE')
     );
-  }, [firestore, resolvedParams.id]);
+  }, [firestore, store?.id]);
 
   const reviewsQuery = useMemoFirebase(() => {
-      if (!firestore || !resolvedParams.id) return null;
-      return query(collection(firestore, `storefronts/${resolvedParams.id}/reviews`), orderBy('createdAt', 'desc'));
-  }, [firestore, resolvedParams.id]);
+      if (!firestore || !store?.id) return null;
+      return query(collection(firestore, `storefronts/${store.id}/reviews`), orderBy('createdAt', 'desc'));
+  }, [firestore, store?.id]);
 
-  const { data: store, isLoading: isStoreLoading } = useDoc<Store>(storeRef);
+  
   const { data: listings, isLoading: areListingsLoading } = useCollection<Listing>(listingsQuery);
   const { data: reviews, isLoading: areReviewsLoading } = useCollection<Review>(reviewsQuery);
 
