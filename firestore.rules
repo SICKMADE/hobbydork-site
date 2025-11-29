@@ -56,7 +56,8 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if isAdmin();
+      // Allow reading the users collection only for admin OR if query is limited to 1 for the first user check.
+      allow list: if isAdmin() || (isSignedIn() && request.query.limit <= 1);
       // Allow user creation if the document ID matches the user's UID
       allow create: if isUser(userId) && isValidUserWrite(request.resource.data);
       allow update: if isUser(userId) 

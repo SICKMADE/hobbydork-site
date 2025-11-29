@@ -115,14 +115,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // We create the user in auth first, which signs them in.
     // The security rules can then use their auth.uid to secure the profile creation.
     try {
-      // First, check if there are any users. This requires a read.
-      const usersCollectionRef = collection(firestore, "users");
-      const q = query(usersCollectionRef, limit(1));
-      const initialUserCheck = await getDocs(q);
-      const isFirstUser = initialUserCheck.empty;
-
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
+
+      // Now that the user is created and signed in, we can check if they are the first user.
+      const usersCollectionRef = collection(firestore, "users");
+      const q = query(usersCollectionRef, limit(1));
+      const querySnapshot = await getDocs(q);
+      const isFirstUser = querySnapshot.empty;
       
       const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'uid'> & { createdAt: any, updatedAt: any, uid: string } = {
         uid: newUser.uid,
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         displayName,
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
         status: 'LIMITED',
-        role: isFirstUser ? 'admin' : 'user', // Set role based on the initial check
+        role: isFirstUser ? 'admin' : 'user', // Set role to 'admin' if first user
         emailVerified: newUser.emailVerified,
         oneAccountAcknowledged,
         goodsAndServicesAgreed,
