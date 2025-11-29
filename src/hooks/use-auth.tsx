@@ -85,14 +85,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
     }
-    
-    // Check if this is the first user to determine admin role
-    const usersCollectionRef = collection(firestore, "users");
-    const q = query(usersCollectionRef, limit(1));
-    const querySnapshot = await getDocs(q);
-    const isFirstUser = querySnapshot.empty;
 
     try {
+        // Check if this is the first user to determine admin role
+        const usersCollectionRef = collection(firestore, "users");
+        const q = query(usersCollectionRef, limit(1));
+        
+        const querySnapshot = await getDocs(q).catch(error => {
+            // This is the point of failure. We emit a contextual error here.
+            const contextualError = new FirestorePermissionError({
+                path: usersCollectionRef.path,
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', contextualError);
+            // We must re-throw the original error to stop execution.
+            throw error;
+        });
+
+        const isFirstUser = querySnapshot.empty;
+
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const newUser = userCredential.user;
 
@@ -103,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
             status: 'ACTIVE',
             role: isFirstUser ? 'admin' : 'user',
-            emailVerified: true,
+            emailVerified: true, // No verification step
             notificationPreferences: {
                 notifyMessages: true,
                 notifyOrders: true,
@@ -116,14 +127,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const newUserDocRef = doc(firestore, "users", newUser.uid);
         
-        // Use non-blocking setDoc with error emitter
-        setDoc(newUserDocRef, userProfileData).catch(error => {
+        await setDoc(newUserDocRef, userProfileData).catch(error => {
             const contextualError = new FirestorePermissionError({
                 path: newUserDocRef.path,
                 operation: 'create',
                 requestResourceData: userProfileData,
             });
             errorEmitter.emit('permission-error', contextualError);
+            throw error;
         });
 
         toast({
@@ -133,13 +144,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         return true;
 
-    } catch (authError: any) {
-        // This catch block handles errors from createUserWithEmailAndPassword
-        toast({
-            title: 'Signup Failed',
-            description: authError.message || 'An unexpected error occurred during authentication.',
-            variant: 'destructive',
-        });
+    } catch (error: any) {
+        // This catch block handles errors from createUserWithEmailAndPassword or the re-thrown Firestore errors
+        if (!error.message.includes('permission-error')) { // Avoid double-toasting
+            toast({
+                title: 'Signup Failed',
+                description: error.message || 'An unexpected error occurred during signup.',
+                variant: 'destructive',
+            });
+        }
         return false;
     }
   }, [auth, firestore, toast]);
