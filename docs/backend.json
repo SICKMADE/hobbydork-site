@@ -530,6 +530,21 @@
         "read": { "type": "boolean" }
       },
       "required": ["id", "userUid", "type", "title", "body", "relatedId", "createdAt", "read"]
+    },
+    "SpotlightSlot": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SpotlightSlot",
+      "type": "object",
+      "description": "Represents a time slot for a store to be featured on the homepage.",
+      "properties": {
+        "slotId": { "type": "string", "description": "Unique identifier for the spotlight slot." },
+        "storeId": { "type": "string", "description": "The ID of the store being spotlighted." },
+        "ownerUid": { "type": "string", "description": "The UID of the store's owner." },
+        "startAt": { "type": "string", "format": "date-time", "description": "Timestamp when the spotlight begins." },
+        "endAt": { "type": "string", "format": "date-time", "description": "Timestamp when the spotlight ends." },
+        "active": { "type": "boolean", "description": "Whether the spotlight slot is currently active." }
+      },
+      "required": ["slotId", "storeId", "ownerUid", "startAt", "endAt", "active"]
     }
   },
   "auth": {
@@ -658,7 +673,25 @@
             }
           ]
         }
+      },
+      {
+        "path": "/spotlightSlots/{slotId}",
+        "definition": {
+          "entityName": "SpotlightSlot",
+          "schema": {
+            "$ref": "#/entities/SpotlightSlot"
+          },
+          "description": "Stores data for store spotlights. Publicly readable, admin-only writes.",
+          "params": [
+            {
+              "name": "slotId",
+              "description": "The unique identifier of the spotlight slot."
+            }
+          ]
+        }
       }
     ]
   }
 }
+
+    

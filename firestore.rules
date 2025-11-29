@@ -79,9 +79,9 @@ service cloud.firestore {
           // reviewId must be the orderId
           // Only the buyer of the order can create a review
           // A review for the order must not already exist
-          allow create: if reviewId == request.resource.data.orderId
-                        && isOrderBuyer(reviewId)
-                        && !existsAfter(/databases/$(database)/documents/storefronts/$(storefrontId)/reviews/$(reviewId));
+          allow create: if request.resource.data.reviewId == request.resource.data.orderId
+                        && isOrderBuyer(request.resource.data.reviewId)
+                        && !existsAfter(/databases/$(database)/documents/storefronts/$(storefrontId)/reviews/$(request.resource.data.reviewId));
           allow update, delete: if false; // Reviews are immutable in v1
       }
     }
@@ -113,6 +113,11 @@ service cloud.firestore {
         allow update, delete: if isUser(resource.data.creatorUid);
     }
     
+    match /spotlightSlots/{slotId} {
+        allow get, list: if true;
+        allow create, update, delete: if isAdmin();
+    }
+    
     // Placeholder rules for features to be implemented
     match /watchlists/{userId} {
         allow read, write: if isUser(userId);
@@ -127,9 +132,7 @@ service cloud.firestore {
         allow read, update, delete: if false; // Admin only
     }
 
-    match /spotlightSlots/{slotId} {
-        allow get, list: if true;
-        allow create, update, delete: if false; // Admin only
-    }
   }
 }
+
+    

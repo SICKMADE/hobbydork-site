@@ -139,7 +139,7 @@ export type Notification = {
 }
 
 export type Review = {
-    reviewId: string; // Should be the same as orderId
+    reviewId: string;
     orderId: string;
     storeId: string;
     sellerUid: string;
@@ -150,3 +150,14 @@ export type Review = {
     comment: string;
     createdAt: Timestamp;
 }
+
+export type SpotlightSlot = {
+    slotId: string;
+    storeId: string;
+    ownerUid: string;
+    startAt: Timestamp;
+    endAt: Timestamp;
+    active: boolean;
+}
+
+    
