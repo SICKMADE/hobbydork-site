@@ -1,4 +1,3 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -144,32 +143,19 @@ service cloud.firestore {
 
     // ORDERS
     match /orders/{orderId} {
-      function userCanReadOrder() {
-        return isSignedIn() &&
-          (
-            request.auth.uid == resource.data.buyerUid ||
-            request.auth.uid == resource.data.sellerUid ||
-            userIsAdmin()
-          );
-      }
-
-      // READ (get + list/query)
+      // Buyer, seller, or admin can read (both get and list/query)
       allow read: if userCanReadOrder();
-
-      // CREATE: only ACTIVE user, and they must be the buyer
-      allow create: if userIsActive() &&
-        request.resource.data.buyerUid == request.auth.uid;
-
-      // UPDATE: buyer, seller, or admin
-      allow update: if isSignedIn() &&
-        (
-          request.auth.uid == resource.data.buyerUid ||
-          request.auth.uid == resource.data.sellerUid ||
-          userIsAdmin()
-        );
-
-      // DELETE: only admin
+      // Any ACTIVE user can create an order where they are the buyer
+      allow create: if userIsActive() && request.resource.data.buyerUid == request.auth.uid;
+      // Buyer, seller, or admin can update the order
+      // (you can tighten which fields they can change later if you want)
+      allow update: if isSignedIn() && (request.auth.uid == resource.data.buyerUid || request.auth.uid == resource.data.sellerUid || userIsAdmin());
+      // Only admin can delete orders (or whatever you want here)
       allow delete: if userIsAdmin();
+
+      function userCanReadOrder() {
+        return isSignedIn() && (request.auth.uid == resource.data.buyerUid || request.auth.uid == resource.data.sellerUid || userIsAdmin());
+      }
     }
 
     // ISO24 posts
