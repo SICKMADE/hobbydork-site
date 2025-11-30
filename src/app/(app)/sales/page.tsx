@@ -36,13 +36,13 @@ export default function SalesPage() {
     const { toast } = useToast();
 
     const salesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.isSeller) return null;
+        if (authLoading || !firestore || !profile || !profile.isSeller) return null;
         return query(
             collection(firestore, 'orders'), 
             where('sellerUid', '==', profile.uid),
             orderBy('createdAt', 'desc')
         );
-    }, [firestore, profile]);
+    }, [firestore, authLoading, profile]);
 
     const { data: sales, isLoading: salesLoading } = useCollection<Order>(salesQuery);
     
