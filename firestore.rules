@@ -144,11 +144,15 @@ service cloud.firestore {
 
     // ORDERS
     match /orders/{orderId} {
-      // Buyer, seller, and admin can read an order
-      allow read: if isSignedIn() &&
+      // Buyer, seller, and admin can read an order document.
+      allow get: if isSignedIn() &&
         (request.auth.uid == resource.data.buyerUid
           || request.auth.uid == resource.data.sellerUid
           || userIsAdmin());
+      
+      // Allow users to query for their own orders as buyer or seller.
+      allow list: if isSignedIn() && 
+        (request.query.get("buyerUid") == request.auth.uid || request.query.get("sellerUid") == request.auth.uid);
 
       // Any ACTIVE user can create an order
       allow create: if userIsActive();
