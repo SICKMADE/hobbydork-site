@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ListingCard from "@/components/ListingCard";
+import Link from "next/link";
 
 export default function MyListingsPage() {
     const { profile } = useAuth();
@@ -22,13 +23,17 @@ export default function MyListingsPage() {
 
     const { data: listings, isLoading } = useCollection<Listing>(listingsQuery);
 
-    if (!profile?.storeId) {
+    if (!profile?.isSeller) {
         return (
             <AppLayout>
                 <PlaceholderContent 
-                    title="No Store Found"
-                    description="You need to create a store before you can view your listings."
-                />
+                    title="You are not a seller"
+                    description="You need to create a store before you can view or create listings."
+                >
+                    <Button asChild className="mt-4">
+                        <Link href="/store/create">Create a Store</Link>
+                    </Button>
+                </PlaceholderContent>
             </AppLayout>
         );
     }
@@ -62,3 +67,5 @@ export default function MyListingsPage() {
         </AppLayout>
     );
 }
+
+    

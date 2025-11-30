@@ -48,8 +48,12 @@
             "ADMIN"
           ]
         },
+        "isSeller": {
+          "type": "boolean",
+          "description": "True if the user has completed seller onboarding and created a store."
+        },
         "storeId": {
-          "type": "string",
+          "type": ["string", "null"],
           "description": "The ID of the store owned by the user, if any."
         },
         "paymentMethod": {
@@ -99,6 +103,7 @@
         "createdAt",
         "updatedAt",
         "role",
+        "isSeller",
         "emailVerified",
         "oneAccountAcknowledged",
         "goodsAndServicesAgreed",
@@ -816,4 +821,6 @@
     ]
   }
 }
+    
+
     

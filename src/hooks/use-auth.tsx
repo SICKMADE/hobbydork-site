@@ -128,6 +128,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
         status: 'LIMITED',
         role: 'USER',
+        isSeller: false,
+        storeId: '',
         emailVerified: false,
         oneAccountAcknowledged: false,
         goodsAndServicesAgreed: false,
@@ -192,3 +194,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

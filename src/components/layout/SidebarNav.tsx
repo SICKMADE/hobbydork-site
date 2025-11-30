@@ -25,12 +25,10 @@ import {
   HelpCircle,
   Tag,
   Shield,
-  PlusCircle,
   Award,
 } from 'lucide-react';
 import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
-import { Badge } from '../ui/badge';
 import { usePathname, useRouter } from 'next/navigation';
 
 export default function SidebarNav() {
@@ -86,27 +84,34 @@ export default function SidebarNav() {
         <div className="mt-4 px-2">
            <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">My Store</h3>
            <SidebarMenu>
-            {profile?.storeId && (
+            {profile?.isSeller ? (
               <>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href={`/store/${profile.storeId}`} onClick={() => router.push(`/store/${profile.storeId}`)} tooltip="My Storefront">
+                    <SidebarMenuButton href={`/store/${profile.storeId}`} onClick={() => router.push(`/store/${profile.storeId!}`)} tooltip="My Storefront">
                         <Store />
                         <span>My Storefront</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
-                    <SidebarMenuButton href="/listings" onClick={() => router.push('/listings')} tooltip="My Listings">
+                    <SidebarMenuButton href="/listings" isActive={pathname.startsWith('/listings')} onClick={() => router.push('/listings')} tooltip="My Listings">
                         <LayoutList />
                         <span>My Listings</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
-                    <SidebarMenuButton href="/sales" onClick={() => router.push('/sales')} tooltip="My Sales">
+                    <SidebarMenuButton href="/sales" isActive={pathname === '/sales'} onClick={() => router.push('/sales')} tooltip="My Sales">
                         <Flame />
                         <span>My Sales</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
               </>
+            ) : (
+                <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => router.push('/store/create')} tooltip="Create a Store">
+                        <Store />
+                        <span>Create a Store</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
             )}
            </SidebarMenu>
         </div>
@@ -198,3 +203,5 @@ export default function SidebarNav() {
     </>
   );
 }
+
+    

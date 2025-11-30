@@ -16,6 +16,7 @@ import { MoreHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
+import Link from "next/link";
 
 const getOrderStatusVariant = (status: Order['state']) => {
     switch (status) {
@@ -35,7 +36,7 @@ export default function SalesPage() {
     const { toast } = useToast();
 
     const salesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
+        if (!firestore || !profile?.isSeller) return null;
         return query(
             collection(firestore, 'orders'), 
             where('sellerUid', '==', profile.uid),
@@ -51,14 +52,13 @@ export default function SalesPage() {
         const orderRef = doc(firestore, 'orders', orderId);
         const updateData: {state: OrderState, trackingNumber?: string, trackingCarrier?: string} = { state: newState };
         
-        // Add tracking info if moving to 'SHIPPED' state
         if (newState === 'SHIPPED') {
             updateData.trackingNumber = prompt("Enter tracking number:");
             if (!updateData.trackingNumber) {
                 toast({ variant: 'destructive', title: 'Action Canceled', description: 'Tracking number is required to mark as shipped.' });
                 return;
             }
-            updateData.trackingCarrier = 'UPS'; // Default carrier
+            updateData.trackingCarrier = 'UPS'; 
         }
 
         updateDoc(orderRef, updateData)
@@ -74,6 +74,21 @@ export default function SalesPage() {
                 errorEmitter.emit('permission-error', contextualError);
             });
     };
+
+     if (!profile?.isSeller) {
+        return (
+            <AppLayout>
+                <PlaceholderContent 
+                    title="You are not a seller"
+                    description="You need to create a store before you can view sales."
+                >
+                    <Button asChild className="mt-4">
+                        <Link href="/store/create">Create a Store</Link>
+                    </Button>
+                </PlaceholderContent>
+            </AppLayout>
+        );
+    }
 
     if (isLoading) {
         return <AppLayout><p>Loading your sales...</p></AppLayout>
@@ -134,6 +149,7 @@ export default function SalesPage() {
                                     <DropdownMenuContent>
                                         {order.state === 'PAYMENT_SENT' && <DropdownMenuItem onSelect={() => handleStateChange(order.id, 'SHIPPED')}>Mark as Shipped</DropdownMenuItem>}
                                         {order.state === 'SHIPPED' && <DropdownMenuItem onSelect={() => handleStateChange(order.id, 'DELIVERED')}>Mark as Delivered</DropdownMenuItem>}
+                                        {(order.state === 'PENDING_PAYMENT' || order.state === 'PAYMENT_SENT') && <DropdownMenuItem onSelect={() => handleStateChange(order.id, 'CANCELLED')}>Cancel Order</DropdownMenuItem>}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                              </div>
@@ -145,3 +161,5 @@ export default function SalesPage() {
         </AppLayout>
     );
 }
+
+    

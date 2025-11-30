@@ -23,14 +23,16 @@ export default function AppRoutesLayout({
       return;
     }
     
-    // Once user and profile are loaded, check for onboarding.
-    if (profile && !profile.storeId && pathname !== '/onboarding') {
+    // Check if the user has completed the basic onboarding (agreements)
+    const needsGlobalOnboarding = profile && (!profile.oneAccountAcknowledged || !profile.goodsAndServicesAgreed);
+    
+    if (needsGlobalOnboarding && pathname !== '/onboarding') {
       router.replace('/onboarding');
       return;
     }
 
-    // If user is onboarded but lands on the onboarding page, send to dashboard.
-    if (profile && profile.storeId && pathname === '/onboarding') {
+    // If user has completed agreements but lands on onboarding, send to dashboard.
+    if (profile && !needsGlobalOnboarding && pathname === '/onboarding') {
         router.replace('/');
         return;
     }
@@ -42,21 +44,12 @@ export default function AppRoutesLayout({
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
   
-  // If user is logged in but profile is still resolving, it's covered by `loading` state.
-  // The useEffect will handle the redirect once `loading` is false.
+  const needsGlobalOnboarding = profile && (!profile.oneAccountAcknowledged || !profile.goodsAndServicesAgreed);
   
-  // Define the condition for needing onboarding.
-  const needsOnboarding = user && profile && !profile.storeId;
-  
-  // If the user needs onboarding, we must block the main app from rendering
-  // unless they are on the onboarding page itself.
-  if (needsOnboarding) {
+  if (needsGlobalOnboarding) {
     if (pathname === '/onboarding') {
-      // Allow the onboarding page to render.
       return <>{children}</>;
     } else {
-      // For any other page, show a redirecting message and wait for useEffect to fire.
-      // This prevents the dashboard or other pages from flashing.
       return <div className="flex items-center justify-center h-screen">Redirecting to onboarding...</div>;
     }
   }
@@ -79,12 +72,13 @@ export default function AppRoutesLayout({
     );
   }
 
-  // If we've passed all checks (user is logged in, profile is loaded, and they have a storeId),
-  // then render the main application content.
-  if (user && profile && profile.storeId) {
+  // If we've passed all checks, render the main application content.
+  if (user && profile) {
     return <>{children}</>;
   }
 
   // Fallback loading state for any other transitional conditions.
   return <div className="flex items-center justify-center h-screen">Loading application...</div>;
 }
+
+    

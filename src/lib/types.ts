@@ -11,6 +11,7 @@ export type User = {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   role: string;
+  isSeller: boolean;
   storeId?: string;
   paymentMethod: "PAYPAL" | "VENMO" | null;
   paymentIdentifier: string | null;
@@ -195,4 +196,5 @@ export type Report = {
     status: "OPEN" | "REVIEWED" | "RESOLVED";
 }
 
+    
     
