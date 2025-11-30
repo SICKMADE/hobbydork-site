@@ -28,6 +28,15 @@ service cloud.firestore {
         && userDoc().data.isSeller == true
         && userDoc().data.storeId != "";
     }
+    
+    function userCanCreateStore() {
+      // User must be active, not already a seller, and be creating a store for themselves
+      return userIsActive()
+        && userDoc().data.isSeller != true
+        && userDoc().data.storeId == ""
+        && userDoc().data.goodsAndServicesAgreed == true
+        && request.resource.data.ownerUid == request.auth.uid;
+    }
 
     // USERS
     match /users/{uid} {
@@ -82,10 +91,10 @@ service cloud.firestore {
       // All logged-in users can read stores
       allow read: if isSignedIn();
 
-      // CREATE: allowed for seller or admin
+      // CREATE: allow an ACTIVE non-seller to create exactly one store for themselves,
+      // or allow admin to create a store.
       allow create: if isSignedIn() && (
-        (userIsSeller() && request.resource.data.ownerUid == request.auth.uid)
-        || userIsAdmin()
+        userCanCreateStore() || userIsAdmin()
       );
 
       // UPDATE:
