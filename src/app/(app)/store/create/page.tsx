@@ -213,19 +213,23 @@ export default function CreateStorePage() {
         try {
             const storeName = profile.displayName;
             const slug = storeName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            // Create a reference to a new document in `storefronts`
             const newStoreRef = doc(collection(firestore, "storefronts"));
             const userProfileRef = doc(firestore, "users", user.uid);
             
             await runTransaction(firestore, async (transaction) => {
                 transaction.update(userProfileRef, {
                     isSeller: true,
+                    // Store the ID of the new document
                     storeId: newStoreRef.id,
                     paymentMethod: values.paymentMethod,
                     paymentIdentifier: values.paymentIdentifier,
                     goodsAndServicesAgreed: values.goodsAndServicesAgreed,
                     updatedAt: serverTimestamp(),
                 });
+
                 transaction.set(newStoreRef, {
+                    // Use the auto-generated ID for both `id` and `storeId` fields for consistency
                     id: newStoreRef.id,
                     storeId: newStoreRef.id,
                     ownerUid: user.uid,
@@ -248,7 +252,8 @@ export default function CreateStorePage() {
                 title: 'Your Store is Live!',
                 description: 'Congratulations! You can now start listing items for sale.',
             });
-            router.push('/listings');
+            // Redirect to the new store's page using its ID
+            router.push(`/store/${newStoreRef.id}`);
             router.refresh();
 
         } catch (error) {

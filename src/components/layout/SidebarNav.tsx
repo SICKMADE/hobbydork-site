@@ -84,10 +84,15 @@ export default function SidebarNav() {
         <div className="mt-4 px-2">
            <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">My Store</h3>
            <SidebarMenu>
-            {profile?.isSeller ? (
+            {profile?.isSeller && profile.storeId ? (
               <>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href={`/store/${profile.storeId}`} onClick={() => router.push(`/store/${profile.storeId!}`)} tooltip="My Storefront">
+                    <SidebarMenuButton 
+                        href={`/store/${profile.storeId}`} 
+                        isActive={pathname === `/store/${profile.storeId}`}
+                        onClick={() => router.push(`/store/${profile.storeId!}`)} 
+                        tooltip="My Storefront"
+                    >
                         <Store />
                         <span>My Storefront</span>
                     </SidebarMenuButton>
@@ -203,5 +208,3 @@ export default function SidebarNav() {
     </>
   );
 }
-
-    

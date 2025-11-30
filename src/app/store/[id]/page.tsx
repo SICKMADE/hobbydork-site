@@ -24,29 +24,29 @@ const StarRating = ({ rating }: { rating: number }) => (
 );
 
 export default function StorefrontPage({ params }: { params: { id: string } }) {
-  const resolvedParams = React.use(params);
   const firestore = useFirestore();
 
+  // Correctly use `params.id` to reference the document in the `storefronts` collection.
   const storeRef = useMemoFirebase(() => {
-    if (!firestore || !resolvedParams.id) return null;
-    return doc(firestore, 'storefronts', resolvedParams.id);
-  }, [firestore, resolvedParams.id]);
+    if (!firestore || !params.id) return null;
+    return doc(firestore, 'storefronts', params.id);
+  }, [firestore, params.id]);
 
   const { data: store, isLoading: isStoreLoading } = useDoc<Store>(storeRef);
 
   const listingsQuery = useMemoFirebase(() => {
-    if (!firestore || !store?.id) return null;
+    if (!firestore || !store?.storeId) return null; // Use storeId from the document
     return query(
       collection(firestore, 'listings'),
-      where('storeId', '==', store.id),
+      where('storeId', '==', store.storeId),
       where('state', '==', 'ACTIVE')
     );
-  }, [firestore, store?.id]);
+  }, [firestore, store?.storeId]);
 
   const reviewsQuery = useMemoFirebase(() => {
-      if (!firestore || !store?.id) return null;
-      return query(collection(firestore, `storefronts/${store.id}/reviews`), orderBy('createdAt', 'desc'));
-  }, [firestore, store?.id]);
+      if (!firestore || !store?.storeId) return null;
+      return query(collection(firestore, `storefronts/${store.storeId}/reviews`), orderBy('createdAt', 'desc'));
+  }, [firestore, store?.storeId]);
 
   
   const { data: listings, isLoading: areListingsLoading } = useCollection<Listing>(listingsQuery);
@@ -57,6 +57,7 @@ export default function StorefrontPage({ params }: { params: { id: string } }) {
     return <AppLayout><div>Loading storefront...</div></AppLayout>;
   }
 
+  // If the hook finishes loading and there is no store data, it's a 404.
   if (!store) {
     notFound();
   }
