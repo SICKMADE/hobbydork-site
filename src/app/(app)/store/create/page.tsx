@@ -21,6 +21,8 @@ import { placeholderImages } from '@/lib/placeholder-images';
 import AppLayout from '@/components/layout/AppLayout';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const storeSchema = z.object({
     about: z.string().min(10, "About section must be at least 10 characters long."),
@@ -210,57 +212,61 @@ export default function CreateStorePage() {
         const slug = storeName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
         setIsSubmitting(true);
-        try {
-            await runTransaction(firestore, async (transaction) => {
-                const newStoreRef = doc(collection(firestore, "storefronts"));
-                const userProfileRef = doc(firestore, "users", user.uid);
-                
-                transaction.update(userProfileRef, {
-                    isSeller: true,
-                    storeId: newStoreRef.id,
-                    paymentMethod: values.paymentMethod,
-                    paymentIdentifier: values.paymentIdentifier,
-                    goodsAndServicesAgreed: values.goodsAndServicesAgreed,
-                    updatedAt: serverTimestamp(),
-                });
 
-                transaction.set(newStoreRef, {
-                    id: newStoreRef.id,
-                    storeId: newStoreRef.id,
-                    ownerUid: user.uid,
-                    storeName: storeName,
-                    slug: slug,
-                    about: values.about,
-                    avatarUrl: placeholderImages['store-logo-1']?.imageUrl || `https://picsum.photos/seed/${slug}/128/128`,
-                    ratingAverage: 0,
-                    ratingCount: 0,
-                    itemsSold: 0,
-                    status: "ACTIVE",
-                    isSpotlighted: false,
-                    spotlightUntil: null,
-                    createdAt: serverTimestamp(),
-                    updatedAt: serverTimestamp(),
-                });
-            });
+        const newStoreRef = doc(collection(firestore, "storefronts"));
+        const userProfileRef = doc(firestore, "users", user.uid);
+        
+        const userUpdateData = {
+            isSeller: true,
+            storeId: newStoreRef.id,
+            paymentMethod: values.paymentMethod,
+            paymentIdentifier: values.paymentIdentifier,
+            goodsAndServicesAgreed: values.goodsAndServicesAgreed,
+            updatedAt: serverTimestamp(),
+        };
 
+        const newStoreData = {
+            id: newStoreRef.id,
+            storeId: newStoreRef.id,
+            ownerUid: user.uid,
+            storeName: storeName,
+            slug: slug,
+            about: values.about,
+            avatarUrl: placeholderImages['store-logo-1']?.imageUrl || `https://picsum.photos/seed/${slug}/128/128`,
+            ratingAverage: 0,
+            ratingCount: 0,
+            itemsSold: 0,
+            status: "ACTIVE",
+            isSpotlighted: false,
+            spotlightUntil: null,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        };
+
+        runTransaction(firestore, async (transaction) => {
+            transaction.update(userProfileRef, userUpdateData);
+            transaction.set(newStoreRef, newStoreData);
+        }).then(() => {
             toast({
                 title: 'Your Store is Live!',
                 description: 'Congratulations! You can now start listing items for sale.',
             });
-            
             router.push('/listings');
             router.refresh();
-
-        } catch (error: any) {
-             console.error("Seller onboarding failed:", error);
-            toast({
-                title: 'Onboarding Failed',
-                description: error.message || 'An unexpected error occurred.',
-                variant: 'destructive',
+        }).catch((error) => {
+            // This is where we create and emit the contextual error
+            const contextualError = new FirestorePermissionError({
+                path: `users/${user.uid} and storefronts/${newStoreRef.id}`, // Path indicates a transaction
+                operation: 'write', // 'write' is generic for transactions
+                requestResourceData: {
+                    userUpdate: userUpdateData,
+                    storeCreate: newStoreData
+                },
             });
-        } finally {
+            errorEmitter.emit('permission-error', contextualError);
+        }).finally(() => {
             setIsSubmitting(false);
-        }
+        });
     }
 
     const stepDetails = [
