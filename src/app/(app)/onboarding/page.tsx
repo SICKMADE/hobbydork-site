@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ const agreementsSchema = z.object({
 type OnboardingFormValues = z.infer<typeof agreementsSchema>;
 
 const StepAgreements = () => {
-    const { control } = useForm<OnboardingFormValues>();
+    const { control } = useFormContext<OnboardingFormValues>(); // Use context from FormProvider
     return (
         <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="space-y-6">
              <FormField
@@ -199,5 +199,3 @@ export default function OnboardingPage() {
         </div>
     );
 }
-
-    
