@@ -13,6 +13,7 @@ import ListingCard from '@/components/ListingCard';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import React from 'react';
+import { useAuth } from '@/hooks/use-auth';
 
 const StarRating = ({ rating }: { rating: number }) => (
     <div className="flex items-center">
@@ -24,9 +25,9 @@ const StarRating = ({ rating }: { rating: number }) => (
 
 export default function StorefrontPage({ params }: { params: { id: string } }) {
   const firestore = useFirestore();
+  const { loading: authLoading } = useAuth();
   const resolvedParams = React.use(params);
 
-  // Correctly use `params.id` to reference the document in the `storefronts` collection.
   const storeRef = useMemoFirebase(() => {
     if (!firestore || !resolvedParams.id) return null;
     return doc(firestore, 'storefronts', resolvedParams.id);
@@ -35,13 +36,13 @@ export default function StorefrontPage({ params }: { params: { id: string } }) {
   const { data: store, isLoading: isStoreLoading } = useDoc<Store>(storeRef);
 
   const listingsQuery = useMemoFirebase(() => {
-    if (!firestore || !store?.storeId) return null; // Use storeId from the document
+    if (authLoading || !firestore || !store?.storeId) return null;
     return query(
       collection(firestore, 'listings'),
       where('storeId', '==', store.storeId),
       where('state', '==', 'ACTIVE')
     );
-  }, [firestore, store?.storeId]);
+  }, [firestore, store?.storeId, authLoading]);
 
   const reviewsQuery = useMemoFirebase(() => {
       if (!firestore || !store?.storeId) return null;
@@ -53,11 +54,10 @@ export default function StorefrontPage({ params }: { params: { id: string } }) {
   const { data: reviews, isLoading: areReviewsLoading } = useCollection<Review>(reviewsQuery);
 
 
-  if (isStoreLoading || areListingsLoading || areReviewsLoading) {
+  if (isStoreLoading || areListingsLoading || areReviewsLoading || authLoading) {
     return <AppLayout><div>Loading storefront...</div></AppLayout>;
   }
 
-  // If the hook finishes loading and there is no store data, it's a 404.
   if (!store) {
     notFound();
   }
