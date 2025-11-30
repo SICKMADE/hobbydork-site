@@ -208,65 +208,62 @@ export default function CreateStorePage() {
             return;
         }
 
-        const storeName = profile.displayName;
-        const slug = storeName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-
         setIsSubmitting(true);
-
-        const newStoreRef = doc(collection(firestore, "storefronts"));
-        const userProfileRef = doc(firestore, "users", user.uid);
         
-        const userUpdateData = {
-            isSeller: true,
-            storeId: newStoreRef.id,
-            paymentMethod: values.paymentMethod,
-            paymentIdentifier: values.paymentIdentifier,
-            goodsAndServicesAgreed: values.goodsAndServicesAgreed,
-            updatedAt: serverTimestamp(),
-        };
+        try {
+            const storeName = profile.displayName;
+            const slug = storeName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            const newStoreRef = doc(collection(firestore, "storefronts"));
+            const userProfileRef = doc(firestore, "users", user.uid);
+            
+            await runTransaction(firestore, async (transaction) => {
+                transaction.update(userProfileRef, {
+                    isSeller: true,
+                    storeId: newStoreRef.id,
+                    paymentMethod: values.paymentMethod,
+                    paymentIdentifier: values.paymentIdentifier,
+                    goodsAndServicesAgreed: values.goodsAndServicesAgreed,
+                    updatedAt: serverTimestamp(),
+                });
+                transaction.set(newStoreRef, {
+                    id: newStoreRef.id,
+                    storeId: newStoreRef.id,
+                    ownerUid: user.uid,
+                    storeName: storeName,
+                    slug: slug,
+                    about: values.about,
+                    avatarUrl: placeholderImages['store-logo-1']?.imageUrl || `https://picsum.photos/seed/${slug}/128/128`,
+                    ratingAverage: 0,
+                    ratingCount: 0,
+                    itemsSold: 0,
+                    status: "ACTIVE",
+                    isSpotlighted: false,
+                    spotlightUntil: null,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                });
+            });
 
-        const newStoreData = {
-            id: newStoreRef.id,
-            storeId: newStoreRef.id,
-            ownerUid: user.uid,
-            storeName: storeName,
-            slug: slug,
-            about: values.about,
-            avatarUrl: placeholderImages['store-logo-1']?.imageUrl || `https://picsum.photos/seed/${slug}/128/128`,
-            ratingAverage: 0,
-            ratingCount: 0,
-            itemsSold: 0,
-            status: "ACTIVE",
-            isSpotlighted: false,
-            spotlightUntil: null,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-        };
-
-        runTransaction(firestore, async (transaction) => {
-            transaction.update(userProfileRef, userUpdateData);
-            transaction.set(newStoreRef, newStoreData);
-        }).then(() => {
             toast({
                 title: 'Your Store is Live!',
                 description: 'Congratulations! You can now start listing items for sale.',
             });
             router.push('/listings');
             router.refresh();
-        }).catch((error) => {
-            // This is where we create and emit the contextual error
-            const contextualError = new FirestorePermissionError({
-                path: `users/${user.uid} and storefronts/${newStoreRef.id}`, // Path indicates a transaction
-                operation: 'write', // 'write' is generic for transactions
+
+        } catch (error) {
+             const contextualError = new FirestorePermissionError({
+                path: `Transaction failed for user/${user.uid} and storefronts/`,
+                operation: 'write', 
                 requestResourceData: {
-                    userUpdate: userUpdateData,
-                    storeCreate: newStoreData
+                    description: 'Transaction to create a store and update user profile.',
+                    formData: values,
                 },
             });
             errorEmitter.emit('permission-error', contextualError);
-        }).finally(() => {
+        } finally {
             setIsSubmitting(false);
-        });
+        }
     }
 
     const stepDetails = [
