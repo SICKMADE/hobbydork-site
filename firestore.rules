@@ -34,14 +34,28 @@ service cloud.firestore {
       // Any signed-in user can read basic user docs
       allow read: if isSignedIn();
 
-      // Normal user can update their own profile, but not role/status
-      allow write: if isSignedIn()
+      // CREATE: user can create their own doc and set safe default role/status
+      allow create: if isSignedIn()
         && request.auth.uid == uid
-        && !("role" in request.resource.data)
-        && !("status" in request.resource.data);
+        && request.resource.data.role == "USER"
+        && request.resource.data.status in ["LIMITED", "ACTIVE"];
 
-      // Admin can update any user (including role/status)
-      allow update: if isSignedIn() && userIsAdmin();
+      // UPDATE: normal user can edit their own profile BUT
+      //         role and status must NOT change
+      allow update: if isSignedIn()
+        && (
+          // owner updating their own doc
+          (
+            request.auth.uid == uid &&
+            resource.data.role == request.resource.data.role &&
+            resource.data.status == request.resource.data.status
+          )
+          // OR admin override
+          || userIsAdmin()
+        );
+
+      // DELETE: only admin can delete user docs
+      allow delete: if userIsAdmin();
       
       // Subcollections are owned by the user.
       match /notifications/{notificationId} {
