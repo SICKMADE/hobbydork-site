@@ -1,3 +1,4 @@
+
 'use client';
 import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -14,7 +15,7 @@ export default function AdminLayout({
     return <div className="flex items-center justify-center h-full">Loading...</div>;
   }
 
-  if (profile?.role !== 'admin') {
+  if (profile?.role !== 'ADMIN') {
     return (
         <div className="flex items-center justify-center h-full">
             <Alert variant="destructive" className="max-w-lg">
