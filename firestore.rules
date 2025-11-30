@@ -34,27 +34,37 @@ service cloud.firestore {
       // Any signed-in user can read basic user docs
       allow read: if isSignedIn();
 
-      // CREATE: user can create their own doc and set SAFE default role/status
-      // New users should be created as normal ACTIVE users with role "USER".
+      // CREATE: user can create their own doc with role "USER" and status "ACTIVE"
       allow create: if isSignedIn()
         && request.auth.uid == uid
         && request.resource.data.role == "USER"
         && request.resource.data.status == "ACTIVE";
 
-      // UPDATE: normal user can edit their own profile BUT
-      //         cannot change role or status.
+      // UPDATE:
+      // - Normal user can update their own doc,
+      //   BUT role, status, and displayName cannot change.
+      // - Admin can update other fields too, but must also respect displayName immutability.
       allow update: if isSignedIn() && (
         (
-          request.auth.uid == uid &&
-          resource.data.role == request.resource.data.role &&
-          resource.data.status == request.resource.data.status
+          request.auth.uid == uid
+          // role cannot change
+          && resource.data.role == request.resource.data.role
+          // status cannot change
+          && resource.data.status == request.resource.data.status
+          // displayName cannot change
+          && resource.data.displayName == request.resource.data.displayName
         )
-        || userIsAdmin()
+        ||
+        (
+          userIsAdmin()
+          // even admin cannot change displayName
+          && resource.data.displayName == request.resource.data.displayName
+        )
       );
 
-      // DELETE: only admin can delete user docs
+      // Only admin can delete user docs
       allow delete: if userIsAdmin();
-      
+
       // Subcollections are owned by the user.
       match /notifications/{notificationId} {
         allow read, write: if request.auth.uid == uid;
@@ -72,9 +82,31 @@ service cloud.firestore {
       // All logged-in users can read stores
       allow read: if isSignedIn();
 
-      // Only the seller who owns the store, or admin, can create/update/delete
-      allow create, update, delete: if isSignedIn() && (
+      // CREATE: allowed for seller or admin
+      allow create: if isSignedIn() && (
         (userIsSeller() && request.resource.data.ownerUid == request.auth.uid)
+        || userIsAdmin()
+      );
+
+      // UPDATE:
+      // - Seller who owns the store OR admin can update other fields,
+      //   BUT storeName and slug cannot change.
+      allow update: if isSignedIn()
+        && (
+          (userIsSeller() && resource.data.ownerUid == request.auth.uid)
+          || userIsAdmin()
+        )
+        // storeName must not change
+        && resource.data.storeName == request.resource.data.storeName
+        // if slug exists, it must not change either
+        && (
+          !("slug" in resource.data)
+          || resource.data.slug == request.resource.data.slug
+        );
+
+      // DELETE: only seller or admin can delete
+      allow delete: if isSignedIn() && (
+        (userIsSeller() && resource.data.ownerUid == request.auth.uid)
         || userIsAdmin()
       );
       
