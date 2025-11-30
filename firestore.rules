@@ -144,7 +144,6 @@ service cloud.firestore {
 
     // ORDERS
     match /orders/{orderId} {
-
       function userCanReadOrder() {
         return isSignedIn() &&
           (
@@ -154,19 +153,14 @@ service cloud.firestore {
           );
       }
 
-      // Single order fetch (getDoc)
-      allow get: if userCanReadOrder();
+      // READ (get + list/query)
+      allow read: if userCanReadOrder();
 
-      // Queries / lists (getDocs, onSnapshot on a query)
-      // You can tighten the limit if you want.
-      allow list: if userCanReadOrder() && request.query.limit <= 50;
-
-      // Creating an order: only ACTIVE user, and they must be the buyer
+      // CREATE: only ACTIVE user, and they must be the buyer
       allow create: if userIsActive() &&
         request.resource.data.buyerUid == request.auth.uid;
 
-      // Updating an order: buyer, seller or admin
-      // (You can later add stricter field checks here if you want.)
+      // UPDATE: buyer, seller, or admin
       allow update: if isSignedIn() &&
         (
           request.auth.uid == resource.data.buyerUid ||
@@ -174,7 +168,7 @@ service cloud.firestore {
           userIsAdmin()
         );
 
-      // Deleting orders: only admin
+      // DELETE: only admin
       allow delete: if userIsAdmin();
     }
 
