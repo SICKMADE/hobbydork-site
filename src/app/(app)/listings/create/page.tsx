@@ -49,7 +49,7 @@ const conditions: { value: Condition, label: string }[] = [
     { value: "POOR", label: "Poor" },
 ];
 
-export default function CreateListingPage() {
+const ListingForm = () => {
     const { profile, user } = useAuth();
     const firestore = useFirestore();
     const router = useRouter();
@@ -127,41 +127,7 @@ export default function CreateListingPage() {
         }
     }
     
-    if (!profile?.isSeller) {
-        return (
-            <AppLayout>
-                <PlaceholderContent 
-                    title="You are not a seller"
-                    description="You need to create a store before you can add listings."
-                >
-                    <Button asChild className="mt-4">
-                        <Link href="/store/create">Create a Store</Link>
-                    </Button>
-                </PlaceholderContent>
-            </AppLayout>
-        )
-    }
-
-    if (profile.status !== 'ACTIVE') {
-        return (
-            <AppLayout>
-                <div className="flex items-center justify-center h-full">
-                    <Alert variant="destructive" className="max-w-lg">
-                      <Terminal className="h-4 w-4" />
-                      <AlertTitle>Account Not Fully Active</AlertTitle>
-                      <AlertDescription>
-                        Your account must be active to create listings that are immediately visible. You can still create listings, but they will be saved as drafts. Please verify your email.
-                      </AlertDescription>
-                    </Alert>
-                </div>
-                 <div className="max-w-2xl mx-auto mt-8">
-                     <ListingForm />
-                 </div>
-            </AppLayout>
-        );
-    }
-
-    const ListingForm = () => (
+    return (
         <Card>
             <CardHeader>
                 <CardTitle className="text-3xl">Create a New Listing</CardTitle>
@@ -332,6 +298,43 @@ export default function CreateListingPage() {
             </CardContent>
         </Card>
     );
+};
+
+
+export default function CreateListingPage() {
+    const { profile } = useAuth();
+    
+    if (!profile?.isSeller) {
+        return (
+            <AppLayout>
+                <PlaceholderContent 
+                    title="You are not a seller"
+                    description="You need to create a store before you can add listings."
+                >
+                    <Button asChild className="mt-4">
+                        <Link href="/store/create">Create a Store</Link>
+                    </Button>
+                </PlaceholderContent>
+            </AppLayout>
+        )
+    }
+
+    if (profile.status !== 'ACTIVE') {
+        return (
+            <AppLayout>
+                <div className="max-w-2xl mx-auto">
+                    <Alert variant="destructive" className="mb-8">
+                      <Terminal className="h-4 w-4" />
+                      <AlertTitle>Account Not Fully Active</AlertTitle>
+                      <AlertDescription>
+                        Your email must be verified to create listings that are immediately visible to buyers. You can still create listings now, but they will be saved as drafts until your account is active.
+                      </AlertDescription>
+                    </Alert>
+                    <ListingForm />
+                 </div>
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout>
@@ -341,5 +344,3 @@ export default function CreateListingPage() {
         </AppLayout>
     );
 }
-
-    

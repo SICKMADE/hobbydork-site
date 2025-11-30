@@ -31,7 +31,7 @@ const getOrderStatusVariant = (status: Order['state']) => {
 }
 
 export default function SalesPage() {
-    const { profile } = useAuth();
+    const { profile, loading: authLoading } = useAuth();
     const firestore = useFirestore();
     const { toast } = useToast();
 
@@ -44,7 +44,7 @@ export default function SalesPage() {
         );
     }, [firestore, profile]);
 
-    const { data: sales, isLoading } = useCollection<Order>(salesQuery);
+    const { data: sales, isLoading: salesLoading } = useCollection<Order>(salesQuery);
     
     const handleStateChange = (orderId: string, newState: OrderState) => {
         if (!firestore) return;
@@ -75,6 +75,10 @@ export default function SalesPage() {
             });
     };
 
+    if (authLoading) {
+        return <AppLayout><div className="flex items-center justify-center h-full">Loading...</div></AppLayout>;
+    }
+
      if (!profile?.isSeller) {
         return (
             <AppLayout>
@@ -90,11 +94,11 @@ export default function SalesPage() {
         );
     }
 
-    if (isLoading) {
+    if (salesLoading) {
         return <AppLayout><p>Loading your sales...</p></AppLayout>
     }
 
-    if (!isLoading && (!sales || sales.length === 0)) {
+    if (!salesLoading && (!sales || sales.length === 0)) {
         return (
             <AppLayout>
                 <PlaceholderContent 
@@ -161,5 +165,3 @@ export default function SalesPage() {
         </AppLayout>
     );
 }
-
-    

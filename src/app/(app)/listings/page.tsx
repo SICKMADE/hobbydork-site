@@ -12,7 +12,7 @@ import ListingCard from "@/components/ListingCard";
 import Link from "next/link";
 
 export default function MyListingsPage() {
-    const { profile } = useAuth();
+    const { profile, loading: authLoading } = useAuth();
     const firestore = useFirestore();
     const router = useRouter();
 
@@ -21,7 +21,11 @@ export default function MyListingsPage() {
         return query(collection(firestore, 'listings'), where('storeId', '==', profile.storeId));
     }, [firestore, profile?.storeId]);
 
-    const { data: listings, isLoading } = useCollection<Listing>(listingsQuery);
+    const { data: listings, isLoading: listingsLoading } = useCollection<Listing>(listingsQuery);
+
+    if (authLoading) {
+        return <AppLayout><div className="flex items-center justify-center h-full">Loading...</div></AppLayout>;
+    }
 
     if (!profile?.isSeller) {
         return (
@@ -48,9 +52,9 @@ export default function MyListingsPage() {
                 </Button>
             </div>
 
-            {isLoading && <p>Loading your listings...</p>}
+            {(authLoading || listingsLoading) && <p>Loading your listings...</p>}
 
-            {!isLoading && listings && listings.length > 0 && (
+            {!listingsLoading && listings && listings.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {listings.map((listing) => (
                         <ListingCard key={listing.id} listing={listing} />
@@ -58,7 +62,7 @@ export default function MyListingsPage() {
                 </div>
             )}
             
-            {!isLoading && (!listings || listings.length === 0) && (
+            {!listingsLoading && (!listings || listings.length === 0) && (
                  <PlaceholderContent 
                     title="No Listings Yet"
                     description="Click the button above to create your first listing and start selling!"
@@ -67,5 +71,3 @@ export default function MyListingsPage() {
         </AppLayout>
     );
 }
-
-    
