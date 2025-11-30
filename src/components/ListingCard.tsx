@@ -14,7 +14,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
   const listingId = listing.id || listing.listingId;
 
   return (
-    <Link href={`/listing/${listingId}`}>
+    <Link href={`/listings/${listingId}`}>
       <Card className="overflow-hidden transition-transform transform hover:scale-105 hover:shadow-primary/20 hover:shadow-lg h-full flex flex-col">
         <CardHeader className="p-0">
           <div className="relative h-48 w-full">

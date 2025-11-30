@@ -188,7 +188,7 @@ export default function CartPage() {
                                             className="rounded-md object-cover"
                                         />
                                         <div className="flex-1">
-                                            <Link href={`/listing/${item.listingId}`} className="font-semibold hover:underline">{item.title}</Link>
+                                            <Link href={`/listings/${item.listingId}`} className="font-semibold hover:underline">{item.title}</Link>
                                             <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>
                                         </div>
                                         <div className="text-right">
