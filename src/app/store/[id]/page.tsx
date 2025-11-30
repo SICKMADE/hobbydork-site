@@ -1,4 +1,3 @@
-
 'use client';
 
 import { notFound } from 'next/navigation';
@@ -25,12 +24,13 @@ const StarRating = ({ rating }: { rating: number }) => (
 
 export default function StorefrontPage({ params }: { params: { id: string } }) {
   const firestore = useFirestore();
+  const resolvedParams = React.use(params);
 
   // Correctly use `params.id` to reference the document in the `storefronts` collection.
   const storeRef = useMemoFirebase(() => {
-    if (!firestore || !params.id) return null;
-    return doc(firestore, 'storefronts', params.id);
-  }, [firestore, params.id]);
+    if (!firestore || !resolvedParams.id) return null;
+    return doc(firestore, 'storefronts', resolvedParams.id);
+  }, [firestore, resolvedParams.id]);
 
   const { data: store, isLoading: isStoreLoading } = useDoc<Store>(storeRef);
 
