@@ -141,9 +141,9 @@ service cloud.firestore {
       );
     }
 
-        // ORDERS
+    // ORDERS
     match /orders/{orderId} {
-      // Buyer, seller, or admin can read (get + query)
+      // Buyer, seller, or admin can read (get and list/query)
       allow read: if isSignedIn() &&
         (
           request.auth.uid == resource.data.buyerUid ||
@@ -151,11 +151,11 @@ service cloud.firestore {
           userIsAdmin()
         );
 
-      // CREATE: ACTIVE user, and they must be the buyer
-      allow create: if userIsActive()
-        && request.resource.data.buyerUid == request.auth.uid;
+      // CREATE: Any ACTIVE user can create an order where they are the buyer
+      allow create: if userIsActive() &&
+        request.resource.data.buyerUid == request.auth.uid;
 
-      // UPDATE: buyer, seller, or admin
+      // UPDATE: buyer, seller, or admin can update the order
       allow update: if isSignedIn() &&
         (
           request.auth.uid == resource.data.buyerUid ||
@@ -163,7 +163,7 @@ service cloud.firestore {
           userIsAdmin()
         );
 
-      // DELETE: only admin
+      // DELETE: only admin can delete orders
       allow delete: if userIsAdmin();
     }
 
