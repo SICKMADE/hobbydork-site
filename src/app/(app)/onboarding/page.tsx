@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 
 const agreementsSchema = z.object({
-    displayName: z.string().min(3, "Please enter a display name."),
+    displayName: z.string().min(3, "Please enter a display name with at least 3 characters."),
     agreeGoodsAndServices: z.literal(true, { errorMap: () => ({ message: "You must agree to use Goods & Services." })}),
     agreeTerms: z.literal(true, { errorMap: () => ({ message: "You must agree to the Terms." })}),
     agreeAge: z.literal(true, { errorMap: () => ({ message: "You must confirm you are 18 or older." })}),
@@ -30,7 +30,7 @@ const agreementsSchema = z.object({
 type OnboardingFormValues = z.infer<typeof agreementsSchema>;
 
 const StepAgreements = () => {
-    const { control } = useForm<OnboardingFormValues>();
+    const { control } = useFormContext<OnboardingFormValues>();
     return (
         <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="space-y-6">
              <FormField
@@ -40,7 +40,7 @@ const StepAgreements = () => {
                     <FormItem>
                         <FormLabel>Display Name</FormLabel>
                         <FormControl>
-                            <Input placeholder="How you'll appear to others" {...field} />
+                            <Input placeholder="This will be your permanent username" {...field} />
                         </FormControl>
                          <FormMessage />
                     </FormItem>

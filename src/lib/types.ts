@@ -1,3 +1,4 @@
+
 import { Timestamp } from "firebase/firestore";
 
 export type UserStatus = 'ACTIVE' | 'LIMITED' | 'SUSPENDED';
@@ -195,6 +196,3 @@ export type Report = {
     createdAt: Timestamp;
     status: "OPEN" | "REVIEWED" | "RESOLVED";
 }
-
-    
-    

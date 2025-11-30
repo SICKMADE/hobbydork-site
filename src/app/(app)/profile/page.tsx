@@ -15,6 +15,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { getInitials } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
 
 const profileSchema = z.object({
     avatar: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
@@ -78,7 +79,7 @@ export default function ProfilePage() {
                                 <div className="space-y-2">
                                     <Label>Display Name</Label>
                                     <Input value={profile.displayName || ''} disabled readOnly />
-                                    <p className="text-sm text-muted-foreground">Usernames cannot be changed after signup.</p>
+                                    <p className="text-sm text-muted-foreground">Usernames are permanent and cannot be changed.</p>
                                 </div>
                                 <FormField
                                     control={form.control}

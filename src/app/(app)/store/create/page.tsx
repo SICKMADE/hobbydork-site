@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { placeholderImages } from '@/lib/placeholder-images';
 import AppLayout from '@/components/layout/AppLayout';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const storeSchema = z.object({
     about: z.string().min(10, "About section must be at least 10 characters long."),
@@ -28,6 +29,7 @@ const storeSchema = z.object({
 const paymentSchema = z.object({
     paymentMethod: z.enum(["PAYPAL", "VENMO"], { required_error: "Please select a payment method." }),
     paymentIdentifier: z.string().min(3, "Please enter your payment username or email."),
+    goodsAndServicesAgreed: z.literal(true, { errorMap: () => ({ message: "You must agree to the Goods & Services policy."})})
 });
 
 const sellerSchema = storeSchema.merge(paymentSchema);
@@ -35,7 +37,7 @@ const sellerSchema = storeSchema.merge(paymentSchema);
 type SellerFormValues = z.infer<typeof sellerSchema>;
 
 const Step1Store = () => {
-    const { control } = useForm<SellerFormValues>();
+    const { control } = useFormContext<SellerFormValues>();
     const { profile } = useAuth();
     
     if (!profile) return null;
@@ -49,7 +51,7 @@ const Step1Store = () => {
             <div className="space-y-2">
                 <Label>Store Name</Label>
                 <Input value={profile.displayName || ''} disabled readOnly />
-                <FormDescription>Your store name is linked to your permanent display name.</FormDescription>
+                <FormDescription>Your store name is permanently linked to your display name.</FormDescription>
             </div>
             <div className="space-y-2">
                 <Label>Store URL</Label>
@@ -59,7 +61,7 @@ const Step1Store = () => {
                     </span>
                     <Input value={slug} disabled readOnly className="rounded-l-none" />
                 </div>
-                 <FormDescription>Your store's unique URL is generated from your display name.</FormDescription>
+                 <FormDescription>Your store's unique URL is generated from your display name and cannot be changed.</FormDescription>
             </div>
              <FormField
                 control={control}
@@ -79,7 +81,7 @@ const Step1Store = () => {
 }
 
 const Step2Payment = () => {
-    const { control } = useForm<SellerFormValues>();
+    const { control } = useFormContext<SellerFormValues>();
     return (
         <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="space-y-8">
              <FormField
@@ -133,6 +135,21 @@ const Step2Payment = () => {
                     </FormItem>
                 )}
             />
+             <FormField
+                control={control}
+                name="goodsAndServicesAgreed"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                        <FormLabel>I agree that all payments for sales on this platform will be sent using Goods & Services (no Friends & Family or off-platform payments). This is required to reduce scams and protect both buyer and seller.</FormLabel>
+                        <FormMessage />
+                    </div>
+                    </FormItem>
+                )}
+            />
         </motion.div>
     );
 };
@@ -153,10 +170,23 @@ export default function CreateStorePage() {
         mode: "onChange",
         defaultValues: {
             about: "",
-            paymentMethod: "PAYPAL",
-            paymentIdentifier: "",
+            paymentMethod: profile?.paymentMethod || "PAYPAL",
+            paymentIdentifier: profile?.paymentIdentifier || "",
+            goodsAndServicesAgreed: profile?.goodsAndServicesAgreed || false,
         }
     });
+
+    useEffect(() => {
+        if (profile?.paymentMethod) {
+            methods.setValue('paymentMethod', profile.paymentMethod);
+        }
+         if (profile?.paymentIdentifier) {
+            methods.setValue('paymentIdentifier', profile.paymentIdentifier);
+        }
+        if (profile?.goodsAndServicesAgreed) {
+            methods.setValue('goodsAndServicesAgreed', profile.goodsAndServicesAgreed);
+        }
+    }, [profile, methods]);
 
     const handleNext = async () => {
         const fieldsToValidate: (keyof SellerFormValues)[] = ['about'];
@@ -190,6 +220,7 @@ export default function CreateStorePage() {
                     storeId: newStoreRef.id,
                     paymentMethod: values.paymentMethod,
                     paymentIdentifier: values.paymentIdentifier,
+                    goodsAndServicesAgreed: values.goodsAndServicesAgreed,
                     updatedAt: serverTimestamp(),
                 });
 
