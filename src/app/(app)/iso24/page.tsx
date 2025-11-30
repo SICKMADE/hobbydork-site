@@ -46,14 +46,14 @@ export default function ISO24Page() {
     });
 
     const isoQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || profile?.status !== 'ACTIVE') return null;
         return query(
             collection(firestore, 'iso24Posts'),
             where('status', '==', 'ACTIVE'),
             where('expiresAt', '>', Timestamp.now()),
             orderBy('expiresAt', 'desc')
         );
-    }, [firestore]);
+    }, [firestore, profile?.status]);
 
     const { data: isoPosts, isLoading } = useCollection<ISO24>(isoQuery);
 
@@ -235,5 +235,3 @@ export default function ISO24Page() {
         </AppLayout>
     );
 }
-
-    
