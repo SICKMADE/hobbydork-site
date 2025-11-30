@@ -1,204 +1,172 @@
 
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --------------------------------
-    // Helper Functions
-    // --------------------------------
 
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    function isAdmin() {
-      return isSignedIn() 
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    function userStatus() {
+      return userDoc().data.status;
+    }
+
+    function userIsActive() {
+      return isSignedIn() && userStatus() == "ACTIVE";
+    }
+
+    function userIsAdmin() {
+      return isSignedIn() && userDoc().data.role == "ADMIN";
+    }
+
+    function userIsSeller() {
+      return isSignedIn()
+        && userDoc().data.isSeller == true
+        && userDoc().data.storeId != "";
+    }
+
+    // USERS
+    match /users/{uid} {
+      // Any signed-in user can read basic user docs
+      allow read: if isSignedIn();
+
+      // Normal user can update their own profile, but not role/status
+      allow write: if isSignedIn()
+        && request.auth.uid == uid
+        && !("role" in request.resource.data)
+        && !("status" in request.resource.data);
+
+      // Admin can update any user (including role/status)
+      allow update: if isSignedIn() && userIsAdmin();
+      
+      // Subcollections are owned by the user.
+      match /notifications/{notificationId} {
+        allow read, write: if request.auth.uid == uid;
+      }
+      match /watchlist/{listingId} {
+        allow read, write: if request.auth.uid == uid;
+      }
+      match /favoriteStores/{storeId} {
+        allow read, write: if request.auth.uid == uid;
+      }
+    }
+
+    // STORES
+    match /storefronts/{storeId} {
+      // All logged-in users can read stores
+      allow read: if isSignedIn();
+
+      // Only the seller who owns the store, or admin, can create/update/delete
+      allow create, update, delete: if isSignedIn() && (
+        (userIsSeller() && request.resource.data.ownerUid == request.auth.uid)
+        || userIsAdmin()
+      );
+      
+      match /reviews/{reviewId} {
+          allow read: if isSignedIn();
+          // The buyer of the corresponding order can create one review.
+          allow create: if isSignedIn() 
+                && get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.buyerUid == request.auth.uid
+                && !existsAfter(/databases/$(database)/documents/storefronts/$(storeId)/reviews/$(request.resource.data.orderId));
+          // Reviews are immutable by users.
+          allow update, delete: if userIsAdmin();
+      }
+    }
+
+    // LISTINGS
+    match /listings/{listingId} {
+      // All logged-in users can read listings
+      allow read: if isSignedIn();
+
+      // Only sellers (or admin) can manage their own listings
+      allow create, update, delete: if isSignedIn() && (
+        (userIsSeller() && request.resource.data.ownerUid == request.auth.uid)
+        || userIsAdmin()
+      );
+    }
+
+    // ORDERS
+    match /orders/{orderId} {
+      // Buyer, seller, and admin can read an order
+      allow read: if isSignedIn() &&
+        (request.auth.uid == resource.data.buyerUid
+          || request.auth.uid == resource.data.sellerUid
+          || userIsAdmin());
+
+      // Any ACTIVE user can create an order
+      allow create: if userIsActive();
+
+      // Buyer/seller/admin can update; tighten on client side for which fields they change
+      allow update: if isSignedIn() &&
+        (request.auth.uid == resource.data.buyerUid
+          || request.auth.uid == resource.data.sellerUid
+          || userIsAdmin());
+    }
+
+    // ISO24 posts
+    match /iso24Posts/{isoId} {
+      // All logged-in users can read ISO24 posts
+      allow read: if isSignedIn();
+
+      // Only ACTIVE users or admin can create/update/delete ISO24 posts
+      allow create, update, delete: if userIsActive() || userIsAdmin();
+    }
+
+    // Community chat
+    match /communityMessages/{messageId} {
+      // Readable by all logged-in users
+      allow read: if isSignedIn();
+
+      // Only ACTIVE users or admin can create
+      allow create: if userIsActive() || userIsAdmin();
+
+      // Only admin can update/delete messages (moderation)
+      allow update, delete: if userIsAdmin();
+    }
+
+    // Conversations and messages
+    match /conversations/{conversationId} {
+      allow read, update: if isSignedIn()
+        && (request.auth.uid in resource.data.participantUids || userIsAdmin());
+
+      allow create: if isSignedIn();
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() &&
+          (request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantUids
+            || userIsAdmin());
+
+        allow create: if isSignedIn();
+      }
+    }
+
+    // Reports
+    match /reports/{reportId} {
+      // Any logged-in user can create a report
+      allow create: if isSignedIn();
+
+      // Reporter can read their own reports; admin can read all
+      allow read: if isSignedIn() &&
+        (resource.data.reporterUid == request.auth.uid || userIsAdmin());
+
+      // Only admin can update/delete a report
+      allow update, delete: if userIsAdmin();
+    }
+
+    // Spotlight slots
+    match /spotlightSlots/{slotId} {
+      allow read: if isSignedIn();
+      // Only admin/backend should manage spotlight slots
+      allow create, update, delete: if userIsAdmin();
     }
     
-    function getUser(userId) {
-      return get(/databases/$(database)/documents/users/$(userId));
-    }
-
-    function isUserStatus(userId, status) {
-        let user = getUser(userId);
-        return user != null && user.data.status == status;
-    }
-
-    function isActiveUser(userId) {
-        return isUserStatus(userId, 'ACTIVE');
-    }
-    
-    function isEmailVerified(userId) {
-      let user = getUser(userId);
-      return user != null && user.data.emailVerified == true;
-    }
-
-    function isStoreOwner(storeId) {
-      let store = get(/databases/$(database)/documents/storefronts/$(storeId));
-      return store != null && isUser(store.data.ownerUid);
-    }
-    
-    function isOrderParticipant(order) {
-      return isSignedIn() && (isUser(order.buyerUid) || isUser(order.sellerUid));
-    }
-    
-    function isOrderBuyer(orderId) {
-        let order = get(/databases/$(database)/documents/orders/$(orderId)).data;
-        return order != null && isUser(order.buyerUid);
-    }
-    
-    function isConversationParticipant(conversation) {
-        return isSignedIn() && request.auth.uid in conversation.participantUids;
-    }
-    
-    // --- Data Validation Helpers ---
-    
-    // On listing create/update, check if user is allowed to make it active.
-    function isValidListingWrite() {
-      let isCreatingActive = request.resource.data.state == 'ACTIVE';
-      // Only active, email-verified users can create active listings
-      let canCreateActive = isActiveUser(request.auth.uid) && isEmailVerified(request.auth.uid);
-      // Allow if not creating an active listing, OR if user is permitted to.
-      return !isCreatingActive || canCreateActive;
-    }
-    
-    // Checks valid state transitions for an order update.
-    function isValidOrderUpdate(existingOrder, newOrder) {
-        // Buyer can mark as payment sent if they are providing a shipping address.
-        let isBuyerSendingPayment = isUser(existingOrder.buyerUid)
-                                  && existingOrder.state == 'PENDING_PAYMENT' 
-                                  && newOrder.state == 'PAYMENT_SENT'
-                                  && newOrder.buyerShippingAddress != null;
-        
-        // Seller can mark as shipped if they provide a tracking number.
-        let isSellerShipping = isUser(existingOrder.sellerUid)
-                               && existingOrder.state == 'PAYMENT_SENT'
-                               && newOrder.state == 'SHIPPED'
-                               && newOrder.trackingNumber != null;
-        
-        // Seller can mark as delivered
-        let isSellerDelivering = isUser(existingOrder.sellerUid)
-                                 && existingOrder.state == 'SHIPPED'
-                                 && newOrder.state == 'DELIVERED';
-
-        // Buyer can mark as complete
-        let isBuyerCompleting = isUser(existingOrder.buyerUid)
-                                && existingOrder.state == 'DELIVERED'
-                                && newOrder.state == 'COMPLETED';
-
-        // Any participant can cancel before it's shipped.
-        let isCancelling = newOrder.state == 'CANCELLED' && existingOrder.state in ['PENDING_PAYMENT', 'PAYMENT_SENT'];
-
-        return isBuyerSendingPayment || isSellerShipping || isSellerDelivering || isBuyerCompleting || isCancelling;
-    }
-
-
-    // --------------------------------
-    // Collection Rules
-    // --------------------------------
-
-    // Global deny-all for reads/writes unless explicitly allowed by a sub-rule.
-    // This is safer than a global allow.
+    // Fallback to deny all access
     match /{path=**} {
       allow read, write: if false;
     }
-
-    match /users/{userId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn(); // For mentions, searches, etc.
-      
-      // Allow user creation if the doc ID matches the user's UID.
-      allow create: if isUser(userId);
-      
-      // A user can update their own doc, but cannot change their role or status.
-      // Admins can update anything.
-      allow update: if (isUser(userId) 
-                      && request.resource.data.role == resource.data.role
-                      && request.resource.data.status == resource.data.status)
-                      || isAdmin();
-                      
-      // Subcollections are owned by the user.
-      match /notifications/{notificationId} {
-        allow read, write: if isUser(userId);
-      }
-      match /watchlist/{listingId} {
-        allow read, write: if isUser(userId);
-      }
-      match /favoriteStores/{storeId} {
-        allow read, write: if isUser(userId);
-      }
-    }
-
-    match /storefronts/{storeId} {
-      allow get, list: if isSignedIn();
-      allow create: if isUser(request.resource.data.ownerUid);
-      allow update: if isStoreOwner(storeId) || isAdmin();
-      
-      match /reviews/{reviewId} {
-          allow get, list: if isSignedIn();
-          // The buyer of the corresponding order can create one review.
-          allow create: if isOrderBuyer(request.resource.data.orderId)
-                        && !existsAfter(/databases/$(database)/documents/storefronts/$(storeId)/reviews/$(request.resource.data.orderId));
-          // Reviews are immutable by users.
-          allow update, delete: if isAdmin();
-      }
-    }
-    
-    match /listings/{listingId} {
-      allow get, list: if isSignedIn();
-      allow create: if isUser(request.resource.data.ownerUid) && isValidListingWrite();
-      allow update: if isUser(resource.data.ownerUid) && isValidListingWrite();
-      allow delete: if isUser(resource.data.ownerUid) || isAdmin();
-    }
-
-    match /orders/{orderId} {
-      allow get: if isOrderParticipant(resource.data) || isAdmin();
-      allow create: if isUser(request.resource.data.buyerUid) && isActiveUser(request.auth.uid);
-      allow update: if (isOrderParticipant(resource.data) && isValidOrderUpdate(resource.data, request.resource.data)) || isAdmin();
-    }
-    
-    match /communityMessages/{messageId} {
-        allow read: if isSignedIn();
-        // Only ACTIVE users can write new messages.
-        allow create, update, delete: if isActiveUser(request.auth.uid);
-    }
-
-    match /iso24Posts/{isoId} {
-        allow get, list: if isActiveUser(request.auth.uid);
-        // Only ACTIVE users can create posts.
-        allow create: if isUser(request.resource.data.creatorUid) && isActiveUser(request.auth.uid);
-        allow update, delete: if isUser(resource.data.creatorUid) || isAdmin();
-    }
-    
-    match /spotlightSlots/{slotId} {
-        allow get, list: if isSignedIn();
-        // Only Admins can manage spotlight slots.
-        allow create, update, delete: if isAdmin();
-    }
-
-    match /conversations/{conversationId} {
-      allow get, list, create, update: if isConversationParticipant(resource.data);
-      
-      match /messages/{messageId} {
-        allow get, list: if isConversationParticipant(get(/databases/$(database)/documents/conversations/$(conversationId)).data);
-        allow create: if isUser(request.resource.data.senderUid);
-        allow update, delete: if false; // Messages are immutable.
-      }
-    }
-    
-     match /reports/{reportId} {
-        allow create: if isSignedIn();
-        // Users can read their own submitted reports.
-        allow get: if isUser(resource.data.reporterUid) || isAdmin();
-        // Only admins can list, update, or delete reports.
-        allow list, update, delete: if isAdmin();
-    }
-
   }
 }
