@@ -25,9 +25,9 @@ export default function Dashboard() {
   }, [firestore]);
 
   const listingsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (isProfileLoading || !firestore) return null;
     return query(collection(firestore, 'listings'), orderBy('createdAt', 'desc'), limit(4));
-  }, [firestore]);
+  }, [firestore, isProfileLoading]);
 
   const { data: stores, isLoading: storesLoading } = useCollection<Store>(storesQuery);
   const { data: listings, isLoading: listingsLoading } = useCollection<Listing>(listingsQuery);
