@@ -1,28 +1,37 @@
+
 'use client';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirebase } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 function VerifyEmailScreen() {
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
     const { auth } = useFirebase();
+    const { toast } = useToast();
 
     const handleResend = async () => {
         if (auth.currentUser) {
             await auth.currentUser.sendEmailVerification();
-            alert('A new verification email has been sent.');
+            toast({ title: 'Verification Email Sent', description: 'A new verification email has been sent to your inbox.' });
         }
     };
 
     const handleReload = async () => {
         if (auth.currentUser) {
             await auth.currentUser.reload();
-            // The useAuth effect will handle the status update and redirect
-            window.location.reload(); 
+            // The onAuthStateChanged listener will automatically pick up the change,
+            // and the main layout's useEffect will handle redirection.
+            // We can force a router refresh to re-evaluate the layout.
+             router.refresh();
         }
     };
+    
+    const router = useRouter();
+
 
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background text-foreground gap-4 p-4 text-center">
@@ -45,6 +54,7 @@ export default function AppRoutesLayout({
   children: React.ReactNode;
 }) {
   const { user, profile, loading } = useAuth();
+  const firestore = useFirebase().firestore;
   const router = useRouter();
   const pathname = usePathname();
 
@@ -67,6 +77,12 @@ export default function AppRoutesLayout({
         return;
       }
       
+      // Sync emailVerified state to Firestore profile if it's out of sync
+      if (!profile.emailVerified && firestore) {
+          const userRef = doc(firestore, 'users', user.uid);
+          updateDoc(userRef, { emailVerified: true });
+      }
+
       // 2. Check for global agreements (only if email is verified)
       const needsGlobalOnboarding = !profile.oneAccountAcknowledged || !profile.goodsAndServicesAgreed;
       if (needsGlobalOnboarding && pathname !== '/onboarding') {
@@ -81,7 +97,7 @@ export default function AppRoutesLayout({
       }
     }
 
-  }, [user, profile, loading, pathname, router]);
+  }, [user, profile, loading, pathname, router, firestore]);
 
   // While loading, show a full-screen loader.
   if (loading) {

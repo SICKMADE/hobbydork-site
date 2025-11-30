@@ -34,25 +34,23 @@ service cloud.firestore {
       // Any signed-in user can read basic user docs
       allow read: if isSignedIn();
 
-      // CREATE: user can create their own doc and set safe default role/status
+      // CREATE: user can create their own doc and set SAFE default role/status
+      // New users should be created as normal ACTIVE users with role "USER".
       allow create: if isSignedIn()
         && request.auth.uid == uid
         && request.resource.data.role == "USER"
-        && request.resource.data.status in ["LIMITED", "ACTIVE"];
+        && request.resource.data.status == "ACTIVE";
 
       // UPDATE: normal user can edit their own profile BUT
-      //         role and status must NOT change
-      allow update: if isSignedIn()
-        && (
-          // owner updating their own doc
-          (
-            request.auth.uid == uid &&
-            resource.data.role == request.resource.data.role &&
-            resource.data.status == request.resource.data.status
-          )
-          // OR admin override
-          || userIsAdmin()
-        );
+      //         cannot change role or status.
+      allow update: if isSignedIn() && (
+        (
+          request.auth.uid == uid &&
+          resource.data.role == request.resource.data.role &&
+          resource.data.status == request.resource.data.status
+        )
+        || userIsAdmin()
+      );
 
       // DELETE: only admin can delete user docs
       allow delete: if userIsAdmin();

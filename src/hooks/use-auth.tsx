@@ -49,25 +49,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    if (user && !user.emailVerified && profile?.status === 'LIMITED') {
-        // This is a good place to periodically check or have a button to resend verification
-    } else if (user && user.emailVerified && profile?.status === 'LIMITED' && userProfileRef) {
-        updateDoc(userProfileRef, { status: 'ACTIVE', emailVerified: true }).then(() => {
-            toast({
-                title: 'Account Activated!',
-                description: 'Your email has been verified and your account is now fully active.',
-            });
-        }).catch(err => {
-            console.error("Failed to activate account", err)
-            const contextualError = new FirestorePermissionError({
-                path: userProfileRef.path,
-                operation: 'update',
-                requestResourceData: { status: 'ACTIVE', emailVerified: true },
-            });
-            errorEmitter.emit('permission-error', contextualError);
-        });
+    // This effect is now primarily for logging or future automatic actions
+    // after a user's profile state changes.
+    // The main email verification gating is handled in (app)/layout.tsx.
+    if (user && user.emailVerified && profile?.status === 'ACTIVE' && !profile.emailVerified) {
+        // This is a good place to ensure our DB is in sync if it somehow got out of sync.
+        updateDoc(userProfileRef, { emailVerified: true });
     }
-  }, [user, profile, userProfileRef, toast]);
+  }, [user, profile, userProfileRef]);
 
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
@@ -126,10 +115,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: newUser.email!,
         displayName: null, 
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-        status: 'LIMITED',
+        status: 'ACTIVE', // Set to ACTIVE on creation per new rules
         role: 'USER',
         isSeller: false,
-        storeId: '',
+        storeId: "",
         emailVerified: false,
         oneAccountAcknowledged: false,
         goodsAndServicesAgreed: false,
@@ -146,14 +135,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const newUserRef = doc(firestore, "users", newUser.uid);
       
-      setDoc(newUserRef, userProfile).catch(error => {
+      await setDoc(newUserRef, userProfile).catch(error => {
           const contextualError = new FirestorePermissionError({
             path: newUserRef.path,
             operation: 'create',
             requestResourceData: userProfile,
           });
           errorEmitter.emit('permission-error', contextualError);
-          // throw error; // Don't rethrow here, let the toast handle user feedback
+          throw error;
       });
       
       router.push('/onboarding');
