@@ -18,6 +18,8 @@ import { useFirestore } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const agreementsSchema = z.object({
     displayName: z.string().min(3, "Please enter a display name with at least 3 characters."),
@@ -127,7 +129,7 @@ export default function OnboardingPage() {
         defaultValues: {
             displayName: profile?.displayName || "",
             agreeGoodsAndServices: profile?.goodsAndServicesAgreed || false,
-            agreeTerms: false, // Terms are not stored, always needs re-agreeing on this screen
+            agreeTerms: false,
             agreeAge: false,
             agreeOneAccount: profile?.oneAccountAcknowledged || false,
         }
@@ -140,14 +142,16 @@ export default function OnboardingPage() {
         }
 
         setIsSubmitting(true);
+        const userProfileRef = doc(firestore, "users", user.uid);
+        const updateData = {
+            displayName: values.displayName,
+            oneAccountAcknowledged: values.agreeOneAccount,
+            goodsAndServicesAgreed: values.agreeGoodsAndServices,
+            updatedAt: serverTimestamp(),
+        };
+
         try {
-            const userProfileRef = doc(firestore, "users", user.uid);
-            await updateDoc(userProfileRef, {
-                displayName: values.displayName,
-                oneAccountAcknowledged: values.agreeOneAccount,
-                goodsAndServicesAgreed: values.agreeGoodsAndServices,
-                updatedAt: serverTimestamp(),
-            });
+            await updateDoc(userProfileRef, updateData);
 
             toast({
                 title: 'Welcome to VaultVerse!',
@@ -158,12 +162,12 @@ export default function OnboardingPage() {
             router.refresh();
 
         } catch (error: any) {
-             console.error("Onboarding failed:", error);
-            toast({
-                title: 'Onboarding Failed',
-                description: error.message || 'An unexpected error occurred.',
-                variant: 'destructive',
+             const contextualError = new FirestorePermissionError({
+                path: userProfileRef.path,
+                operation: 'update', 
+                requestResourceData: updateData,
             });
+            errorEmitter.emit('permission-error', contextualError);
         } finally {
             setIsSubmitting(false);
         }
