@@ -145,20 +145,28 @@ service cloud.firestore {
     // ORDERS
     match /orders/{orderId} {
 
-      // Buyer, seller, or admin can read (both get and list/query)
-      allow read: if isSignedIn() &&
-        (
-          request.auth.uid == resource.data.buyerUid ||
-          request.auth.uid == resource.data.sellerUid ||
-          userIsAdmin()
-        );
+      function userCanReadOrder() {
+        return isSignedIn() &&
+          (
+            request.auth.uid == resource.data.buyerUid ||
+            request.auth.uid == resource.data.sellerUid ||
+            userIsAdmin()
+          );
+      }
 
-      // Any ACTIVE user can create an order where they are the buyer
+      // Single order fetch (getDoc)
+      allow get: if userCanReadOrder();
+
+      // Queries / lists (getDocs, onSnapshot on a query)
+      // You can tighten the limit if you want.
+      allow list: if userCanReadOrder() && request.query.limit <= 50;
+
+      // Creating an order: only ACTIVE user, and they must be the buyer
       allow create: if userIsActive() &&
         request.resource.data.buyerUid == request.auth.uid;
 
-      // Buyer, seller, or admin can update the order
-      // (you can tighten which fields they can change later if you want)
+      // Updating an order: buyer, seller or admin
+      // (You can later add stricter field checks here if you want.)
       allow update: if isSignedIn() &&
         (
           request.auth.uid == resource.data.buyerUid ||
@@ -166,7 +174,7 @@ service cloud.firestore {
           userIsAdmin()
         );
 
-      // Only admin can delete orders (or whatever you want here)
+      // Deleting orders: only admin
       allow delete: if userIsAdmin();
     }
 
