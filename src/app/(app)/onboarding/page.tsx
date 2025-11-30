@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm, FormProvider, useFormContext } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,10 @@ import Logo from '@/components/Logo';
 import { useFirestore } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 const agreementsSchema = z.object({
-    displayName: z.string().min(3, "Please enter a display name with at least 3 characters."),
     agreeGoodsAndServices: z.literal(true, { errorMap: () => ({ message: "You must agree to use Goods & Services." })}),
     agreeTerms: z.literal(true, { errorMap: () => ({ message: "You must agree to the Terms." })}),
     agreeAge: z.literal(true, { errorMap: () => ({ message: "You must confirm you are 18 or older." })}),
@@ -35,19 +33,6 @@ const StepAgreements = () => {
     const { control } = useFormContext<OnboardingFormValues>();
     return (
         <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="space-y-6">
-             <FormField
-                control={control}
-                name="displayName"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Display Name</FormLabel>
-                        <FormControl>
-                            <Input placeholder="This will be your permanent username" {...field} />
-                        </FormControl>
-                         <FormMessage />
-                    </FormItem>
-                )}
-            />
             <div className="space-y-4">
                  <FormField
                     control={control}
@@ -127,7 +112,6 @@ export default function OnboardingPage() {
         resolver: zodResolver(agreementsSchema),
         mode: "onChange",
         defaultValues: {
-            displayName: profile?.displayName || "",
             agreeGoodsAndServices: profile?.goodsAndServicesAgreed || false,
             agreeTerms: false,
             agreeAge: false,
@@ -144,7 +128,6 @@ export default function OnboardingPage() {
         setIsSubmitting(true);
         const userProfileRef = doc(firestore, "users", user.uid);
         const updateData = {
-            displayName: values.displayName,
             oneAccountAcknowledged: values.agreeOneAccount,
             goodsAndServicesAgreed: values.agreeGoodsAndServices,
             updatedAt: serverTimestamp(),
@@ -181,7 +164,7 @@ export default function OnboardingPage() {
                 </div>
                  <Card>
                     <CardHeader>
-                        <CardTitle className="text-3xl">Welcome to VaultVerse!</CardTitle>
+                        <CardTitle className="text-3xl">Welcome, {profile?.displayName || 'Collector'}!</CardTitle>
                         <CardDescription>
                             Just a few things to agree to before you get started.
                         </CardDescription>

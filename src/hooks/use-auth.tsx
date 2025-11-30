@@ -21,6 +21,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 interface SignupData {
   email: string;
   password: string;
+  displayName: string;
 }
 
 interface AuthContextType {
@@ -54,7 +55,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // The main email verification gating is handled in (app)/layout.tsx.
     if (user && user.emailVerified && profile?.status === 'ACTIVE' && !profile.emailVerified) {
         // This is a good place to ensure our DB is in sync if it somehow got out of sync.
-        updateDoc(userProfileRef, { emailVerified: true });
+        if (userProfileRef) {
+          updateDoc(userProfileRef, { emailVerified: true });
+        }
     }
   }, [user, profile, userProfileRef]);
 
@@ -94,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth, router, toast]);
 
   const signup = useCallback(async (data: SignupData): Promise<boolean> => {
-    const { email, password } = data;
+    const { email, password, displayName } = data;
     if (!firestore) {
         toast({ title: 'Signup Failed', description: 'Database service is not available.', variant: 'destructive' });
         return false;
@@ -113,9 +116,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
         uid: newUser.uid,
         email: newUser.email!,
-        displayName: null, 
+        displayName: displayName, 
         avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
-        status: 'ACTIVE', // Set to ACTIVE on creation per new rules
+        status: 'ACTIVE',
         role: 'USER',
         isSeller: false,
         storeId: "",
