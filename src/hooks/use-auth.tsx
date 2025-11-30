@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useCallback, useEffect } from 'react';
@@ -6,7 +7,8 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
-  User as FirebaseUser
+  User as FirebaseUser,
+  sendEmailVerification
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
@@ -47,13 +49,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    if (user && profile?.status === 'LIMITED' && user.emailVerified && userProfileRef) {
-        updateDoc(userProfileRef, { status: 'ACTIVE' }).then(() => {
+    if (user && !user.emailVerified && profile?.status === 'LIMITED') {
+        // This is a good place to periodically check or have a button to resend verification
+    } else if (user && user.emailVerified && profile?.status === 'LIMITED' && userProfileRef) {
+        updateDoc(userProfileRef, { status: 'ACTIVE', emailVerified: true }).then(() => {
             toast({
                 title: 'Account Activated!',
                 description: 'Your email has been verified and your account is now fully active.',
             });
-        }).catch(err => console.error("Failed to activate account", err));
+        }).catch(err => {
+            console.error("Failed to activate account", err)
+            const contextualError = new FirestorePermissionError({
+                path: userProfileRef.path,
+                operation: 'update',
+                requestResourceData: { status: 'ACTIVE', emailVerified: true },
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        });
     }
   }, [user, profile, userProfileRef, toast]);
 
@@ -102,6 +114,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
+
+      await sendEmailVerification(newUser);
+      toast({
+          title: 'Verification Email Sent',
+          description: 'Please check your inbox to verify your email address.',
+      });
       
       const userProfile: Omit<UserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
         uid: newUser.uid,
@@ -126,14 +144,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const newUserRef = doc(firestore, "users", newUser.uid);
       
-      await setDoc(newUserRef, userProfile).catch(error => {
+      setDoc(newUserRef, userProfile).catch(error => {
           const contextualError = new FirestorePermissionError({
             path: newUserRef.path,
             operation: 'create',
             requestResourceData: userProfile,
           });
           errorEmitter.emit('permission-error', contextualError);
-          throw error;
+          // throw error; // Don't rethrow here, let the toast handle user feedback
       });
       
       router.push('/onboarding');

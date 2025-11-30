@@ -30,7 +30,7 @@ const isoSchema = z.object({
 const categories = ["Trading Cards", "Action Figures", "Comics", "Memorabilia", "Video Games", "Stamps"];
 
 export default function ISO24Page() {
-    const { profile, user } = useAuth();
+    const { profile, user, loading: authLoading } = useAuth();
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,16 +46,17 @@ export default function ISO24Page() {
     });
 
     const isoQuery = useMemoFirebase(() => {
-        if (!firestore || profile?.status !== 'ACTIVE') return null;
+        // Only run the query if firestore is available AND the user is confirmed to be active.
+        if (!firestore || !profile || profile.status !== 'ACTIVE') return null;
         return query(
             collection(firestore, 'iso24Posts'),
             where('status', '==', 'ACTIVE'),
             where('expiresAt', '>', Timestamp.now()),
             orderBy('expiresAt', 'desc')
         );
-    }, [firestore, profile?.status]);
+    }, [firestore, profile]);
 
-    const { data: isoPosts, isLoading } = useCollection<ISO24>(isoQuery);
+    const { data: isoPosts, isLoading: postsLoading } = useCollection<ISO24>(isoQuery);
 
     const userPostsQuery = useMemoFirebase(() => {
         if (!firestore || !user) return null;
@@ -123,6 +124,10 @@ export default function ISO24Page() {
         }
     }
     
+    if (authLoading) {
+        return <AppLayout><div className="flex items-center justify-center h-full">Loading...</div></AppLayout>;
+    }
+
     if (profile?.status !== 'ACTIVE') {
         return (
             <AppLayout>
@@ -131,7 +136,7 @@ export default function ISO24Page() {
                       <Terminal className="h-4 w-4" />
                       <AlertTitle>Account Not Active</AlertTitle>
                       <AlertDescription>
-                        Your account must be active to perform this action. This might be because your email is not verified or your account is suspended.
+                        Your account must be active to view or create ISO posts. This might be because your email is not verified or your account is suspended.
                       </AlertDescription>
                     </Alert>
                 </div>
@@ -222,13 +227,13 @@ export default function ISO24Page() {
                 </div>
                 <div className="lg:col-span-2">
                      <h2 className="text-2xl font-bold mb-4">Active ISO Posts</h2>
-                     {isLoading && <p>Loading posts...</p>}
-                     {!isLoading && isoPosts && isoPosts.length > 0 ? (
+                     {postsLoading && <p>Loading posts...</p>}
+                     {!postsLoading && isoPosts && isoPosts.length > 0 ? (
                         <div className="space-y-4">
                             {isoPosts.map(post => <ISO24Card key={post.id} post={post} />)}
                         </div>
                      ) : (
-                        !isLoading && <p className="text-muted-foreground">No active ISO posts right now. Be the first to create one!</p>
+                        !postsLoading && <p className="text-muted-foreground">No active ISO posts right now. Be the first to create one!</p>
                      )}
                 </div>
             </div>
