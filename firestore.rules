@@ -150,11 +150,11 @@ service cloud.firestore {
           request.auth.uid == resource.data.sellerUid ||
           userIsAdmin()
         );
-    
+
       // CREATE: ACTIVE user, and they must be the buyer
       allow create: if userIsActive()
         && request.resource.data.buyerUid == request.auth.uid;
-    
+
       // UPDATE: buyer, seller, or admin
       allow update: if isSignedIn() &&
         (
@@ -162,13 +162,12 @@ service cloud.firestore {
           request.auth.uid == resource.data.sellerUid ||
           userIsAdmin()
         );
-    
+
       // DELETE: only admin
       allow delete: if userIsAdmin();
     }
 
-
-        // ISO24 posts
+    // ISO24 posts
     match /iso24Posts/{isoId} {
       // All logged-in users can read ISO24 posts
       allow read: if isSignedIn();
