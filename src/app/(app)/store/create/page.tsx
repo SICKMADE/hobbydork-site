@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -19,11 +19,9 @@ import { doc, runTransaction, serverTimestamp, collection } from 'firebase/fires
 import { useToast } from '@/hooks/use-toast';
 import { placeholderImages } from '@/lib/placeholder-images';
 import AppLayout from '@/components/layout/AppLayout';
+import { Label } from '@/components/ui/label';
 
 const storeSchema = z.object({
-    storeName: z.string().min(3, "Store name must be at least 3 characters long."),
-    slug: z.string().min(3, "URL slug must be at least 3 characters long.")
-      .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens."),
     about: z.string().min(10, "About section must be at least 10 characters long."),
 });
 
@@ -37,54 +35,32 @@ const sellerSchema = storeSchema.merge(paymentSchema);
 type SellerFormValues = z.infer<typeof sellerSchema>;
 
 const Step1Store = () => {
-    const { control, watch, setValue } = useForm<SellerFormValues>();
+    const { control } = useForm<SellerFormValues>();
+    const { profile } = useAuth();
+    
+    if (!profile) return null;
 
-    const storeNameValue = watch("storeName");
-
-    React.useEffect(() => {
-        if (storeNameValue) {
-            const slug = storeNameValue
-                .toLowerCase()
-                .replace(/\s+/g, '-')
-                .replace(/[^a-z0-9-]/g, '');
-            setValue("slug", slug, { shouldValidate: true });
-        }
-    }, [storeNameValue, setValue]);
+    const slug = profile.displayName?.toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '') || '';
 
     return (
         <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="space-y-8">
-             <FormField
-                control={control}
-                name="storeName"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Store Name</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g., Galactic Treasures" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-            <FormField
-                control={control}
-                name="slug"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Store URL</FormLabel>
-                        <FormControl>
-                            <div className="flex items-center">
-                                <span className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-l-md border border-r-0">
-                                    vaultverse.app/store/
-                                </span>
-                                <Input placeholder="galactic-treasures" {...field} className="rounded-l-none" />
-                            </div>
-                        </FormControl>
-                        <FormDescription>This will be your store's unique URL.</FormDescription>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
+            <div className="space-y-2">
+                <Label>Store Name</Label>
+                <Input value={profile.displayName || ''} disabled readOnly />
+                <FormDescription>Your store name is linked to your permanent display name.</FormDescription>
+            </div>
+            <div className="space-y-2">
+                <Label>Store URL</Label>
+                 <div className="flex items-center">
+                    <span className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-l-md border border-r-0 h-10 flex items-center">
+                        vaultverse.app/store/
+                    </span>
+                    <Input value={slug} disabled readOnly className="rounded-l-none" />
+                </div>
+                 <FormDescription>Your store's unique URL is generated from your display name.</FormDescription>
+            </div>
              <FormField
                 control={control}
                 name="about"
@@ -176,8 +152,6 @@ export default function CreateStorePage() {
         ),
         mode: "onChange",
         defaultValues: {
-            storeName: profile?.displayName || "",
-            slug: "",
             about: "",
             paymentMethod: "PAYPAL",
             paymentIdentifier: "",
@@ -185,7 +159,7 @@ export default function CreateStorePage() {
     });
 
     const handleNext = async () => {
-        const fieldsToValidate: (keyof SellerFormValues)[] = ['storeName', 'slug', 'about'];
+        const fieldsToValidate: (keyof SellerFormValues)[] = ['about'];
         const isValid = await methods.trigger(fieldsToValidate);
         if (isValid) {
             setStep(s => s + 1);
@@ -197,10 +171,13 @@ export default function CreateStorePage() {
     };
 
     async function onSubmit(values: SellerFormValues) {
-        if (!user || !firestore) {
-            toast({ variant: 'destructive', title: 'Error', description: 'You are not properly signed in.' });
+        if (!user || !firestore || !profile?.displayName) {
+            toast({ variant: 'destructive', title: 'Error', description: 'You are not properly signed in or missing a display name.' });
             return;
         }
+
+        const storeName = profile.displayName;
+        const slug = storeName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
         setIsSubmitting(true);
         try {
@@ -208,25 +185,22 @@ export default function CreateStorePage() {
                 const newStoreRef = doc(collection(firestore, "storefronts"));
                 const userProfileRef = doc(firestore, "users", user.uid);
                 
-                // 1. Update the user document to become a seller
                 transaction.update(userProfileRef, {
                     isSeller: true,
                     storeId: newStoreRef.id,
                     paymentMethod: values.paymentMethod,
                     paymentIdentifier: values.paymentIdentifier,
-                    displayName: values.storeName, // Update their main display name as well
                     updatedAt: serverTimestamp(),
                 });
 
-                // 2. Create the store document
                 transaction.set(newStoreRef, {
                     id: newStoreRef.id,
                     storeId: newStoreRef.id,
                     ownerUid: user.uid,
-                    storeName: values.storeName,
-                    slug: values.slug,
+                    storeName: storeName,
+                    slug: slug,
                     about: values.about,
-                    avatarUrl: placeholderImages['store-logo-1']?.imageUrl || `https://picsum.photos/seed/${values.slug}/128/128`,
+                    avatarUrl: placeholderImages['store-logo-1']?.imageUrl || `https://picsum.photos/seed/${slug}/128/128`,
                     ratingAverage: 0,
                     ratingCount: 0,
                     itemsSold: 0,
@@ -305,5 +279,3 @@ export default function CreateStorePage() {
         </AppLayout>
     );
 }
-
-    

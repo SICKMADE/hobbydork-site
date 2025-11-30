@@ -1,3 +1,4 @@
+
 'use client';
 import AppLayout from "@/components/layout/AppLayout";
 import { useAuth } from "@/hooks/use-auth";
@@ -16,7 +17,6 @@ import { useState } from "react";
 import { getInitials } from "@/lib/utils";
 
 const profileSchema = z.object({
-    displayName: z.string().min(3, "Display name must be at least 3 characters."),
     avatar: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
 });
 
@@ -29,7 +29,6 @@ export default function ProfilePage() {
     const form = useForm<z.infer<typeof profileSchema>>({
         resolver: zodResolver(profileSchema),
         values: {
-            displayName: profile?.displayName || '',
             avatar: profile?.avatar || '',
         },
     });
@@ -40,7 +39,6 @@ export default function ProfilePage() {
         try {
             const userRef = doc(firestore, 'users', user.uid);
             await updateDoc(userRef, {
-                displayName: values.displayName,
                 avatar: values.avatar,
             });
             toast({
@@ -68,7 +66,7 @@ export default function ProfilePage() {
                 <Card>
                     <CardHeader className="text-center">
                         <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-primary/20">
-                            <AvatarImage src={profile.avatar} alt={profile.displayName || ''} />
+                            <AvatarImage src={form.watch('avatar')} alt={profile.displayName || ''} />
                             <AvatarFallback className="text-3xl">{getInitials(profile.displayName)}</AvatarFallback>
                         </Avatar>
                         <CardTitle className="text-3xl">{profile.displayName}</CardTitle>
@@ -77,19 +75,11 @@ export default function ProfilePage() {
                     <CardContent>
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                                <FormField
-                                    control={form.control}
-                                    name="displayName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Display Name</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                <div className="space-y-2">
+                                    <Label>Display Name</Label>
+                                    <Input value={profile.displayName || ''} disabled readOnly />
+                                    <p className="text-sm text-muted-foreground">Usernames cannot be changed after signup.</p>
+                                </div>
                                 <FormField
                                     control={form.control}
                                     name="avatar"

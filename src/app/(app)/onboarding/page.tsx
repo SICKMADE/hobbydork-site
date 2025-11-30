@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm, FormProvider, useFormContext } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 
 const agreementsSchema = z.object({
-    displayName: z.string().min(3, "Please enter a display name.").optional(),
+    displayName: z.string().min(3, "Please enter a display name."),
     agreeGoodsAndServices: z.literal(true, { errorMap: () => ({ message: "You must agree to use Goods & Services." })}),
     agreeTerms: z.literal(true, { errorMap: () => ({ message: "You must agree to the Terms." })}),
     agreeAge: z.literal(true, { errorMap: () => ({ message: "You must confirm you are 18 or older." })}),
@@ -30,7 +30,7 @@ const agreementsSchema = z.object({
 type OnboardingFormValues = z.infer<typeof agreementsSchema>;
 
 const StepAgreements = () => {
-    const { control } = useFormContext<OnboardingFormValues>(); // Use context from FormProvider
+    const { control } = useForm<OnboardingFormValues>();
     return (
         <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="space-y-6">
              <FormField
@@ -42,7 +42,7 @@ const StepAgreements = () => {
                         <FormControl>
                             <Input placeholder="How you'll appear to others" {...field} />
                         </FormControl>
-                        <FormMessage />
+                         <FormMessage />
                     </FormItem>
                 )}
             />
@@ -126,10 +126,10 @@ export default function OnboardingPage() {
         mode: "onChange",
         defaultValues: {
             displayName: profile?.displayName || "",
-            agreeGoodsAndServices: false,
-            agreeTerms: false,
+            agreeGoodsAndServices: profile?.goodsAndServicesAgreed || false,
+            agreeTerms: false, // Terms are not stored, always needs re-agreeing on this screen
             agreeAge: false,
-            agreeOneAccount: false,
+            agreeOneAccount: profile?.oneAccountAcknowledged || false,
         }
     });
 
@@ -184,14 +184,16 @@ export default function OnboardingPage() {
                     </CardHeader>
                     <CardContent>
                        <FormProvider {...methods}>
-                            <form onSubmit={methods.handleSubmit(onSubmit)}>
-                                <StepAgreements />
-                                <div className="flex justify-end mt-8">
-                                    <Button type="submit" disabled={isSubmitting || !methods.formState.isValid}>
-                                        {isSubmitting ? "Saving..." : "Finish Setup"}
-                                    </Button>
-                                </div>
-                            </form>
+                            <Form {...methods}>
+                                <form onSubmit={methods.handleSubmit(onSubmit)}>
+                                    <StepAgreements />
+                                    <div className="flex justify-end mt-8">
+                                        <Button type="submit" disabled={isSubmitting || !methods.formState.isValid}>
+                                            {isSubmitting ? "Saving..." : "Finish Setup"}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </Form>
                        </FormProvider>
                     </CardContent>
                  </Card>
