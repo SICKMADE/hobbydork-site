@@ -8,20 +8,24 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userStatus() {
+      return userDoc().data.status;
+    }
+
+    function userIsActive() {
+      return isSignedIn() && userStatus() == "ACTIVE";
+    }
+
+    function userIsAdmin() {
+      return isSignedIn() && userDoc().data.role == "ADMIN";
     }
 
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function userIsActive() {
-      return isSignedIn() && getUserData().status == 'ACTIVE';
-    }
-
-    function userIsAdmin() {
-      return isSignedIn() && getUserData().role == 'ADMIN';
     }
 
     // --- User Profiles ---
