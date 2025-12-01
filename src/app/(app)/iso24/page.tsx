@@ -1,6 +1,6 @@
 
 'use client';
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -46,17 +46,24 @@ export default function ISO24Page() {
     });
 
     const isoQuery = useMemoFirebase(() => {
-        // Only run the query if firestore is available AND the user is confirmed to be active.
         if (!firestore || !profile || profile.status !== 'ACTIVE') return null;
         return query(
             collection(firestore, 'iso24Posts'),
             where('status', '==', 'ACTIVE'),
-            where('expiresAt', '>', Timestamp.now()),
             orderBy('expiresAt', 'desc')
         );
     }, [firestore, profile]);
 
     const { data: isoPosts, isLoading: postsLoading } = useCollection<ISO24>(isoQuery);
+
+    const activePosts = React.useMemo(() => {
+      if (!isoPosts) return [];
+      const now = new Date();
+      return isoPosts.filter((post) => {
+        if (!post.expiresAt) return false;
+        return post.expiresAt.toDate() > now;
+      });
+    }, [isoPosts]);
 
     const userPostsQuery = useMemoFirebase(() => {
         if (!firestore || !user) return null;
@@ -228,9 +235,9 @@ export default function ISO24Page() {
                 <div className="lg:col-span-2">
                      <h2 className="text-2xl font-bold mb-4">Active ISO Posts</h2>
                      {postsLoading && <p>Loading posts...</p>}
-                     {!postsLoading && isoPosts && isoPosts.length > 0 ? (
+                     {!postsLoading && activePosts && activePosts.length > 0 ? (
                         <div className="space-y-4">
-                            {isoPosts.map(post => <ISO24Card key={post.id} post={post} />)}
+                            {activePosts.map(post => <ISO24Card key={post.id} post={post} />)}
                         </div>
                      ) : (
                         !postsLoading && <p className="text-muted-foreground">No active ISO posts right now. Be the first to create one!</p>
