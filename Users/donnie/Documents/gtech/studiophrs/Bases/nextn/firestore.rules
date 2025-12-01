@@ -1,224 +1,529 @@
-rules_version = '2';
+'use client';
 
-service cloud.firestore {
-  match /databases/{database}/documents {
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import AppLayout from '@/components/layout/AppLayout';
+import { useAuth } from '@/hooks/use-auth';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import {
+  collection,
+  query,
+  orderBy,
+  limit,
+  addDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { formatDistanceToNow } from 'date-fns';
 
-    // ---------- Helpers ----------
+type ISO24Post = {
+  id: string;
+  userUid: string;
+  title: string;
+  description?: string;
+  category?: string;
+  status?: string;      // 'ACTIVE' | 'EXPIRED' | etc
+  createdAt?: any;      // Firestore Timestamp
+  expiresAt?: any;      // Firestore Timestamp
+};
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
+type ISO24Comment = {
+  id: string;
+  authorUid: string;
+  authorName?: string;
+  text: string;
+  createdAt?: any;      // Firestore Timestamp
+};
 
-    function userDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
+export default function ISO24Page() {
+  const { user, profile, loading: authLoading } = useAuth();
+  const firestore = useFirestore();
+  const router = useRouter();
 
-    function userStatus() {
-      return userDoc().data.status;
-    }
+  const canPost =
+    !!user &&
+    !!profile &&
+    profile.status === 'ACTIVE';
 
-    function userIsActive() {
-      return isSignedIn() && userStatus() == "ACTIVE";
-    }
+  // ---------- QUERY: ISO24 POSTS (simple, index-friendly) ----------
+  const isoQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'iso24Posts'),
+      orderBy('createdAt', 'desc'),
+      limit(200),
+    );
+  }, [firestore]);
 
-    function userIsAdmin() {
-      return isSignedIn() && userDoc().data.role == "ADMIN";
-    }
+  const {
+    data: isoPosts,
+    isLoading: postsLoading,
+  } = useCollection<ISO24Post>(isoQuery);
 
-    function userIsSeller() {
-      return isSignedIn()
-        && userDoc().data.isSeller == true
-        && userDoc().data.storeId != "";
-    }
+  // Filter ACTIVE & not expired on the client
+  const activePosts = useMemo(() => {
+    if (!isoPosts) return [];
+    const nowMs = Date.now();
 
-    // ---------- USERS ----------
+    return isoPosts.filter((post) => {
+      const status = post.status || 'ACTIVE';
+      const expiresMs =
+        post.expiresAt && post.expiresAt.toDate
+          ? post.expiresAt.toDate().getTime()
+          : Number.MAX_SAFE_INTEGER;
 
-    match /users/{uid} {
-      // Any signed-in user can read basic user docs
-      allow read: if isSignedIn();
+      return status === 'ACTIVE' && expiresMs > nowMs;
+    });
+  }, [isoPosts]);
 
-      // User can create their own doc
-      allow create: if isSignedIn()
-        && request.auth.uid == uid;
-
-      // User can update their own doc, but cannot change role/status.
-      // Admin can update anything.
-      allow update: if isSignedIn() && (
-        (
-          request.auth.uid == uid &&
-          resource.data.role == request.resource.data.role &&
-          resource.data.status == request.resource.data.status
-        )
-        ||
-        userIsAdmin()
-      );
-
-      // Only admin can delete user docs
-      allow delete: if userIsAdmin();
-
-      // Subcollections owned by the user
-      match /notifications/{notificationId} {
-        allow read, write: if isSignedIn() && request.auth.uid == uid;
+  // Category options derived from posts
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    activePosts.forEach((p) => {
+      if (p.category && p.category.trim()) {
+        set.add(p.category.trim());
       }
-      match /watchlist/{listingId} {
-        allow read, write: if isSignedIn() && request.auth.uid == uid;
-      }
-      match /favoriteStores/{storeId} {
-        allow read, write: if isSignedIn() && request.auth.uid == uid;
-      }
+    });
+    return Array.from(set).sort();
+  }, [activePosts]);
+
+  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+
+  const filteredPosts = useMemo(() => {
+    if (categoryFilter === 'ALL') return activePosts;
+    return activePosts.filter(
+      (p) =>
+        (p.category || '').toLowerCase() === categoryFilter.toLowerCase(),
+    );
+  }, [activePosts, categoryFilter]);
+
+  // ---------- SELECTED POST + COMMENTS ----------
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+
+  const selectedPost = useMemo(
+    () => filteredPosts.find((p) => p.id === selectedPostId) || null,
+    [filteredPosts, selectedPostId],
+  );
+
+  const commentsQuery = useMemoFirebase(() => {
+    if (!firestore || !selectedPost) return null;
+    return query(
+      collection(firestore, 'iso24Posts', selectedPost.id, 'comments'),
+      orderBy('createdAt', 'asc'),
+    );
+  }, [firestore, selectedPost?.id]);
+
+  const {
+    data: comments,
+    isLoading: commentsLoading,
+  } = useCollection<ISO24Comment>(commentsQuery);
+
+  const [newComment, setNewComment] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firestore || !user || !profile || !selectedPost) return;
+    if (!newComment.trim()) {
+      setCommentError('Comment cannot be empty.');
+      return;
     }
+    setCommentError(null);
+    setCommentSubmitting(true);
 
-    // ---------- STOREFRONTS ----------
-
-    match /storefronts/{storeId} {
-      // Any signed-in user can read stores
-      allow read: if isSignedIn();
-
-      // ACTIVE non-seller can create one store, or admin can create
-      allow create: if isSignedIn() && (
-        userIsAdmin()
-        ||
-        (
-          userIsActive() &&
-          userDoc().data.isSeller != true &&
-          userDoc().data.storeId == "" &&
-          request.resource.data.ownerUid == request.auth.uid
-        )
+    try {
+      await addDoc(
+        collection(firestore, 'iso24Posts', selectedPost.id, 'comments'),
+        {
+          authorUid: user.uid,
+          authorName: profile.displayName || '',
+          text: newComment.trim(),
+          createdAt: serverTimestamp(),
+        },
       );
+      setNewComment('');
+    } catch (err) {
+      console.error('Failed to add comment', err);
+      setCommentError('Failed to add comment. Try again.');
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
 
-      // Seller who owns the store or admin can update
-      allow update: if isSignedIn() && (
-        (userIsSeller() && resource.data.ownerUid == request.auth.uid)
-        || userIsAdmin()
-      );
+  const handleContactPoster = (targetUid: string) => {
+    if (!user) {
+      // If your app has a dedicated login route, change this
+      router.push('/');
+      return;
+    }
+    router.push(`/chat?to=${encodeURIComponent(targetUid)}&source=iso24`);
+  };
 
-      // Seller who owns the store or admin can delete
-      allow delete: if isSignedIn() && (
-        (userIsSeller() && resource.data.ownerUid == request.auth.uid)
-        || userIsAdmin()
-      );
+  // ---------- CREATE ISO POST ----------
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState('');
+  const [description, setDescription] = useState('');
+  const [postSubmitting, setPostSubmitting] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
 
-      // Store reviews subcollection
-      match /reviews/{reviewId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn();
-        allow update, delete: if userIsAdmin();
-      }
+  const handleCreatePost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firestore || !user || !profile) return;
+
+    if (!title.trim()) {
+      setPostError('Title is required.');
+      return;
     }
 
-    // ---------- LISTINGS ----------
+    setPostError(null);
+    setPostSubmitting(true);
 
-    match /listings/{listingId} {
-      // Any signed-in user can read listings
-      allow read: if isSignedIn();
+    try {
+      await addDoc(collection(firestore, 'iso24Posts'), {
+        userUid: user.uid,
+        title: title.trim(),
+        description: description.trim() || '',
+        category: category.trim() || '',
+        status: 'ACTIVE',
+        createdAt: serverTimestamp(),
+        // expiresAt set by Cloud Function or separate logic (24h)
+      });
 
-      // Only sellers (or admin) can manage their own listings
-      allow create, update, delete: if isSignedIn() && (
-        (userIsSeller() && request.resource.data.ownerUid == request.auth.uid)
-        || userIsAdmin()
-      );
+      setTitle('');
+      setCategory('');
+      setDescription('');
+    } catch (err) {
+      console.error('Failed to create ISO24 post', err);
+      setPostError('Failed to create ISO24 post. Try again.');
+    } finally {
+      setPostSubmitting(false);
     }
+  };
 
-    // ---------- ORDERS ----------
+  // ---------- RENDER ----------
+  return (
+    <AppLayout>
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* LEFT: List + category filter */}
+        <div className="lg:col-span-2 space-y-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight mb-1">ISO24</h1>
+            <p className="text-sm text-muted-foreground">
+              Posts of what users are currently looking to buy. Posts auto-expire
+              after 24 hours.
+            </p>
+          </div>
 
-    match /orders/{orderId} {
+          <div className="flex flex-wrap gap-2 mt-2">
+            <Button
+              size="sm"
+              variant={categoryFilter === 'ALL' ? 'default' : 'outline'}
+              onClick={() => setCategoryFilter('ALL')}
+            >
+              All
+            </Button>
+            {categoryOptions.map((cat) => (
+              <Button
+                key={cat}
+                size="sm"
+                variant={categoryFilter === cat ? 'default' : 'outline'}
+                onClick={() => setCategoryFilter(cat)}
+              >
+                {cat}
+              </Button>
+            ))}
+          </div>
 
-      function userCanReadOrder() {
-        return isSignedIn() && (
-          request.auth.uid == resource.data.buyerUid ||
-          request.auth.uid == resource.data.sellerUid ||
-          userIsAdmin()
-        );
-      }
+          {postsLoading && <p>Loading ISO posts...</p>}
 
-      // Buyer, seller, or admin can read (get + list/query)
-      allow read: if userCanReadOrder();
+          {!postsLoading && filteredPosts.length === 0 && (
+            <p className="text-muted-foreground mt-4">
+              No active ISO posts for this filter.
+            </p>
+          )}
 
-      // ACTIVE user can create an order where they are the buyer
-      allow create: if userIsActive()
-        && request.resource.data.buyerUid == request.auth.uid;
+          {!postsLoading &&
+            filteredPosts.length > 0 &&
+            filteredPosts.map((post) => (
+              <Card
+                key={post.id}
+                className={`cursor-pointer ${
+                  selectedPostId === post.id ? 'border-primary' : ''
+                }`}
+                onClick={() => setSelectedPostId(post.id)}
+              >
+                <CardHeader className="flex flex-row items-start justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-base">{post.title}</CardTitle>
+                    <div className="mt-1 flex items-center gap-2">
+                      {post.category && (
+                        <Badge variant="outline">{post.category}</Badge>
+                      )}
+                      {post.createdAt && post.createdAt.toDate && (
+                        <span className="text-xs text-muted-foreground">
+                          Posted{' '}
+                          {formatDistanceToNow(post.createdAt.toDate(), {
+                            addSuffix: true,
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedPostId(post.id);
+                      }}
+                    >
+                      View details
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleContactPoster(post.userUid);
+                      }}
+                    >
+                      Contact poster
+                    </Button>
+                  </div>
+                </CardHeader>
+                {post.description && (
+                  <CardContent>
+                    <p className="text-sm text-foreground/80 line-clamp-2">
+                      {post.description}
+                    </p>
+                  </CardContent>
+                )}
+              </Card>
+            ))}
+        </div>
 
-      // Buyer, seller, or admin can update
-      allow update: if isSignedIn() && (
-        request.auth.uid == resource.data.buyerUid ||
-        request.auth.uid == resource.data.sellerUid ||
-        userIsAdmin()
-      );
+        {/* RIGHT: Selected post details + comments + create form */}
+        <div className="space-y-6">
+          {/* Selected post details + comments */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Post details</CardTitle>
+              <CardDescription>
+                View full info, comment, or message the poster.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!selectedPost && (
+                <p className="text-sm text-muted-foreground">
+                  Select a post from the list to see its details.
+                </p>
+              )}
 
-      // Only admin can delete
-      allow delete: if userIsAdmin();
-    }
+              {selectedPost && (
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      {selectedPost.title}
+                    </h2>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      {selectedPost.category && (
+                        <Badge variant="outline">
+                          {selectedPost.category}
+                        </Badge>
+                      )}
+                      {selectedPost.createdAt &&
+                        selectedPost.createdAt.toDate && (
+                          <span className="text-xs text-muted-foreground">
+                            Posted{' '}
+                            {formatDistanceToNow(
+                              selectedPost.createdAt.toDate(),
+                              { addSuffix: true },
+                            )}
+                          </span>
+                        )}
+                      {selectedPost.expiresAt &&
+                        selectedPost.expiresAt.toDate && (
+                          <span className="text-xs text-muted-foreground">
+                            · Expires{' '}
+                            {selectedPost.expiresAt
+                              .toDate()
+                              .toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                          </span>
+                        )}
+                    </div>
+                  </div>
 
-      // ---------- ISO24 POSTS ----------
-    match /iso24Posts/{isoId} {
-      // TEMP: Open everything for debugging
-      allow read, write: if true;
-}
+                  {selectedPost.description && (
+                    <p className="text-sm text-foreground/80 whitespace-pre-line">
+                      {selectedPost.description}
+                    </p>
+                  )}
 
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        handleContactPoster(selectedPost.userUid)
+                      }
+                    >
+                      Message poster
+                    </Button>
+                  </div>
 
-    // ---------- COMMUNITY CHAT ----------
+                  <Separator className="my-2" />
 
-    match /communityMessages/{messageId} {
-      // Any signed-in user can read
-      allow read: if isSignedIn();
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2">Comments</h3>
+                    {commentsLoading && (
+                      <p className="text-xs text-muted-foreground">
+                        Loading comments...
+                      </p>
+                    )}
+                    {!commentsLoading &&
+                      (!comments || comments.length === 0) && (
+                        <p className="text-xs text-muted-foreground">
+                          No comments yet. Be the first.
+                        </p>
+                      )}
+                    {!commentsLoading &&
+                      comments &&
+                      comments.length > 0 && (
+                        <div className="space-y-2 mb-3">
+                          {comments.map((c) => (
+                            <div
+                              key={c.id}
+                              className="rounded-md border px-2 py-1.5"
+                            >
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs font-semibold">
+                                  {c.authorName || 'User'}
+                                </span>
+                                {c.createdAt && c.createdAt.toDate && (
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {formatDistanceToNow(
+                                      c.createdAt.toDate(),
+                                      { addSuffix: true },
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs mt-1">{c.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-      // Only ACTIVE users or admin can post
-      allow create: if userIsActive() || userIsAdmin();
+                    <form
+                      onSubmit={handleCommentSubmit}
+                      className="space-y-2 mt-2"
+                    >
+                      {!canPost && (
+                        <p className="text-xs text-red-500 mb-1">
+                          Your account must be ACTIVE to comment.
+                        </p>
+                      )}
+                      <Textarea
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Add a comment..."
+                        rows={2}
+                        disabled={!canPost || commentSubmitting || !selectedPost}
+                      />
+                      {commentError && (
+                        <p className="text-xs text-red-500">
+                          {commentError}
+                        </p>
+                      )}
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={
+                          !canPost || commentSubmitting || !selectedPost
+                        }
+                      >
+                        {commentSubmitting ? 'Posting...' : 'Post comment'}
+                      </Button>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-      // Only admin can update/delete
-      allow update, delete: if userIsAdmin();
-    }
-
-    // ---------- CONVERSATIONS & MESSAGES ----------
-
-    match /conversations/{conversationId} {
-      // Participant or admin can read/update
-      allow read, update: if isSignedIn() && (
-        request.auth.uid in resource.data.participantUids ||
-        userIsAdmin()
-      );
-
-      // Any signed-in user can create a conversation
-      allow create: if isSignedIn();
-
-      match /messages/{messageId} {
-        // Participant or admin can read messages
-        allow read: if isSignedIn() && (
-          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantUids
-          || userIsAdmin()
-        );
-
-        // Any signed-in user can send a message
-        allow create: if isSignedIn();
-      }
-    }
-
-    // ---------- REPORTS ----------
-
-    match /reports/{reportId} {
-      // Any signed-in user can create a report
-      allow create: if isSignedIn();
-
-      // Reporter can read their own reports; admin can read all
-      allow read: if isSignedIn() && (
-        resource.data.reporterUid == request.auth.uid || userIsAdmin()
-      );
-
-      // Only admin can update/delete
-      allow update, delete: if userIsAdmin();
-    }
-
-    // ---------- SPOTLIGHT SLOTS ----------
-
-    match /spotlightSlots/{slotId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if userIsAdmin();
-    }
-
-    // ---------- Fallback deny ----------
-
-    match /{path=**} {
-      allow read, write: if false;
-    }
-  }
+          {/* Create ISO post */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Create ISO Post</CardTitle>
+              <CardDescription>
+                List what you&apos;re searching for. Posts stay up for 24 hours.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!canPost && (
+                <div className="mb-3 text-xs text-red-500">
+                  Your account is not ACTIVE yet. Verify email / complete
+                  onboarding before posting. You can still browse ISO posts.
+                </div>
+              )}
+              <form onSubmit={handleCreatePost} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Title</label>
+                  <Input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="What are you looking for?"
+                    disabled={!canPost || postSubmitting}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Category</label>
+                  <Input
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    placeholder="e.g. Comics, Sports Cards, Toys"
+                    disabled={!canPost || postSubmitting}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Details</label>
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Any specific issues, years, players, conditions, etc."
+                    rows={3}
+                    disabled={!canPost || postSubmitting}
+                  />
+                </div>
+                {postError && (
+                  <p className="text-xs text-red-500">{postError}</p>
+                )}
+                <Separator className="my-2" />
+                <Button
+                  type="submit"
+                  disabled={!canPost || postSubmitting}
+                >
+                  {postSubmitting ? 'Posting...' : 'Post ISO (24h)'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </AppLayout>
+  );
 }
