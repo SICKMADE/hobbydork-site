@@ -1,213 +1,24 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Helpers ---
 
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function userDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-
-    function userStatus() {
-      return userDoc().data.status;
-    }
-
-    function userIsActive() {
-      return isSignedIn() && userStatus() == "ACTIVE";
-    }
-
-    function userIsAdmin() {
-      return isSignedIn() && userDoc().data.role == "ADMIN";
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function userIsSeller() {
-      return isSignedIn()
-        && userDoc().data.isSeller == true
-        && userDoc().data.storeId != "";
-    }
-
-    // --- USERS ---
-
     match /users/{uid} {
-      // Any signed-in user can read basic user docs
       allow read: if isSignedIn();
 
-      // User creates their own doc; server / backend can also create if needed.
-      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn()
+        && request.auth.uid == uid;
 
-      // User can update their own doc; admin can update any
-      allow update: if isSignedIn() && (
-        request.auth.uid == uid || userIsAdmin()
-      );
-
-      // Only admin can delete users
-      allow delete: if userIsAdmin();
-    }
-    
-    // This is the critical rule that was missing for subcollections
-    match /users/{userId}/{document=**} {
-        allow read, write: if isOwner(userId) || userIsAdmin();
+      allow update, delete: if isSignedIn()
+        && request.auth.uid == uid;
     }
 
-    // --- STOREFRONTS ---
-
-    match /storefronts/{storeId} {
-      // Any signed-in user can view stores
-      allow read: if isSignedIn();
-
-      // ACTIVE non-seller can create exactly one store for themselves, or admin can create
-      allow create: if isSignedIn() && (
-        userIsAdmin() ||
-        (
-          userIsActive() &&
-          userDoc().data.isSeller != true &&
-          userDoc().data.storeId == "" &&
-          request.resource.data.ownerUid == request.auth.uid
-        )
-      );
-
-      // Seller who owns the store or admin can update
-      allow update: if isSignedIn() && (
-        (userIsSeller() && request.auth.uid == resource.data.ownerUid) ||
-        userIsAdmin()
-      );
-
-      // Seller or admin can delete
-      allow delete: if isSignedIn() && (
-        (userIsSeller() && request.auth.uid == resource.data.ownerUid) ||
-        userIsAdmin()
-      );
-
-      // Store reviews as subcollection
-      match /reviews/{reviewId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn() && isOwner(request.resource.data.buyerUid);
-        allow update, delete: if userIsAdmin();
-      }
-    }
-
-    // --- LISTINGS ---
-
-    match /listings/{listingId} {
-      // Any signed-in user can read listings
-      allow read: if isSignedIn();
-
-      // Only sellers or admin can create/update/delete listings
-      allow create, update, delete: if isSignedIn() && (
-        (userIsSeller() && request.resource.data.ownerUid == request.auth.uid) ||
-        userIsAdmin()
-      );
-    }
-
-    // --- ORDERS ---
-
-    match /orders/{orderId} {
-
-      function userCanReadOrder() {
-        return isSignedIn() && (
-          request.auth.uid == resource.data.buyerUid ||
-          request.auth.uid == resource.data.sellerUid ||
-          userIsAdmin()
-        );
-      }
-
-      // Buyer, seller, or admin can read (get + list/query)
-      allow read: if userCanReadOrder();
-
-      // Any ACTIVE user can create an order where they are the buyer
-      allow create: if userIsActive() &&
-        request.resource.data.buyerUid == request.auth.uid;
-
-      // Buyer, seller, or admin can update
-      allow update: if isSignedIn() && (
-        request.auth.uid == resource.data.buyerUid ||
-        request.auth.uid == resource.data.sellerUid ||
-        userIsAdmin()
-      );
-
-      // Only admin can delete
-      allow delete: if userIsAdmin();
-    }
-
-    // --- ISO24 POSTS ---
-
-    match /iso24Posts/{isoId} {
-      // Any signed-in user can read ISO24 posts
-      allow read: if isSignedIn();
-
-      // Only ACTIVE users or admin can create/update/delete ISO24 posts
-      allow create, update, delete: if userIsActive() || userIsAdmin();
-    }
-
-    // --- COMMUNITY CHAT ---
-
-    match /communityMessages/{messageId} {
-      // Any signed-in user can read community chat
-      allow read: if isSignedIn();
-
-      // Only ACTIVE users or admin can post
-      allow create: if userIsActive() || userIsAdmin();
-
-      // Only admin can update/delete (moderation)
-      allow update, delete: if isOwner(resource.data.senderUid) || userIsAdmin();
-    }
-
-    // --- CONVERSATIONS + MESSAGES ---
-
-    match /conversations/{conversationId} {
-      // Participant or admin can read/update the conversation
-      allow read, update: if isSignedIn() &&
-        (request.auth.uid in resource.data.participantUids || userIsAdmin());
-
-      // Any signed-in user can create a conversation
-      allow create: if isSignedIn();
-
-      match /messages/{messageId} {
-        // Participant or admin can read messages
-        allow read: if isSignedIn() && (
-          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantUids ||
-          userIsAdmin()
-        );
-
-        // Any signed-in user can send a message (you can tighten later if needed)
-        allow create: if isSignedIn();
-      }
-    }
-
-    // --- REPORTS ---
-
-    match /reports/{reportId} {
-      // Any signed-in user can create a report
-      allow create: if isSignedIn();
-
-      // Reporter can read their own reports; admin can read all
-      allow read: if isSignedIn() && (
-        resource.data.reporterUid == request.auth.uid || userIsAdmin()
-      );
-
-      // Only admin can update/delete
-      allow update, delete: if userIsAdmin();
-    }
-
-    // --- SPOTLIGHT SLOTS ---
-
-    match /spotlightSlots/{slotId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if userIsAdmin();
-    }
-
-    // --- Default deny ---
-
-    match /{path=**} {
-      allow read, write: if false;
+    match /{document=**} {
+      allow read, write: if isSignedIn();
     }
   }
 }
