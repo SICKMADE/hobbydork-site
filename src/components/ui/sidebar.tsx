@@ -87,12 +87,6 @@ const SidebarProvider = React.forwardRef<
     const toggleSidebar = React.useCallback(() => {
       setOpen((open) => !open)
     }, [setOpen])
-
-    React.useEffect(() => {
-      if (isMobile) {
-        setOpen(false);
-      }
-    }, [isMobile, setOpen]);
     
 
     const contextValue = React.useMemo<SidebarContext>(
@@ -128,25 +122,17 @@ SidebarProvider.displayName = "SidebarProvider"
 
 const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
     ({ className, children, ...props }, ref) => {
-        const { open, isMobile, setOpen } = useSidebar();
+        const { open, isMobile } = useSidebar();
 
         if (isMobile) {
-            return (
-                <Sheet open={open} onOpenChange={setOpen}>
-                    <SheetContent side="left" className="p-0 w-64 border-r-0">
-                         <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
-                            {children}
-                        </div>
-                    </SheetContent>
-                </Sheet>
-            )
+            return null; // The mobile sidebar is handled by MobileSidebar in AppLayout
         }
 
         return (
             <aside
                 ref={ref}
                 className={cn(
-                    "fixed top-0 left-0 h-full w-64 z-50 bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-transform duration-300 ease-in-out",
+                    "fixed top-0 left-0 h-full w-64 z-20 bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-transform duration-300 ease-in-out",
                     open ? "translate-x-0" : "-translate-x-full",
                     className
                 )}
@@ -174,7 +160,7 @@ const SidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className={cn("h-7 w-7", className)}
+      className={cn("h-9 w-9", className)}
       onClick={(event) => {
         onClick?.(event)
         toggleSidebar()
