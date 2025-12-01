@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState } from "react";
+import React from "react";
 import { useAuth } from "@/hooks/use-auth";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ export default function ISO24Page() {
     const { profile, user, loading: authLoading } = useAuth();
     const firestore = useFirestore();
     const { toast } = useToast();
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     const form = useForm<z.infer<typeof isoSchema>>({
         resolver: zodResolver(isoSchema),

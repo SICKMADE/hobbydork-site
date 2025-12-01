@@ -1,9 +1,85 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // TEMP: allow absolutely everything for everyone.
-    match /{document=**} {
-      allow read, write: if true;
+    
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function userIsActive() {
+      return isSignedIn() && getUserData().status == 'ACTIVE';
+    }
+
+    function userIsAdmin() {
+      return isSignedIn() && getUserData().role == 'ADMIN';
+    }
+
+    // --- User Profiles ---
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || userIsAdmin();
+    }
+    match /users/{userId}/{document=**} {
+      allow read, write: if isOwner(userId) || userIsAdmin();
+    }
+    
+    // --- Stores ---
+    match /storefronts/{storeId} {
+      allow read: if true;
+      allow write: if isOwner(resource.data.ownerUid) || userIsAdmin();
+    }
+    match /storefronts/{storeId}/reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.buyerUid);
+    }
+    
+    // --- Listings ---
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create, update, delete: if isOwner(request.resource.data.ownerUid) || userIsAdmin();
+    }
+    
+    // --- Orders ---
+    match /orders/{orderId} {
+      allow read, write: if isSignedIn() && (request.auth.uid == resource.data.buyerUid || request.auth.uid == resource.data.sellerUid) || userIsAdmin();
+    }
+    
+    // --- ISO24 posts ---
+    match /iso24Posts/{isoId} {
+      // Any signed-in user can READ ISO24 posts (for browsing)
+      allow read: if isSignedIn();
+    
+      // Only ACTIVE users or admin can create/update/delete ISO24 posts
+      allow create, update, delete: if userIsActive() || userIsAdmin();
+    }
+
+    // --- Community Chat ---
+    match /communityMessages/{messageId} {
+        allow read, create: if userIsActive();
+        allow update, delete: if isOwner(resource.data.senderUid);
+    }
+
+    // --- Admin-only collections ---
+    match /spotlightSlots/{slotId} {
+        allow read: if true;
+        allow write: if userIsAdmin();
+    }
+    match /reports/{reportId} {
+        allow read, write: if userIsAdmin();
+    }
+
+    // Fallback security: deny all other access
+    match /{path=**} {
+      allow read, write: if false;
     }
   }
 }
