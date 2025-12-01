@@ -62,7 +62,7 @@ export default function Header() {
               <Input
                 type="search"
                 placeholder="Search collectibles..."
-                className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] bg-background"
+                className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] bg-muted"
                 value={searchTerm}
                 onChange={handleSearchChange}
               />
