@@ -1,0 +1,224 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Helpers ----------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userStatus() {
+      return userDoc().data.status;
+    }
+
+    function userIsActive() {
+      return isSignedIn() && userStatus() == "ACTIVE";
+    }
+
+    function userIsAdmin() {
+      return isSignedIn() && userDoc().data.role == "ADMIN";
+    }
+
+    function userIsSeller() {
+      return isSignedIn()
+        && userDoc().data.isSeller == true
+        && userDoc().data.storeId != "";
+    }
+
+    // ---------- USERS ----------
+
+    match /users/{uid} {
+      // Any signed-in user can read basic user docs
+      allow read: if isSignedIn();
+
+      // User can create their own doc
+      allow create: if isSignedIn()
+        && request.auth.uid == uid;
+
+      // User can update their own doc, but cannot change role/status.
+      // Admin can update anything.
+      allow update: if isSignedIn() && (
+        (
+          request.auth.uid == uid &&
+          resource.data.role == request.resource.data.role &&
+          resource.data.status == request.resource.data.status
+        )
+        ||
+        userIsAdmin()
+      );
+
+      // Only admin can delete user docs
+      allow delete: if userIsAdmin();
+
+      // Subcollections owned by the user
+      match /notifications/{notificationId} {
+        allow read, write: if isSignedIn() && request.auth.uid == uid;
+      }
+      match /watchlist/{listingId} {
+        allow read, write: if isSignedIn() && request.auth.uid == uid;
+      }
+      match /favoriteStores/{storeId} {
+        allow read, write: if isSignedIn() && request.auth.uid == uid;
+      }
+    }
+
+    // ---------- STOREFRONTS ----------
+
+    match /storefronts/{storeId} {
+      // Any signed-in user can read stores
+      allow read: if isSignedIn();
+
+      // ACTIVE non-seller can create one store, or admin can create
+      allow create: if isSignedIn() && (
+        userIsAdmin()
+        ||
+        (
+          userIsActive() &&
+          userDoc().data.isSeller != true &&
+          userDoc().data.storeId == "" &&
+          request.resource.data.ownerUid == request.auth.uid
+        )
+      );
+
+      // Seller who owns the store or admin can update
+      allow update: if isSignedIn() && (
+        (userIsSeller() && resource.data.ownerUid == request.auth.uid)
+        || userIsAdmin()
+      );
+
+      // Seller who owns the store or admin can delete
+      allow delete: if isSignedIn() && (
+        (userIsSeller() && resource.data.ownerUid == request.auth.uid)
+        || userIsAdmin()
+      );
+
+      // Store reviews subcollection
+      match /reviews/{reviewId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        allow update, delete: if userIsAdmin();
+      }
+    }
+
+    // ---------- LISTINGS ----------
+
+    match /listings/{listingId} {
+      // Any signed-in user can read listings
+      allow read: if isSignedIn();
+
+      // Only sellers (or admin) can manage their own listings
+      allow create, update, delete: if isSignedIn() && (
+        (userIsSeller() && request.resource.data.ownerUid == request.auth.uid)
+        || userIsAdmin()
+      );
+    }
+
+    // ---------- ORDERS ----------
+
+    match /orders/{orderId} {
+
+      function userCanReadOrder() {
+        return isSignedIn() && (
+          request.auth.uid == resource.data.buyerUid ||
+          request.auth.uid == resource.data.sellerUid ||
+          userIsAdmin()
+        );
+      }
+
+      // Buyer, seller, or admin can read (get + list/query)
+      allow read: if userCanReadOrder();
+
+      // ACTIVE user can create an order where they are the buyer
+      allow create: if userIsActive()
+        && request.resource.data.buyerUid == request.auth.uid;
+
+      // Buyer, seller, or admin can update
+      allow update: if isSignedIn() && (
+        request.auth.uid == resource.data.buyerUid ||
+        request.auth.uid == resource.data.sellerUid ||
+        userIsAdmin()
+      );
+
+      // Only admin can delete
+      allow delete: if userIsAdmin();
+    }
+
+      // ---------- ISO24 POSTS ----------
+    match /iso24Posts/{isoId} {
+      // TEMP: Open everything for debugging
+      allow read, write: if true;
+}
+
+
+    // ---------- COMMUNITY CHAT ----------
+
+    match /communityMessages/{messageId} {
+      // Any signed-in user can read
+      allow read: if isSignedIn();
+
+      // Only ACTIVE users or admin can post
+      allow create: if userIsActive() || userIsAdmin();
+
+      // Only admin can update/delete
+      allow update, delete: if userIsAdmin();
+    }
+
+    // ---------- CONVERSATIONS & MESSAGES ----------
+
+    match /conversations/{conversationId} {
+      // Participant or admin can read/update
+      allow read, update: if isSignedIn() && (
+        request.auth.uid in resource.data.participantUids ||
+        userIsAdmin()
+      );
+
+      // Any signed-in user can create a conversation
+      allow create: if isSignedIn();
+
+      match /messages/{messageId} {
+        // Participant or admin can read messages
+        allow read: if isSignedIn() && (
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantUids
+          || userIsAdmin()
+        );
+
+        // Any signed-in user can send a message
+        allow create: if isSignedIn();
+      }
+    }
+
+    // ---------- REPORTS ----------
+
+    match /reports/{reportId} {
+      // Any signed-in user can create a report
+      allow create: if isSignedIn();
+
+      // Reporter can read their own reports; admin can read all
+      allow read: if isSignedIn() && (
+        resource.data.reporterUid == request.auth.uid || userIsAdmin()
+      );
+
+      // Only admin can update/delete
+      allow update, delete: if userIsAdmin();
+    }
+
+    // ---------- SPOTLIGHT SLOTS ----------
+
+    match /spotlightSlots/{slotId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if userIsAdmin();
+    }
+
+    // ---------- Fallback deny ----------
+
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
