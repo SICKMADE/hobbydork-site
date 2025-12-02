@@ -34,10 +34,10 @@ const LegoHead = ({ className }: { className?: string }) => (
 export default function Logo({ className, iconOnly = false }: LogoProps) {
   return (
     <div className={cn('flex items-center justify-center gap-4 text-primary w-full', className)}>
-      <LegoHead className="h-14 w-14" />
+      <LegoHead className="h-12 w-12" />
       {!iconOnly && (
         <div className="rounded-full px-6 py-2 border-4 border-red-600">
-          <h1 className="text-2xl font-bold tracking-tighter text-red-600">
+          <h1 className="text-2xl font-bold tracking-tighter text-red-600" style={{ fontFamily: 'Arial, sans-serif' }}>
             <span>HobbyDork</span>
           </h1>
         </div>
