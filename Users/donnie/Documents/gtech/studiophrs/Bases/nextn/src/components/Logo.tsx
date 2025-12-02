@@ -9,9 +9,7 @@ const LegoHead = ({ className }: { className?: string }) => (
     <svg
       className={cn("h-8 w-8 text-primary", className)}
       viewBox="0 0 100 100"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="4"
+      fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
     >
       <g>
@@ -34,8 +32,8 @@ const LegoHead = ({ className }: { className?: string }) => (
 
 export default function Logo({ className, iconOnly = false }: LogoProps) {
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <LegoHead className="h-10 w-10 text-primary" />
+    <div className={cn('flex items-center gap-2 text-primary', className)}>
+      <LegoHead className="h-10 w-10" />
       {!iconOnly && (
         <h1 className="text-xl font-bold tracking-tighter text-foreground">
           <span>HobbyDork</span>
