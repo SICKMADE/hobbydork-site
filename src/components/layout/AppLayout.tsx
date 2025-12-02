@@ -40,7 +40,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
     <div
       className={cn(
         'flex flex-col h-screen',
-        { 'md:ml-64': !isMobile }
+        'md:ml-64'
       )}
     >
       <Header />
