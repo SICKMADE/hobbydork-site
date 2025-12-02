@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -122,18 +123,18 @@ SidebarProvider.displayName = "SidebarProvider"
 
 const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
     ({ className, children, ...props }, ref) => {
-        const { open, isMobile } = useSidebar();
+        const { isMobile } = useSidebar();
 
         if (isMobile) {
-            return null; // The mobile sidebar is handled by MobileSidebar in AppLayout
+            return null; // On mobile, the sidebar is rendered as a Sheet in MobileSidebar
         }
 
+        // On desktop, the sidebar is always visible and takes up space.
         return (
             <aside
                 ref={ref}
                 className={cn(
-                    "fixed top-0 left-0 h-full w-64 z-20 bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-transform duration-300 ease-in-out",
-                    open ? "translate-x-0" : "-translate-x-full",
+                    "fixed top-0 left-0 h-full w-64 z-20 bg-sidebar text-sidebar-foreground border-r border-sidebar-border",
                     className
                 )}
                 {...props}
@@ -152,7 +153,10 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
 >(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, isMobile } = useSidebar()
+
+  // This trigger is only for the desktop view, mobile is handled by AppLayout
+  if (isMobile) return null;
 
   return (
     <Button
@@ -178,13 +182,13 @@ const SidebarInset = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"main">
 >(({ className, ...props }, ref) => {
-  const { open, isMobile } = useSidebar();
+  const { isMobile } = useSidebar();
   return (
     <main
       ref={ref}
       className={cn(
         "relative flex min-h-svh flex-1 flex-col bg-background transition-all duration-300 ease-in-out",
-        !isMobile && open && "md:ml-64",
+        !isMobile && "md:ml-64",
         className
       )}
       {...props}

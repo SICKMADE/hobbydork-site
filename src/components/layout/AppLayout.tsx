@@ -35,12 +35,12 @@ function MobileSidebar() {
 
 
 function MainContent({ children }: { children: React.ReactNode }) {
-  const { open, isMobile } = useSidebar();
+  const { isMobile } = useSidebar();
   return (
     <div
       className={cn(
-        'flex flex-col h-screen transition-all duration-300 ease-in-out',
-        { 'md:ml-64': open && !isMobile }
+        'flex flex-col h-screen',
+        { 'md:ml-64': !isMobile }
       )}
     >
       <Header />

@@ -1,5 +1,6 @@
+
 'use client';
-import { SidebarTrigger } from '../ui/sidebar';
+import { SidebarTrigger, useSidebar } from '../ui/sidebar';
 import { UserNav } from './UserNav';
 import Logo from '../Logo';
 import { Input } from '../ui/input';
@@ -8,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 
 export default function Header() {
+  const { isMobile } = useSidebar();
   const checkeredBg = {
     backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill-opacity='0.15'%3e%3cpath d='M0 0h16v16H0z' fill='%23fff'/%3e%3cpath d='M16 16h16v16H16z' fill='%23fff'/%3e%3c/svg%3e")`,
     backgroundPosition: '0 0, 16px 16px',
@@ -17,7 +19,11 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
-        <SidebarTrigger className="hidden md:flex" />
+        {/* The mobile sidebar trigger is now in AppLayout */}
+        {!isMobile && <SidebarTrigger className="hidden md:flex" />}
+        
+        {/* Spacer for mobile view */}
+        <div className="md:hidden" style={{ width: '40px' }} />
 
         {/* Search Bar & Logo */}
         <div className="flex-1 flex justify-center items-center gap-4">
