@@ -15,9 +15,9 @@ const LegoHead = ({ className }: { className?: string }) => (
     >
         <g>
             {/* Crossbones */}
-            <g transform="translate(5, 60) scale(0.9)">
-                <path transform="rotate(-30 50 25)" d="M20,15 C10,15 10,35 20,35 L80,35 C90,35 90,15 80,15 L20,15 Z M15,10 C5,10 5,40 15,40 M85,10 C95,10 95,40 85,40" fill="currentColor" />
-                <path transform="rotate(30 50 25)" d="M20,15 C10,15 10,35 20,35 L80,35 C90,35 90,15 80,15 L20,15 Z M15,10 C5,10 5,40 15,40 M85,10 C95,10 95,40 85,40" fill="currentColor" />
+            <g transform="translate(0, 55) scale(1)">
+              <path transform="rotate(-30 50 25)" d="M15 20 a 5 5 0 0 1 0 -5 a 5 5 0 0 1 0 5 z m -5 -5 a 5 5 0 0 1 -5 0 a 5 5 0 0 1 5 0 z m 5 5 h 60 v -5 h -60 z m 65 -5 a 5 5 0 0 1 0 5 a 5 5 0 0 1 0 -5 z m 5 5 a 5 5 0 0 1 5 0 a 5 5 0 0 1 -5 0 z" fill="currentColor" />
+              <path transform="rotate(30 50 25)" d="M15 20 a 5 5 0 0 1 0 -5 a 5 5 0 0 1 0 5 z m -5 -5 a 5 5 0 0 1 -5 0 a 5 5 0 0 1 5 0 z m 5 5 h 60 v -5 h -60 z m 65 -5 a 5 5 0 0 1 0 5 a 5 5 0 0 1 0 -5 z m 5 5 a 5 5 0 0 1 5 0 a 5 5 0 0 1 -5 0 z" fill="currentColor" />
             </g>
 
             {/* Top Cylinder */}
