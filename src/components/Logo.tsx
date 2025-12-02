@@ -37,7 +37,7 @@ export default function Logo({ className, iconOnly = false }: LogoProps) {
       <LegoHead className="h-16 w-16" />
       {!iconOnly && (
         <div className="rounded-full px-8 py-3 border-4 border-red-600">
-          <h1 className="text-5xl font-bold tracking-tighter text-red-600">
+          <h1 className="text-3xl font-bold tracking-tighter text-red-600">
             <span>HobbyDork</span>
           </h1>
         </div>
