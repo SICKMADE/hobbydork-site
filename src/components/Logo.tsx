@@ -35,17 +35,15 @@ export default function Logo({ className, iconOnly = false }: LogoProps) {
     <div className={cn('flex items-center justify-center gap-4 text-primary', className)}>
       <LegoHead className="h-12 w-12" />
       {!iconOnly && (
-        <div className="rounded-full bg-neutral-400 border-4 border-red-600 px-6 py-2">
           <h1 
-            className="text-3xl font-nintendo font-black tracking-tight italic"
+            className="text-4xl font-nintendo font-black tracking-tight italic"
             style={{
               color: 'hsl(var(--destructive))',
               textShadow: '0 0 2px #fff, 0 0 2px #fff, 0 0 2px #fff, 0 0 2px #fff, 3px 3px 5px rgba(0,0,0,0.5)'
             }}
             >
-            <span>HobbyDork</span>
+            <span>HD</span>
           </h1>
-        </div>
       )}
     </div>
   );
