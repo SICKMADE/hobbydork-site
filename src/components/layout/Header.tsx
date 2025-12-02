@@ -42,7 +42,7 @@ export default function Header() {
               />
             </div>
             <Button
-              className="h-9 w-24 bg-red-600 hover:bg-red-700 text-white font-sans rounded-full shadow-[0_4px_#9f1212] active:shadow-none active:translate-y-1 transition-all"
+              className="h-9 w-24 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-[0_4px_#9f1212] active:shadow-none active:translate-y-1 transition-all"
             >
               START
             </Button>
