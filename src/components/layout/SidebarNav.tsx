@@ -51,7 +51,7 @@ export default function SidebarNav() {
   return (
     <>
       <SidebarHeader className="flex justify-center">
-        <Logo iconOnly />
+        <Logo iconOnly={true} />
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
