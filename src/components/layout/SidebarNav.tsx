@@ -9,7 +9,7 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 
-import { LogOut, Home, Search, Store, MessageSquare, Newspaper, LayoutDashboard, Heart, Settings } from 'lucide-react';
+import { LogOut, Home, Search, Store, MessageSquare, Newspaper, LayoutDashboard, Heart, Settings, User, Star } from 'lucide-react';
 import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
