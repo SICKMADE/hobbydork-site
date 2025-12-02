@@ -41,8 +41,9 @@ export default function Logo({ className, iconOnly = false, abbreviated = false 
           <h1 
             className="text-4xl font-nintendo font-black tracking-tight italic"
             style={{
-              color: 'hsl(var(--destructive))',
-              textShadow: '0 0 2px #fff, 0 0 2px #fff, 0 0 2px #fff, 0 0 2px #fff, 3px 3px 5px rgba(0,0,0,0.5)'
+                color: 'hsl(var(--destructive))',
+                textShadow: 
+                  '1px 1px 0 #fff, -1px 1px 0 #fff, 1px -1px 0 #fff, -1px -1px 0 #fff, 3px 3px 5px rgba(0,0,0,0.5)'
             }}
             >
             <span>{textToShow}</span>
