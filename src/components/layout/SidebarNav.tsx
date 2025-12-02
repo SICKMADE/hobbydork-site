@@ -14,11 +14,6 @@ import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 
-const RedLineSeparator = () => (
-    <div className="h-0.5 w-full my-2 bg-destructive" />
-);
-
-
 export default function SidebarNav() {
   const { logout, profile } = useAuth();
   const pathname = usePathname();
@@ -60,8 +55,8 @@ export default function SidebarNav() {
         <Logo iconOnly={true} />
         <p className="text-sm font-body text-muted-foreground mt-2">A safe marketplace to buy and sell</p>
       </SidebarHeader>
-      <SidebarContent className="p-4 pt-4 flex flex-col justify-between">
-        <div className="space-y-6">
+      <SidebarContent className="p-4 pt-4 flex flex-col">
+        <div className="space-y-6 flex-grow flex flex-col justify-center">
             <div className="bg-card/50 rounded-lg p-2">
                 <SidebarMenu>
                 {mainMenuItems.map((item) => (
