@@ -9,7 +9,7 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 
-import { LogOut, Home, Search, Store, MessageSquare, Newspaper, LayoutDashboard, Heart, Settings, User, Star } from 'lucide-react';
+import { LogOut, Home, Search, Store, MessageSquare, Newspaper, LayoutDashboard, Heart, Settings, User, Star, HelpCircle, ShoppingCart, Package, HeartHandshake } from 'lucide-react';
 import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
@@ -30,10 +30,16 @@ export default function SidebarNav() {
     { href: '/chat', label: 'Community', icon: MessageSquare },
   ];
   
+  const personalMenuItems = [
+      { href: '/orders', label: 'My Orders', icon: Package },
+      { href: '/sales', label: 'My Sales', icon: HeartHandshake },
+      { href: '/watchlist', label: 'Watchlist', icon: Heart },
+      { href: '/favorites', label: 'Favorite Stores', icon: Store },
+      { href: '/cart', label: 'Cart', icon: ShoppingCart },
+  ];
+
   const userMenuItems = [
-    { href: '/dashboard', label: 'My Dashboard', icon: LayoutDashboard },
     { href: '/listings', label: 'My Listings', icon: Store },
-    { href: '/watchlist', label: 'My Watchlist', icon: Heart },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
 
@@ -62,6 +68,22 @@ export default function SidebarNav() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
+        </SidebarMenu>
+         <SidebarMenu className="mt-4">
+            <p className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
+            {personalMenuItems.map((item) => (
+                <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton
+                        href={item.href}
+                        isActive={pathname.startsWith(item.href)}
+                        onClick={() => router.push(item.href)}
+                        className="justify-start gap-3"
+                    >
+                        <item.icon className="h-5 w-5" />
+                        <span className="text-base">{item.label}</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            ))}
         </SidebarMenu>
         {profile?.isSeller && (
             <SidebarMenu className="mt-4">
@@ -102,6 +124,12 @@ export default function SidebarNav() {
       </SidebarContent>
       <SidebarFooter className="p-2">
         <SidebarMenu>
+            <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-3">
+                    <HelpCircle className="h-5 w-5" />
+                    <span className="text-base">Help</span>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleLogout} className="justify-start gap-3">
               <LogOut className="h-5 w-5" />
