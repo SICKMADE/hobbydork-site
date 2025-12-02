@@ -59,21 +59,20 @@ export default function SidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="p-4 pt-6 text-center">
+      <SidebarHeader className="p-4 pt-8 text-center">
         <Logo iconOnly={true} />
         <p className="text-sm font-body text-muted-foreground mt-2">A safe marketplace to buy and sell</p>
       </SidebarHeader>
-      <SidebarContent className="p-4 pt-20 flex flex-col gap-4">
+      <SidebarContent className="p-4 pt-12">
         <div 
-          className="flex-grow space-y-4"
+          className="h-full flex flex-col"
           style={{
-            backgroundImage:
-              'linear-gradient(45deg, hsla(0,0%,13%,.4) 25%, transparent 25%), linear-gradient(-45deg, hsla(0,0%,13%,.4) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsla(0,0%,13%,.4) 75%), linear-gradient(-45deg, transparent 75%, hsla(0,0%,13%,.4) 75%)',
+            backgroundImage: 'linear-gradient(45deg, hsl(0 0% 13% / 0.4) 25%, transparent 25%), linear-gradient(-45deg, hsl(0 0% 13% / 0.4) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(0 0% 13% / 0.4) 75%), linear-gradient(-45deg, transparent 75%, hsl(0 0% 13% / 0.4) 75%)',
             backgroundSize: '20px 20px',
             backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
           }}
         >
-          <div className="space-y-4">
+          <div className="flex-grow space-y-4">
              <div className="bg-black/80 rounded-lg p-2">
                 <SidebarMenu>
                  <RedLineSeparator />
@@ -83,7 +82,7 @@ export default function SidebarNav() {
                         href={item.href}
                         isActive={pathname === item.href}
                         onClick={() => router.push(item.href)}
-                        className="justify-start gap-4 text-base"
+                        className="justify-start gap-4 text-base font-medium tracking-wide"
                     >
                         <item.icon className="h-5 w-5" />
                         <span>{item.label}</span>
@@ -103,7 +102,7 @@ export default function SidebarNav() {
                                 href={item.href}
                                 isActive={pathname.startsWith(item.href)}
                                 onClick={() => router.push(item.href)}
-                                className="justify-start gap-4 text-base"
+                                className="justify-start gap-4 text-base font-medium tracking-wide"
                             >
                                 <item.icon className="h-5 w-5" />
                                 <span>{item.label}</span>
@@ -124,7 +123,7 @@ export default function SidebarNav() {
                                     href={item.href}
                                     isActive={pathname.startsWith(item.href)}
                                     onClick={() => router.push(item.href)}
-                                    className="justify-start gap-4 text-base"
+                                    className="justify-start gap-4 text-base font-medium tracking-wide"
                                 >
                                     <item.icon className="h-5 w-5" />
                                     <span>{item.label}</span>
@@ -146,7 +145,7 @@ export default function SidebarNav() {
                                     href={item.href}
                                     isActive={pathname.startsWith(item.href)}
                                     onClick={() => router.push(item.href)}
-                                    className="justify-start gap-4 text-base"
+                                    className="justify-start gap-4 text-base font-medium tracking-wide"
                                 >
                                     <item.icon className="h-5 w-5" />
                                     <span>{item.label}</span>
@@ -161,13 +160,13 @@ export default function SidebarNav() {
                   <SidebarMenu>
                         <RedLineSeparator />
                       <SidebarMenuItem>
-                          <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-4 text-base">
+                          <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-4 text-base font-medium tracking-wide">
                               <HelpCircle className="h-5 w-5" />
                               <span>Help</span>
                           </SidebarMenuButton>
                       </SidebarMenuItem>
                   <SidebarMenuItem>
-                      <SidebarMenuButton onClick={handleLogout} className="justify-start gap-4 text-base">
+                      <SidebarMenuButton onClick={handleLogout} className="justify-start gap-4 text-base font-medium tracking-wide">
                       <LogOut className="h-5 w-5" />
                       <span>Logout</span>
                       </SidebarMenuButton>
