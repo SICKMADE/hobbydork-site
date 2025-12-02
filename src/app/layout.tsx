@@ -7,7 +7,7 @@ import { AuthProvider } from '@/hooks/use-auth';
 import { CartProvider } from '@/hooks/use-cart';
 
 export const metadata: Metadata = {
-  title: 'VaultVerse',
+  title: 'HobbyDork',
   description: 'Your personal vault for amazing collectibles.',
 };
 

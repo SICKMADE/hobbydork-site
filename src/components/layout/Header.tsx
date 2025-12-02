@@ -28,16 +28,6 @@ export default function Header() {
   const { itemCount } = useCart();
   const router = useRouter();
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    if (value.toUpperCase() === 'HOBBYDORK') {
-      revealPin();
-      showVaultButton();
-      setIsVaultModalOpen(true);
-      setSearchTerm('');
-    }
-  };
   
   // Mock notifications
   const notifications = [
@@ -56,18 +46,16 @@ export default function Header() {
           </div>
         </div>
         <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
-          <form className="ml-auto flex-1 sm:flex-initial" onSubmit={(e) => e.preventDefault()}>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
+          <div className="relative ml-auto flex-1 sm:flex-initial">
+             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+             <Input
                 type="search"
                 placeholder="Search collectibles..."
                 className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] bg-muted"
                 value={searchTerm}
-                onChange={handleSearchChange}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
-            </div>
-          </form>
+          </div>
           
           <Button variant="ghost" className="relative h-8 w-8 rounded-full" onClick={() => router.push('/cart')}>
             <ShoppingCart className="h-5 w-5" />
