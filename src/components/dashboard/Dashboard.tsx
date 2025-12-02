@@ -52,7 +52,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <section className="bg-slate-800 text-white -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 py-8 rounded-lg shadow-inner">
+        <section className="bg-card text-foreground -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 py-8 rounded-lg shadow-inner">
           <h2 className="text-2xl font-semibold tracking-tight mb-4">Spotlight Stores</h2>
           {storesLoading && <p>Loading stores...</p>}
           {stores && stores.length > 0 ? (
