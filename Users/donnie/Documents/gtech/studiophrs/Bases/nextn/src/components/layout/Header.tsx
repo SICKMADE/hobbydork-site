@@ -39,24 +39,34 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
           <SidebarTrigger className="hidden md:flex" />
           <div className="hidden md:block">
             <Logo iconOnly />
           </div>
-        </div>
-        <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
-          <div className="relative ml-auto flex-1 sm:flex-initial">
-             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-             <Input
-                type="search"
-                placeholder="Search collectibles..."
-                className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] bg-muted"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+           <div className="md:hidden">
+            <Logo />
           </div>
-          
+        </div>
+
+        {/* Centered Search Bar */}
+        <div className="flex-1 flex justify-center items-center">
+            <div className="relative w-full max-w-lg">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg blur-lg opacity-75 animate-pulse"></div>
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                        type="search"
+                        placeholder="Search for anything..."
+                        className="w-full h-12 pl-10 text-lg bg-card border-2 border-transparent focus:border-pink-500 transition-colors"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            </div>
+        </div>
+
+        <div className="flex items-center gap-2">
           <Button variant="ghost" className="relative h-8 w-8 rounded-full" onClick={() => router.push('/cart')}>
             <ShoppingCart className="h-5 w-5" />
             {itemCount > 0 && (
