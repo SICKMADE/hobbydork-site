@@ -61,7 +61,14 @@ export default function SidebarNav() {
         <p className="text-sm font-body text-muted-foreground mt-2">A safe marketplace to buy and sell</p>
       </SidebarHeader>
       <SidebarContent className="p-4 pt-4 flex flex-col">
-        <div className="space-y-4 flex-grow flex flex-col">
+        <div 
+          className="space-y-4 flex-grow flex flex-col"
+          style={{
+            backgroundImage: 'linear-gradient(45deg, hsl(var(--border)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--border)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--border)) 75%), linear-gradient(-45deg, hsl(var(--border)) 75%, transparent 75%)',
+            backgroundSize: '20px 20px',
+            backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
+          }}
+        >
             <RedLineSeparator />
             <div className="bg-black/80 rounded-lg p-2">
                 <SidebarMenu>
@@ -153,8 +160,8 @@ export default function SidebarNav() {
         </div>
         
         <SidebarFooter className="p-2 mt-auto">
-            <RedLineSeparator />
              <div className="bg-black/80 rounded-lg p-2">
+                <RedLineSeparator />
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-4 text-base h-12">
