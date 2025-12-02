@@ -13,6 +13,7 @@ export default {
         body: ['Inter', 'sans-serif'],
         headline: ['"Press Start 2P"', 'monospace'],
         code: ['monospace'],
+        nintendo: ['Nunito', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',
