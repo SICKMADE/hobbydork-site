@@ -25,12 +25,12 @@ export default function Header() {
             <Logo />
           </div>
           <div
-            className="w-full max-w-lg rounded-lg p-1"
+            className="w-full max-w-lg rounded-lg p-1 border-2 border-white"
             style={{
               backgroundImage: 'linear-gradient(45deg, #333 25%, transparent 25%), linear-gradient(-45deg, #333 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #333 75%), linear-gradient(-45deg, transparent 75%, #333 75%)',
               backgroundSize: '20px 20px',
               backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-              boxShadow: '0 0 15px rgba(255, 255, 255, 0.2)'
+              boxShadow: '0 0 15px rgba(255, 255, 255, 0.7)'
             }}
           >
             <div className="relative">
