@@ -25,7 +25,13 @@ export default function Header() {
             <Logo />
           </div>
           <div
-            className="w-full max-w-lg rounded-lg p-1 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+            className="w-full max-w-lg rounded-lg p-1"
+            style={{
+              backgroundImage: 'linear-gradient(45deg, #333 25%, transparent 25%), linear-gradient(-45deg, #333 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #333 75%), linear-gradient(-45deg, transparent 75%, #333 75%)',
+              backgroundSize: '20px 20px',
+              backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+              boxShadow: '0 0 15px rgba(255, 255, 255, 0.2)'
+            }}
           >
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
