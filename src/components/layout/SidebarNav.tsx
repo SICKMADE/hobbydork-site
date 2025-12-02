@@ -10,22 +10,17 @@ import {
 } from '@/components/ui/sidebar';
 import {
   Home,
-  Package,
-  MessageSquare,
-  User,
-  Settings,
+  Users,
   Store,
-  LogOut,
-  Search,
-  Heart,
-  Star,
-  ShoppingCart,
   LayoutList,
-  Flame,
+  MessageSquare,
   HelpCircle,
-  Tag,
-  Shield,
-  Award,
+  LogOut,
+  PlusCircle,
+  Heart,
+  Settings,
+  User,
+  Package,
 } from 'lucide-react';
 import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
@@ -40,23 +35,23 @@ export default function SidebarNav() {
     await logout();
   }
 
-  const menuItems = [
-    { href: '/', label: 'Dashboard', icon: Home },
-    { href: '/search', label: 'Search', icon: Search },
-    { href: '/cart', label: 'Cart', icon: ShoppingCart },
-    { href: '/orders', label: 'My Orders', icon: Package },
+  const mainMenuItems = [
+    { href: '/', label: 'Home', icon: Home },
+    { href: '/sellers', label: 'Explore Sellers', icon: Users },
+    { href: '/store', label: 'Store', icon: Store },
+    { href: '/iso24', label: '24iso Board', icon: LayoutList },
     { href: '/chat', label: 'Community Chat', icon: MessageSquare },
-    { href: '/iso24', label: 'ISO24', icon: Tag },
   ];
   
-  const userMenuItems = [
-    { href: '/profile', label: 'Profile', icon: User },
-    { href: '/settings', label: 'Settings', icon: Settings },
-  ];
-  
-  const favoritesMenuItems = [
-      { href: '/watchlist', label: 'Watchlist', icon: Star },
-      { href: '/favorites', label: 'Favorite Stores', icon: Heart },
+  const accountMenuItems = [
+      { href: '/dashboard', label: 'Dashboard', icon: Package },
+      { href: '/watchlist', label: 'Wishlist', icon: Heart },
+      { href: '/messages', label: 'Messages', icon: MessageSquare },
+  ]
+
+  const bottomMenuItems = [
+      { href: '/listings/create', label: 'Sell an Item', icon: PlusCircle },
+      { href: '/help', label: 'Help & Support', icon: HelpCircle },
   ]
 
   return (
@@ -66,141 +61,62 @@ export default function SidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
-          {menuItems.map((item) => (
+          {mainMenuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
               <SidebarMenuButton
                 href={item.href}
                 isActive={pathname === item.href}
                 tooltip={item.label}
                 onClick={() => router.push(item.href)}
+                className="justify-start gap-3"
               >
-                <item.icon />
-                <span>{item.label}</span>
+                <item.icon className="h-5 w-5" />
+                <span className="text-base">{item.label}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
         
         <div className="mt-4 px-2">
-           <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">My Store</h3>
+           <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">My Account</h3>
            <SidebarMenu>
-            {profile?.isSeller && profile.storeId ? (
-              <>
-                <SidebarMenuItem>
+            {accountMenuItems.map((item) => (
+                <SidebarMenuItem key={item.label}>
                     <SidebarMenuButton 
-                        href={`/store/${profile.storeId}`} 
-                        isActive={pathname === `/store/${profile.storeId}`}
-                        onClick={() => router.push(`/store/${profile.storeId!}`)} 
-                        tooltip="My Storefront"
+                        href={item.href} 
+                        isActive={pathname.startsWith(item.href)}
+                        onClick={() => router.push(item.href)} 
+                        tooltip={item.label}
+                        className="justify-start gap-3"
                     >
-                        <Store />
-                        <span>My Storefront</span>
+                        <item.icon className="h-5 w-5" />
+                        <span className="text-base">{item.label}</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
-                 <SidebarMenuItem>
-                    <SidebarMenuButton href="/listings" isActive={pathname.startsWith('/listings')} onClick={() => router.push('/listings')} tooltip="My Listings">
-                        <LayoutList />
-                        <span>My Listings</span>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                    <SidebarMenuButton href="/sales" isActive={pathname === '/sales'} onClick={() => router.push('/sales')} tooltip="My Sales">
-                        <Flame />
-                        <span>My Sales</span>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-              </>
-            ) : (
-                <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => router.push('/store/create')} tooltip="Create a Store">
-                        <Store />
-                        <span>Create a Store</span>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            )}
+            ))}
            </SidebarMenu>
         </div>
-
-        <div className="mt-4 px-2">
-           <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">My Favorites</h3>
-            <SidebarMenu>
-                {favoritesMenuItems.map((item) => (
-                    <SidebarMenuItem key={item.label}>
-                    <SidebarMenuButton
-                        href={item.href}
-                        isActive={pathname === item.href}
-                        tooltip={item.label}
-                        onClick={() => router.push(item.href)}
-                    >
-                        <item.icon />
-                        <span>{item.label}</span>
-                    </SidebarMenuButton>
-                    </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
-        </div>
-        
-        {profile?.role === 'ADMIN' && (
-          <div className="mt-4 px-2">
-            <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">Admin</h3>
-            <SidebarMenu>
-                <SidebarMenuItem>
-                <SidebarMenuButton
-                    href="/admin/users"
-                    isActive={pathname === '/admin/users'}
-                    tooltip="Manage Users"
-                    onClick={() => router.push('/admin/users')}
-                >
-                    <Shield />
-                    <span>Manage Users</span>
-                </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                <SidebarMenuButton
-                    href="/admin/spotlight"
-                    isActive={pathname === '/admin/spotlight'}
-                    tooltip="Manage Spotlight"
-                    onClick={() => router.push('/admin/spotlight')}
-                >
-                    <Award />
-                    <span>Manage Spotlight</span>
-                </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
-          </div>
-        )}
-
       </SidebarContent>
       <SidebarFooter className="p-2">
         <SidebarMenu>
-          {userMenuItems.map((item) => (
+          {bottomMenuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
               <SidebarMenuButton
                 href={item.href}
                 isActive={pathname === item.href}
                 tooltip={item.label}
                 onClick={() => router.push(item.href)}
+                className="justify-start gap-3"
               >
-                <item.icon />
-                <span>{item.label}</span>
+                <item.icon className="h-5 w-5" />
+                <span className="text-base">{item.label}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
-           <SidebarMenuItem>
-              <SidebarMenuButton
-                href="/help"
-                isActive={pathname === '/help'}
-                tooltip="Help & FAQ"
-                 onClick={() => router.push('/help')}
-              >
-                <HelpCircle />
-                <span>Help / FAQ</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout} tooltip="Logout">
-              <LogOut />
-              <span>Logout</span>
+            <SidebarMenuButton onClick={handleLogout} tooltip="Logout" className="justify-start gap-3">
+              <LogOut className="h-5 w-5" />
+              <span className="text-base">Logout</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

@@ -1,19 +1,11 @@
 'use client';
 
 import AppLayout from '@/components/layout/AppLayout';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-
 import { useAuth } from '@/hooks/use-auth';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
@@ -22,144 +14,95 @@ export default function SalesPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const firestore = useFirestore();
 
-  const isSeller = !!profile?.isSeller;
-
-  // Build query only when we have a seller with a user
+  // Build query ONLY when auth + firestore are ready and user is a seller
   const salesQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !isSeller) return null;
+    if (authLoading || !firestore || !user) return null;
 
     return query(
       collection(firestore, 'orders'),
       where('sellerUid', '==', user.uid),
-      orderBy('createdAt', 'desc'),
+      orderBy('createdAt', 'desc')
     );
-  }, [firestore, user?.uid, isSeller]);
+  }, [firestore, user?.uid, authLoading]);
 
-  const {
-    data: sales,
-    isLoading: salesLoading,
-    error,
-  } = useCollection<Order>(salesQuery);
+  const { data: sales, isLoading } = useCollection<Order>(salesQuery);
+
+  if (authLoading || !user) {
+    return (
+      <AppLayout>
+        <div>Loading your sales...</div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">My Sales</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground">
             Orders where you are the seller.
           </p>
         </div>
 
-        {authLoading && (
-          <p className="text-sm text-muted-foreground">Checking your account…</p>
+        {isLoading && (
+          <div>Loading sales...</div>
         )}
 
-        {!authLoading && !user && (
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">
-                You must be signed in to view your sales.
-              </p>
-            </CardContent>
-          </Card>
+        {!isLoading && (!sales || sales.length === 0) && (
+          <p className="text-muted-foreground">You don&apos;t have any sales yet.</p>
         )}
 
-        {user && !isSeller && (
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">
-                You don&apos;t have a store yet. Create a store to start selling.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        {!isLoading && sales && sales.length > 0 && (
+          <div className="space-y-4">
+            {sales.map((order) => {
+              const createdAtDate =
+                (order.createdAt as any)?.toDate
+                  ? (order.createdAt as any).toDate()
+                  : null;
 
-        {user && isSeller && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Sales</CardTitle>
-              <CardDescription>
-                Orders placed on your store.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {error && (
-                <p className="text-sm text-red-500">
-                  Failed to load sales. If this keeps happening, it&apos;s a
-                  rules/index issue, not your account.
-                </p>
-              )}
-
-              {salesLoading && !error && (
-                <p className="text-sm text-muted-foreground">Loading sales…</p>
-              )}
-
-              {!salesLoading && !error && (!sales || sales.length === 0) && (
-                <p className="text-sm text-muted-foreground">
-                  You have no sales yet.
-                </p>
-              )}
-
-              {!salesLoading &&
-                !error &&
-                sales &&
-                sales.length > 0 && (
-                  <div className="space-y-3">
-                    {sales.map((order) => (
-                      <Card key={order.id} className="border border-border">
-                        <CardContent className="p-4 space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">
-                                {order.state || 'UNKNOWN'}
-                              </Badge>
-                              {order.createdAt && order.createdAt.toDate && (
-                                <span className="text-xs text-muted-foreground">
-                                  Created{' '}
-                                  {formatDistanceToNow(
-                                    order.createdAt.toDate(),
-                                    { addSuffix: true },
-                                  )}
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">
-                                Total
-                              </p>
-                              <p className="font-semibold">
-                                $
-                                {Number(order.totalPrice || 0).toFixed(2)}
-                              </p>
-                            </div>
-                          </div>
-
-                          <Separator className="my-2" />
-
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="text-xs text-muted-foreground">
-                              <div>Order ID: {order.id}</div>
-                              {order.buyerName && (
-                                <div>Buyer: {order.buyerName}</div>
-                              )}
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled
-                              // wire up to a detailed sales view later if you want
-                            >
-                              View details
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-            </CardContent>
-          </Card>
+              return (
+                <Card key={order.id || order.orderId}>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">
+                        Order #{order.id || order.orderId || 'unknown'}
+                      </CardTitle>
+                      {createdAtDate && (
+                        <p className="text-xs text-muted-foreground">
+                          Placed {formatDistanceToNow(createdAtDate, { addSuffix: true })}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant="outline">{order.state}</Badge>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-muted-foreground">Buyer</span>
+                      <span className="font-medium">{order.buyerName || order.buyerUid}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-muted-foreground">Total</span>
+                      <span className="font-medium">
+                        ${Number(order.totalPrice || 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <Separator className="my-3" />
+                    <div className="space-y-1 text-sm">
+                      {order.items?.map((item: any, idx: number) => (
+                        <div key={idx} className="flex justify-between">
+                          <span>{item.title || item.listingId}</span>
+                          <span className="text-muted-foreground">
+                            x{item.quantity} · ${Number(item.price || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         )}
       </div>
     </AppLayout>

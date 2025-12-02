@@ -1,12 +1,8 @@
 'use client';
-import { Bell, Search } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { SidebarTrigger } from '../ui/sidebar';
-import { Input } from '../ui/input';
 import { UserNav } from './UserNav';
 import Logo from '../Logo';
-import { VaultModal } from '../VaultModal';
-import { useState } from 'react';
-import { useVault } from '@/lib/vault';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -22,13 +18,9 @@ import { ShoppingCart } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function Header() {
-  const [isVaultModalOpen, setIsVaultModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const { revealPin, showVaultButton } = useVault();
   const { itemCount } = useCart();
   const router = useRouter();
 
-  
   // Mock notifications
   const notifications = [
     { id: 1, type: 'message', title: 'New Message', description: 'From: Retro Rewind', icon: <MessageSquare className="h-4 w-4 text-muted-foreground" /> },
@@ -49,24 +41,12 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Centered Search Bar */}
-        <div className="flex-1 flex justify-center items-center">
-            <div className="relative w-full max-w-lg">
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg blur-lg opacity-75 animate-pulse"></div>
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                        type="search"
-                        placeholder="Search for anything..."
-                        className="w-full h-12 pl-10 text-lg bg-card border-2 border-transparent focus:border-pink-500 transition-colors"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-            </div>
-        </div>
+        {/* Spacer */}
+        <div className="flex-1" />
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+            <Button variant="default" size="sm" onClick={() => router.push('/listings/create')}>Sell</Button>
+
           <Button variant="ghost" className="relative h-8 w-8 rounded-full" onClick={() => router.push('/cart')}>
             <ShoppingCart className="h-5 w-5" />
             {itemCount > 0 && (
@@ -111,7 +91,6 @@ export default function Header() {
           <UserNav />
         </div>
       </header>
-      <VaultModal open={isVaultModalOpen} onOpenChange={setIsVaultModalOpen} />
     </>
   );
 }
