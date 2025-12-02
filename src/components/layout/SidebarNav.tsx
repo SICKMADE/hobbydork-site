@@ -60,111 +60,105 @@ export default function SidebarNav() {
         <Logo iconOnly={true} />
         <p className="text-sm font-body text-muted-foreground mt-2">A safe marketplace to buy and sell</p>
       </SidebarHeader>
-      <SidebarContent className="p-4 pt-4">
-        
-        <div className="bg-black rounded-lg p-2">
-            <SidebarMenu>
-            {mainMenuItems.map((item) => (
-                <SidebarMenuItem key={item.label}>
-                <SidebarMenuButton
-                    href={item.href}
-                    isActive={pathname === item.href}
-                    onClick={() => router.push(item.href)}
-                    className="justify-start gap-3 text-base"
-                >
-                    <item.icon className="h-5 w-5" />
-                    <span>{item.label}</span>
-                </SidebarMenuButton>
-                </SidebarMenuItem>
-            ))}
-            </SidebarMenu>
-        </div>
-        
-        <RedLineSeparator />
-
-        <div className="bg-neutral-800/50 rounded-lg p-2">
-            <SidebarMenu>
-                <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
-                {personalMenuItems.map((item) => (
+      <SidebarContent className="p-4 pt-4 flex flex-col justify-between">
+        <div className="space-y-6">
+            <div className="bg-card/50 rounded-lg p-2">
+                <SidebarMenu>
+                {mainMenuItems.map((item) => (
                     <SidebarMenuItem key={item.label}>
-                        <SidebarMenuButton
-                            href={item.href}
-                            isActive={pathname.startsWith(item.href)}
-                            onClick={() => router.push(item.href)}
-                            className="justify-start gap-3 text-base"
-                        >
-                            <item.icon className="h-5 w-5" />
-                            <span>{item.label}</span>
-                        </SidebarMenuButton>
+                    <SidebarMenuButton
+                        href={item.href}
+                        isActive={pathname === item.href}
+                        onClick={() => router.push(item.href)}
+                        className="justify-start gap-3 text-base"
+                    >
+                        <item.icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                    </SidebarMenuButton>
                     </SidebarMenuItem>
                 ))}
-            </SidebarMenu>
+                </SidebarMenu>
+            </div>
+            
+            <div className="bg-card/50 rounded-lg p-2">
+                <SidebarMenu>
+                    <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
+                    {personalMenuItems.map((item) => (
+                        <SidebarMenuItem key={item.label}>
+                            <SidebarMenuButton
+                                href={item.href}
+                                isActive={pathname.startsWith(item.href)}
+                                onClick={() => router.push(item.href)}
+                                className="justify-start gap-3 text-base"
+                            >
+                                <item.icon className="h-5 w-5" />
+                                <span>{item.label}</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+            </div>
+            
+            {profile?.isSeller && (
+                <div className="bg-card/50 rounded-lg p-2">
+                    <SidebarMenu>
+                        <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
+                        {userMenuItems.map((item) => (
+                            <SidebarMenuItem key={item.label}>
+                                <SidebarMenuButton
+                                    href={item.href}
+                                    isActive={pathname.startsWith(item.href)}
+                                    onClick={() => router.push(item.href)}
+                                    className="justify-start gap-3 text-base"
+                                >
+                                    <item.icon className="h-5 w-5" />
+                                    <span>{item.label}</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenu>
+                </div>
+            )}
+            
+            {profile?.role === 'ADMIN' && (
+                <div className="bg-card/50 rounded-lg p-2">
+                    <SidebarMenu>
+                        <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
+                        {adminMenuItems.map((item) => (
+                            <SidebarMenuItem key={item.label}>
+                                <SidebarMenuButton
+                                    href={item.href}
+                                    isActive={pathname.startsWith(item.href)}
+                                    onClick={() => router.push(item.href)}
+                                    className="justify-start gap-3 text-base"
+                                >
+                                    <item.icon className="h-5 w-5" />
+                                    <span>{item.label}</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenu>
+                </div>
+            )}
         </div>
         
-        {profile?.isSeller && (
-            <>
-              <RedLineSeparator />
-              <div className="bg-black rounded-lg p-2">
-                <SidebarMenu>
-                    <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
-                    {userMenuItems.map((item) => (
-                        <SidebarMenuItem key={item.label}>
-                            <SidebarMenuButton
-                                href={item.href}
-                                isActive={pathname.startsWith(item.href)}
-                                onClick={() => router.push(item.href)}
-                                className="justify-start gap-3 text-base"
-                            >
-                                <item.icon className="h-5 w-5" />
-                                <span>{item.label}</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenu>
-              </div>
-            </>
-        )}
-        
-        {profile?.role === 'ADMIN' && (
-            <>
-              <RedLineSeparator />
-              <div className="bg-neutral-800/50 rounded-lg p-2">
-                <SidebarMenu>
-                    <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
-                    {adminMenuItems.map((item) => (
-                        <SidebarMenuItem key={item.label}>
-                            <SidebarMenuButton
-                                href={item.href}
-                                isActive={pathname.startsWith(item.href)}
-                                onClick={() => router.push(item.href)}
-                                className="justify-start gap-3 text-base"
-                            >
-                                <item.icon className="h-5 w-5" />
-                                <span>{item.label}</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenu>
-              </div>
-            </>
-        )}
-      </SidebarContent>
-      <SidebarFooter className="p-2 mt-auto">
-        <SidebarMenu>
+        <SidebarFooter className="p-2 mt-auto">
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-3 text-base">
+                        <HelpCircle className="h-5 w-5" />
+                        <span>Help</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
             <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-3 text-base">
-                    <HelpCircle className="h-5 w-5" />
-                    <span>Help</span>
+                <SidebarMenuButton onClick={handleLogout} className="justify-start gap-3 text-base">
+                <LogOut className="h-5 w-5" />
+                <span>Logout</span>
                 </SidebarMenuButton>
             </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout} className="justify-start gap-3 text-base">
-              <LogOut className="h-5 w-5" />
-              <span>Logout</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+            </SidebarMenu>
+        </SidebarFooter>
+      </SidebarContent>
     </>
   );
 }
