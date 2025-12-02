@@ -54,7 +54,7 @@ export default function SidebarNav() {
       <SidebarHeader>
         {/* Logo removed from header */}
       </SidebarHeader>
-      <SidebarContent className="p-2">
+      <SidebarContent className="p-4 pt-8">
         <SidebarMenu>
           {mainMenuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
@@ -70,7 +70,7 @@ export default function SidebarNav() {
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
-         <SidebarMenu className="mt-4">
+         <SidebarMenu className="mt-8">
             <p className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
             {personalMenuItems.map((item) => (
                 <SidebarMenuItem key={item.label}>
@@ -87,7 +87,7 @@ export default function SidebarNav() {
             ))}
         </SidebarMenu>
         {profile?.isSeller && (
-            <SidebarMenu className="mt-4">
+            <SidebarMenu className="mt-8">
                 <p className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
                  {userMenuItems.map((item) => (
                     <SidebarMenuItem key={item.label}>
@@ -105,7 +105,7 @@ export default function SidebarNav() {
             </SidebarMenu>
         )}
         {profile?.role === 'ADMIN' && (
-             <SidebarMenu className="mt-4">
+             <SidebarMenu className="mt-8">
                 <p className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
                  {adminMenuItems.map((item) => (
                     <SidebarMenuItem key={item.label}>
