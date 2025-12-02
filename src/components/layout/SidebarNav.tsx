@@ -9,7 +9,7 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 
-import { LogOut, Home, Search, Store, MessageSquare, Newspaper, LayoutDashboard, Heart, Settings, User, Star, HelpCircle, ShoppingCart, Package, HeartHandshake } from 'lucide-react';
+import { LogOut, Home, Search, Store, MessageSquare, Newspaper, Heart, Settings, User, Star, HelpCircle, ShoppingCart, Package, HeartHandshake } from 'lucide-react';
 import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
@@ -50,8 +50,8 @@ export default function SidebarNav() {
 
   return (
     <>
-      <SidebarHeader>
-        <Logo />
+      <SidebarHeader className="flex justify-center">
+        <Logo iconOnly />
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
