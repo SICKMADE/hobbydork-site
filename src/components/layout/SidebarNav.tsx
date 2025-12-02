@@ -15,7 +15,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 
 const RedLineSeparator = () => (
-    <div className="h-0.5 w-full my-4 bg-gradient-to-r from-transparent via-red-600 to-transparent" />
+    <div className="h-0.5 w-full my-4 bg-red-600" />
 );
 
 
