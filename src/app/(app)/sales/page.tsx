@@ -1,109 +1,92 @@
 'use client';
 
 import AppLayout from '@/components/layout/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/use-auth';
-import { useFirestore, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 
-export default function SalesPage() {
+export default function MySalesPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const firestore = useFirestore();
 
-  // Build query ONLY when auth + firestore are ready and user is a seller
   const salesQuery = useMemoFirebase(() => {
-    if (authLoading || !firestore || !user) return null;
+    // don’t even build the query until auth + profile are ready
+    if (authLoading || !firestore || !user || !profile || !profile.isSeller) return null;
 
     return query(
       collection(firestore, 'orders'),
-      where('sellerUid', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('sellerUid', '==', user.uid)
+      // no orderBy; client-side sort
     );
-  }, [firestore, user?.uid, authLoading]);
+  }, [firestore, user?.uid, profile?.isSeller, authLoading]);
 
-  const { data: sales, isLoading } = useCollection<Order>(salesQuery);
+  const { data: sales, isLoading: salesLoading } = useCollection<Order>(salesQuery);
 
-  if (authLoading || !user) {
+  if (!profile?.isSeller) {
     return (
       <AppLayout>
-        <div>Loading your sales...</div>
+        <div>You are not a seller yet.</div>
       </AppLayout>
     );
   }
 
+  if (authLoading || salesLoading) {
+    return (
+      <AppLayout>
+        <div>Loading your sales…</div>
+      </AppLayout>
+    );
+  }
+
+  const sortedSales =
+    sales?.slice().sort((a, b) => {
+      const aTime = a.createdAt?.toMillis?.() ?? 0;
+      const bTime = b.createdAt?.toMillis?.() ?? 0;
+      return bTime - aTime;
+    }) ?? [];
+
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Sales</h1>
-          <p className="text-muted-foreground">
-            Orders where you are the seller.
-          </p>
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold">My Sales</h1>
+
+        {sortedSales.length === 0 && (
+          <p className="text-muted-foreground">You haven&apos;t sold anything yet.</p>
+        )}
+
+        <div className="space-y-3">
+          {sortedSales.map((order) => (
+            <Card key={order.id}>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">
+                    Order #{order.shortId ?? order.id}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Sold{' '}
+                    {order.createdAt?.toDate
+                      ? formatDistanceToNow(order.createdAt.toDate(), { addSuffix: true })
+                      : 'unknown time'}
+                  </p>
+                </div>
+                <Badge variant="outline">{order.state}</Badge>
+              </CardHeader>
+              <CardContent className="text-sm space-y-1">
+                <p>
+                  <span className="font-semibold">Buyer:</span> {order.buyerName}
+                </p>
+                <p>
+                  <span className="font-semibold">Total:</span> $
+                  {Number(order.totalAmount ?? 0).toFixed(2)}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-
-        {isLoading && (
-          <div>Loading sales...</div>
-        )}
-
-        {!isLoading && (!sales || sales.length === 0) && (
-          <p className="text-muted-foreground">You don&apos;t have any sales yet.</p>
-        )}
-
-        {!isLoading && sales && sales.length > 0 && (
-          <div className="space-y-4">
-            {sales.map((order) => {
-              const createdAtDate =
-                (order.createdAt as any)?.toDate
-                  ? (order.createdAt as any).toDate()
-                  : null;
-
-              return (
-                <Card key={order.id || order.orderId}>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle className="text-base">
-                        Order #{order.id || order.orderId || 'unknown'}
-                      </CardTitle>
-                      {createdAtDate && (
-                        <p className="text-xs text-muted-foreground">
-                          Placed {formatDistanceToNow(createdAtDate, { addSuffix: true })}
-                        </p>
-                      )}
-                    </div>
-                    <Badge variant="outline">{order.state}</Badge>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-muted-foreground">Buyer</span>
-                      <span className="font-medium">{order.buyerName || order.buyerUid}</span>
-                    </div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-muted-foreground">Total</span>
-                      <span className="font-medium">
-                        ${Number(order.totalPrice || 0).toFixed(2)}
-                      </span>
-                    </div>
-                    <Separator className="my-3" />
-                    <div className="space-y-1 text-sm">
-                      {order.items?.map((item: any, idx: number) => (
-                        <div key={idx} className="flex justify-between">
-                          <span>{item.title || item.listingId}</span>
-                          <span className="text-muted-foreground">
-                            x{item.quantity} · ${Number(item.price || 0).toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
       </div>
     </AppLayout>
   );

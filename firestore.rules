@@ -141,30 +141,33 @@ service cloud.firestore {
       );
     }
 
-    // ORDERS
-    match /orders/{orderId} {
-      // Buyer, seller, or admin can read (get + list/query)
-      allow read: if isSignedIn() &&
-        (
-          request.auth.uid == resource.data.buyerUid ||
-          request.auth.uid == resource.data.sellerUid ||
-          userIsAdmin()
-        );
+// ORDERS
+match /orders/{orderId} {
 
-      // Any ACTIVE user can create an order where they are the buyer
-      allow create: if userIsActive()
-        && request.resource.data.buyerUid == request.auth.uid;
+  // Buyer, seller or admin can read ANY order (get + list/query)
+  allow read: if request.auth != null &&
+    (
+      request.auth.uid == resource.data.buyerUid ||
+      request.auth.uid == resource.data.sellerUid ||
+      userIsAdmin()
+    );
 
-      // Buyer, seller, or admin can update the order
-      allow update: if isSignedIn() && (
-        request.auth.uid == resource.data.buyerUid ||
-        request.auth.uid == resource.data.sellerUid ||
-        userIsAdmin()
-      );
+  // Any signed-in user can create an order where they are the buyer
+  allow create: if request.auth != null &&
+    request.auth.uid == request.resource.data.buyerUid;
 
-      // Only admin can delete orders
-      allow delete: if userIsAdmin();
-    }
+  // Buyer, seller or admin can update
+  allow update: if request.auth != null &&
+    (
+      request.auth.uid == resource.data.buyerUid ||
+      request.auth.uid == resource.data.sellerUid ||
+      userIsAdmin()
+    );
+
+  // Only admin can delete
+  allow delete: if userIsAdmin();
+}
+
 
     // ISO24 posts
     match /iso24Posts/{isoId} {

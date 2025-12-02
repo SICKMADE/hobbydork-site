@@ -1,109 +1,83 @@
 'use client';
 
 import AppLayout from '@/components/layout/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/use-auth';
-import { useFirestore, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 
-export default function OrdersPage() {
-  const { user, profile, loading: authLoading } = useAuth();
+export default function MyOrdersPage() {
+  const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
 
-  // Build query ONLY when auth + firestore are ready
   const ordersQuery = useMemoFirebase(() => {
     if (authLoading || !firestore || !user) return null;
 
     return query(
       collection(firestore, 'orders'),
-      where('buyerUid', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('buyerUid', '==', user.uid)
+      // no orderBy -> avoid composite index headaches; we sort client-side
     );
   }, [firestore, user?.uid, authLoading]);
 
-  const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
+  const { data: orders, isLoading: ordersLoading } = useCollection<Order>(ordersQuery);
 
-  if (authLoading || !user) {
+  if (authLoading || ordersLoading) {
     return (
       <AppLayout>
-        <div>Loading your orders...</div>
+        <div>Loading your orders…</div>
       </AppLayout>
     );
   }
 
+  const sortedOrders =
+    orders?.slice().sort((a, b) => {
+      const aTime = a.createdAt?.toMillis?.() ?? 0;
+      const bTime = b.createdAt?.toMillis?.() ?? 0;
+      return bTime - aTime; // newest first
+    }) ?? [];
+
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Orders</h1>
-          <p className="text-muted-foreground">
-            Orders where you are the buyer.
-          </p>
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold">My Orders</h1>
+
+        {sortedOrders.length === 0 && (
+          <p className="text-muted-foreground">You haven&apos;t bought anything yet.</p>
+        )}
+
+        <div className="space-y-3">
+          {sortedOrders.map((order) => (
+            <Card key={order.id}>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">
+                    Order #{order.shortId ?? order.id}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Placed{' '}
+                    {order.createdAt?.toDate
+                      ? formatDistanceToNow(order.createdAt.toDate(), { addSuffix: true })
+                      : 'unknown time'}
+                  </p>
+                </div>
+                <Badge variant="outline">{order.state}</Badge>
+              </CardHeader>
+              <CardContent className="text-sm space-y-1">
+                <p>
+                  <span className="font-semibold">Seller:</span> {order.sellerName}
+                </p>
+                <p>
+                  <span className="font-semibold">Total:</span> $
+                  {Number(order.totalAmount ?? 0).toFixed(2)}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-
-        {isLoading && (
-          <div>Loading orders...</div>
-        )}
-
-        {!isLoading && (!orders || orders.length === 0) && (
-          <p className="text-muted-foreground">You don&apos;t have any orders yet.</p>
-        )}
-
-        {!isLoading && orders && orders.length > 0 && (
-          <div className="space-y-4">
-            {orders.map((order) => {
-              const createdAtDate =
-                (order.createdAt as any)?.toDate
-                  ? (order.createdAt as any).toDate()
-                  : null;
-
-              return (
-                <Card key={order.id || order.orderId}>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle className="text-base">
-                        Order #{order.id || order.orderId || 'unknown'}
-                      </CardTitle>
-                      {createdAtDate && (
-                        <p className="text-xs text-muted-foreground">
-                          Placed {formatDistanceToNow(createdAtDate, { addSuffix: true })}
-                        </p>
-                      )}
-                    </div>
-                    <Badge variant="outline">{order.state}</Badge>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-muted-foreground">Store</span>
-                      <span className="font-medium">{order.storeName || order.storeId}</span>
-                    </div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-muted-foreground">Total</span>
-                      <span className="font-medium">
-                        ${Number(order.totalPrice || 0).toFixed(2)}
-                      </span>
-                    </div>
-                    <Separator className="my-3" />
-                    <div className="space-y-1 text-sm">
-                      {order.items?.map((item: any, idx: number) => (
-                        <div key={idx} className="flex justify-between">
-                          <span>{item.title || item.listingId}</span>
-                          <span className="text-muted-foreground">
-                            x{item.quantity} · ${Number(item.price || 0).toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
       </div>
     </AppLayout>
   );
