@@ -50,8 +50,8 @@ export default function SidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex justify-center">
-        <Logo iconOnly={true} />
+      <SidebarHeader>
+        {/* Logo removed from header */}
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
@@ -123,6 +123,9 @@ export default function SidebarNav() {
         )}
       </SidebarContent>
       <SidebarFooter className="p-2">
+        <div className="my-4">
+          <Logo iconOnly={true} className="w-24 h-24 mx-auto" />
+        </div>
         <SidebarMenu>
             <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-3">
