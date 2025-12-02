@@ -1,3 +1,4 @@
+
 'use client';
 
 // --- Inlined `cn` utility to remove external dependency ---
@@ -185,8 +186,8 @@ export function StandaloneVaultDoor() {
       <DialogTrigger asChild>
         <button className="bg-card p-8 rounded-lg flex flex-col items-center gap-4 text-center">
           <HobbyDorkLogo className="w-24 h-24 text-primary" />
-          <h3 className="font-headline text-2xl font-bold">Help HOBBYDORK unlock his safe!</h3>
-          <p className="max-w-md text-muted-foreground">He doesn\'t remember the PIN. The PIN is located somewhere on this app. Whoever helps him unlock it wins a big prize!</p>
+          <h3 className="text-2xl font-bold">Help HOBBYDORK unlock his safe!</h3>
+          <p className="max-w-md text-muted-foreground">He doesn't remember the PIN. The PIN is located somewhere on this app. Whoever helps him unlock it wins a big prize!</p>
           <SafeDoorIcon />
         </button>
       </DialogTrigger>
