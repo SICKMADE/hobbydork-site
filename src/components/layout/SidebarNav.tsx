@@ -57,7 +57,7 @@ export default function SidebarNav() {
   return (
     <>
       <SidebarHeader className="p-4 pt-6 text-center">
-        <Logo />
+        <Logo abbreviated={true} />
         <p className="text-sm text-muted-foreground mt-2">A safe marketplace buy and sell</p>
       </SidebarHeader>
       <SidebarContent className="p-4 pt-4">

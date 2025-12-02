@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 type LogoProps = {
   className?: string;
   iconOnly?: boolean;
+  abbreviated?: boolean;
 };
 
 const LegoHead = ({ className }: { className?: string }) => (
@@ -30,7 +31,9 @@ const LegoHead = ({ className }: { className?: string }) => (
 );
 
 
-export default function Logo({ className, iconOnly = false }: LogoProps) {
+export default function Logo({ className, iconOnly = false, abbreviated = false }: LogoProps) {
+  const textToShow = abbreviated ? "HD" : "HobbyDork";
+
   return (
     <div className={cn('flex items-center justify-center gap-4 text-primary', className)}>
       <LegoHead className="h-12 w-12" />
@@ -42,7 +45,7 @@ export default function Logo({ className, iconOnly = false }: LogoProps) {
               textShadow: '0 0 2px #fff, 0 0 2px #fff, 0 0 2px #fff, 0 0 2px #fff, 3px 3px 5px rgba(0,0,0,0.5)'
             }}
             >
-            <span>HD</span>
+            <span>{textToShow}</span>
           </h1>
       )}
     </div>
