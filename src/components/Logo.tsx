@@ -20,7 +20,7 @@ const LegoHead = ({ className }: { className?: string }) => (
         <rect x="20" y="15" width="60" height="55" rx="5" />
         <circle cx="38" cy="38" r="5" fill="hsl(var(--background))" />
         <circle cx="62" cy="38" r="5" fill="hsl(var(--background))" />
-        <path d="M35 55 Q50 65 65 55" stroke="hsl(var(--background))" strokeWidth="3" fill="none" />
+        <path d="M35 55 Q50 65 65 55" stroke="hsl(var(--background))" fill="none" />
       </g>
       {/* Crossbones Underneath */}
       <g transform="translate(0, 65)">
