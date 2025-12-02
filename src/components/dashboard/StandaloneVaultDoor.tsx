@@ -1,11 +1,21 @@
 'use client';
+
+// --- Inlined `cn` utility to remove external dependency ---
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+// --- End of inlined utility ---
+
 import { useState } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { cn } from '@/lib/utils';
 import { handleVaultPinCheck } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, X } from 'lucide-react';
 import React from 'react';
+
 
 // --- Inlined SVG Icons to reduce dependencies ---
 const AwardIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -40,6 +50,30 @@ const HobbyDorkLogo = (props: React.SVGProps<SVGSVGElement>) => (
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
 
+const DialogTitle = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Title>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Title
+    ref={ref}
+    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+    {...props}
+  />
+));
+DialogTitle.displayName = DialogPrimitive.Title.displayName;
+
+const DialogDescription = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+));
+DialogDescription.displayName = DialogPrimitive.Description.displayName;
+
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
@@ -63,13 +97,18 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const Button = React.forwardRef<
     HTMLButtonElement,
-    React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'default' | 'outline' }
+    React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'default' | 'outline' | 'destructive' | 'secondary' | 'ghost' | 'link' }
 >(({ className, variant, ...props }, ref) => {
     const baseClasses = "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
-    const variantClasses = variant === 'outline'
-        ? "border border-input bg-background hover:bg-accent hover:text-accent-foreground"
-        : "bg-primary text-primary-foreground hover:bg-primary/90";
-    return <button className={cn(baseClasses, variantClasses, className)} ref={ref} {...props} />;
+    const variantClasses = {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+    };
+    return <button className={cn(baseClasses, variant ? variantClasses[variant] : variantClasses.default, className)} ref={ref} {...props} />;
 });
 Button.displayName = 'Button';
 
@@ -147,11 +186,20 @@ export function StandaloneVaultDoor() {
         <button className="bg-card p-8 rounded-lg flex flex-col items-center gap-4 text-center">
           <HobbyDorkLogo className="w-24 h-24 text-primary" />
           <h3 className="font-headline text-2xl font-bold">Help HOBBYDORK unlock his safe!</h3>
-          <p className="max-w-md text-muted-foreground">He doesn't remember the PIN. The PIN is located somewhere on this app. Whoever helps him unlock it wins a big prize!</p>
+          <p className="max-w-md text-muted-foreground">He doesn\'t remember the PIN. The PIN is located somewhere on this app. Whoever helps him unlock it wins a big prize!</p>
           <SafeDoorIcon />
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
+        <div className="sr-only">
+            <DialogTitle>{isCorrect ? "Vault Unlocked" : "Unlock the Vault"}</DialogTitle>
+            <DialogDescription>
+            {isCorrect
+                ? "You have successfully unlocked the vault. Claim your prize."
+                : "Enter the 4-digit PIN to unlock the vault and win a prize."}
+            </DialogDescription>
+        </div>
+
         {isCorrect ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <AwardIcon className="w-16 h-16 text-yellow-400 animate-bounce" />

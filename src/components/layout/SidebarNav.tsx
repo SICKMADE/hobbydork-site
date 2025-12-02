@@ -31,6 +31,7 @@ export default function SidebarNav() {
   ];
   
   const personalMenuItems = [
+      { href: '/profile', label: 'Profile', icon: User },
       { href: '/orders', label: 'My Orders', icon: Package },
       { href: '/sales', label: 'My Sales', icon: HeartHandshake },
       { href: '/watchlist', label: 'Watchlist', icon: Heart },
