@@ -22,7 +22,7 @@ export default function Header() {
         {/* Search Bar & Logo */}
         <div className="flex-1 flex justify-center items-center">
           <div
-            className="w-full max-w-4xl rounded-lg p-2 flex items-center gap-4 border-2 border-white"
+            className="w-full max-w-4xl rounded-lg p-2 flex items-center gap-4"
             style={{
               backgroundImage: 'linear-gradient(45deg, #333 25%, transparent 25%), linear-gradient(-45deg, #333 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #333 75%), linear-gradient(-45deg, transparent 75%, #333 75%)',
               backgroundSize: '20px 20px',
@@ -38,7 +38,7 @@ export default function Header() {
               <Input
                 type="search"
                 placeholder="Search collectibles, stores, and users..."
-                className="pl-10 h-10 text-base bg-black border-gray-700 shadow-inner text-white placeholder:text-gray-500 rounded-md w-full"
+                className="pl-10 h-10 text-base bg-black border-white shadow-inner text-white placeholder:text-gray-500 rounded-md w-full"
               />
             </div>
             <Button
