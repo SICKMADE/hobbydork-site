@@ -67,7 +67,7 @@ export default function SidebarNav() {
                 className="justify-start gap-3"
               >
                 <item.icon className="h-5 w-5" />
-                <span className="text-lg font-code">{item.label}</span>
+                <span className="text-xl">{item.label}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
@@ -86,7 +86,7 @@ export default function SidebarNav() {
                         className="justify-start gap-3"
                     >
                         <item.icon className="h-5 w-5" />
-                        <span className="text-lg font-code">{item.label}</span>
+                        <span className="text-xl">{item.label}</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             ))}
@@ -106,7 +106,7 @@ export default function SidebarNav() {
                               className="justify-start gap-3"
                           >
                               <item.icon className="h-5 w-5" />
-                              <span className="text-lg font-code">{item.label}</span>
+                              <span className="text-xl">{item.label}</span>
                           </SidebarMenuButton>
                       </SidebarMenuItem>
                   ))}
@@ -128,7 +128,7 @@ export default function SidebarNav() {
                               className="justify-start gap-3"
                           >
                               <item.icon className="h-5 w-5" />
-                              <span className="text-lg font-code">{item.label}</span>
+                              <span className="text-xl">{item.label}</span>
                           </SidebarMenuButton>
                       </SidebarMenuItem>
                   ))}
@@ -144,13 +144,13 @@ export default function SidebarNav() {
             <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-3">
                     <HelpCircle className="h-5 w-5" />
-                    <span className="text-lg font-code">Help</span>
+                    <span className="text-xl">Help</span>
                 </SidebarMenuButton>
             </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleLogout} className="justify-start gap-3">
               <LogOut className="h-5 w-5" />
-              <span className="text-lg font-code">Logout</span>
+              <span className="text-xl">Logout</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
