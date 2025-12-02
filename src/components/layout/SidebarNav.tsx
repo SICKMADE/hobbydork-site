@@ -123,7 +123,7 @@ export default function SidebarNav() {
         )}
       </SidebarContent>
       <SidebarFooter className="p-2 mt-auto">
-        <Logo iconOnly={true} className="w-full h-auto p-4" />
+        <Logo iconOnly={true} className="w-48 h-48 mx-auto" />
         <SidebarMenu>
             <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-3">
