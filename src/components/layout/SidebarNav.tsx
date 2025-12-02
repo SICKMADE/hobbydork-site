@@ -13,7 +13,11 @@ import { LogOut, Home, Search, Store, MessageSquare, Newspaper, Heart, Settings,
 import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
-import { Separator } from '../ui/separator';
+
+const BeveledSeparator = () => (
+    <div className="h-0.5 w-full my-8 bg-gradient-to-r from-transparent via-red-600 to-transparent" />
+);
+
 
 export default function SidebarNav() {
   const { logout, profile } = useAuth();
@@ -56,7 +60,7 @@ export default function SidebarNav() {
         {/* Logo removed from header */}
       </SidebarHeader>
       <SidebarContent className="p-4 pt-20">
-        <Separator className="my-8 bg-red-600 h-0.5" />
+        <BeveledSeparator />
         <SidebarMenu>
           {mainMenuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
@@ -73,7 +77,7 @@ export default function SidebarNav() {
           ))}
         </SidebarMenu>
         
-        <Separator className="my-8 bg-red-600 h-0.5" />
+        <BeveledSeparator />
 
          <SidebarMenu className="mt-8">
             <p className="px-2 mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
@@ -94,7 +98,7 @@ export default function SidebarNav() {
         
         {profile?.isSeller && (
             <>
-              <Separator className="my-8 bg-red-600 h-0.5" />
+              <BeveledSeparator />
               <SidebarMenu className="mt-8">
                   <p className="px-2 mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
                   {userMenuItems.map((item) => (
@@ -116,7 +120,7 @@ export default function SidebarNav() {
         
         {profile?.role === 'ADMIN' && (
             <>
-              <Separator className="my-8 bg-red-600 h-0.5" />
+              <BeveledSeparator />
               <SidebarMenu className="mt-8">
                   <p className="px-2 mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
                   {adminMenuItems.map((item) => (
