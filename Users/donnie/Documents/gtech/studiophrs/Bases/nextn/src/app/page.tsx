@@ -4,6 +4,7 @@ import AuthComponent from '@/components/auth/AuthComponent';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
+import AppLayout from '@/components/layout/AppLayout';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import Logo from '@/components/Logo';
