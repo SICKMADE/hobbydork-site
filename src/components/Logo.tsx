@@ -9,39 +9,29 @@ type LogoProps = {
 const LegoHead = ({ className }: { className?: string }) => (
     <svg
       className={cn("h-8 w-8 text-primary", className)}
-      viewBox="0 0 100 125"
+      viewBox="0 0 100 100"
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
     >
-        <g>
-            {/* Lego Head - Made Larger */}
-            <g transform="translate(5, 0) scale(1.0)">
-                <rect x="35" y="5" width="30" height="10" rx="2" />
-                <ellipse cx="50" cy="5" rx="15" ry="4" />
-                <rect x="20" y="15" width="60" height="55" rx="5" />
-                <circle cx="38" cy="38" r="5" fill="hsl(var(--background))" />
-                <circle cx="62" cy="38" r="5" fill="hsl(var(--background))" />
-                <path d="M35 55 Q50 65 65 55" stroke="hsl(var(--background))" strokeWidth="3" fill="none" />
-            </g>
-
-            {/* Crossbones */}
-            <g transform="translate(0, 70) scale(1.1)">
-                <g transform="rotate(-30 50 25)">
-                    <path d="M 15 25 C 15 15, 25 15, 25 25 S 15 35, 15 25 Z" />
-                    <path d="M 25 25 C 25 15, 35 15, 35 25 S 25 35, 25 35 Z" transform="translate(40, 0) scale(-1, 1) translate(-60, 0)" />
-                    <rect x="22" y="22.5" width="56" height="5" rx="2.5" />
-                    <path d="M 75 25 C 75 15, 85 15, 85 25 S 75 35, 75 25 Z" />
-                    <path d="M 85 25 C 85 15, 95 15, 95 25 S 85 35, 85 35 Z" transform="translate(140, 0) scale(-1, 1) translate(-180, 0)" />
-                </g>
-                <g transform="rotate(30 50 25)">
-                    <path d="M 15 25 C 15 15, 25 15, 25 25 S 15 35, 15 25 Z" />
-                    <path d="M 25 25 C 25 15, 35 15, 35 25 S 25 35, 25 35 Z" transform="translate(40, 0) scale(-1, 1) translate(-60, 0)" />
-                    <rect x="22" y="22.5" width="56" height="5" rx="2.5" />
-                    <path d="M 75 25 C 75 15, 85 15, 85 25 S 75 35, 75 25 Z" />
-                    <path d="M 85 25 C 85 15, 95 15, 95 25 S 85 35, 85 35 Z" transform="translate(140, 0) scale(-1, 1) translate(-180, 0)" />
-                </g>
-            </g>
-        </g>
+      {/* Simplified Crossbones - Background */}
+      <g transform="translate(5, 5) scale(0.9)">
+        <rect x="10" y="45" width="80" height="10" rx="5" transform="rotate(-45 50 50)" />
+        <circle cx="15" cy="15" r="8" transform="rotate(-45 50 50)"/>
+        <circle cx="85" cy="85" r="8" transform="rotate(-45 50 50)"/>
+        <rect x="10" y="45" width="80" height="10" rx="5" transform="rotate(45 50 50)" />
+        <circle cx="85" cy="15" r="8" transform="rotate(45 50 50)"/>
+        <circle cx="15" cy="85" r="8" transform="rotate(45 50 50)"/>
+      </g>
+      
+      {/* Skull */}
+      <g>
+        <rect x="35" y="5" width="30" height="10" rx="2" />
+        <ellipse cx="50" cy="5" rx="15" ry="4" />
+        <rect x="20" y="15" width="60" height="55" rx="5" />
+        <circle cx="38" cy="38" r="5" fill="hsl(var(--background))" />
+        <circle cx="62" cy="38" r="5" fill="hsl(var(--background))" />
+        <path d="M35 55 Q50 65 65 55" stroke="hsl(var(--background))" strokeWidth="3" fill="none" />
+      </g>
     </svg>
 );
 
