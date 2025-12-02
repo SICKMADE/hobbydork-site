@@ -13,6 +13,7 @@ import { LogOut, Home, Search, Store, MessageSquare, Newspaper, Heart, Settings,
 import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
+import { Separator } from '../ui/separator';
 
 export default function SidebarNav() {
   const { logout, profile } = useAuth();
@@ -54,7 +55,7 @@ export default function SidebarNav() {
       <SidebarHeader>
         {/* Logo removed from header */}
       </SidebarHeader>
-      <SidebarContent className="p-4 pt-8">
+      <SidebarContent className="p-4 pt-12">
         <SidebarMenu>
           {mainMenuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
@@ -65,13 +66,16 @@ export default function SidebarNav() {
                 className="justify-start gap-3"
               >
                 <item.icon className="h-5 w-5" />
-                <span className="text-base">{item.label}</span>
+                <span className="text-lg">{item.label}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
+        
+        <Separator className="my-6 bg-red-600 h-0.5" />
+
          <SidebarMenu className="mt-8">
-            <p className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
+            <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
             {personalMenuItems.map((item) => (
                 <SidebarMenuItem key={item.label}>
                     <SidebarMenuButton
@@ -81,46 +85,54 @@ export default function SidebarNav() {
                         className="justify-start gap-3"
                     >
                         <item.icon className="h-5 w-5" />
-                        <span className="text-base">{item.label}</span>
+                        <span className="text-lg">{item.label}</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             ))}
         </SidebarMenu>
+        
         {profile?.isSeller && (
-            <SidebarMenu className="mt-8">
-                <p className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
-                 {userMenuItems.map((item) => (
-                    <SidebarMenuItem key={item.label}>
-                        <SidebarMenuButton
-                            href={item.href}
-                            isActive={pathname.startsWith(item.href)}
-                             onClick={() => router.push(item.href)}
-                            className="justify-start gap-3"
-                        >
-                            <item.icon className="h-5 w-5" />
-                            <span className="text-base">{item.label}</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
+            <>
+              <Separator className="my-6 bg-red-600 h-0.5" />
+              <SidebarMenu className="mt-8">
+                  <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
+                  {userMenuItems.map((item) => (
+                      <SidebarMenuItem key={item.label}>
+                          <SidebarMenuButton
+                              href={item.href}
+                              isActive={pathname.startsWith(item.href)}
+                              onClick={() => router.push(item.href)}
+                              className="justify-start gap-3"
+                          >
+                              <item.icon className="h-5 w-5" />
+                              <span className="text-lg">{item.label}</span>
+                          </SidebarMenuButton>
+                      </SidebarMenuItem>
+                  ))}
+              </SidebarMenu>
+            </>
         )}
+        
         {profile?.role === 'ADMIN' && (
-             <SidebarMenu className="mt-8">
-                <p className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
-                 {adminMenuItems.map((item) => (
-                    <SidebarMenuItem key={item.label}>
-                        <SidebarMenuButton
-                            href={item.href}
-                            isActive={pathname.startsWith(item.href)}
-                             onClick={() => router.push(item.href)}
-                            className="justify-start gap-3"
-                        >
-                            <item.icon className="h-5 w-5" />
-                            <span className="text-base">{item.label}</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
+            <>
+              <Separator className="my-6 bg-red-600 h-0.5" />
+              <SidebarMenu className="mt-8">
+                  <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
+                  {adminMenuItems.map((item) => (
+                      <SidebarMenuItem key={item.label}>
+                          <SidebarMenuButton
+                              href={item.href}
+                              isActive={pathname.startsWith(item.href)}
+                              onClick={() => router.push(item.href)}
+                              className="justify-start gap-3"
+                          >
+                              <item.icon className="h-5 w-5" />
+                              <span className="text-lg">{item.label}</span>
+                          </SidebarMenuButton>
+                      </SidebarMenuItem>
+                  ))}
+              </SidebarMenu>
+            </>
         )}
       </SidebarContent>
       <SidebarFooter className="p-2 mt-auto">
@@ -131,13 +143,13 @@ export default function SidebarNav() {
             <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-3">
                     <HelpCircle className="h-5 w-5" />
-                    <span className="text-base">Help</span>
+                    <span className="text-lg">Help</span>
                 </SidebarMenuButton>
             </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleLogout} className="justify-start gap-3">
               <LogOut className="h-5 w-5" />
-              <span className="text-base">Logout</span>
+              <span className="text-lg">Logout</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
