@@ -1,3 +1,4 @@
+
 'use client';
 import {
   SidebarHeader,
@@ -59,21 +60,20 @@ export default function SidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="p-4 pt-8 text-center">
+      <SidebarHeader className="p-4 pt-12 text-center">
         <Logo iconOnly={true} />
-        <p className="text-sm font-body text-muted-foreground mt-2">A safe marketplace to buy and sell</p>
+        <p className="text-sm font-nintendo tracking-wider text-muted-foreground mt-4">A safe marketplace to buy and sell</p>
       </SidebarHeader>
-      <SidebarContent className="p-4 pt-12">
+      <SidebarContent className="p-4">
         <div 
-          className="h-full flex flex-col"
+          className="h-full flex flex-col space-y-4"
           style={{
             backgroundImage: 'linear-gradient(45deg, hsl(0 0% 13% / 0.4) 25%, transparent 25%), linear-gradient(-45deg, hsl(0 0% 13% / 0.4) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(0 0% 13% / 0.4) 75%), linear-gradient(-45deg, transparent 75%, hsl(0 0% 13% / 0.4) 75%)',
             backgroundSize: '20px 20px',
             backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
           }}
         >
-          <div className="flex-grow space-y-4">
-             <div className="bg-black/80 rounded-lg p-2">
+            <div className="bg-black/80 rounded-lg p-2">
                 <SidebarMenu>
                  <RedLineSeparator />
                 {mainMenuItems.map((item) => (
@@ -173,7 +173,6 @@ export default function SidebarNav() {
                   </SidebarMenuItem>
                   </SidebarMenu>
               </div>
-            </div>
         </div>
       </SidebarContent>
     </>
