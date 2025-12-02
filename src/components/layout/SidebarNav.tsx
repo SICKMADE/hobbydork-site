@@ -56,7 +56,7 @@ export default function SidebarNav() {
         {/* Logo removed from header */}
       </SidebarHeader>
       <SidebarContent className="p-4 pt-20">
-        <Separator className="my-6 bg-red-600 h-0.5" />
+        <Separator className="my-8 bg-red-600 h-0.5" />
         <SidebarMenu>
           {mainMenuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
@@ -67,7 +67,7 @@ export default function SidebarNav() {
                 className="justify-start gap-3"
               >
                 <item.icon className="h-5 w-5" />
-                <span className="text-xl">{item.label}</span>
+                <span className="font-headline text-base">{item.label}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
@@ -86,7 +86,7 @@ export default function SidebarNav() {
                         className="justify-start gap-3"
                     >
                         <item.icon className="h-5 w-5" />
-                        <span className="text-xl">{item.label}</span>
+                        <span className="font-headline text-base">{item.label}</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             ))}
@@ -106,7 +106,7 @@ export default function SidebarNav() {
                               className="justify-start gap-3"
                           >
                               <item.icon className="h-5 w-5" />
-                              <span className="text-xl">{item.label}</span>
+                              <span className="font-headline text-base">{item.label}</span>
                           </SidebarMenuButton>
                       </SidebarMenuItem>
                   ))}
@@ -128,7 +128,7 @@ export default function SidebarNav() {
                               className="justify-start gap-3"
                           >
                               <item.icon className="h-5 w-5" />
-                              <span className="text-xl">{item.label}</span>
+                              <span className="font-headline text-base">{item.label}</span>
                           </SidebarMenuButton>
                       </SidebarMenuItem>
                   ))}
@@ -138,19 +138,19 @@ export default function SidebarNav() {
       </SidebarContent>
       <SidebarFooter className="p-2 mt-auto">
         <div className="flex justify-center p-4">
-            <Logo iconOnly className="w-32 h-32" />
+            <Logo iconOnly className="w-48 h-48" />
         </div>
         <SidebarMenu>
             <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-3">
                     <HelpCircle className="h-5 w-5" />
-                    <span className="text-lg">Help</span>
+                    <span className="font-headline text-base">Help</span>
                 </SidebarMenuButton>
             </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleLogout} className="justify-start gap-3">
               <LogOut className="h-5 w-5" />
-              <span className="text-lg">Logout</span>
+              <span className="font-headline text-base">Logout</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
