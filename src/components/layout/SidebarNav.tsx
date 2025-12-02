@@ -15,7 +15,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 
 const RedLineSeparator = () => (
-    <div className="h-0.5 w-full my-2 bg-red-600" />
+    <div className="h-0.5 w-full my-2 bg-destructive" />
 );
 
 
@@ -70,10 +70,10 @@ export default function SidebarNav() {
                     href={item.href}
                     isActive={pathname === item.href}
                     onClick={() => router.push(item.href)}
-                    className="justify-start gap-3"
+                    className="justify-start gap-3 text-base"
                 >
                     <item.icon className="h-5 w-5" />
-                    <span className="text-xl">{item.label}</span>
+                    <span>{item.label}</span>
                 </SidebarMenuButton>
                 </SidebarMenuItem>
             ))}
@@ -91,10 +91,10 @@ export default function SidebarNav() {
                             href={item.href}
                             isActive={pathname.startsWith(item.href)}
                             onClick={() => router.push(item.href)}
-                            className="justify-start gap-3"
+                            className="justify-start gap-3 text-base"
                         >
                             <item.icon className="h-5 w-5" />
-                            <span className="text-xl">{item.label}</span>
+                            <span>{item.label}</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 ))}
@@ -113,10 +113,10 @@ export default function SidebarNav() {
                                 href={item.href}
                                 isActive={pathname.startsWith(item.href)}
                                 onClick={() => router.push(item.href)}
-                                className="justify-start gap-3"
+                                className="justify-start gap-3 text-base"
                             >
                                 <item.icon className="h-5 w-5" />
-                                <span className="text-xl">{item.label}</span>
+                                <span>{item.label}</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                     ))}
@@ -137,10 +137,10 @@ export default function SidebarNav() {
                                 href={item.href}
                                 isActive={pathname.startsWith(item.href)}
                                 onClick={() => router.push(item.href)}
-                                className="justify-start gap-3"
+                                className="justify-start gap-3 text-base"
                             >
                                 <item.icon className="h-5 w-5" />
-                                <span className="text-xl">{item.label}</span>
+                                <span>{item.label}</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                     ))}
@@ -152,15 +152,15 @@ export default function SidebarNav() {
       <SidebarFooter className="p-2 mt-auto">
         <SidebarMenu>
             <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-3">
+                <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-3 text-base">
                     <HelpCircle className="h-5 w-5" />
-                    <span className="text-xl">Help</span>
+                    <span>Help</span>
                 </SidebarMenuButton>
             </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout} className="justify-start gap-3">
+            <SidebarMenuButton onClick={handleLogout} className="justify-start gap-3 text-base">
               <LogOut className="h-5 w-5" />
-              <span className="text-xl">Logout</span>
+              <span>Logout</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
