@@ -36,7 +36,10 @@ export default function Logo({ className, iconOnly = false }: LogoProps) {
       <LegoHead className="h-12 w-12" />
       {!iconOnly && (
         <div className="rounded-full bg-neutral-300 border-4 border-red-600 px-6 py-2">
-          <h1 className="text-3xl font-nintendo font-black tracking-tight text-white italic">
+          <h1 
+            className="text-3xl font-nintendo font-black tracking-tight text-red-600 italic"
+            style={{ textShadow: '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff' }}
+            >
             <span>HobbyDork</span>
           </h1>
         </div>
