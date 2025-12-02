@@ -25,7 +25,7 @@ export default function Header() {
             <Logo />
           </div>
           <div
-            className="w-full max-w-lg rounded-lg p-1 border-2 border-white"
+            className="w-full max-w-2xl rounded-lg p-1 border-2 border-white"
             style={{
               backgroundImage: 'linear-gradient(45deg, #333 25%, transparent 25%), linear-gradient(-45deg, #333 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #333 75%), linear-gradient(-45deg, transparent 75%, #333 75%)',
               backgroundSize: '20px 20px',
