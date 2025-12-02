@@ -15,7 +15,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 
 const RedLineSeparator = () => (
-    <div className="h-0.5 w-full my-4 bg-red-600" />
+    <div className="h-0.5 w-full my-2 bg-red-600" />
 );
 
 
@@ -56,10 +56,11 @@ export default function SidebarNav() {
 
   return (
     <>
-      <SidebarHeader>
-        {/* Logo removed from header */}
+      <SidebarHeader className="p-4 pt-6 text-center">
+        <Logo />
+        <p className="text-sm text-muted-foreground mt-2">A safe marketplace buy and sell</p>
       </SidebarHeader>
-      <SidebarContent className="p-4 pt-20">
+      <SidebarContent className="p-4 pt-4">
         
         <div className="bg-black rounded-lg p-2">
             <SidebarMenu>
@@ -149,9 +150,6 @@ export default function SidebarNav() {
         )}
       </SidebarContent>
       <SidebarFooter className="p-2 mt-auto">
-        <div className="flex justify-center p-4">
-            <Logo iconOnly className="w-48 h-48" />
-        </div>
         <SidebarMenu>
             <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-3">
