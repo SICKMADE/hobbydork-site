@@ -61,7 +61,7 @@ export default function SidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-4 pt-4 flex flex-col">
         <div 
-          className="flex-grow flex flex-col justify-between"
+          className="flex-grow"
           style={{
             backgroundImage:
               'linear-gradient(45deg, hsla(0,0%,13%,.4) 25%, transparent 25%), linear-gradient(-45deg, hsla(0,0%,13%,.4) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsla(0,0%,13%,.4) 75%), linear-gradient(-45deg, transparent 75%, hsla(0,0%,13%,.4) 75%)',
@@ -69,9 +69,9 @@ export default function SidebarNav() {
             backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
           }}
         >
-          <div>
+          <div className="space-y-4">
             <RedLineSeparator />
-            <div className="bg-black/80 rounded-lg p-2 mt-4">
+            <div className="bg-black/80 rounded-lg p-2">
                 <SidebarMenu>
                 {mainMenuItems.map((item) => (
                     <SidebarMenuItem key={item.label}>
@@ -91,7 +91,7 @@ export default function SidebarNav() {
             
              <RedLineSeparator />
             
-            <div className="bg-black/80 rounded-lg p-2 mt-4">
+            <div className="bg-black/80 rounded-lg p-2">
                 <SidebarMenu>
                     <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
                     {personalMenuItems.map((item) => (
@@ -113,7 +113,7 @@ export default function SidebarNav() {
             {profile?.isSeller && (
                 <>
                 <RedLineSeparator />
-                <div className="bg-black/80 rounded-lg p-2 mt-4">
+                <div className="bg-black/80 rounded-lg p-2">
                     <SidebarMenu>
                         <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
                         {userMenuItems.map((item) => (
@@ -137,7 +137,7 @@ export default function SidebarNav() {
             {profile?.role === 'ADMIN' && (
                 <>
                 <RedLineSeparator />
-                <div className="bg-black/80 rounded-lg p-2 mt-4">
+                <div className="bg-black/80 rounded-lg p-2">
                     <SidebarMenu>
                         <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
                         {adminMenuItems.map((item) => (
@@ -157,11 +157,9 @@ export default function SidebarNav() {
                 </div>
                 </>
             )}
-            </div>
             
-            <div>
               <RedLineSeparator />
-              <div className="bg-black/80 rounded-lg p-2 mt-4">
+              <div className="bg-black/80 rounded-lg p-2">
                   <SidebarMenu>
                       <SidebarMenuItem>
                           <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-4 text-base h-12">
@@ -179,7 +177,6 @@ export default function SidebarNav() {
               </div>
             </div>
         </div>
-        
       </SidebarContent>
     </>
   );
