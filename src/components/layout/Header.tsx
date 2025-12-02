@@ -17,39 +17,33 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
-        <div className="flex items-center gap-2">
-          <SidebarTrigger className="hidden md:flex" />
-          <div className="hidden md:block">
-            <Logo iconOnly />
-          </div>
-           <div className="md:hidden">
+        <SidebarTrigger className="hidden md:flex" />
+
+        {/* Search Bar & Logo */}
+        <div className="flex-1 flex justify-center items-center gap-4">
+          <div className="hidden md:flex">
             <Logo />
           </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="flex-1 flex justify-center items-center gap-4 px-4">
-            <div 
-              className="w-full max-w-lg rounded-lg p-1 shadow-inner"
-              style={checkeredBg}
-            >
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                    type="search"
-                    placeholder="Search collectibles, stores, and users..."
-                    className="pl-10 h-10 text-base bg-black border-gray-700 shadow-inner text-white placeholder:text-gray-500 rounded-md"
-                />
-              </div>
+          <div
+            className="w-full max-w-lg rounded-lg p-1 shadow-inner"
+            style={checkeredBg}
+          >
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                type="search"
+                placeholder="Search collectibles, stores, and users..."
+                className="pl-10 h-10 text-base bg-black border-gray-700 shadow-inner text-white placeholder:text-gray-500 rounded-md"
+              />
             </div>
-            <Button
-              className="h-9 w-24 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full shadow-[0_4px_#9f1212] active:shadow-none active:translate-y-1 transition-all"
-              style={{ fontFamily: '"Press Start 2P", monospace' }}
-            >
-              START
-            </Button>
+          </div>
+          <Button
+            className="h-9 w-24 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full shadow-[0_4px_#9f1212] active:shadow-none active:translate-y-1 transition-all"
+            style={{ fontFamily: '"Press Start 2P", monospace' }}
+          >
+            START
+          </Button>
         </div>
-
 
         <div className="flex items-center gap-4">
           <UserNav />
