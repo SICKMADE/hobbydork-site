@@ -125,7 +125,7 @@ export default function SidebarNav() {
       </SidebarContent>
       <SidebarFooter className="p-2 mt-auto">
         <div className="flex justify-center p-4">
-            <Logo iconOnly className="w-48 h-48" />
+            <Logo iconOnly className="w-32 h-32" />
         </div>
         <SidebarMenu>
             <SidebarMenuItem>
