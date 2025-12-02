@@ -1,4 +1,3 @@
-
 'use client';
 import {
   SidebarHeader,
@@ -64,7 +63,7 @@ export default function SidebarNav() {
         <Logo iconOnly={true} />
         <p className="text-sm font-body text-muted-foreground mt-2">A safe marketplace to buy and sell</p>
       </SidebarHeader>
-      <SidebarContent className="p-4 pt-8 flex flex-col gap-4">
+      <SidebarContent className="p-4 pt-12 flex flex-col gap-4">
         <div 
           className="flex-grow space-y-4"
           style={{
