@@ -58,9 +58,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Sidebar>
           <SidebarNav />
         </Sidebar>
-        <div className="absolute top-3 left-4 z-40 md:hidden">
-            <MobileSidebar />
-        </div>
         <MainContent>{children}</MainContent>
       </div>
     </SidebarProvider>

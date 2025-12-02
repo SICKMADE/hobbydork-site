@@ -123,10 +123,18 @@ SidebarProvider.displayName = "SidebarProvider"
 
 const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
     ({ className, children, ...props }, ref) => {
-        const { isMobile } = useSidebar();
+        const { open, isMobile, setOpen } = useSidebar();
 
         if (isMobile) {
-            return null; // On mobile, the sidebar is rendered as a Sheet in MobileSidebar
+            return (
+              <Sheet open={open} onOpenChange={setOpen}>
+                  <SheetContent side="left" className="p-0 w-64 border-r-0">
+                      <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
+                          {children}
+                      </div>
+                  </SheetContent>
+              </Sheet>
+            );
         }
 
         // On desktop, the sidebar is always visible and takes up space.
@@ -153,10 +161,7 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
 >(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar, isMobile } = useSidebar()
-
-  // This trigger is only for the desktop view, mobile is handled by AppLayout
-  if (isMobile) return null;
+  const { toggleSidebar } = useSidebar()
 
   return (
     <Button

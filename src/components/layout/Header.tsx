@@ -7,6 +7,7 @@ import { Input } from '../ui/input';
 import { Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
+import { PanelLeft } from 'lucide-react';
 
 export default function Header() {
   const { isMobile } = useSidebar();
@@ -20,8 +21,8 @@ export default function Header() {
     <>
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
         
-        {/* Spacer for mobile view where the trigger is now in AppLayout */}
-        <div className="md:hidden" style={{ width: '40px' }} />
+        {/* This button is only for toggling the sidebar on mobile and should be hidden on desktop */}
+        <SidebarTrigger className="md:hidden" />
 
         {/* Search Bar & Logo */}
         <div className="flex-1 flex justify-center items-center gap-4">
