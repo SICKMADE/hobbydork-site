@@ -1,3 +1,4 @@
+
 import { cn } from '@/lib/utils';
 
 type LogoProps = {
@@ -12,30 +13,34 @@ const LegoHead = ({ className }: { className?: string }) => (
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
     >
-        <g transform="translate(0, 5)">
+        <g>
             {/* Top Cylinder */}
-            <rect x="35" y="10" width="30" height="10" rx="2" fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth="2" />
-            <ellipse cx="50" cy="10" rx="15" ry="5" fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth="2" />
+            <rect x="35" y="5" width="30" height="10" rx="2" />
+            <ellipse cx="50" cy="5" rx="15" ry="4" />
             
             {/* Head */}
-            <rect x="20" y="20" width="60" height="60" rx="5" fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth="2" />
+            <rect x="20" y="15" width="60" height="55" rx="5" />
 
             {/* Face - Simple Eyes and Smile */}
-            <circle cx="38" cy="45" r="5" fill="hsl(var(--background))" />
-            <circle cx="62" cy="45" r="5" fill="hsl(var(--background))" />
-            <path d="M35 65 Q50 75 65 65" stroke="hsl(var(--background))" strokeWidth="3" fill="none" />
+            <circle cx="38" cy="38" r="5" fill="hsl(var(--background))" />
+            <circle cx="62" cy="38" r="5" fill="hsl(var(--background))" />
+            <path d="M35 55 Q50 65 65 55" stroke="hsl(var(--background))" strokeWidth="3" fill="none" />
 
             {/* Crossbones */}
-            <g transform="translate(5, 75)" fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth="2">
-                <g transform="rotate(15 50 50)">
-                    <rect x="10" y="20" width="70" height="12" rx="6"/>
-                    <circle cx="10" cy="18" r="7" />
-                    <circle cx="80" cy="28" r="7" />
+            <g transform="translate(0, 55)">
+                <g transform="rotate(25 50 50)">
+                    <rect x="20" y="44" width="60" height="12" rx="6"/>
+                    <circle cx="20" cy="44" r="8" />
+                    <circle cx="20" cy="56" r="8" />
+                    <circle cx="80" cy="44" r="8" />
+                    <circle cx="80" cy="56" r="8" />
                 </g>
-                 <g transform="rotate(-15 50 50)">
-                    <rect x="10" y="20" width="70" height="12" rx="6"/>
-                    <circle cx="10" cy="28" r="7" />
-                    <circle cx="80" cy="18" r="7" />
+                 <g transform="rotate(-25 50 50)">
+                    <rect x="20" y="44" width="60" height="12" rx="6"/>
+                    <circle cx="20"cy="44" r="8" />
+                    <circle cx="20" cy="56" r="8" />
+                    <circle cx="80" cy="44" r="8" />
+                    <circle cx="80" cy="56" r="8" />
                 </g>
             </g>
         </g>
