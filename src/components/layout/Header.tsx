@@ -14,7 +14,7 @@ export default function Header() {
   
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 lg:px-8">
+      <header className="sticky top-0 z-30 flex h-32 items-center gap-4 border-b bg-card px-4 md:px-6 lg:px-8">
         
         {/* This button is only for toggling the sidebar on mobile and should be hidden on desktop */}
         <SidebarTrigger className="md:hidden" />
@@ -43,7 +43,7 @@ export default function Header() {
             </div>
           </div>
           <Button
-            className="h-9 w-24 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full shadow-[0_4px_#9f1212] active:shadow-none active:translate-y-1 transition-all"
+            className="h-9 w-24 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-[0_4px_#9f1212] active:shadow-none active:translate-y-1 transition-all"
           >
             START
           </Button>
