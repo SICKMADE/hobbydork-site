@@ -6,7 +6,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarFooter,
 } from '@/components/ui/sidebar';
 
 import { LogOut, Home, Search, Store, MessageSquare, Newspaper, Heart, Settings, User, Star, HelpCircle, ShoppingCart, Package, HeartHandshake } from 'lucide-react';
@@ -62,16 +61,17 @@ export default function SidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-4 pt-4 flex flex-col">
         <div 
-          className="space-y-4 flex-grow flex flex-col"
+          className="flex-grow flex flex-col justify-between"
           style={{
             backgroundImage:
-              'linear-gradient(45deg, #222 25%, transparent 25%), linear-gradient(-45deg, #222 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #222 75%), linear-gradient(-45deg, transparent 75%, #222 75%)',
+              'linear-gradient(45deg, hsla(0,0%,13%,.4) 25%, transparent 25%), linear-gradient(-45deg, hsla(0,0%,13%,.4) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsla(0,0%,13%,.4) 75%), linear-gradient(-45deg, transparent 75%, hsla(0,0%,13%,.4) 75%)',
             backgroundSize: '20px 20px',
             backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
           }}
         >
+          <div>
             <RedLineSeparator />
-            <div className="bg-black/80 rounded-lg p-2">
+            <div className="bg-black/80 rounded-lg p-2 mt-4">
                 <SidebarMenu>
                 {mainMenuItems.map((item) => (
                     <SidebarMenuItem key={item.label}>
@@ -91,7 +91,7 @@ export default function SidebarNav() {
             
              <RedLineSeparator />
             
-            <div className="bg-black/80 rounded-lg p-2">
+            <div className="bg-black/80 rounded-lg p-2 mt-4">
                 <SidebarMenu>
                     <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
                     {personalMenuItems.map((item) => (
@@ -113,7 +113,7 @@ export default function SidebarNav() {
             {profile?.isSeller && (
                 <>
                 <RedLineSeparator />
-                <div className="bg-black/80 rounded-lg p-2">
+                <div className="bg-black/80 rounded-lg p-2 mt-4">
                     <SidebarMenu>
                         <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
                         {userMenuItems.map((item) => (
@@ -137,7 +137,7 @@ export default function SidebarNav() {
             {profile?.role === 'ADMIN' && (
                 <>
                 <RedLineSeparator />
-                <div className="bg-black/80 rounded-lg p-2">
+                <div className="bg-black/80 rounded-lg p-2 mt-4">
                     <SidebarMenu>
                         <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
                         {adminMenuItems.map((item) => (
@@ -157,28 +157,29 @@ export default function SidebarNav() {
                 </div>
                 </>
             )}
-            <div className="flex-grow" />
+            </div>
+            
+            <div>
+              <RedLineSeparator />
+              <div className="bg-black/80 rounded-lg p-2 mt-4">
+                  <SidebarMenu>
+                      <SidebarMenuItem>
+                          <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-4 text-base h-12">
+                              <HelpCircle className="h-5 w-5" />
+                              <span>Help</span>
+                          </SidebarMenuButton>
+                      </SidebarMenuItem>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton onClick={handleLogout} className="justify-start gap-4 text-base h-12">
+                      <LogOut className="h-5 w-5" />
+                      <span>Logout</span>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  </SidebarMenu>
+              </div>
+            </div>
         </div>
         
-        <SidebarFooter className="p-2 mt-auto">
-             <div className="bg-black/80 rounded-lg p-2">
-                <RedLineSeparator />
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-4 text-base h-12">
-                            <HelpCircle className="h-5 w-5" />
-                            <span>Help</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton onClick={handleLogout} className="justify-start gap-4 text-base h-12">
-                    <LogOut className="h-5 w-5" />
-                    <span>Logout</span>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                </SidebarMenu>
-            </div>
-        </SidebarFooter>
       </SidebarContent>
     </>
   );
