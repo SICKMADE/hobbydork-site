@@ -27,7 +27,7 @@ export default function Header() {
                 <Input
                     type="search"
                     placeholder="Search collectibles, stores, and users..."
-                    className="pl-10 h-10 text-base"
+                    className="pl-10 h-10 text-base bg-input border-border"
                 />
             </div>
         </div>

@@ -46,7 +46,6 @@ export default function SidebarNav() {
               <SidebarMenuButton
                 href={item.href}
                 isActive={pathname === item.href}
-                tooltip={item.label}
                 onClick={() => router.push(item.href)}
                 className="justify-start gap-3"
               >
@@ -59,7 +58,7 @@ export default function SidebarNav() {
       <SidebarFooter className="p-2">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout} tooltip="Logout" className="justify-start gap-3">
+            <SidebarMenuButton onClick={handleLogout} className="justify-start gap-3">
               <LogOut className="h-5 w-5" />
               <span className="text-base">Logout</span>
             </SidebarMenuButton>
