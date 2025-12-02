@@ -44,7 +44,6 @@ export default function Header() {
           </div>
           <Button
             className="h-9 w-24 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full shadow-[0_4px_#9f1212] active:shadow-none active:translate-y-1 transition-all"
-            style={{ fontFamily: '"Press Start 2P", monospace' }}
           >
             START
           </Button>
