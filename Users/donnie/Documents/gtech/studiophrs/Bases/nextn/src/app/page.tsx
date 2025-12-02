@@ -59,6 +59,8 @@ export default function Home() {
   }
 
   return (
-    <HomePageContent />
+    <AppLayout>
+      <HomePageContent />
+    </AppLayout>
   );
 }
