@@ -55,7 +55,8 @@ export default function SidebarNav() {
       <SidebarHeader>
         {/* Logo removed from header */}
       </SidebarHeader>
-      <SidebarContent className="p-4 pt-12">
+      <SidebarContent className="p-4 pt-20">
+        <Separator className="my-6 bg-red-600 h-0.5" />
         <SidebarMenu>
           {mainMenuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
@@ -66,13 +67,13 @@ export default function SidebarNav() {
                 className="justify-start gap-3"
               >
                 <item.icon className="h-5 w-5" />
-                <span className="text-lg">{item.label}</span>
+                <span className="text-xl">{item.label}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
         
-        <Separator className="my-6 bg-red-600 h-0.5" />
+        <Separator className="my-8 bg-red-600 h-0.5" />
 
          <SidebarMenu className="mt-8">
             <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
@@ -85,7 +86,7 @@ export default function SidebarNav() {
                         className="justify-start gap-3"
                     >
                         <item.icon className="h-5 w-5" />
-                        <span className="text-lg">{item.label}</span>
+                        <span className="text-xl">{item.label}</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             ))}
@@ -93,7 +94,7 @@ export default function SidebarNav() {
         
         {profile?.isSeller && (
             <>
-              <Separator className="my-6 bg-red-600 h-0.5" />
+              <Separator className="my-8 bg-red-600 h-0.5" />
               <SidebarMenu className="mt-8">
                   <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
                   {userMenuItems.map((item) => (
@@ -105,7 +106,7 @@ export default function SidebarNav() {
                               className="justify-start gap-3"
                           >
                               <item.icon className="h-5 w-5" />
-                              <span className="text-lg">{item.label}</span>
+                              <span className="text-xl">{item.label}</span>
                           </SidebarMenuButton>
                       </SidebarMenuItem>
                   ))}
@@ -115,7 +116,7 @@ export default function SidebarNav() {
         
         {profile?.role === 'ADMIN' && (
             <>
-              <Separator className="my-6 bg-red-600 h-0.5" />
+              <Separator className="my-8 bg-red-600 h-0.5" />
               <SidebarMenu className="mt-8">
                   <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
                   {adminMenuItems.map((item) => (
@@ -127,7 +128,7 @@ export default function SidebarNav() {
                               className="justify-start gap-3"
                           >
                               <item.icon className="h-5 w-5" />
-                              <span className="text-lg">{item.label}</span>
+                              <span className="text-xl">{item.label}</span>
                           </SidebarMenuButton>
                       </SidebarMenuItem>
                   ))}
@@ -137,7 +138,7 @@ export default function SidebarNav() {
       </SidebarContent>
       <SidebarFooter className="p-2 mt-auto">
         <div className="flex justify-center p-4">
-            <Logo iconOnly className="w-48 h-48" />
+            <Logo iconOnly className="w-32 h-32" />
         </div>
         <SidebarMenu>
             <SidebarMenuItem>
