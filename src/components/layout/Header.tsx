@@ -5,6 +5,7 @@ import Logo from '../Logo';
 import { Input } from '../ui/input';
 import { Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '../ui/button';
 
 export default function Header() {
   return (
@@ -21,7 +22,7 @@ export default function Header() {
         </div>
 
         {/* Search Bar */}
-        <div className="flex-1 flex justify-center px-4">
+        <div className="flex-1 flex justify-center items-center gap-2 px-4">
             <div className="w-full max-w-lg relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
@@ -30,6 +31,12 @@ export default function Header() {
                     className="pl-10 h-10 text-base bg-input border-border"
                 />
             </div>
+            <Button
+              className="h-9 w-24 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full shadow-[0_4px_#9f1212] active:shadow-none active:translate-y-1 transition-all"
+              style={{ fontFamily: '"Press Start 2P", monospace' }}
+            >
+              START
+            </Button>
         </div>
 
 
