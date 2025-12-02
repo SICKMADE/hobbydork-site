@@ -64,9 +64,10 @@ export default function SidebarNav() {
         <div 
           className="space-y-4 flex-grow flex flex-col"
           style={{
-            backgroundImage: 'linear-gradient(45deg, hsl(var(--border)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--border)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--border)) 75%), linear-gradient(-45deg, hsl(var(--border)) 75%, transparent 75%)',
+            backgroundImage:
+              'linear-gradient(45deg, #222 25%, transparent 25%), linear-gradient(-45deg, #222 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #222 75%), linear-gradient(-45deg, transparent 75%, #222 75%)',
             backgroundSize: '20px 20px',
-            backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
+            backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
           }}
         >
             <RedLineSeparator />
