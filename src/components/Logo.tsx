@@ -14,8 +14,8 @@ const LegoHead = ({ className }: { className?: string }) => (
       xmlns="http://www.w3.org/2000/svg"
     >
         <g>
-            {/* Lego Head */}
-            <g transform="translate(10, 0) scale(0.8)">
+            {/* Lego Head - Made Larger */}
+            <g transform="translate(5, 0) scale(1.0)">
                 <rect x="35" y="5" width="30" height="10" rx="2" />
                 <ellipse cx="50" cy="5" rx="15" ry="4" />
                 <rect x="20" y="15" width="60" height="55" rx="5" />
@@ -25,7 +25,7 @@ const LegoHead = ({ className }: { className?: string }) => (
             </g>
 
             {/* Crossbones */}
-            <g transform="translate(0, 55) scale(1.1)">
+            <g transform="translate(0, 70) scale(1.1)">
                 <g transform="rotate(-30 50 25)">
                     <path d="M 15 25 C 15 15, 25 15, 25 25 S 15 35, 15 25 Z" />
                     <path d="M 25 25 C 25 15, 35 15, 35 25 S 25 35, 25 35 Z" transform="translate(40, 0) scale(-1, 1) translate(-60, 0)" />
@@ -48,7 +48,7 @@ const LegoHead = ({ className }: { className?: string }) => (
 
 export default function Logo({ className, iconOnly = false }: LogoProps) {
   return (
-    <div className={cn('flex items-center gap-2 text-primary', className)}>
+    <div className={cn('flex items-center justify-center gap-2 text-primary w-full', className)}>
       <LegoHead className="h-10 w-10" />
       {!iconOnly && (
         <h1 className="text-xl font-bold tracking-tighter text-foreground">
