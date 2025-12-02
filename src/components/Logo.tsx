@@ -35,7 +35,7 @@ export default function Logo({ className, iconOnly = false }: LogoProps) {
     <div className={cn('flex items-center justify-center gap-4 text-primary', className)}>
       <LegoHead className="h-12 w-12" />
       {!iconOnly && (
-        <div className="rounded-full bg-black px-6 py-2 border-4 border-red-600">
+        <div className="rounded-full bg-neutral-800 px-6 py-2 border-4 border-red-600">
           <h1 className="text-3xl font-nintendo font-black tracking-tight text-red-600 italic">
             <span>HobbyDork</span>
           </h1>
