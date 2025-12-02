@@ -14,8 +14,8 @@ import Logo from '../Logo';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 
-const BeveledSeparator = () => (
-    <div className="h-0.5 w-full my-8 bg-gradient-to-r from-transparent via-red-600 to-transparent" />
+const RedLineSeparator = () => (
+    <div className="h-0.5 w-full my-4 bg-gradient-to-r from-transparent via-red-600 to-transparent" />
 );
 
 
@@ -60,83 +60,91 @@ export default function SidebarNav() {
         {/* Logo removed from header */}
       </SidebarHeader>
       <SidebarContent className="p-4 pt-20">
-        <BeveledSeparator />
-        <SidebarMenu>
-          {mainMenuItems.map((item) => (
-            <SidebarMenuItem key={item.label}>
-              <SidebarMenuButton
-                href={item.href}
-                isActive={pathname === item.href}
-                onClick={() => router.push(item.href)}
-                className="justify-start gap-3"
-              >
-                <item.icon className="h-5 w-5" />
-                <span className="text-xl">{item.label}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
         
-        <BeveledSeparator />
-
-         <SidebarMenu className="mt-8">
-            <p className="px-2 mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
-            {personalMenuItems.map((item) => (
+        <div className="bg-black rounded-lg p-2">
+            <SidebarMenu>
+            {mainMenuItems.map((item) => (
                 <SidebarMenuItem key={item.label}>
-                    <SidebarMenuButton
-                        href={item.href}
-                        isActive={pathname.startsWith(item.href)}
-                        onClick={() => router.push(item.href)}
-                        className="justify-start gap-3"
-                    >
-                        <item.icon className="h-5 w-5" />
-                        <span className="text-xl">{item.label}</span>
-                    </SidebarMenuButton>
+                <SidebarMenuButton
+                    href={item.href}
+                    isActive={pathname === item.href}
+                    onClick={() => router.push(item.href)}
+                    className="justify-start gap-3"
+                >
+                    <item.icon className="h-5 w-5" />
+                    <span className="text-xl">{item.label}</span>
+                </SidebarMenuButton>
                 </SidebarMenuItem>
             ))}
-        </SidebarMenu>
+            </SidebarMenu>
+        </div>
+        
+        <RedLineSeparator />
+
+        <div className="bg-neutral-800/50 rounded-lg p-2">
+            <SidebarMenu>
+                <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
+                {personalMenuItems.map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                        <SidebarMenuButton
+                            href={item.href}
+                            isActive={pathname.startsWith(item.href)}
+                            onClick={() => router.push(item.href)}
+                            className="justify-start gap-3"
+                        >
+                            <item.icon className="h-5 w-5" />
+                            <span className="text-xl">{item.label}</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+        </div>
         
         {profile?.isSeller && (
             <>
-              <BeveledSeparator />
-              <SidebarMenu className="mt-8">
-                  <p className="px-2 mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
-                  {userMenuItems.map((item) => (
-                      <SidebarMenuItem key={item.label}>
-                          <SidebarMenuButton
-                              href={item.href}
-                              isActive={pathname.startsWith(item.href)}
-                              onClick={() => router.push(item.href)}
-                              className="justify-start gap-3"
-                          >
-                              <item.icon className="h-5 w-5" />
-                              <span className="text-xl">{item.label}</span>
-                          </SidebarMenuButton>
-                      </SidebarMenuItem>
-                  ))}
-              </SidebarMenu>
+              <RedLineSeparator />
+              <div className="bg-black rounded-lg p-2">
+                <SidebarMenu>
+                    <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
+                    {userMenuItems.map((item) => (
+                        <SidebarMenuItem key={item.label}>
+                            <SidebarMenuButton
+                                href={item.href}
+                                isActive={pathname.startsWith(item.href)}
+                                onClick={() => router.push(item.href)}
+                                className="justify-start gap-3"
+                            >
+                                <item.icon className="h-5 w-5" />
+                                <span className="text-xl">{item.label}</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+              </div>
             </>
         )}
         
         {profile?.role === 'ADMIN' && (
             <>
-              <BeveledSeparator />
-              <SidebarMenu className="mt-8">
-                  <p className="px-2 mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
-                  {adminMenuItems.map((item) => (
-                      <SidebarMenuItem key={item.label}>
-                          <SidebarMenuButton
-                              href={item.href}
-                              isActive={pathname.startsWith(item.href)}
-                              onClick={() => router.push(item.href)}
-                              className="justify-start gap-3"
-                          >
-                              <item.icon className="h-5 w-5" />
-                              <span className="text-xl">{item.label}</span>
-                          </SidebarMenuButton>
-                      </SidebarMenuItem>
-                  ))}
-              </SidebarMenu>
+              <RedLineSeparator />
+              <div className="bg-neutral-800/50 rounded-lg p-2">
+                <SidebarMenu>
+                    <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
+                    {adminMenuItems.map((item) => (
+                        <SidebarMenuItem key={item.label}>
+                            <SidebarMenuButton
+                                href={item.href}
+                                isActive={pathname.startsWith(item.href)}
+                                onClick={() => router.push(item.href)}
+                                className="justify-start gap-3"
+                            >
+                                <item.icon className="h-5 w-5" />
+                                <span className="text-xl">{item.label}</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+              </div>
             </>
         )}
       </SidebarContent>
