@@ -69,13 +69,12 @@ export default function SidebarNav() {
         <div 
           className="h-full flex flex-col space-y-4 pt-8"
            style={{
-                backgroundImage:
-                  'linear-gradient(45deg, hsl(0 0% 13% / 0.4) 25%, transparent 25%), linear-gradient(-45deg, hsl(0 0% 13% / 0.4) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(0 0% 13% / 0.4) 75%), linear-gradient(-45deg, transparent 75%, hsl(0 0% 13% / 0.4) 75%)',
+                backgroundImage: 'linear-gradient(45deg, hsl(0 0% 13%) 25%, transparent 25%), linear-gradient(-45deg, hsl(0 0% 13%) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(0 0% 13%) 75%), linear-gradient(-45deg, transparent 75%, hsl(0 0% 13%) 75%)',
                 backgroundSize: '20px 20px',
-                backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+                backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
             }}
         >
-             <div className="bg-background rounded-lg p-2 shadow-inner">
+             <div className="bg-background rounded-lg p-2" style={{ boxShadow: 'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)' }}>
                 <SidebarMenu>
                  <RedLineSeparator />
                 {mainMenuItems.map((item) => (
@@ -94,7 +93,7 @@ export default function SidebarNav() {
                 </SidebarMenu>
             </div>
             
-             <div className="bg-background rounded-lg p-2 shadow-inner">
+             <div className="bg-background rounded-lg p-2" style={{ boxShadow: 'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)' }}>
                 <SidebarMenu>
                      <RedLineSeparator />
                     <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
@@ -115,7 +114,7 @@ export default function SidebarNav() {
             </div>
             
             {profile?.isSeller && (
-                 <div className="bg-background rounded-lg p-2 shadow-inner">
+                 <div className="bg-background rounded-lg p-2" style={{ boxShadow: 'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)' }}>
                     <SidebarMenu>
                          <RedLineSeparator />
                         <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
@@ -137,7 +136,7 @@ export default function SidebarNav() {
             )}
             
             {profile?.role === 'ADMIN' && (
-                 <div className="bg-background rounded-lg p-2 shadow-inner">
+                 <div className="bg-background rounded-lg p-2" style={{ boxShadow: 'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)' }}>
                     <SidebarMenu>
                         <RedLineSeparator />
                         <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
@@ -158,7 +157,7 @@ export default function SidebarNav() {
                 </div>
             )}
             
-              <div className="bg-background rounded-lg p-2 shadow-inner">
+              <div className="bg-background rounded-lg p-2" style={{ boxShadow: 'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)' }}>
                   <SidebarMenu>
                         <RedLineSeparator />
                       <SidebarMenuItem>
