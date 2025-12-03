@@ -6,6 +6,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarFooter,
 } from '@/components/ui/sidebar';
 
 import { LogOut, Home, Search, Store, MessageSquare, Newspaper, Heart, Settings, User, Star, HelpCircle, ShoppingCart, Package, HeartHandshake } from 'lucide-react';
@@ -66,7 +67,7 @@ export default function SidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-4">
         <div 
-          className="h-full flex flex-col space-y-4"
+          className="h-full flex flex-col space-y-4 pt-8"
            style={{
                 backgroundImage:
                   'linear-gradient(45deg, hsl(0 0% 13% / 0.4) 25%, transparent 25%), linear-gradient(-45deg, hsl(0 0% 13% / 0.4) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(0 0% 13% / 0.4) 75%), linear-gradient(-45deg, transparent 75%, hsl(0 0% 13% / 0.4) 75%)',
@@ -74,7 +75,7 @@ export default function SidebarNav() {
                 backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
             }}
         >
-             <div className="bg-muted/50 rounded-lg p-2 shadow-inner">
+             <div className="bg-background rounded-lg p-2 shadow-inner">
                 <SidebarMenu>
                  <RedLineSeparator />
                 {mainMenuItems.map((item) => (
@@ -83,7 +84,7 @@ export default function SidebarNav() {
                         href={item.href}
                         isActive={pathname === item.href}
                         onClick={() => router.push(item.href)}
-                        className="justify-start gap-4 text-base font-medium tracking-wide"
+                        className="justify-start gap-4 text-base font-semibold tracking-wide"
                     >
                         <item.icon className="h-5 w-5" />
                         <span>{item.label}</span>
@@ -93,7 +94,7 @@ export default function SidebarNav() {
                 </SidebarMenu>
             </div>
             
-             <div className="bg-muted/50 rounded-lg p-2 shadow-inner">
+             <div className="bg-background rounded-lg p-2 shadow-inner">
                 <SidebarMenu>
                      <RedLineSeparator />
                     <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
@@ -103,7 +104,7 @@ export default function SidebarNav() {
                                 href={item.href}
                                 isActive={pathname.startsWith(item.href)}
                                 onClick={() => router.push(item.href)}
-                                className="justify-start gap-4 text-base font-medium tracking-wide"
+                                className="justify-start gap-4 text-base font-semibold tracking-wide"
                             >
                                 <item.icon className="h-5 w-5" />
                                 <span>{item.label}</span>
@@ -114,7 +115,7 @@ export default function SidebarNav() {
             </div>
             
             {profile?.isSeller && (
-                 <div className="bg-muted/50 rounded-lg p-2 shadow-inner">
+                 <div className="bg-background rounded-lg p-2 shadow-inner">
                     <SidebarMenu>
                          <RedLineSeparator />
                         <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
@@ -124,7 +125,7 @@ export default function SidebarNav() {
                                     href={item.href}
                                     isActive={pathname.startsWith(item.href)}
                                     onClick={() => router.push(item.href)}
-                                    className="justify-start gap-4 text-base font-medium tracking-wide"
+                                    className="justify-start gap-4 text-base font-semibold tracking-wide"
                                 >
                                     <item.icon className="h-5 w-5" />
                                     <span>{item.label}</span>
@@ -136,7 +137,7 @@ export default function SidebarNav() {
             )}
             
             {profile?.role === 'ADMIN' && (
-                 <div className="bg-muted/50 rounded-lg p-2 shadow-inner">
+                 <div className="bg-background rounded-lg p-2 shadow-inner">
                     <SidebarMenu>
                         <RedLineSeparator />
                         <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
@@ -146,7 +147,7 @@ export default function SidebarNav() {
                                     href={item.href}
                                     isActive={pathname.startsWith(item.href)}
                                     onClick={() => router.push(item.href)}
-                                    className="justify-start gap-4 text-base font-medium tracking-wide"
+                                    className="justify-start gap-4 text-base font-semibold tracking-wide"
                                 >
                                     <item.icon className="h-5 w-5" />
                                     <span>{item.label}</span>
@@ -157,17 +158,17 @@ export default function SidebarNav() {
                 </div>
             )}
             
-              <div className="bg-muted/50 rounded-lg p-2 shadow-inner">
+              <div className="bg-background rounded-lg p-2 shadow-inner">
                   <SidebarMenu>
                         <RedLineSeparator />
                       <SidebarMenuItem>
-                          <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-4 text-base font-medium tracking-wide">
+                          <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-4 text-base font-semibold tracking-wide">
                               <HelpCircle className="h-5 w-5" />
                               <span>Help</span>
                           </SidebarMenuButton>
                       </SidebarMenuItem>
                   <SidebarMenuItem>
-                      <SidebarMenuButton onClick={handleLogout} className="justify-start gap-4 text-base font-medium tracking-wide">
+                      <SidebarMenuButton onClick={handleLogout} className="justify-start gap-4 text-base font-semibold tracking-wide">
                       <LogOut className="h-5 w-5" />
                       <span>Logout</span>
                       </SidebarMenuButton>
