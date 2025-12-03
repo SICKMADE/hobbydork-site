@@ -67,13 +67,14 @@ export default function SidebarNav() {
       <SidebarContent className="p-4">
         <div 
           className="h-full flex flex-col space-y-4"
-          style={{
-            backgroundImage: 'linear-gradient(45deg, hsl(0 0% 13% / 0.4) 25%, transparent 25%), linear-gradient(-45deg, hsl(0 0% 13% / 0.4) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(0 0% 13% / 0.4) 75%), linear-gradient(-45deg, transparent 75%, hsl(0 0% 13% / 0.4) 75%)',
-            backgroundSize: '20px 20px',
-            backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-          }}
+           style={{
+                backgroundImage:
+                  'linear-gradient(45deg, hsl(0 0% 13% / 0.4) 25%, transparent 25%), linear-gradient(-45deg, hsl(0 0% 13% / 0.4) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(0 0% 13% / 0.4) 75%), linear-gradient(-45deg, transparent 75%, hsl(0 0% 13% / 0.4) 75%)',
+                backgroundSize: '20px 20px',
+                backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+            }}
         >
-            <div className="bg-black/80 rounded-lg p-2">
+             <div className="bg-muted/50 rounded-lg p-2 shadow-inner">
                 <SidebarMenu>
                  <RedLineSeparator />
                 {mainMenuItems.map((item) => (
@@ -92,7 +93,7 @@ export default function SidebarNav() {
                 </SidebarMenu>
             </div>
             
-            <div className="bg-black/80 rounded-lg p-2">
+             <div className="bg-muted/50 rounded-lg p-2 shadow-inner">
                 <SidebarMenu>
                      <RedLineSeparator />
                     <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
@@ -113,7 +114,7 @@ export default function SidebarNav() {
             </div>
             
             {profile?.isSeller && (
-                <div className="bg-black/80 rounded-lg p-2">
+                 <div className="bg-muted/50 rounded-lg p-2 shadow-inner">
                     <SidebarMenu>
                          <RedLineSeparator />
                         <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
@@ -135,7 +136,7 @@ export default function SidebarNav() {
             )}
             
             {profile?.role === 'ADMIN' && (
-                <div className="bg-black/80 rounded-lg p-2">
+                 <div className="bg-muted/50 rounded-lg p-2 shadow-inner">
                     <SidebarMenu>
                         <RedLineSeparator />
                         <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
@@ -156,7 +157,7 @@ export default function SidebarNav() {
                 </div>
             )}
             
-              <div className="bg-black/80 rounded-lg p-2">
+              <div className="bg-muted/50 rounded-lg p-2 shadow-inner">
                   <SidebarMenu>
                         <RedLineSeparator />
                       <SidebarMenuItem>
