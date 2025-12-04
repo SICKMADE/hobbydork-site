@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -72,7 +71,7 @@ const SidebarProvider = React.forwardRef<
     });
 
     const open = openProp ?? _open
-    const setOpen = React.useCallback(
+    const setOpen = React. useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
         const openState = typeof value === "function" ? value(open) : value
         if (setOpenProp) {
