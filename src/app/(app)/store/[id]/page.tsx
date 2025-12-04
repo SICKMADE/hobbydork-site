@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,6 +30,7 @@ const StarRating = ({ rating }: { rating: number }) => (
 export default function StorefrontPage() {
   const firestore = useFirestore();
   const { loading: authLoading } = useAuth();
+  const router = useRouter();
 
   // Get params via hook instead of props
   const params = useParams<{ id: string }>();
@@ -51,7 +52,7 @@ export default function StorefrontPage() {
     return query(
       collection(firestore, 'listings'),
       where('storeId', '==', storeId),
-      where('state', '==', 'ACTIVE')
+      where('state', '==', 'ACTIVE'),
     );
   }, [firestore, storeId, authLoading]);
 
@@ -63,7 +64,7 @@ export default function StorefrontPage() {
     if (!firestore || !storeId) return null;
     return query(
       collection(firestore, `storefronts/${storeId}/reviews`),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
     );
   }, [firestore, storeId]);
 
@@ -95,6 +96,15 @@ export default function StorefrontPage() {
       </AppLayout>
     );
   }
+
+  const handleMessageSeller = () => {
+    if (!store.ownerUid) return;
+    router.push(
+      `/messages/new?to=${encodeURIComponent(
+        store.ownerUid,
+      )}&storeId=${encodeURIComponent(storeId)}`,
+    );
+  };
 
   return (
     <AppLayout>
@@ -135,7 +145,7 @@ export default function StorefrontPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleMessageSeller}>
                   <MessageSquare className="mr-2" /> Message
                 </Button>
                 <Button variant="outline">
@@ -198,7 +208,7 @@ export default function StorefrontPage() {
                             <p className="text-xs text-muted-foreground">
                               {formatDistanceToNow(
                                 review.createdAt.toDate(),
-                                { addSuffix: true }
+                                { addSuffix: true },
                               )}
                             </p>
                           </div>
