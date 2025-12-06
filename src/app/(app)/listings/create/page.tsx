@@ -1,438 +1,217 @@
 'use client';
 
-import { useAuth } from "@/hooks/use-auth";
-import AppLayout from "@/components/layout/AppLayout";
-import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+import AppLayout from '@/components/layout/AppLayout';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import { useFirestore } from '@/firebase';
+
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
 import {
   Card,
-  CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useFirestore } from "@/firebase";
-import { collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { useRouter } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
+  CardTitle,
+  CardContent,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   Select,
+  SelectTrigger,
+  SelectValue,
   SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import { Trash } from "lucide-react";
-import PlaceholderContent from "@/components/PlaceholderContent";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react";
-import Link from "next/link";
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Firestore category must match your backend enum:
-// "COMIC_BOOKS" | "SPORTS_CARDS" | "POKEMON_CARDS" | "VIDEO_GAMES" | "TOYS" | "OTHER"
-const categories = [
-  { value: "COMIC_BOOKS", label: "Comic Books" },
-  { value: "SPORTS_CARDS", label: "Sports Cards" },
-  { value: "POKEMON_CARDS", label: "Pokémon Cards" },
-  { value: "VIDEO_GAMES", label: "Video Games" },
-  { value: "TOYS", label: "Toys" },
-  { value: "OTHER", label: "Other" }
+const CATEGORY_OPTIONS = [
+  { value: 'COMIC_BOOKS', label: 'Comic Books' },
+  { value: 'SPORTS_CARDS', label: 'Sports Cards' },
+  { value: 'POKEMON_CARDS', label: 'Pokémon Cards' },
+  { value: 'VIDEO_GAMES', label: 'Video Games' },
+  { value: 'TOYS', label: 'Toys' },
+  { value: 'OTHER', label: 'Other' },
 ];
 
-// Keep conditions as simple strings so we don't depend on an external type
-const conditions = [
-  { value: "NEW", label: "New" },
-  { value: "LIKE_NEW", label: "Like New" },
-  { value: "VERY_GOOD", label: "Very Good" },
-  { value: "GOOD", label: "Good" },
-  { value: "FAIR", label: "Fair" },
-  { value: "POOR", label: "Poor" }
+const CONDITION_OPTIONS = [
+  { value: 'MINT', label: 'Mint' },
+  { value: 'NEAR_MINT', label: 'Near Mint' },
+  { value: 'VERY_FINE', label: 'Very Fine' },
+  { value: 'FINE', label: 'Fine' },
+  { value: 'GOOD', label: 'Good' },
+  { value: 'FAIR', label: 'Fair' },
+  { value: 'POOR', label: 'Poor' },
+  { value: 'UNKNOWN', label: 'Unknown' },
 ];
 
-const listingSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters."),
-  category: z.string().min(1, "Please select a category."),
-  description: z
-    .string()
-    .min(20, "Description must be at least 20 characters."),
-  price: z.preprocess(
-    (a) => parseFloat(z.string().parse(a)),
-    z.number().positive("Price must be a positive number.")
-  ),
-  quantity: z.preprocess(
-    (a) => parseInt(z.string().parse(a), 10),
-    z.number().int().min(1, "Quantity must be at least 1.")
-  ),
-  condition: z.string().min(1, "Please select a condition."),
-  images: z
-    .array(
-      z.object({
-        value: z.string().url("Please enter a valid image URL.")
-      })
-    )
-    .min(1, "At least one image is required."),
-  tags: z.string().optional()
-});
-
-type ListingFormValues = z.infer<typeof listingSchema>;
-
-const ListingForm = () => {
-  const { profile, user } = useAuth();
-  const firestore = useFirestore();
+export default function CreateListingPage() {
   const router = useRouter();
+  const firestore = useFirestore();
+  const { user, profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
-  const form = useForm<ListingFormValues>({
-    resolver: zodResolver(listingSchema),
-    defaultValues: {
-      title: "",
-      category: "",
-      description: "",
-      price: 0,
-      quantity: 1,
-      condition: "",
-      images: [{ value: "" }],
-      tags: ""
-    }
-  });
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<string>('COMIC_BOOKS');
+  const [condition, setCondition] = useState<string>('UNKNOWN');
+  const [price, setPrice] = useState<string>('');
+  const [quantity, setQuantity] = useState<string>('1');
+  const [tags, setTags] = useState<string>('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { fields, append, remove } = useFieldArray({
-    name: "images",
-    control: form.control
-  });
+  const isSeller = !!profile?.isSeller && !!profile?.storeId;
+  const storeId = profile?.storeId as string | undefined;
 
-  async function onSubmit(values: ListingFormValues) {
-    if (!profile?.storeId || !firestore || !user) {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const selected = Array.from(e.target.files);
+    setFiles(selected);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firestore || !user || !storeId) return;
+
+    const numericPrice = Number(price);
+    const numericQty = Number(quantity || '1');
+
+    if (!title.trim()) {
       toast({
-        title: "Error",
-        description:
-          "You must have a store and be logged in to create a listing.",
-        variant: "destructive"
+        title: 'Title required',
+        description: 'Enter a title for your listing.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (Number.isNaN(numericPrice) || numericPrice <= 0) {
+      toast({
+        title: 'Price required',
+        description: 'Enter a valid price greater than 0.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (Number.isNaN(numericQty) || numericQty <= 0) {
+      toast({
+        title: 'Quantity required',
+        description: 'Enter a valid quantity (1 or more).',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (files.length === 0) {
+      toast({
+        title: 'Images required',
+        description: 'Add at least one image for this listing.',
+        variant: 'destructive',
       });
       return;
     }
 
     try {
-      const listingsCollection = collection(firestore, "listings");
-      const newListingRef = doc(listingsCollection);
+      setIsSubmitting(true);
 
-      const imageUrls = values.images
-        .map((img) => img.value)
-        .filter((url) => url);
+      // Upload images to Firebase Storage
+      const storage = getStorage();
+      const uploadedUrls: string[] = [];
 
-      const primaryImageUrl = imageUrls[0] || "";
+      for (const file of files) {
+        const cleanName = file.name.replace(/\s+/g, '_');
+        const path = `listingImages/${user.uid}/${Date.now()}_${cleanName}`;
+        const storageRef = ref(storage, path);
 
-      // Per security rules, only ACTIVE users can create ACTIVE listings.
-      // All other users' listings should start as DRAFT.
-      const initialState = profile.status === "ACTIVE" ? "ACTIVE" : "DRAFT";
+        const snapshot = await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(snapshot.ref);
+        uploadedUrls.push(url);
+      }
 
-      await setDoc(newListingRef, {
-        listingId: newListingRef.id,
-        storeId: profile.storeId,
+      const primaryImageUrl = uploadedUrls[0];
+      const imageUrls = uploadedUrls;
+
+      const tagArray = tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      await addDoc(collection(firestore, 'listings'), {
+        storeId,
         ownerUid: user.uid,
-        title: values.title,
-        category: values.category,
-        description: values.description,
-        price: values.price,
-        condition: values.condition,
-        quantityTotal: values.quantity,
-        quantityAvailable: values.quantity,
-        state: initialState,
-        tags: values.tags
-          ? values.tags
-              .split(",")
-              .map((tag) => tag.trim())
-              .filter(Boolean)
-          : [],
-        imageUrls: imageUrls.length > 0 ? imageUrls : primaryImageUrl ? [primaryImageUrl] : [],
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        condition,
+        price: numericPrice,
+        quantityAvailable: numericQty,
         primaryImageUrl,
+        imageUrls,
+        tags: tagArray,
+        state: 'ACTIVE',
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       toast({
-        title: "Listing Created!",
-        description: `Your new item has been saved as a ${initialState.toLowerCase()}.`
+        title: 'Listing created',
+        description: 'Your item is now live in your store.',
       });
 
-      router.push("/listings");
-    } catch (error: any) {
-      console.error("Error creating listing:", error);
+      router.push('/listings');
+    } catch (err: any) {
+      console.error('Error creating listing', err);
       toast({
-        title: "Error Creating Listing",
-        description: error.message || "An unexpected error occurred.",
-        variant: "destructive"
+        title: 'Error creating listing',
+        description: err?.message ?? 'Something went wrong.',
+        variant: 'destructive',
       });
+      setIsSubmitting(false);
     }
-  }
+  };
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-3xl">Create a New Listing</CardTitle>
-        <CardDescription>
-          Fill out the details below to add a new item to your store.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Listing Title</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g., Holographic Charizard Card"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                            {cat.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="condition"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Condition</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a condition" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {conditions.map((con) => (
-                          <SelectItem key={con.value} value={con.value}>
-                            {con.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Describe your item in detail..."
-                      {...field}
-                      rows={5}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price ($)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="25.00"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantity</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Total number of this item you have for sale.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div>
-              <FormLabel>Images</FormLabel>
-              <FormDescription className="mb-2">
-                Add at least one image URL. The first image will be the main
-                one.
-              </FormDescription>
-              <div className="space-y-4">
-                {fields.map((field, index) => (
-                  <FormField
-                    key={field.id}
-                    control={form.control}
-                    name={`images.${index}.value`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex items-center gap-2">
-                          <FormControl>
-                            <Input placeholder="https://..." {...field} />
-                          </FormControl>
-                          {fields.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
-                              onClick={() => remove(index)}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ))}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-4"
-                onClick={() => append({ value: "" })}
-              >
-                Add Another Image
-              </Button>
-            </div>
-
-            <FormField
-              control={form.control}
-              name="tags"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tags</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g., pokemon, vintage, rare"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Comma-separated keywords to help buyers find your item.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={form.formState.isSubmitting}
-            >
-              {form.formState.isSubmitting
-                ? "Creating Listing..."
-                : "Create Listing"}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
-  );
-};
-
-export default function CreateListingPage() {
-  const { profile } = useAuth();
-
-  if (!profile?.isSeller) {
+  if (authLoading) {
     return (
       <AppLayout>
-        <PlaceholderContent
-          title="You are not a seller"
-          description="You need to create a store before you can add listings."
-        >
-          <Button asChild className="mt-4">
-            <Link href="/store/create">Create a Store</Link>
-          </Button>
-        </PlaceholderContent>
+        <div className="p-4 md:p-6 space-y-4">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-24 w-full" />
+        </div>
       </AppLayout>
     );
   }
 
-  if (profile.status !== "ACTIVE") {
+  if (!user) {
     return (
       <AppLayout>
-        <div className="mx-auto max-w-2xl">
-          <Alert variant="destructive" className="mb-8">
-            <Terminal className="h-4 w-4" />
-            <AlertTitle>Account Not Fully Active</AlertTitle>
-            <AlertDescription>
-              Your email must be verified to create listings that are
-              immediately visible to buyers. You can still create listings now,
-              but they will be saved as drafts until your account is active.
-            </AlertDescription>
-          </Alert>
-          <ListingForm />
+        <div className="p-4 md:p-6">
+          <Card>
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              You must be signed in to create a listing.
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!isSeller || !storeId) {
+    return (
+      <AppLayout>
+        <div className="p-4 md:p-6">
+          <Card>
+            <CardContent className="p-6 space-y-2 text-sm text-muted-foreground">
+              <p>You don&apos;t have a store set up yet.</p>
+              <p>Create your storefront first, then you can list items for sale.</p>
+            </CardContent>
+          </Card>
         </div>
       </AppLayout>
     );
@@ -440,8 +219,159 @@ export default function CreateListingPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-2xl">
-        <ListingForm />
+      <div className="p-4 md:p-6 max-w-3xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle>Create a new listing</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              {/* Basic info */}
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  placeholder="Amazing key issue, CGC 9.8..."
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe the item: condition, notes, defects, extras..."
+                  rows={5}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
+
+              {/* Category / condition */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select
+                    value={category}
+                    onValueChange={(val) => setCategory(val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORY_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Condition</Label>
+                  <Select
+                    value={condition}
+                    onValueChange={(val) => setCondition(val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select condition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CONDITION_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Price / quantity */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="price">Price</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Quantity available</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputMode="numeric"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <Label htmlFor="tags">Tags (comma separated)</Label>
+                <Input
+                  id="tags"
+                  placeholder="spider-man, key issue, cgc, bronze age"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                />
+              </div>
+
+              {/* Images */}
+              <div className="space-y-2">
+                <Label>Images</Label>
+                <Input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Add clear photos. The first image will be used as the main cover image.
+                </p>
+
+                {files.length > 0 && (
+                  <div className="mt-2 grid grid-cols-3 md:grid-cols-4 gap-2">
+                    {files.map((file, idx) => (
+                      <div
+                        key={idx}
+                        className="text-[10px] border rounded px-1 py-0.5 truncate bg-muted"
+                      >
+                        {file.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push('/listings')}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Listing item…' : 'List item'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </AppLayout>
   );

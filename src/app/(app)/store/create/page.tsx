@@ -1,16 +1,30 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useForm, FormProvider, useFormContext } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "next/navigation";
+import { useForm, FormProvider, useFormContext } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useFirestore } from '@/firebase';
@@ -24,13 +38,19 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 const storeSchema = z.object({
-  about: z.string().min(10, "About section must be at least 10 characters long."),
+  about: z.string().min(10, 'About section must be at least 10 characters long.'),
 });
 
 const paymentSchema = z.object({
-  paymentMethod: z.enum(["PAYPAL", "VENMO"], { required_error: "Please select a payment method." }),
-  paymentIdentifier: z.string().min(3, "Please enter your payment username or email."),
-  goodsAndServicesAgreed: z.literal(true, { errorMap: () => ({ message: "You must agree to the Goods & Services policy."})})
+  paymentMethod: z.enum(['PAYPAL', 'VENMO'], {
+    required_error: 'Please select a payment method.',
+  }),
+  paymentIdentifier: z.string().min(3, 'Please enter your payment username or email.'),
+  goodsAndServicesAgreed: z.literal(true, {
+    errorMap: () => ({
+      message: 'You must agree to the Goods & Services policy.',
+    }),
+  }),
 });
 
 const sellerSchema = storeSchema.merge(paymentSchema);
@@ -40,19 +60,28 @@ type SellerFormValues = z.infer<typeof sellerSchema>;
 const Step1Store = () => {
   const { control } = useFormContext<SellerFormValues>();
   const { profile } = useAuth();
-  
+
   if (!profile) return null;
 
-  const slug = profile.displayName?.toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '') || '';
+  const slug =
+    profile.displayName
+      ?.toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '') || '';
 
   return (
-    <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="space-y-8">
+    <motion.div
+      initial={{ opacity: 0, x: 50 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -50 }}
+      className="space-y-8"
+    >
       <div className="space-y-2">
         <Label>Store Name</Label>
         <Input value={profile.displayName || ''} disabled readOnly />
-        <FormDescription>Your store name is permanently linked to your display name.</FormDescription>
+        <FormDescription>
+          Your store name is permanently linked to your display name.
+        </FormDescription>
       </div>
       <div className="space-y-2">
         <Label>Store URL</Label>
@@ -62,7 +91,10 @@ const Step1Store = () => {
           </span>
           <Input value={slug} disabled readOnly className="rounded-l-none" />
         </div>
-        <FormDescription>Your store&apos;s unique URL is generated from your display name and cannot be changed.</FormDescription>
+        <FormDescription>
+          Your store&apos;s unique URL is generated from your display name and cannot be
+          changed.
+        </FormDescription>
       </div>
       <FormField
         control={control}
@@ -71,7 +103,11 @@ const Step1Store = () => {
           <FormItem>
             <FormLabel>About Your Store</FormLabel>
             <FormControl>
-              <Textarea placeholder="Tell everyone what makes your store special..." {...field} rows={3} />
+              <Textarea
+                placeholder="Tell everyone what makes your store special..."
+                {...field}
+                rows={3}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -84,7 +120,12 @@ const Step1Store = () => {
 const Step2Payment = () => {
   const { control } = useFormContext<SellerFormValues>();
   return (
-    <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="space-y-8">
+    <motion.div
+      initial={{ opacity: 0, x: 50 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -50 }}
+      className="space-y-8"
+    >
       <FormField
         control={control}
         name="paymentMethod"
@@ -102,17 +143,13 @@ const Step2Payment = () => {
                   <FormControl>
                     <RadioGroupItem value="PAYPAL" />
                   </FormControl>
-                  <FormLabel className="font-normal">
-                    PayPal
-                  </FormLabel>
+                  <FormLabel className="font-normal">PayPal</FormLabel>
                 </FormItem>
                 <FormItem className="flex items-center space-x-3 space-y-0">
                   <FormControl>
                     <RadioGroupItem value="VENMO" />
                   </FormControl>
-                  <FormLabel className="font-normal">
-                    Venmo
-                  </FormLabel>
+                  <FormLabel className="font-normal">Venmo</FormLabel>
                 </FormItem>
               </RadioGroup>
             </FormControl>
@@ -146,7 +183,9 @@ const Step2Payment = () => {
             </FormControl>
             <div className="space-y-1 leading-none">
               <FormLabel>
-                I agree that all payments for sales on this platform will be sent using Goods &amp; Services (no Friends &amp; Family or off-platform payments). This is required to reduce scams and protect both buyer and seller.
+                I agree that all payments for sales on this platform will be sent using
+                Goods &amp; Services (no Friends &amp; Family or off-platform payments).
+                This is required to reduce scams and protect both buyer and seller.
               </FormLabel>
               <FormMessage />
             </div>
@@ -167,11 +206,11 @@ export default function CreateStorePage() {
 
   const methods = useForm<SellerFormValues>({
     resolver: zodResolver(step === 1 ? storeSchema : sellerSchema),
-    mode: "onChange",
+    mode: 'onChange',
     defaultValues: {
-      about: "",
-      paymentMethod: profile?.paymentMethod || "PAYPAL",
-      paymentIdentifier: profile?.paymentIdentifier || "",
+      about: '',
+      paymentMethod: profile?.paymentMethod || 'PAYPAL',
+      paymentIdentifier: profile?.paymentIdentifier || '',
       goodsAndServicesAgreed: profile?.goodsAndServicesAgreed || false,
     },
   });
@@ -256,7 +295,6 @@ export default function CreateStorePage() {
         title: 'Your Store is Live!',
         description: 'Congratulations! You can now start listing items for sale.',
       });
-
       router.push(`/store/${newStoreRef.id}`);
       router.refresh();
     } catch (error) {

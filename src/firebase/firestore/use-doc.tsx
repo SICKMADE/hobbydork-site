@@ -46,7 +46,6 @@ export function useDoc<T = any>(
   const [data, setData] = useState<StateDataType>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
-
   useEffect(() => {
     if (!memoizedDocRef) {
       setData(null);
@@ -54,40 +53,26 @@ export function useDoc<T = any>(
       setError(null);
       return;
     }
-
+  
     setIsLoading(true);
     setError(null);
-    // Optional: setData(null); // Clear previous data instantly
-
+  
     const unsubscribe = onSnapshot(
       memoizedDocRef,
-      (snapshot: DocumentSnapshot<DocumentData>) => {
-        if (snapshot.exists()) {
-          setData({ ...(snapshot.data() as T), id: snapshot.id });
-        } else {
-          // Document does not exist
-          setData(null);
-        }
-        setError(null); // Clear any previous error on successful snapshot (even if doc doesn't exist)
+      (snap) => {
+        // @ts-expect-error generic
+        setData(snap.exists() ? { id: snap.id, ...snap.data() } : null);
         setIsLoading(false);
       },
-      (error: FirestoreError) => {
-        const contextualError = new FirestorePermissionError({
-          operation: 'get',
-          path: memoizedDocRef.path,
-        })
-
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
-
-        // trigger global error propagation
-        errorEmitter.emit('permission-error', contextualError);
-      }
+      (err) => {
+        setError(err);
+        setIsLoading(false);
+      },
     );
-
+  
     return () => unsubscribe();
-  }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
+  }, [memoizedDocRef?.path]); // <<< change deps to this
+  
 
   return { data, isLoading, error };
 }

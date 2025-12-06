@@ -1,32 +1,90 @@
-
 'use client';
+
 import {
   SidebarHeader,
   SidebarContent,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarFooter,
 } from '@/components/ui/sidebar';
 
-import { LogOut, Home, Search, Store, MessageSquare, Newspaper, Heart, Settings, User, Star, HelpCircle, ShoppingCart, Package, HeartHandshake } from 'lucide-react';
-import Logo from '../Logo';
+import {
+  LogOut,
+  Home,
+  Search,
+  Store,
+  MessageSquare,
+  Newspaper,
+  Heart,
+  Settings,
+  User,
+  Star,
+  HelpCircle,
+  ShoppingCart,
+  Package,
+  HeartHandshake,
+  Bell,
+} from 'lucide-react';
+
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 
+import {
+  useFirestore,
+  useCollection,
+  useMemoFirebase,
+} from '@/firebase';
+
+import {
+  collection,
+  query,
+  orderBy,
+} from 'firebase/firestore';
+
+import {
+  Avatar,
+  AvatarImage,
+  AvatarFallback,
+} from '@/components/ui/avatar';
+
 const RedLineSeparator = () => (
-    <div className="h-0.5 w-full bg-red-600" />
+  <div className="h-0.5 w-full bg-red-600" />
 );
 
+type NotificationDoc = {
+  id?: string;
+  title?: string;
+  body?: string;
+  type?: string;
+  createdAt?: any;
+  readAt?: any | null;
+  isRead?: boolean;
+};
 
 export default function SidebarNav() {
-  const { logout, profile } = useAuth();
+  const { user, logout, profile } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  
+  const firestore = useFirestore();
+
   const handleLogout = async () => {
     await logout();
-  }
+  };
+
+  // Notifications for current user
+  const notificationsQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return query(
+      collection(firestore, 'users', user.uid, 'notifications'),
+      orderBy('createdAt', 'desc'),
+    );
+  }, [firestore, user?.uid]);
+
+  const { data: notifications } =
+    useCollection<NotificationDoc>(notificationsQuery);
+
+  const unreadNotificationsCount =
+    (notifications || []).filter((n) => !n.isRead && !n.readAt).length;
 
   const mainMenuItems = [
     { href: '/', label: 'Home', icon: Home },
@@ -34,146 +92,248 @@ export default function SidebarNav() {
     { href: '/iso24', label: 'ISO24', icon: Newspaper },
     { href: '/chat', label: 'Community', icon: MessageSquare },
   ];
-  
+
   const personalMenuItems = [
-      { href: '/profile', label: 'Profile', icon: User },
-      { href: '/orders', label: 'My Orders', icon: Package },
-      { href: '/sales', label: 'My Sales', icon: HeartHandshake },
-      { href: '/watchlist', label: 'Watchlist', icon: Heart },
-      { href: '/favorites', label: 'Favorite Stores', icon: Store },
-      { href: '/cart', label: 'Cart', icon: ShoppingCart },
+    { href: '/profile', label: 'Profile', icon: User },
+    { href: '/orders', label: 'My Orders', icon: Package },
+    { href: '/sales', label: 'My Sales', icon: HeartHandshake },
+    { href: '/watchlist', label: 'Watchlist', icon: Heart },
+    { href: '/favorites', label: 'Favorite Stores', icon: Store },
+    { href: '/cart', label: 'Cart', icon: ShoppingCart },
+    { href: '/messages', label: 'Messages', icon: MessageSquare },
+    { href: '/notifications', label: 'Notifications', icon: Bell },
   ];
 
-  const userMenuItems = [
+  const sellerMenuItems = [
     { href: '/listings', label: 'My Listings', icon: Store },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
 
   const adminMenuItems = [
-      { href: '/admin/users', label: 'Manage Users', icon: User },
-      { href: '/admin/spotlight', label: 'Spotlight', icon: Star },
-  ]
+    { href: '/admin/users', label: 'Manage Users', icon: User },
+    { href: '/admin/spotlight', label: 'Spotlight', icon: Star },
+  ];
 
-  const utilityMenuItems = [
-      { href: '/help', label: 'Help', icon: HelpCircle },
-      { href: '#', label: 'Logout', icon: LogOut, onClick: handleLogout },
-  ]
+  const displayName =
+    (profile as any)?.displayName ||
+    user?.email ||
+    'My account';
+
+  const avatarUrl =
+    (profile as any)?.avatarUrl || '';
 
   return (
     <>
-      <SidebarHeader className="p-4 pt-12 text-center">
-        <Logo iconOnly={true} />
-        <p className="text-sm font-nintendo tracking-wider text-muted-foreground mt-4">A safe marketplace to buy and sell</p>
-      </SidebarHeader>
-      <SidebarContent className="p-4">
-        <div 
-          className="h-full flex flex-col space-y-4 pt-8"
-           style={{
-                backgroundImage: 'linear-gradient(45deg, hsl(0 0% 13%) 25%, transparent 25%), linear-gradient(-45deg, hsl(0 0% 13%) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(0 0% 13%) 75%), linear-gradient(-45deg, transparent 75%, hsl(0 0% 13%) 75%)',
-                backgroundSize: '20px 20px',
-                backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
-            }}
-        >
-             <div className="bg-background rounded-lg p-2" style={{ boxShadow: 'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)' }}>
-                <SidebarMenu>
-                 <RedLineSeparator />
-                {mainMenuItems.map((item) => (
-                    <SidebarMenuItem key={item.label}>
-                    <SidebarMenuButton
-                        href={item.href}
-                        isActive={pathname === item.href}
-                        onClick={() => router.push(item.href)}
-                        className="justify-start gap-4 text-base font-semibold tracking-wide"
-                    >
-                        <item.icon className="h-5 w-5" />
-                        <span>{item.label}</span>
-                    </SidebarMenuButton>
-                    </SidebarMenuItem>
-                ))}
-                </SidebarMenu>
-            </div>
-            
-             <div className="bg-background rounded-lg p-2" style={{ boxShadow: 'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)' }}>
-                <SidebarMenu>
-                     <RedLineSeparator />
-                    <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Vault</p>
-                    {personalMenuItems.map((item) => (
-                        <SidebarMenuItem key={item.label}>
-                            <SidebarMenuButton
-                                href={item.href}
-                                isActive={pathname.startsWith(item.href)}
-                                onClick={() => router.push(item.href)}
-                                className="justify-start gap-4 text-base font-semibold tracking-wide"
-                            >
-                                <item.icon className="h-5 w-5" />
-                                <span>{item.label}</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenu>
-            </div>
-            
-            {profile?.isSeller && (
-                 <div className="bg-background rounded-lg p-2" style={{ boxShadow: 'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)' }}>
-                    <SidebarMenu>
-                         <RedLineSeparator />
-                        <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Store</p>
-                        {userMenuItems.map((item) => (
-                            <SidebarMenuItem key={item.label}>
-                                <SidebarMenuButton
-                                    href={item.href}
-                                    isActive={pathname.startsWith(item.href)}
-                                    onClick={() => router.push(item.href)}
-                                    className="justify-start gap-4 text-base font-semibold tracking-wide"
-                                >
-                                    <item.icon className="h-5 w-5" />
-                                    <span>{item.label}</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        ))}
-                    </SidebarMenu>
-                </div>
-            )}
-            
-            {profile?.role === 'ADMIN' && (
-                 <div className="bg-background rounded-lg p-2" style={{ boxShadow: 'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)' }}>
-                    <SidebarMenu>
-                        <RedLineSeparator />
-                        <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
-                        {adminMenuItems.map((item) => (
-                            <SidebarMenuItem key={item.label}>
-                                <SidebarMenuButton
-                                    href={item.href}
-                                    isActive={pathname.startsWith(item.href)}
-                                    onClick={() => router.push(item.href)}
-                                    className="justify-start gap-4 text-base font-semibold tracking-wide"
-                                >
-                                    <item.icon className="h-5 w-5" />
-                                    <span>{item.label}</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        ))}
-                    </SidebarMenu>
-                </div>
-            )}
-            
-              <div className="bg-background rounded-lg p-2" style={{ boxShadow: 'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)' }}>
-                  <SidebarMenu>
-                        <RedLineSeparator />
-                      <SidebarMenuItem>
-                          <SidebarMenuButton onClick={() => router.push('/help')} className="justify-start gap-4 text-base font-semibold tracking-wide">
-                              <HelpCircle className="h-5 w-5" />
-                              <span>Help</span>
-                          </SidebarMenuButton>
-                      </SidebarMenuItem>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton onClick={handleLogout} className="justify-start gap-4 text-base font-semibold tracking-wide">
-                      <LogOut className="h-5 w-5" />
-                      <span>Logout</span>
-                      </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  </SidebarMenu>
+      {/* Profile block at top (replaces old logo + tagline) */}
+      <SidebarHeader className="p-4 pt-6">
+        {user && (
+          <div className="flex items-center gap-3 rounded-lg border bg-background/80 px-3 py-2">
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={avatarUrl} />
+              <AvatarFallback>
+                {displayName.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold truncate">
+                {displayName}
               </div>
+              <div className="text-[11px] text-muted-foreground truncate">
+                {profile?.isSeller ? 'Seller' : 'Collector'}
+              </div>
+            </div>
+          </div>
+        )}
+      </SidebarHeader>
+
+      <SidebarContent className="p-4">
+        <div
+          className="h-full flex flex-col space-y-4 pt-2"
+          style={{
+            backgroundImage:
+              'linear-gradient(45deg, hsl(0 0% 13%) 25%, transparent 25%), linear-gradient(-45deg, hsl(0 0% 13%) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(0 0% 13%) 75%), linear-gradient(-45deg, transparent 75%, hsl(0 0% 13%) 75%)',
+            backgroundSize: '20px 20px',
+            backgroundPosition:
+              '0 0, 0 10px, 10px -10px, -10px 0px',
+          }}
+        >
+          {/* Main */}
+          <div
+            className="bg-background rounded-lg p-2"
+            style={{
+              boxShadow:
+                'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)',
+            }}
+          >
+            <SidebarMenu>
+              <RedLineSeparator />
+              {mainMenuItems.map((item) => (
+                <SidebarMenuItem key={item.label}>
+                  <SidebarMenuButton
+                    href={item.href}
+                    isActive={pathname === item.href}
+                    onClick={() => router.push(item.href)}
+                    className="justify-start gap-4 text-base font-semibold tracking-wide"
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </div>
+
+          {/* My Vault */}
+          <div
+            className="bg-background rounded-lg p-2"
+            style={{
+              boxShadow:
+                'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)',
+            }}
+          >
+            <SidebarMenu>
+              <RedLineSeparator />
+              <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                My Vault
+              </p>
+              {personalMenuItems.map((item) => (
+                <SidebarMenuItem key={item.label}>
+                  <SidebarMenuButton
+                    href={item.href}
+                    isActive={pathname.startsWith(item.href)}
+                    onClick={() => router.push(item.href)}
+                    className="justify-start gap-4 text-base font-semibold tracking-wide"
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span className="flex-1">
+                      {item.label}
+                    </span>
+                    {item.href === '/notifications' &&
+                      unreadNotificationsCount > 0 && (
+                        <span className="ml-auto inline-flex items-center justify-center rounded-full bg-red-600 text-[10px] font-bold px-1.5 py-0.5 text-white">
+                          {unreadNotificationsCount > 9
+                            ? '9+'
+                            : unreadNotificationsCount}
+                        </span>
+                      )}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </div>
+
+          {/* My Store (seller-only) */}
+          {profile?.isSeller && (
+            <div
+              className="bg-background rounded-lg p-2"
+              style={{
+                boxShadow:
+                  'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)',
+              }}
+            >
+              <SidebarMenu>
+                <RedLineSeparator />
+                <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  My Store
+                </p>
+
+                {/* Direct link to public store page */}
+                {profile?.storeId && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      href={`/store/${profile.storeId}`}
+                      isActive={pathname.startsWith(
+                        `/store/${profile.storeId}`,
+                      )}
+                      onClick={() =>
+                        router.push(`/store/${profile.storeId}`)
+                      }
+                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                    >
+                      <Store className="h-5 w-5" />
+                      <span>My Store</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+
+                {sellerMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton
+                      href={item.href}
+                      isActive={pathname.startsWith(item.href)}
+                      onClick={() => router.push(item.href)}
+                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </div>
+          )}
+
+          {/* Admin */}
+          {profile?.role === 'ADMIN' && (
+            <div
+              className="bg-background rounded-lg p-2"
+              style={{
+                boxShadow:
+                  'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)',
+              }}
+            >
+              <SidebarMenu>
+                <RedLineSeparator />
+                <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  Admin
+                </p>
+                {adminMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton
+                      href={item.href}
+                      isActive={pathname.startsWith(item.href)}
+                      onClick={() => router.push(item.href)}
+                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </div>
+          )}
+
+          {/* Help / Logout */}
+          <div
+            className="bg-background rounded-lg p-2"
+            style={{
+              boxShadow:
+                'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)',
+            }}
+          >
+            <SidebarMenu>
+              <RedLineSeparator />
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => router.push('/help')}
+                  className="justify-start gap-4 text-base font-semibold tracking-wide"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                  <span>Help</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={handleLogout}
+                  className="justify-start gap-4 text-base font-semibold tracking-wide"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span>Logout</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </div>
         </div>
       </SidebarContent>
     </>

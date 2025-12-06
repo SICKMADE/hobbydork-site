@@ -3,20 +3,32 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  orderBy,
+  limit,
+  where,
+} from 'firebase/firestore';
 
 import { useAuth } from '@/hooks/use-auth';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import {
+  useFirestore,
+  useCollection,
+  useMemoFirebase,
+} from '@/firebase';
 
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui/button';
+import StoreCard from '@/components/StoreCard';
+import type { Store as StoreType } from '@/lib/types';
 import { StandaloneVaultDoor } from './StandaloneVaultDoor';
 
 import vaultImg from './hobbydork-vault.png';
-import genieImg from './hobbydork-genie.png';
+import genieImg from './genie.png';
 
-// ----------------------
-// Ask HobbyDork 8-ball
-// ----------------------
+/* =======================
+   Ask HobbyDork (8-ball)
+   ======================= */
 
 const BUY_ANSWERS = [
   'Yeah, you should buy it.',
@@ -72,26 +84,27 @@ function AskHobbyDorkSection() {
       : null;
 
   return (
-    <section className="rounded-2xl border bg-card/80 p-6 sm:p-8 shadow-md">
+    <div className="rounded-2xl border bg-gradient-to-br from-zinc-900/90 via-zinc-900 to-black p-6 sm:p-8 shadow-xl">
       <div className="grid items-center gap-6 sm:grid-cols-[auto,minmax(0,1fr)]">
-        {/* Genie image */}
         <div className="flex justify-center">
           <Image
             src={genieImg}
-            alt="HobbyDork genie"
-            className="h-auto w-28 sm:w-36"
+            alt="genie"
+            className="h-auto w-28 sm:w-40 drop-shadow-[0_0_18px_rgba(0,0,0,0.75)]"
             priority
           />
         </div>
 
-        {/* Text + controls */}
         <div className="space-y-4">
           <div className="space-y-1">
-            <h2 className="text-3xl font-extrabold uppercase tracking-[0.2em] text-primary drop-shadow-md">
-              Ask HobbyDork
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
+              HobbyDork Genie
+            </p>
+            <h2 className="text-3xl font-black uppercase tracking-[0.18em]">
+              Ask The Vault
             </h2>
             <p className="text-xs text-muted-foreground">
-              Magic 8-Ball style. Pick a question and let HobbyDork decide.
+              Hit one of the buttons and let HobbyDork give you a brutally honest answer.
             </p>
           </div>
 
@@ -101,6 +114,7 @@ function AskHobbyDorkSection() {
               variant="outline"
               onClick={() => handleAsk('BUY')}
               disabled={isThinking}
+              className="border-emerald-500/60 bg-emerald-500/5 hover:bg-emerald-500/15"
             >
               Should I buy this item?
             </Button>
@@ -109,20 +123,21 @@ function AskHobbyDorkSection() {
               variant="outline"
               onClick={() => handleAsk('SELL')}
               disabled={isThinking}
+              className="border-rose-500/60 bg-rose-500/5 hover:bg-rose-500/15"
             >
               Should I sell this item?
             </Button>
           </div>
 
-          <div className="mt-2 rounded-lg border bg-background/60 p-4 text-sm">
+          <div className="mt-2 rounded-xl border border-zinc-800 bg-black/40 p-4 text-sm">
             {isThinking && (
               <p className="text-muted-foreground">
-                HobbyDork is thinking about it...
+                HobbyDork is flipping a coin in the back room…
               </p>
             )}
             {!isThinking && answer && label && (
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {label}
                 </p>
                 <p className="text-base font-semibold">{answer}</p>
@@ -130,168 +145,352 @@ function AskHobbyDorkSection() {
             )}
             {!isThinking && !answer && (
               <p className="text-muted-foreground">
-                Pick one of the questions above and HobbyDork will give you an
-                answer.
+                Pick BUY or SELL and let the genie decide your fate.
               </p>
             )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =======================
+   Vault Easter egg card
+   ======================= */
+
+function VaultEasterEggSection() {
+  return (
+    <div className="space-y-6 rounded-2xl border bg-card/90 p-6 shadow-md sm:p-8">
+      <div className="flex flex-col gap-6 md:flex-row md:items-center">
+        <div className="flex justify-center md:justify-start">
+          <Image
+            src={vaultImg}
+            alt="HobbyDork trying to unlock the vault"
+            className="max-h-40 w-auto drop-shadow-[0_0_18px_rgba(0,0,0,0.7)]"
+            priority
+          />
+        </div>
+        <div className="space-y-1 text-center md:text-left">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-yellow-400/80">
+            Easter Egg
+          </p>
+          <h2 className="text-2xl font-semibold">
+            Can you unlock the HobbyDork vault?
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Tap the door, punch in the secret 4-digit PIN, and hit the winner
+            screen if you get it right.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex justify-center">
+        <StandaloneVaultDoor />
+      </div>
+    </div>
+  );
+}
+
+/* =======================
+   Store Spotlight row
+   (static glow around whole row)
+   ======================= */
+
+function SpotlightStoresSection() {
+  const firestore = useFirestore();
+
+  const spotlightQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'storefronts'),
+      where('isSpotlighted', '==', true),
+      limit(20),
+    );
+  }, [firestore]);
+
+  const { data: spotlightStores, isLoading } =
+    useCollection<StoreType>(spotlightQuery as any);
+
+  if (!spotlightStores || spotlightStores.length === 0) return null;
+
+  return (
+    <section className="relative rounded-2xl border border-amber-500/80 bg-card/95 p-[1px] shadow-[0_0_25px_rgba(251,191,36,0.35)]">
+      {/* Static glow frame around the whole strip */}
+      <div className="pointer-events-none absolute -inset-[2px] rounded-2xl bg-[radial-gradient(circle_at_0_0,rgba(251,191,36,0.30),transparent_55%),radial-gradient(circle_at_100%_0,rgba(251,191,36,0.18),transparent_55%),radial-gradient(circle_at_0_100%,rgba(251,191,36,0.18),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(251,191,36,0.30),transparent_55%)] opacity-70" />
+
+      {/* Content */}
+      <div className="relative rounded-2xl bg-zinc-950/95 p-4 sm:p-6">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-300/90">
+                Store Spotlight
+              </p>
+              <span className="rounded-full bg-amber-400 text-[10px] font-semibold uppercase tracking-[0.2em] text-black px-2 py-0.5">
+                Paid
+              </span>
+            </div>
+            <h2 className="mt-1 text-xl font-semibold">
+              Featured HobbyDork Stores
+            </h2>
+            <p className="mt-1 text-[11px] text-muted-foreground max-w-xl">
+              Weekly paid spots from the HobbyDork Market. Scroll sideways to
+              see who bought their way to the front of the vault.
+            </p>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/search">Browse all stores</Link>
+          </Button>
+        </div>
+
+        {isLoading && (
+          <p className="text-xs text-muted-foreground">Loading spotlight…</p>
+        )}
+
+        <div className="mt-2 flex gap-4 overflow-x-auto pb-2">
+          {spotlightStores.map((slot) => {
+            const storeWithId = {
+              ...(slot as any),
+              storeId: (slot as any).storeId ?? (slot as any).id,
+              isSpotlighted: true,
+            } as StoreType;
+
+            return (
+              <div
+                key={storeWithId.storeId}
+                className="flex-[0_0_280px] max-w-[320px]"
+              >
+                {/* Uses your existing StoreCard; card size unchanged */}
+                <StoreCard store={storeWithId} />
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
   );
 }
 
-// ----------------------
-// Dashboard
-// ----------------------
+/* =======================
+   Newly Listed row
+   ======================= */
 
-export default function Dashboard() {
-  const { profile, loading } = useAuth();
+function NewListingsSection() {
   const firestore = useFirestore();
-  const displayName = profile?.displayName ?? 'HobbyDork';
 
-  // Store Spotlight uses spotlightSlots, not storefronts
-  const spotlightQuery = useMemoFirebase(() => {
+  const newListingsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-
     return query(
-      collection(firestore, 'spotlightSlots'),
+      collection(firestore, 'listings'),
+      where('state', '==', 'ACTIVE'),
       orderBy('createdAt', 'desc'),
-      limit(4),
+      limit(24),
     );
   }, [firestore]);
 
-  const {
-    data: spotlightSlots,
-    isLoading: spotlightLoading,
-    error: spotlightError,
-  } = useCollection(spotlightQuery);
+  const { data: listings, isLoading } =
+    useCollection<any>(newListingsQuery);
+
+  if (!listings || listings.length === 0) return null;
 
   return (
-    <div className="space-y-10">
-      {/* Header */}
-      <header className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+    <section className="rounded-2xl border bg-card/90 p-4 sm:p-6 shadow-md">
+      <div className="mb-4 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Welcome, {loading ? '...' : displayName}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Check the Store Spotlight, help HobbyDork unlock the vault, and ask
-            if you should buy or sell.
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-sky-400/80">
+            Newly Listed
           </p>
+          <h2 className="text-xl font-semibold">Fresh in the Vault</h2>
         </div>
-        <div className="flex gap-3">
-          <Button asChild variant="outline" className="hidden sm:inline-flex">
-            <Link href="/search">Search HobbyDork</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/listings/create">Create listing</Link>
-          </Button>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/search">Browse all listings</Link>
+        </Button>
+      </div>
+
+      {isLoading && (
+        <p className="text-xs text-muted-foreground">Loading listings…</p>
+      )}
+
+      <div className="flex gap-4 overflow-x-auto pb-2">
+        {listings.map((l: any, index: number) => {
+          const primaryUrl =
+            l.primaryImageUrl ||
+            (Array.isArray(l.imageUrls) && l.imageUrls[0]) ||
+            null;
+
+          return (
+            <Link
+              key={l.listingId ?? l.id}
+              href={`/listings/${l.listingId ?? l.id}`}
+              className="group flex w-60 flex-[0_0_auto] flex-col overflow-hidden rounded-xl border bg-background/90 text-left shadow-sm transition hover:border-primary hover:bg-background"
+            >
+              <div className="relative w-full aspect-[4/3] bg-black/40">
+                {primaryUrl && (
+                  <Image
+                    src={primaryUrl}
+                    alt={l.title}
+                    fill
+                    sizes="(min-width: 1024px) 240px, (min-width: 640px) 40vw, 80vw"
+                    priority={index === 0}
+                    className="object-cover transition group-hover:scale-105"
+                  />
+                )}
+              </div>
+              <div className="space-y-1 p-3">
+                <p className="line-clamp-2 text-xs font-semibold">
+                  {l.title}
+                </p>
+                <p className="text-sm font-bold">
+                  $
+                  {typeof l.price === 'number'
+                    ? l.price.toFixed(2)
+                    : Number(l.price || 0).toFixed(2)}
+                </p>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/* =======================
+   ISO24 row
+   ======================= */
+
+function ISO24SummarySection() {
+  const firestore = useFirestore();
+
+  const isoQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'iso24Posts'),
+      where('status', '==', 'ACTIVE'),
+      orderBy('expiresAt', 'asc'),
+      limit(20),
+    );
+  }, [firestore]);
+
+  const { data: isoPosts, isLoading } =
+    useCollection<any>(isoQuery);
+
+  if (!isoPosts || isoPosts.length === 0) return null;
+
+  const formatCategory = (cat: string | undefined) =>
+    (cat || '')
+      .toLowerCase()
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const timeLeft = (expiresAt: any) => {
+    if (!expiresAt?.toDate) return '';
+    const ms = expiresAt.toDate().getTime() - Date.now();
+    if (ms <= 0) return 'Expired';
+    const hours = Math.floor(ms / (1000 * 60 * 60));
+    if (hours < 24) return `${hours}h left`;
+    const days = Math.floor(hours / 24);
+    return `${days}d left`;
+  };
+
+  return (
+    <section className="rounded-2xl border bg-card/90 p-4 sm:p-6 shadow-md">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-fuchsia-400/80">
+            ISO24
+          </p>
+          <h2 className="text-xl font-semibold">In Search Of (24 hours)</h2>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/iso24">View all</Link>
+        </Button>
+      </div>
+
+      {isLoading && (
+        <p className="text-xs text-muted-foreground">
+          Loading ISO posts…
+        </p>
+      )}
+
+      <div className="flex gap-4 overflow-x-auto pb-2">
+        {isoPosts.map((iso: any) => (
+          <div
+            key={iso.id ?? iso.isoId}
+            className="flex w-64 flex-[0_0_auto] flex-col rounded-xl border bg-background/90 p-3 text-xs"
+          >
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                {formatCategory(iso.category)}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                {timeLeft(iso.expiresAt)}
+              </span>
+            </div>
+            <p className="line-clamp-2 text-[13px] font-semibold">
+              {iso.title}
+            </p>
+            <p className="mt-1 line-clamp-3 whitespace-pre-line text-[12px] text-muted-foreground">
+              {iso.description}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* =======================
+   Main Dashboard
+   ======================= */
+
+export default function Dashboard() {
+  const { profile, loading } = useAuth();
+  const displayName = profile?.displayName ?? 'Collector';
+
+  return (
+    <div className="space-y-10 lg:space-y-12">
+      {/* Hero header */}
+      <header className="rounded-2xl border bg-gradient-to-r from-zinc-900 via-zinc-900 to-black p-6 sm:p-7 shadow-xl">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
+              HobbyDork Dashboard
+            </p>
+            <h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">
+              Welcome, {loading ? '...' : displayName}
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground max-w-xl">
+              See what&apos;s hot, what just hit the vault, and crack open the secret
+              HobbyDork Vault to win something crazy!.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              asChild
+              variant="outline"
+              className="hidden sm:inline-flex"
+            >
+              <Link href="/search">Browse listings</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/listings/create">Create listing</Link>
+            </Button>
+          </div>
         </div>
       </header>
 
-      {/* STORE SPOTLIGHT – from spotlightSlots */}
-      <section className="rounded-2xl border bg-card/80 p-6 sm:p-8 shadow-md">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-              Store Spotlight
-            </p>
-            <h2 className="text-lg font-semibold">
-              Featured HobbyDork stores this week
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              When sellers buy spotlight slots, their stores show up here.
-            </p>
-          </div>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/browse">View marketplace</Link>
-          </Button>
-        </div>
+      {/* Rows */}
+      <SpotlightStoresSection />
+      <NewListingsSection />
+      <ISO24SummarySection />
 
-        {spotlightLoading && (
-          <p className="text-sm text-muted-foreground">
-            Loading spotlight stores...
-          </p>
-        )}
-
-        {spotlightError && (
-          <p className="text-sm text-destructive">
-            Couldn&apos;t load spotlight stores right now.
-          </p>
-        )}
-
-        {spotlightSlots && spotlightSlots.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {spotlightSlots.map((slot: any) => {
-              const storeId = slot.storeId ?? slot.storeRef ?? slot.id;
-              const storeName = slot.storeName ?? 'Spotlight store';
-              const blurb =
-                slot.blurb ||
-                slot.tagline ||
-                'Tap to view this HobbyDork store and see what they have listed.';
-
-              return (
-                <Link
-                  key={slot.id}
-                  href={storeId ? `/store/${storeId}` : '#'}
-                  className="group rounded-xl border bg-background/60 p-4 shadow-sm transition hover:border-primary hover:bg-background"
-                >
-                  <h3 className="text-base font-semibold group-hover:text-primary">
-                    {storeName}
-                  </h3>
-                  <p className="mt-1 text-xs text-muted-foreground line-clamp-3">
-                    {blurb}
-                  </p>
-                  {storeId && (
-                    <p className="mt-3 text-xs font-medium text-primary">
-                      View store →
-                    </p>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        ) : !spotlightLoading && !spotlightError ? (
-          <p className="text-sm text-muted-foreground">
-            No spotlight stores yet. Once you start selling spotlight spots,
-            they&apos;ll appear here.
-          </p>
-        ) : null}
+      {/* Fun row: vault + genie side by side on desktop */}
+      <section className="grid gap-6 md:grid-cols-2">
+        <VaultEasterEggSection />
+        <AskHobbyDorkSection />
       </section>
-
-      {/* Vault section */}
-      <section className="max-w-4xl mx-auto rounded-2xl border bg-card/80 p-6 sm:p-8 shadow-md space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center gap-6">
-          <div className="flex justify-center md:justify-start">
-            <Image
-              src={vaultImg}
-              alt="HobbyDork trying to unlock the vault"
-              className="max-h-40 w-auto"
-              priority
-            />
-          </div>
-          <div className="text-center md:text-left space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-              Easter Egg
-            </p>
-            <h2 className="text-2xl font-semibold">
-              Can you unlock the HobbyDork safe?
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Help HobbyDork unlock the vault. Tap the door and enter the secret
-              4-digit PIN. Get it right and you&apos;ll hit the winner&apos;s screen.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-6 flex justify-center">
-          <StandaloneVaultDoor />
-        </div>
-      </section>
-
-      {/* Ask HobbyDork */}
-      <AskHobbyDorkSection />
     </div>
   );
 }

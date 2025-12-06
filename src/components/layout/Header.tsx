@@ -1,65 +1,142 @@
 'use client';
 
+import { useState, KeyboardEvent } from 'react';
 import Image from 'next/image';
-import { SidebarTrigger } from '../ui/sidebar';
-import { UserNav } from './UserNav';
-import { Input } from '../ui/input';
-import { Search } from 'lucide-react';
-import { Button } from '../ui/button';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
-// wide HobbyDork logo – same folder as Header.tsx
+import { SidebarTrigger } from '../ui/sidebar';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
+import { Search, Bell } from 'lucide-react';
+
+import { useAuth } from '@/hooks/use-auth';
+import {
+  useFirestore,
+  useCollection,
+  useMemoFirebase,
+} from '@/firebase';
+
+import {
+  collection,
+  query,
+  where,
+} from 'firebase/firestore';
+
+// HobbyDork header logo
 import headLogo from './hobbydork-head.png';
 
+type NotificationDoc = {
+  id?: string;
+  isRead?: boolean;
+  readAt?: any | null;
+};
+
 export default function Header() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const router = useRouter();
+  const { user } = useAuth();
+  const firestore = useFirestore();
+
+  // Unread notifications for header badge
+  const notifQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return query(
+      collection(firestore, 'users', user.uid, 'notifications'),
+      where('isRead', '==', false),
+    );
+  }, [firestore, user?.uid]);
+  
+
+  const { data: notifications } =
+    useCollection<NotificationDoc>(notifQuery as any);
+
+  const unreadCount =
+    (notifications || []).filter(
+      (n) => !n.isRead && !n.readAt,
+    ).length;
+
+  const runSearch = () => {
+    const trimmed = searchTerm.trim();
+    if (!trimmed) return;
+    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      runSearch();
+    }
+  };
+  
+
   return (
-    <header className="sticky top-0 z-30 flex h-32 items-center gap-4 border-b bg-card px-4 md:px-6 lg:px-8">
-      {/* mobile sidebar toggle */}
-      <SidebarTrigger className="md:hidden" />
-
-      {/* center section: logo + search bar + START */}
-      <div className="flex-1 flex justify-center items-center">
-        <div
-          className="w-full max-w-5xl rounded-lg p-2 flex items-center gap-4"
-          style={{
-            backgroundImage:
-              'linear-gradient(45deg, #333 25%, transparent 25%), linear-gradient(-45deg, #333 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #333 75%), linear-gradient(-45deg, transparent 75%, #333 75%)',
-            backgroundSize: '20px 20px',
-            backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-            boxShadow: '0 0 15px rgba(255, 255, 255, 0.7)',
-          }}
+    <header className="sticky top-0 z-30 border-b bg-muted">
+      <div className="mx-auto flex h-24 max-w-6xl items-center gap-3 px-4 md:px-6 lg:px-8">
+        {/* MOBILE: red menu button for sidebar */}
+        <SidebarTrigger
+          className="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-full bg-red-500 text-white shadow-[0_6px_0_#7f1010] active:translate-y-1 active:shadow-[0_0px_0_#7f1010] transition-all"
         >
-          {/* BIGGER LOGO */}
-          <div className="hidden md:flex items-center">
-            <Image
-              src={headLogo}
-              alt="HobbyDork"
-              className="h-14 sm:h-16 w-auto flex-shrink-0"
-              priority
-            />
-          </div>
+          <span className="flex flex-col gap-1">
+            <span className="h-0.5 w-5 rounded-full bg-white" />
+            <span className="h-0.5 w-5 rounded-full bg-white" />
+            <span className="h-0.5 w-5 rounded-full bg-white" />
+          </span>
+        </SidebarTrigger>
 
-          {/* SEARCH */}
+        {/* Logo */}
+        <Link href="/" className="flex items-center">
+          <Image
+            src={headLogo}
+            alt="HobbyDork"
+            className="h-12 w-auto object-contain mr-3"
+            priority
+          />
+        </Link>
+
+        {/* Search + header actions */}
+        <div className="flex flex-1 items-center gap-3">
+          {/* Search input */}
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search collectibles, stores, and users..."
-              className="pl-10 h-10 text-base bg-black border-white shadow-inner text-white placeholder:text-gray-500 rounded-md w-full"
+              placeholder="Search listings, ISO posts, or stores..."
+              className="h-10 w-full rounded-full bg-white text-black border-2 border-red-500 pl-9 pr-4 text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              
+              onKeyDown={onKeyDown}
             />
           </div>
 
-          {/* START BUTTON */}
+          {/* Red Nintendo search button */}
           <Button
-            className="h-9 w-24 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-[0_4px_#9f1212] active:shadow-none active:translate-y-1 transition-all"
+            type="button"
+            onClick={runSearch}
+            className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-red-500 text-white shadow-[0_6px_0_#7f1010] active:translate-y-1 active:shadow-[0_0px_0_#7f1010] transition-all"
           >
-            START
+            <Search className="h-4 w-4" />
           </Button>
-        </div>
-      </div>
 
-      {/* right side: user menu */}
-      <div className="flex items-center gap-4">
-        <UserNav />
+          {/* Notifications bell */}
+          {user && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="relative ml-1"
+              onClick={() => router.push('/notifications')}
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
     </header>
   );

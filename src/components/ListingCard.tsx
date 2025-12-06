@@ -1,44 +1,94 @@
 import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import Link from 'next/link';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Listing } from '@/lib/types';
-import Link from 'next/link';
 
 interface ListingCardProps {
   listing: Listing;
 }
 
 export default function ListingCard({ listing }: ListingCardProps) {
-  // The listing object might not have an `id` field if it comes from a source
-  // where the document ID is not automatically added. The new schema uses `listingId`.
-  const listingId = listing.id || listing.listingId;
+  // Some older queries may use listingId instead of id
+  const anyListing = listing as any;
+  const listingId: string | undefined =
+    anyListing.id || anyListing.listingId;
+
+  if (!listingId) return null;
+
+  const title: string = anyListing.title ?? 'Untitled listing';
+  const price: number = Number(anyListing.price ?? 0);
+  const category: string = anyListing.category ?? 'OTHER';
+  const condition: string = anyListing.condition ?? 'UNKNOWN';
+  const quantityAvailable: number = Number(
+    anyListing.quantityAvailable ?? 0,
+  );
+  const state: string = anyListing.state ?? 'ACTIVE';
+  const primaryImageUrl: string | undefined =
+    anyListing.primaryImageUrl;
+
+  const isActive = state === 'ACTIVE';
+  const isSoldOut = state === 'SOLD_OUT' || quantityAvailable <= 0;
+
+  let stateLabel = 'Inventory';
+  let stateVariant: 'default' | 'secondary' | 'outline' =
+    'outline';
+
+  if (isActive) {
+    stateLabel = 'For sale';
+    stateVariant = 'default';
+  } else if (isSoldOut) {
+    stateLabel = 'Sold out';
+    stateVariant = 'secondary';
+  } else if (state) {
+    stateLabel = state.replace('_', ' ').toLowerCase();
+  }
+
+  const categoryLabel = category.replace('_', ' ');
 
   return (
-    <Link href={`/listings/${listingId}`}>
-      <Card className="overflow-hidden transition-transform transform hover:scale-105 hover:shadow-primary/20 hover:shadow-lg h-full flex flex-col">
-        <CardHeader className="p-0">
-          <div className="relative h-48 w-full">
-            {listing.primaryImageUrl && (
-              <Image
-                src={listing.primaryImageUrl}
-                alt={listing.title}
-                fill
-                className="object-cover"
-                data-ai-hint="collectible item"
-              />
-            )}
+    <Link href={`/listings/${listingId}`} className="block">
+      <Card className="h-full flex flex-col overflow-hidden hover:shadow-lg transition-shadow">
+        {/* Image section – NOT zoomed in */}
+        <div className="relative w-full aspect-[3/4] bg-muted flex items-center justify-center">
+          {primaryImageUrl ? (
+            <Image
+              src={primaryImageUrl}
+              alt={title}
+              fill
+              sizes="(min-width: 1024px) 250px, 50vw"
+              className="object-contain"
+            />
+          ) : (
+            <div className="text-xs text-muted-foreground px-4 text-center">
+              No image
+            </div>
+          )}
+        </div>
+
+        <CardHeader className="space-y-2 pb-2">
+          <div className="flex items-center gap-2 text-[10px]">
+            <Badge variant="outline">{categoryLabel}</Badge>
+            <Badge variant={stateVariant}>{stateLabel}</Badge>
           </div>
+          <CardTitle className="text-sm sm:text-base leading-tight line-clamp-2">
+            {title}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="p-4 space-y-2 flex flex-col flex-grow">
-          <Badge variant="secondary" className="text-xs w-fit">{listing.category}</Badge>
-          <CardTitle className="text-lg leading-tight truncate">{listing.title}</CardTitle>
-          <div className="flex-grow" />
-          <CardDescription className="text-primary font-bold text-xl">
-            ${listing.price.toFixed(2)}
+
+        <CardContent className="pt-0 pb-3 flex flex-col gap-1 text-xs">
+          <CardDescription className="text-primary font-bold text-lg">
+            ${price.toFixed(2)}
           </CardDescription>
-          <div className="flex justify-between items-center text-xs text-muted-foreground pt-2">
-            <span>{listing.condition.replace('_', ' ')}</span>
-            <span>{listing.quantityAvailable} available</span>
+          <div className="flex justify-between items-center text-[11px] text-muted-foreground">
+            <span>{condition.replace('_', ' ')}</span>
+            <span>{quantityAvailable} available</span>
           </div>
         </CardContent>
       </Card>
