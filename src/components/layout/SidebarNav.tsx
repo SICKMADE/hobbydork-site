@@ -149,13 +149,6 @@ export default function SidebarNav() {
       <SidebarContent className="p-4">
         <div
           className="h-full flex flex-col space-y-4 pt-2"
-          style={{
-            backgroundImage:
-              'linear-gradient(45deg, hsl(0 0% 13%) 25%, transparent 25%), linear-gradient(-45deg, hsl(0 0% 13%) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(0 0% 13%) 75%), linear-gradient(-45deg, transparent 75%, hsl(0 0% 13%) 75%)',
-            backgroundSize: '20px 20px',
-            backgroundPosition:
-              '0 0, 0 10px, 10px -10px, -10px 0px',
-          }}
         >
           {/* Main */}
           <div
