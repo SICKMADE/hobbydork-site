@@ -90,7 +90,7 @@ function AskHobbyDorkSection() {
           <Image
             src={genieImg}
             alt="genie"
-            className="h-auto w-28 sm:w-40 drop-shadow-[0_0_18px_rgba(0,0,0,0.75)]"
+            className="h-auto w-40 sm:w-56 drop-shadow-[0_0_18px_rgba(0,0,0,0.75)]"
             priority
           />
         </div>
