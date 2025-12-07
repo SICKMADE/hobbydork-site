@@ -13,8 +13,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
-  Form,
-  FormControl,
   FormField,
   FormItem,
   FormLabel,
@@ -24,20 +22,18 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useFirestore } from '@/firebase';
 import { doc, runTransaction, serverTimestamp, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { placeholderImages } from '@/lib/placeholder-images';
 import AppLayout from '@/components/layout/AppLayout';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-
-// change this path/filename to match your actual PNG under components/dashboard
-import storeDefaultAvatar from '@/components/dashboard/store-default.png';
 
 const storeSchema = z.object({
   about: z.string().min(10, 'About section must be at least 10 characters long.'),
@@ -47,18 +43,15 @@ const paymentSchema = z.object({
   paymentMethod: z.enum(['PAYPAL', 'VENMO'], {
     required_error: 'Please select a payment method.',
   }),
-  paymentIdentifier: z
-    .string()
-    .min(3, 'Please enter your payment username or email.'),
-  goodsAndServicesAgreed: z
-    .boolean()
-    .refine((val) => val === true, {
+  paymentIdentifier: z.string().min(3, 'Please enter your payment username or email.'),
+  goodsAndServicesAgreed: z.literal(true, {
+    errorMap: () => ({
       message: 'You must agree to the Goods & Services policy.',
     }),
+  }),
 });
 
 const sellerSchema = storeSchema.merge(paymentSchema);
-
 type SellerFormValues = z.infer<typeof sellerSchema>;
 
 const Step1Store = () => {
@@ -106,13 +99,11 @@ const Step1Store = () => {
         render={({ field }) => (
           <FormItem>
             <FormLabel>About Your Store</FormLabel>
-            <FormControl>
-              <Textarea
-                placeholder="Tell everyone what makes your store special..."
-                {...field}
-                rows={3}
-              />
-            </FormControl>
+            <Textarea
+              placeholder="Tell everyone what makes your store special..."
+              {...field}
+              rows={3}
+            />
             <FormMessage />
           </FormItem>
         )}
@@ -137,26 +128,20 @@ const Step2Payment = () => {
           <FormItem className="space-y-3">
             <FormLabel>Preferred Payment Method</FormLabel>
             <FormDescription>Required to receive payments from buyers.</FormDescription>
-            <FormControl>
-              <RadioGroup
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                className="flex flex-col space-y-1"
-              >
-                <FormItem className="flex items-center space-x-3 space-y-0">
-                  <FormControl>
-                    <RadioGroupItem value="PAYPAL" />
-                  </FormControl>
-                  <FormLabel className="font-normal">PayPal</FormLabel>
-                </FormItem>
-                <FormItem className="flex items-center space-x-3 space-y-0">
-                  <FormControl>
-                    <RadioGroupItem value="VENMO" />
-                  </FormControl>
-                  <FormLabel className="font-normal">Venmo</FormLabel>
-                </FormItem>
-              </RadioGroup>
-            </FormControl>
+            <RadioGroup
+              onValueChange={field.onChange}
+              defaultValue={field.value}
+              className="flex flex-col space-y-1"
+            >
+              <FormItem className="flex items-center space-x-3 space-y-0">
+                <RadioGroupItem value="PAYPAL" />
+                <FormLabel className="font-normal">PayPal</FormLabel>
+              </FormItem>
+              <FormItem className="flex items-center space-x-3 space-y-0">
+                <RadioGroupItem value="VENMO" />
+                <FormLabel className="font-normal">Venmo</FormLabel>
+              </FormItem>
+            </RadioGroup>
             <FormMessage />
           </FormItem>
         )}
@@ -167,9 +152,7 @@ const Step2Payment = () => {
         render={({ field }) => (
           <FormItem>
             <FormLabel>PayPal Email or Venmo Handle</FormLabel>
-            <FormControl>
-              <Input placeholder="Your payment username" {...field} />
-            </FormControl>
+            <Input placeholder="Your payment username" {...field} />
             <FormDescription>
               This will be shown to buyers at checkout. Make sure it&apos;s correct!
             </FormDescription>
@@ -182,12 +165,7 @@ const Step2Payment = () => {
         name="goodsAndServicesAgreed"
         render={({ field }) => (
           <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-            <FormControl>
-              <Checkbox
-                checked={field.value}
-                onCheckedChange={(checked) => field.onChange(!!checked)}
-              />
-            </FormControl>
+            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
             <div className="space-y-1 leading-none">
               <FormLabel>
                 I agree that all payments for sales on this platform will be sent using
@@ -207,12 +185,13 @@ export default function CreateStorePage() {
   const { user, profile } = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const methods = useForm<SellerFormValues>({
-    resolver: zodResolver(sellerSchema),
+    resolver: zodResolver(step === 1 ? storeSchema : sellerSchema),
     mode: 'onChange',
     defaultValues: {
       about: '',
@@ -222,6 +201,19 @@ export default function CreateStorePage() {
     },
   });
 
+  // Already a seller? bounce away
+  useEffect(() => {
+    if (!user || !profile) return;
+    if (profile.storeId && profile.isSeller) {
+      const redirect = searchParams.get('redirect');
+      if (redirect) {
+        router.replace(redirect);
+      } else {
+        router.replace(`/store/${profile.storeId}`);
+      }
+    }
+  }, [user, profile, router, searchParams]);
+
   useEffect(() => {
     if (profile?.paymentMethod) {
       methods.setValue('paymentMethod', profile.paymentMethod);
@@ -229,22 +221,17 @@ export default function CreateStorePage() {
     if (profile?.paymentIdentifier) {
       methods.setValue('paymentIdentifier', profile.paymentIdentifier);
     }
-    if (profile?.goodsAndServicesAgreed !== undefined) {
+    if (profile?.goodsAndServicesAgreed) {
       methods.setValue('goodsAndServicesAgreed', profile.goodsAndServicesAgreed);
     }
   }, [profile, methods]);
 
   const handleNext = async () => {
-    const fieldsToValidate: (keyof SellerFormValues)[] = ['about'];
-    const isValid = await methods.trigger(fieldsToValidate);
-    if (isValid) {
-      setStep((s) => s + 1);
-    }
+    const isValid = await methods.trigger(['about']);
+    if (isValid) setStep((s) => s + 1);
   };
 
-  const handleBack = () => {
-    setStep((s) => s - 1);
-  };
+  const handleBack = () => setStep((s) => s - 1);
 
   async function onSubmit(values: SellerFormValues) {
     if (!user || !firestore || !profile?.displayName) {
@@ -264,7 +251,6 @@ export default function CreateStorePage() {
         .toLowerCase()
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '');
-
       const newStoreRef = doc(collection(firestore, 'storefronts'));
       const userProfileRef = doc(firestore, 'users', user.uid);
 
@@ -285,7 +271,9 @@ export default function CreateStorePage() {
           storeName,
           slug,
           about: values.about,
-          avatarUrl: storeDefaultAvatar.src, // your PNG
+          avatarUrl:
+            placeholderImages['store-logo-1']?.imageUrl ||
+            `https://picsum.photos/seed/${slug}/128/128`,
           ratingAverage: 0,
           ratingCount: 0,
           itemsSold: 0,
@@ -301,7 +289,9 @@ export default function CreateStorePage() {
         title: 'Your Store is Live!',
         description: 'Congratulations! You can now start listing items for sale.',
       });
-      router.push(`/store/${newStoreRef.id}`);
+
+      const redirect = searchParams.get('redirect') || `/store/${newStoreRef.id}`;
+      router.push(redirect);
       router.refresh();
     } catch (error) {
       const contextualError = new FirestorePermissionError({
@@ -319,14 +309,8 @@ export default function CreateStorePage() {
   }
 
   const stepDetails = [
-    {
-      title: 'Set Up Your Store',
-      description: 'This will be your public identity on HobbyDork.',
-    },
-    {
-      title: 'Set Up Payments',
-      description: 'Choose how you want to get paid by buyers.',
-    },
+    { title: 'Set Up Your Store', description: 'This will be your public identity on HobbyDork.' },
+    { title: 'Set Up Payments', description: 'Choose how you want to get paid by buyers.' },
   ];
 
   return (
@@ -361,7 +345,6 @@ export default function CreateStorePage() {
                   ) : (
                     <div />
                   )}
-
                   {step < 2 ? (
                     <Button type="button" onClick={handleNext}>
                       Next

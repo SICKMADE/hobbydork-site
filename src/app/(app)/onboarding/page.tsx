@@ -32,27 +32,28 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
+// FIXED: use boolean + refine instead of z.literal(true)
 const agreementsSchema = z.object({
-  agreeGoodsAndServices: z.literal(true, {
-    errorMap: () => ({
+  agreeGoodsAndServices: z
+    .boolean()
+    .refine((val) => val === true, {
       message: 'You must agree to use Goods & Services.',
     }),
-  }),
-  agreeTerms: z.literal(true, {
-    errorMap: () => ({
+  agreeTerms: z
+    .boolean()
+    .refine((val) => val === true, {
       message: 'You must agree to the Terms.',
     }),
-  }),
-  agreeAge: z.literal(true, {
-    errorMap: () => ({
+  agreeAge: z
+    .boolean()
+    .refine((val) => val === true, {
       message: 'You must confirm you are 18 or older.',
     }),
-  }),
-  agreeOneAccount: z.literal(true, {
-    errorMap: () => ({
+  agreeOneAccount: z
+    .boolean()
+    .refine((val) => val === true, {
       message: 'You must acknowledge the one account rule.',
     }),
-  }),
 });
 
 type OnboardingFormValues = z.infer<typeof agreementsSchema>;
@@ -75,7 +76,9 @@ const StepAgreements = () => {
               <FormControl>
                 <Checkbox
                   checked={field.value}
-                  onCheckedChange={field.onChange}
+                  onCheckedChange={(checked) =>
+                    field.onChange(!!checked)
+                  }
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
@@ -96,7 +99,9 @@ const StepAgreements = () => {
               <FormControl>
                 <Checkbox
                   checked={field.value}
-                  onCheckedChange={field.onChange}
+                  onCheckedChange={(checked) =>
+                    field.onChange(!!checked)
+                  }
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
@@ -130,7 +135,9 @@ const StepAgreements = () => {
               <FormControl>
                 <Checkbox
                   checked={field.value}
-                  onCheckedChange={field.onChange}
+                  onCheckedChange={(checked) =>
+                    field.onChange(!!checked)
+                  }
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
@@ -148,7 +155,9 @@ const StepAgreements = () => {
               <FormControl>
                 <Checkbox
                   checked={field.value}
-                  onCheckedChange={field.onChange}
+                  onCheckedChange={(checked) =>
+                    field.onChange(!!checked)
+                  }
                 />
               </FormControl>
               <div className="space-y-1 leading-none">

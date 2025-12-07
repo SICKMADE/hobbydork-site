@@ -49,6 +49,7 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useAuth } from '@/hooks/use-auth';
 
 const slotSchema = z
   .object({
@@ -64,6 +65,7 @@ const slotSchema = z
 export default function AdminSpotlightPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { profile, loading: authLoading } = useAuth();
 
   const form = useForm<z.infer<typeof slotSchema>>({
     resolver: zodResolver(slotSchema),
@@ -116,11 +118,11 @@ export default function AdminSpotlightPage() {
       await updateDoc(slotRef, updatedData);
       const slot = slots?.find((s) => s.slotId === slotId);
       if (slot) {
-        await syncStoreSpotlight(
-          slot.storeId,
-          newActive,
-          slot.endAt?.toDate ? slot.endAt.toDate() : undefined,
-        );
+        const endAt =
+          slot.endAt && (slot.endAt as any).toDate
+            ? (slot.endAt as any).toDate()
+            : undefined;
+        await syncStoreSpotlight(slot.storeId, newActive, endAt);
       }
     } catch (err) {
       const contextualError = new FirestorePermissionError({
@@ -152,7 +154,8 @@ export default function AdminSpotlightPage() {
 
       toast({
         title: 'Spotlight Slot Created',
-        description: 'The new slot has been added and the store is spotlighted.',
+        description:
+          'The new slot has been added and the store is spotlighted.',
       });
       form.reset();
     } catch (err: any) {
@@ -164,6 +167,35 @@ export default function AdminSpotlightPage() {
       errorEmitter.emit('permission-error', contextualError);
     }
   }
+
+  // --- ACCESS CONTROL: ADMIN ONLY ---
+
+  if (authLoading) {
+    return (
+      <AppLayout>
+        <div className="p-4 md:p-6">Loading…</div>
+      </AppLayout>
+    );
+  }
+
+  if (profile?.role !== 'ADMIN') {
+    return (
+      <AppLayout>
+        <div className="p-4 md:p-6 max-w-xl mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle>Permission denied</CardTitle>
+              <CardDescription>
+                Only administrators can manage store spotlight slots.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // --- ADMIN UI ---
 
   return (
     <AppLayout>
@@ -201,7 +233,10 @@ export default function AdminSpotlightPage() {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Start Date</FormLabel>
-                        <DatePicker date={field.value} setDate={field.onChange} />
+                        <DatePicker
+                          date={field.value}
+                          setDate={field.onChange}
+                        />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -212,7 +247,10 @@ export default function AdminSpotlightPage() {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>End Date</FormLabel>
-                        <DatePicker date={field.value} setDate={field.onChange} />
+                        <DatePicker
+                          date={field.value}
+                          setDate={field.onChange}
+                        />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -251,8 +289,8 @@ export default function AdminSpotlightPage() {
                   )}
                   {slots?.map((slot) => {
                     const now = new Date();
-                    const start = slot.startAt.toDate();
-                    const end = slot.endAt.toDate();
+                    const start = (slot.startAt as any).toDate();
+                    const end = (slot.endAt as any).toDate();
                     const isActiveNow =
                       start <= now && end >= now && slot.active;
                     return (

@@ -1,11 +1,30 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+} from 'firebase/firestore';
+
 import AppLayout from '@/components/layout/AppLayout';
-import { Input } from '@/components/ui/input';
+import {
+  useFirestore,
+  useCollection,
+  useMemoFirebase,
+} from '@/firebase';
+import type { Listing } from '@/lib/types';
+
 import { Button } from '@/components/ui/button';
-import { Search, SlidersHorizontal } from 'lucide-react';
-import ListingCard from '@/components/ListingCard';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -13,25 +32,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Separator } from '@/components/ui/separator';
-import {
-  useCollection,
-  useFirestore,
-  useMemoFirebase,
-} from '@/firebase';
-import { collection } from 'firebase/firestore';
-import type { Listing } from '@/lib/types';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SlidersHorizontal } from 'lucide-react';
+import ListingCard from '@/components/ListingCard';
 
-// Match listing categories (enum values) with labels
+type SortOrder = 'newest' | 'price-asc' | 'price-desc';
+
 const categoryOptions = [
   { value: 'COMIC_BOOKS', label: 'Comic Books' },
   { value: 'SPORTS_CARDS', label: 'Sports Cards' },
@@ -50,260 +59,265 @@ const conditionOptions = [
   { value: 'POOR', label: 'Poor' },
 ];
 
-type SortOrder = 'newest' | 'price-asc' | 'price-desc';
+export default function BrowsePage() {
+  const firestore = useFirestore();
+  const searchParams = useSearchParams();
 
-export default function SearchPage() {
-  const [showFilters, setShowFilters] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 15000]);
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
 
-  const firestore = useFirestore();
+  const q = (searchParams?.get('q') || '').trim().toLowerCase();
 
-  const listingsCollection = useMemoFirebase(() => {
+  const listingsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'listings');
+
+    // Only ACTIVE listings, newest first
+    return query(
+      collection(firestore, 'listings'),
+      where('state', '==', 'ACTIVE'),
+      orderBy('createdAt', 'desc'),
+    );
   }, [firestore]);
 
-  const { data: listings, isLoading } = useCollection<Listing>(listingsCollection);
-
-  const toggleCategory = (value: string, checked: boolean | 'indeterminate') => {
-    const isChecked = checked === true;
-    setSelectedCategories((prev) =>
-      isChecked ? [...prev, value] : prev.filter((v) => v !== value),
-    );
-  };
-
-  const toggleCondition = (value: string, checked: boolean | 'indeterminate') => {
-    const isChecked = checked === true;
-    setSelectedConditions((prev) =>
-      isChecked ? [...prev, value] : prev.filter((v) => v !== value),
-    );
-  };
-
-  const normalizedListings = useMemo(() => {
-    if (!listings) return [];
-    return listings.filter((l) => l.state === 'ACTIVE'); // only active listings on search
-  }, [listings]);
+  const {
+    data: listings,
+    isLoading,
+  } = useCollection<Listing>(listingsQuery);
 
   const filteredListings = useMemo(() => {
-    let result = [...normalizedListings];
+    let items: any[] = (listings as any[]) || [];
 
-    const term = searchTerm.trim().toLowerCase();
-    if (term) {
-      result = result.filter((l) => {
-        const title = (l.title || '').toLowerCase();
-        const tags = Array.isArray(l.tags)
-          ? l.tags.join(' ').toLowerCase()
-          : '';
-        return title.includes(term) || tags.includes(term);
+    // Text search from header (?q=)
+    if (q) {
+      items = items.filter((l) => {
+        const haystack = [
+          l.title,
+          l.series,
+          l.description,
+          l.storeName,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+        return haystack.includes(q);
       });
     }
 
+    // Category filter (if your docs have l.category)
     if (selectedCategories.length > 0) {
-      result = result.filter((l) =>
-        selectedCategories.includes(String(l.category)),
+      items = items.filter((l) =>
+        selectedCategories.includes(l.category),
       );
     }
 
+    // Condition filter (if your docs have l.condition)
     if (selectedConditions.length > 0) {
-      result = result.filter((l) =>
-        selectedConditions.includes(String(l.condition)),
+      items = items.filter((l) =>
+        selectedConditions.includes(l.condition),
       );
     }
 
-    const [minPrice, maxPrice] = priceRange;
-    result = result.filter((l) => {
-      const price =
-        typeof l.price === 'number' ? l.price : Number(l.price || 0);
-      return price >= minPrice && price <= maxPrice;
-    });
+    // Sort
+    const getCreatedAt = (l: any) =>
+      l.createdAt?.toMillis
+        ? l.createdAt.toMillis()
+        : 0;
 
-    result.sort((a, b) => {
-      if (sortOrder === 'price-asc' || sortOrder === 'price-desc') {
-        const pa = typeof a.price === 'number' ? a.price : Number(a.price || 0);
-        const pb = typeof b.price === 'number' ? b.price : Number(b.price || 0);
-        if (sortOrder === 'price-asc') return pa - pb;
-        return pb - pa;
+    const getPriceNumber = (l: any) => {
+      if (typeof l.priceCents === 'number') {
+        return l.priceCents / 100;
       }
+      if (typeof l.price === 'number') {
+        return l.price;
+      }
+      return 0;
+    };
 
-      // default: newest (createdAt desc if available)
-      const ta = (a as any).createdAt?.toDate
-        ? (a as any).createdAt.toDate().getTime()
-        : 0;
-      const tb = (b as any).createdAt?.toDate
-        ? (b as any).createdAt.toDate().getTime()
-        : 0;
-      return tb - ta;
-    });
+    items = [...items]; // copy before sort
 
-    return result;
-  }, [normalizedListings, searchTerm, selectedCategories, selectedConditions, priceRange, sortOrder]);
+    if (sortOrder === 'newest') {
+      items.sort((a, b) => getCreatedAt(b) - getCreatedAt(a));
+    } else if (sortOrder === 'price-asc') {
+      items.sort(
+        (a, b) => getPriceNumber(a) - getPriceNumber(b),
+      );
+    } else if (sortOrder === 'price-desc') {
+      items.sort(
+        (a, b) => getPriceNumber(b) - getPriceNumber(a),
+      );
+    }
 
-  const resultCount = filteredListings.length;
+    return items;
+  }, [listings, q, selectedCategories, selectedConditions, sortOrder]);
+
+  const toggleCategory = (value: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(value)
+        ? prev.filter((v) => v !== value)
+        : [...prev, value],
+    );
+  };
+
+  const toggleCondition = (value: string) => {
+    setSelectedConditions((prev) =>
+      prev.includes(value)
+        ? prev.filter((v) => v !== value)
+        : [...prev, value],
+    );
+  };
+
+  const total = filteredListings.length;
 
   return (
     <AppLayout>
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search for anything..."
-              className="pl-10 h-12 text-lg"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+      <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-4 md:space-y-6">
+        {/* Header row */}
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+              Browse listings
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Use the search bar at the top to find anything.
+              Filter and sort results here.
+            </p>
           </div>
-          <Button
-            size="lg"
-            className="h-12"
-            onClick={() => {
-              // no-op; filtering is live. Keeping button for UX.
-            }}
-          >
-            Search
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-12 lg:hidden"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <SlidersHorizontal className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs px-2 py-1">
+              {isLoading ? 'Loading…' : `${total} results`}
+            </Badge>
+
+            <Select
+              value={sortOrder}
+              onValueChange={(v) =>
+                setSortOrder(v as SortOrder)
+              }
+            >
+              <SelectTrigger className="h-9 w-[150px]">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">
+                  Newest first
+                </SelectItem>
+                <SelectItem value="price-asc">
+                  Price: low → high
+                </SelectItem>
+                <SelectItem value="price-desc">
+                  Price: high → low
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              type="button"
+              variant={showFilters ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={() => setShowFilters((v) => !v)}
+              className="inline-flex items-center gap-1"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              {showFilters ? 'Hide filters' : 'Show filters'}
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            Showing {resultCount} result{resultCount === 1 ? '' : 's'}
-          </p>
-          <Select
-            value={sortOrder}
-            onValueChange={(v) => setSortOrder(v as SortOrder)}
-          >
-            <SelectTrigger className="w-auto">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Sort by: Newest</SelectItem>
-              <SelectItem value="price-asc">Price: Low to High</SelectItem>
-              <SelectItem value="price-desc">Price: High to Low</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="grid lg:grid-cols-4 gap-8">
-          <aside
-            className={`${showFilters ? 'block' : 'hidden'} lg:block lg:col-span-1`}
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle>Filters</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="font-semibold mb-2">Category</h3>
-                  <div className="space-y-2">
-                    {categoryOptions.map((category) => (
-                      <div
-                        key={category.value}
-                        className="flex items-center space-x-2"
-                      >
-                        <Checkbox
-                          id={category.value}
-                          checked={selectedCategories.includes(category.value)}
-                          onCheckedChange={(checked) =>
-                            toggleCategory(category.value, checked)
-                          }
-                        />
-                        <Label
-                          htmlFor={category.value}
-                          className="font-normal"
-                        >
-                          {category.label}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
+        {/* Collapsible filters */}
+        {showFilters && (
+          <Card className="border-dashed">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">
+                Filters
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Refine results by category and condition.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              {/* Categories */}
+              <div>
+                <p className="text-xs font-semibold mb-2">
+                  Categories
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {categoryOptions.map((cat) => (
+                    <label
+                      key={cat.value}
+                      className="flex items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-xs cursor-pointer hover:bg-muted"
+                    >
+                      <Checkbox
+                        checked={selectedCategories.includes(
+                          cat.value,
+                        )}
+                        onCheckedChange={() =>
+                          toggleCategory(cat.value)
+                        }
+                      />
+                      <span>{cat.label}</span>
+                    </label>
+                  ))}
                 </div>
-                <Separator />
-                <div>
-                  <h3 className="font-semibold mb-2">Price Range</h3>
-                  <Slider
-                    value={priceRange}
-                    onValueChange={(val) =>
-                      setPriceRange([val[0], val[1]] as [number, number])
-                    }
-                    min={0}
-                    max={15000}
-                    step={100}
-                  />
-                  <div className="flex justify-between text-muted-foreground text-sm mt-2">
-                    <span>${priceRange[0]}</span>
-                    <span>${priceRange[1]}</span>
-                  </div>
-                </div>
-                <Separator />
-                <div>
-                  <h3 className="font-semibold mb-2">Condition</h3>
-                  <div className="space-y-2">
-                    {conditionOptions.map((condition) => (
-                      <div
-                        key={condition.value}
-                        className="flex items-center space-x-2"
-                      >
-                        <Checkbox
-                          id={condition.value}
-                          checked={selectedConditions.includes(condition.value)}
-                          onCheckedChange={(checked) =>
-                            toggleCondition(condition.value, checked)
-                          }
-                        />
-                        <Label
-                          htmlFor={condition.value}
-                          className="font-normal"
-                        >
-                          {condition.label}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Button
-                    className="w-full"
-                    type="button"
-                    onClick={() => {
-                      setSelectedCategories([]);
-                      setSelectedConditions([]);
-                      setPriceRange([0, 15000]);
-                    }}
-                  >
-                    Clear Filters
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </aside>
-
-          <section className="lg:col-span-3">
-            {isLoading && <p>Loading listings...</p>}
-            {!isLoading && filteredListings.length === 0 && (
-              <p>No listings found.</p>
-            )}
-            {!isLoading && filteredListings.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredListings.map((listing) => (
-                  <ListingCard key={listing.id} listing={listing} />
-                ))}
               </div>
-            )}
-          </section>
-        </div>
+
+              {/* Conditions */}
+              <div>
+                <p className="text-xs font-semibold mb-2">
+                  Condition
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {conditionOptions.map((cond) => (
+                    <label
+                      key={cond.value}
+                      className="flex items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-xs cursor-pointer hover:bg-muted"
+                    >
+                      <Checkbox
+                        checked={selectedConditions.includes(
+                          cond.value,
+                        )}
+                        onCheckedChange={() =>
+                          toggleCondition(cond.value)
+                        }
+                      />
+                      <span>{cond.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Results grid */}
+        {isLoading && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-[260px] w-full" />
+            ))}
+          </div>
+        )}
+
+        {!isLoading && total === 0 && (
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              No listings found. Try changing your filters or
+              search terms.
+            </CardContent>
+          </Card>
+        )}
+
+        {!isLoading && total > 0 && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredListings.map((listing: any) => (
+              <ListingCard
+                key={listing.id || listing.listingId}
+                listing={listing}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </AppLayout>
   );

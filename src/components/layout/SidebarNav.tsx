@@ -71,7 +71,11 @@ export default function SidebarNav() {
     await logout();
   };
 
-  // Notifications for current user
+  const isSeller = !!profile?.isSeller && !!profile?.storeId;
+  const role = (profile as any)?.role as string | undefined;
+
+  const currentPath = pathname ?? '';
+
   const notificationsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return query(
@@ -81,7 +85,7 @@ export default function SidebarNav() {
   }, [firestore, user?.uid]);
 
   const { data: notifications } =
-    useCollection<NotificationDoc>(notificationsQuery);
+    useCollection<NotificationDoc>(notificationsQuery as any);
 
   const unreadNotificationsCount =
     (notifications || []).filter((n) => !n.isRead && !n.readAt).length;
@@ -96,7 +100,6 @@ export default function SidebarNav() {
   const personalMenuItems = [
     { href: '/profile', label: 'Profile', icon: User },
     { href: '/orders', label: 'My Orders', icon: Package },
-    { href: '/sales', label: 'My Sales', icon: HeartHandshake },
     { href: '/watchlist', label: 'Watchlist', icon: Heart },
     { href: '/favorites', label: 'Favorite Stores', icon: Store },
     { href: '/cart', label: 'Cart', icon: ShoppingCart },
@@ -110,6 +113,7 @@ export default function SidebarNav() {
   ];
 
   const adminMenuItems = [
+    { href: '/admin', label: 'Admin Dashboard', icon: Settings },
     { href: '/admin/users', label: 'Manage Users', icon: User },
     { href: '/admin/spotlight', label: 'Spotlight', icon: Star },
   ];
@@ -124,12 +128,12 @@ export default function SidebarNav() {
 
   return (
     <>
-      {/* Profile block at top (replaces old logo + tagline) */}
+      {/* Profile block at top */}
       <SidebarHeader className="p-4 pt-6">
         {user && (
           <div className="flex items-center gap-3 rounded-lg border bg-background/80 px-3 py-2">
             <Avatar className="h-9 w-9">
-              <AvatarImage src={avatarUrl} />
+              <AvatarImage src={avatarUrl || undefined} />
               <AvatarFallback>
                 {displayName.charAt(0).toUpperCase()}
               </AvatarFallback>
@@ -139,7 +143,7 @@ export default function SidebarNav() {
                 {displayName}
               </div>
               <div className="text-[11px] text-muted-foreground truncate">
-                {profile?.isSeller ? 'Seller' : 'Collector'}
+                {isSeller ? 'Seller' : 'Collector'}
               </div>
             </div>
           </div>
@@ -147,9 +151,7 @@ export default function SidebarNav() {
       </SidebarHeader>
 
       <SidebarContent className="p-4">
-        <div
-          className="h-full flex flex-col space-y-4 pt-2"
-        >
+        <div className="h-full flex flex-col space-y-4 pt-2">
           {/* Main */}
           <div
             className="bg-background rounded-lg p-2"
@@ -163,8 +165,7 @@ export default function SidebarNav() {
               {mainMenuItems.map((item) => (
                 <SidebarMenuItem key={item.label}>
                   <SidebarMenuButton
-                    href={item.href}
-                    isActive={pathname === item.href}
+                    isActive={currentPath === item.href}
                     onClick={() => router.push(item.href)}
                     className="justify-start gap-4 text-base font-semibold tracking-wide"
                   >
@@ -192,8 +193,7 @@ export default function SidebarNav() {
               {personalMenuItems.map((item) => (
                 <SidebarMenuItem key={item.label}>
                   <SidebarMenuButton
-                    href={item.href}
-                    isActive={pathname.startsWith(item.href)}
+                    isActive={currentPath.startsWith(item.href)}
                     onClick={() => router.push(item.href)}
                     className="justify-start gap-4 text-base font-semibold tracking-wide"
                   >
@@ -212,11 +212,25 @@ export default function SidebarNav() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+
+              {/* My Sales – sellers only */}
+              {isSeller && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={currentPath.startsWith('/sales')}
+                    onClick={() => router.push('/sales')}
+                    className="justify-start gap-4 text-base font-semibold tracking-wide"
+                  >
+                    <HeartHandshake className="h-5 w-5" />
+                    <span className="flex-1">My Sales</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </div>
 
-          {/* My Store (seller-only) */}
-          {profile?.isSeller && (
+          {/* My Store */}
+          {user && (
             <div
               className="bg-background rounded-lg p-2"
               style={{
@@ -230,44 +244,58 @@ export default function SidebarNav() {
                   My Store
                 </p>
 
-                {/* Direct link to public store page */}
-                {profile?.storeId && (
+                {isSeller ? (
+                  <>
+                    {/* Link to your store page */}
+                    {profile?.storeId && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          isActive={currentPath.startsWith(`/store/${profile.storeId}`)}
+                          onClick={() =>
+                            router.push(`/store/${profile.storeId}`)
+                          }
+                          className="justify-start gap-4 text-base font-semibold tracking-wide"
+                        >
+                          <Store className="h-5 w-5" />
+                          <span>My Store</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+
+                    {sellerMenuItems.map((item) => (
+                      <SidebarMenuItem key={item.label}>
+                        <SidebarMenuButton
+                          isActive={currentPath.startsWith(item.href)}
+                          onClick={() => router.push(item.href)}
+                          className="justify-start gap-4 text-base font-semibold tracking-wide"
+                        >
+                          <item.icon className="h-5 w-5" />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </>
+                ) : (
+                  // Not a seller → Become a seller
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      href={`/store/${profile.storeId}`}
-                      isActive={pathname.startsWith(
-                        `/store/${profile.storeId}`,
-                      )}
+                      isActive={currentPath.startsWith('/store/setup')}
                       onClick={() =>
-                        router.push(`/store/${profile.storeId}`)
+                        router.push('/store/setup?redirect=/listings')
                       }
                       className="justify-start gap-4 text-base font-semibold tracking-wide"
                     >
                       <Store className="h-5 w-5" />
-                      <span>My Store</span>
+                      <span>Become a seller</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}
-
-                {sellerMenuItems.map((item) => (
-                  <SidebarMenuItem key={item.label}>
-                    <SidebarMenuButton
-                      href={item.href}
-                      isActive={pathname.startsWith(item.href)}
-                      onClick={() => router.push(item.href)}
-                      className="justify-start gap-4 text-base font-semibold tracking-wide"
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
               </SidebarMenu>
             </div>
           )}
 
-          {/* Admin */}
-          {profile?.role === 'ADMIN' && (
+          {/* Admin (admin + moderators) */}
+          {(role === 'ADMIN' || role === 'MODERATOR') && (
             <div
               className="bg-background rounded-lg p-2"
               style={{
@@ -283,8 +311,7 @@ export default function SidebarNav() {
                 {adminMenuItems.map((item) => (
                   <SidebarMenuItem key={item.label}>
                     <SidebarMenuButton
-                      href={item.href}
-                      isActive={pathname.startsWith(item.href)}
+                      isActive={currentPath.startsWith(item.href)}
                       onClick={() => router.push(item.href)}
                       className="justify-start gap-4 text-base font-semibold tracking-wide"
                     >

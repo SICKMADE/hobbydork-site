@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import AppLayout from '@/components/layout/AppLayout';
@@ -11,12 +11,7 @@ import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -66,8 +61,27 @@ export default function CreateListingPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isSeller = !!profile?.isSeller && !!profile?.storeId;
   const storeId = profile?.storeId as string | undefined;
+  const isSeller = !!profile?.isSeller;
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      router.replace('/login?redirect=/listings/create');
+      return;
+    }
+
+    if (profile?.status && profile.status !== 'ACTIVE') {
+      router.replace('/');
+      return;
+    }
+
+    if (!isSeller || !storeId) {
+      router.replace('/store/setup?redirect=/listings/create');
+      return;
+    }
+  }, [authLoading, user, profile, isSeller, storeId, router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -121,7 +135,6 @@ export default function CreateListingPage() {
     try {
       setIsSubmitting(true);
 
-      // Upload images to Firebase Storage
       const storage = getStorage();
       const uploadedUrls: string[] = [];
 
@@ -177,41 +190,12 @@ export default function CreateListingPage() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || !user || !profile || !isSeller || !storeId) {
     return (
       <AppLayout>
         <div className="p-4 md:p-6 space-y-4">
           <Skeleton className="h-8 w-40" />
           <Skeleton className="h-24 w-full" />
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (!user) {
-    return (
-      <AppLayout>
-        <div className="p-4 md:p-6">
-          <Card>
-            <CardContent className="p-6 text-sm text-muted-foreground">
-              You must be signed in to create a listing.
-            </CardContent>
-          </Card>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (!isSeller || !storeId) {
-    return (
-      <AppLayout>
-        <div className="p-4 md:p-6">
-          <Card>
-            <CardContent className="p-6 space-y-2 text-sm text-muted-foreground">
-              <p>You don&apos;t have a store set up yet.</p>
-              <p>Create your storefront first, then you can list items for sale.</p>
-            </CardContent>
-          </Card>
         </div>
       </AppLayout>
     );
@@ -226,7 +210,6 @@ export default function CreateListingPage() {
           </CardHeader>
           <CardContent>
             <form className="space-y-6" onSubmit={handleSubmit}>
-              {/* Basic info */}
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
@@ -248,14 +231,10 @@ export default function CreateListingPage() {
                 />
               </div>
 
-              {/* Category / condition */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Select
-                    value={category}
-                    onValueChange={(val) => setCategory(val)}
-                  >
+                  <Select value={category} onValueChange={(val) => setCategory(val)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -271,10 +250,7 @@ export default function CreateListingPage() {
 
                 <div className="space-y-2">
                   <Label>Condition</Label>
-                  <Select
-                    value={condition}
-                    onValueChange={(val) => setCondition(val)}
-                  >
+                  <Select value={condition} onValueChange={(val) => setCondition(val)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select condition" />
                     </SelectTrigger>
@@ -289,7 +265,6 @@ export default function CreateListingPage() {
                 </div>
               </div>
 
-              {/* Price / quantity */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="price">Price</Label>
@@ -317,7 +292,6 @@ export default function CreateListingPage() {
                 </div>
               </div>
 
-              {/* Tags */}
               <div className="space-y-2">
                 <Label htmlFor="tags">Tags (comma separated)</Label>
                 <Input
@@ -328,7 +302,6 @@ export default function CreateListingPage() {
                 />
               </div>
 
-              {/* Images */}
               <div className="space-y-2">
                 <Label>Images</Label>
                 <Input
@@ -355,7 +328,6 @@ export default function CreateListingPage() {
                 )}
               </div>
 
-              {/* Actions */}
               <div className="flex justify-end gap-3 pt-4">
                 <Button
                   type="button"

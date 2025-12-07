@@ -90,7 +90,7 @@ function AskHobbyDorkSection() {
           <Image
             src={genieImg}
             alt="genie"
-            className="h-auto w-40 sm:w-56 drop-shadow-[0_0_18px_rgba(0,0,0,0.75)]"
+            className="h-auto w-32 sm:w-40 drop-shadow-[0_0_18px_rgba(0,0,0,0.75)]"
             priority
           />
         </div>
@@ -449,6 +449,20 @@ export default function Dashboard() {
   const { profile, loading } = useAuth();
   const displayName = profile?.displayName ?? 'Collector';
 
+  const isSeller = !!profile?.isSeller && !!profile?.storeId;
+
+  const primaryCtaLabel = !profile
+    ? 'Sign in to sell'
+    : isSeller
+    ? 'Create listing'
+    : 'Become a seller';
+
+  const primaryCtaHref = !profile
+    ? '/login?redirect=/listings'
+    : isSeller
+    ? '/listings/create'
+    : '/store/setup?redirect=/listings';
+
   return (
     <div className="space-y-10 lg:space-y-12">
       {/* Hero header */}
@@ -474,8 +488,8 @@ export default function Dashboard() {
             >
               <Link href="/search">Browse listings</Link>
             </Button>
-            <Button asChild>
-              <Link href="/listings/create">Create listing</Link>
+            <Button asChild disabled={loading}>
+              <Link href={primaryCtaHref}>{primaryCtaLabel}</Link>
             </Button>
           </div>
         </div>
