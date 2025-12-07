@@ -84,7 +84,7 @@ function AskHobbyDorkSection() {
       : null;
 
   return (
-    <div className="rounded-2xl border bg-gradient-to-br from-zinc-900/90 via-zinc-900 to-black p-6 sm:p-8 shadow-xl">
+    <div className="rounded-2xl border bg-gradient-to-br from-zinc-900/90 via-zinc-900 to-black p-6 sm:p-8 shadow-xl h-full">
       <div className="grid items-center gap-6 sm:grid-cols-[auto,minmax(0,1fr)]">
         <div className="flex justify-center">
           <Image
@@ -395,7 +395,7 @@ function ISO24SummarySection() {
   };
 
   return (
-    <section className="rounded-2xl border bg-card/90 p-4 sm:p-6 shadow-md">
+    <section className="rounded-2xl border bg-card/90 p-4 sm:p-6 shadow-md h-full">
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-fuchsia-400/80">
@@ -498,13 +498,15 @@ export default function Dashboard() {
       {/* Rows */}
       <SpotlightStoresSection />
       <NewListingsSection />
-      <ISO24SummarySection />
-
-      {/* Fun row: vault + genie side by side on desktop */}
+      
+      {/* ISO and Genie row */}
       <section className="grid gap-6 md:grid-cols-2">
-        <VaultEasterEggSection />
+        <ISO24SummarySection />
         <AskHobbyDorkSection />
       </section>
+      
+      {/* Vault section */}
+      <VaultEasterEggSection />
     </div>
   );
 }
