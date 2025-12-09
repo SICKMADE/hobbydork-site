@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -148,11 +149,7 @@ export default function SidebarNav() {
         <div className="h-full flex flex-col space-y-4 pt-2">
           {/* Main */}
           <div
-            className="bg-background rounded-lg p-2"
-            style={{
-              boxShadow:
-                '2px 2px 8px rgba(0,0,0,0.5), -2px -2px 8px rgba(255,255,255,0.08)',
-            }}
+            className="bg-card/50 rounded-lg p-2"
           >
             <SidebarMenu>
               <RedLineSeparator />
@@ -167,7 +164,7 @@ export default function SidebarNav() {
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => router.push(item.href)}
-                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                      className="justify-start gap-4"
                     >
                       <Icon className="h-5 w-5" />
                       <span>{item.label}</span>
@@ -180,11 +177,7 @@ export default function SidebarNav() {
 
           {/* My Stuff */}
           <div
-            className="bg-background rounded-lg p-2"
-            style={{
-              boxShadow:
-                '2px 2px 8px rgba(0,0,0,0.5), -2px -2px 8px rgba(255,255,255,0.08)',
-            }}
+            className="bg-card/50 rounded-lg p-2"
           >
             <SidebarMenu>
               <RedLineSeparator />
@@ -203,7 +196,7 @@ export default function SidebarNav() {
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => router.push(item.href)}
-                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                      className="justify-start gap-4"
                     >
                       <Icon className="h-5 w-5" />
                       <span>{item.label}</span>
@@ -224,11 +217,7 @@ export default function SidebarNav() {
           {/* My Store (seller only) */}
           {profile?.isSeller && (
             <div
-              className="bg-background rounded-lg p-2"
-              style={{
-                boxShadow:
-                  '2px 2px 8px rgba(0,0,0,0.5), -2px -2px 8px rgba(255,255,255,0.08)',
-              }}
+              className="bg-card/50 rounded-lg p-2"
             >
               <SidebarMenu>
                 <RedLineSeparator />
@@ -246,7 +235,7 @@ export default function SidebarNav() {
                       onClick={() =>
                         router.push(`/store/${profile.storeId}`)
                       }
-                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                      className="justify-start gap-4"
                     >
                       <Store className="h-5 w-5" />
                       <span>My Store</span>
@@ -262,7 +251,7 @@ export default function SidebarNav() {
                       <SidebarMenuButton
                         isActive={isActive}
                         onClick={() => router.push(item.href)}
-                        className="justify-start gap-4 text-base font-semibold tracking-wide"
+                        className="justify-start gap-4"
                       >
                         <Icon className="h-5 w-5" />
                         <span>{item.label}</span>
@@ -277,11 +266,7 @@ export default function SidebarNav() {
           {/* Admin */}
           {profile?.role === 'ADMIN' && (
             <div
-              className="bg-background rounded-lg p-2"
-              style={{
-                boxShadow:
-                  '2px 2px 8px rgba(0,0,0,0.5), -2px -2px 8px rgba(255,255,255,0.08)',
-              }}
+              className="bg-card/50 rounded-lg p-2"
             >
               <SidebarMenu>
                 <RedLineSeparator />
@@ -296,7 +281,7 @@ export default function SidebarNav() {
                       <SidebarMenuButton
                         isActive={isActive}
                         onClick={() => router.push(item.href)}
-                        className="justify-start gap-4 text-base font-semibold tracking-wide"
+                        className="justify-start gap-4"
                       >
                         <Icon className="h-5 w-5" />
                         <span>{item.label}</span>
@@ -310,11 +295,7 @@ export default function SidebarNav() {
 
           {/* Help + Logout */}
           <div
-            className="bg-background rounded-lg p-2"
-            style={{
-              boxShadow:
-                '2px 2px 8px rgba(0,0,0,0.5), -2px -2px 8px rgba(255,255,255,0.08)',
-            }}
+            className="bg-card/50 rounded-lg p-2"
           >
             <SidebarMenu>
               <RedLineSeparator />
@@ -330,7 +311,7 @@ export default function SidebarNav() {
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => router.push(item.href)}
-                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                      className="justify-start gap-4"
                     >
                       <Icon className="h-5 w-5" />
                       <span>{item.label}</span>
@@ -342,7 +323,7 @@ export default function SidebarNav() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={handleLogout}
-                  className="justify-start gap-4 text-base font-semibold tracking-wide"
+                  className="justify-start gap-4"
                 >
                   <LogOut className="h-5 w-5" />
                   <span>Logout</span>
