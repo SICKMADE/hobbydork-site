@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -27,6 +28,7 @@ import type { Store as StoreType, User } from '@/lib/types';
 import { StandaloneVaultDoor } from './StandaloneVaultDoor';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Store } from 'lucide-react';
+import ListingCard from '../ListingCard';
 
 import genieImg from './genie.png';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -159,26 +161,20 @@ function NewStoreCard({ store }: { store: StoreType }) {
     const cardImage = owner?.avatar;
 
     return (
-        <Link href={`/store/${store.storeId}`} className="block h-full">
-            <Card className="h-full flex flex-col overflow-hidden hover:shadow-lg transition-shadow group">
-                <div className="relative w-full aspect-[4/3] bg-muted flex items-center justify-center">
-                    {cardImage ? (
-                        <Image
-                            src={cardImage}
-                            alt={store.storeName}
-                            fill
-                            sizes="(min-width: 1024px) 250px, 50vw"
-                            className="object-contain transition-transform group-hover:scale-105"
-                        />
-                    ) : (
-                        <Store className="h-10 w-10 text-muted-foreground" />
-                    )}
-                </div>
-                <CardHeader className="flex-1 p-3">
-                    <CardTitle className="text-xs font-semibold line-clamp-2">{store.storeName}</CardTitle>
-                </CardHeader>
-            </Card>
-        </Link>
+       <div className="relative flex flex-col items-center gap-2 text-center">
+            <Link href={`/store/${store.storeId}`} className="block">
+                <Avatar className="h-20 w-20 border-2 border-primary/50 transition-transform hover:scale-105">
+                    <AvatarImage src={cardImage} alt={store.storeName} />
+                    <AvatarFallback>{store.storeName.charAt(0)}</AvatarFallback>
+                </Avatar>
+            </Link>
+            <div className="text-xs">
+                <p className="font-semibold truncate">{store.storeName}</p>
+                <Button asChild variant="link" className="h-auto p-0 text-xs">
+                    <Link href={`/store/${store.storeId}`}>Visit Store</Link>
+                </Button>
+            </div>
+        </div>
     );
 }
 
@@ -226,7 +222,7 @@ function NewStoresSection() {
         <p className="text-xs text-muted-foreground">Loading stores…</p>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
         {stores.map((store) => {
           const id = (store as any).storeId ?? (store as any).id;
           if (!id) return null;
@@ -262,7 +258,7 @@ function NewListingsSection() {
       collection(firestore, 'listings'),
       where('state', '==', 'ACTIVE'),
       orderBy('createdAt', 'desc'),
-      limit(24),
+      limit(12),
     );
   }, [firestore]);
 
@@ -289,45 +285,13 @@ function NewListingsSection() {
         <p className="text-xs text-muted-foreground">Loading listings…</p>
       )}
 
-      <div className="flex gap-4 overflow-x-auto pb-2">
-        {listings.map((l: any, index: number) => {
-          const primaryUrl =
-            l.primaryImageUrl ||
-            (Array.isArray(l.imageUrls) && l.imageUrls[0]) ||
-            null;
-
-          return (
-            <Link
-              key={l.listingId ?? l.id}
-              href={`/listings/${l.listingId ?? l.id}`}
-              className="group flex w-60 flex-[0_0_auto] flex-col overflow-hidden rounded-xl border bg-background/90 text-left shadow-sm transition hover:border-primary hover:bg-background"
-            >
-              <div className="relative aspect-[4/3] w-full bg-black/40">
-                {primaryUrl && (
-                  <Image
-                    src={primaryUrl}
-                    alt={l.title}
-                    fill
-                    sizes="(min-width: 1024px) 240px, (min-width: 640px) 40vw, 80vw"
-                    priority={index === 0}
-                    className="object-cover transition group-hover:scale-105"
-                  />
-                )}
-              </div>
-              <div className="space-y-1 p-3">
-                <p className="line-clamp-2 text-xs font-semibold">
-                  {l.title}
-                </p>
-                <p className="text-sm font-bold">
-                  $
-                  {typeof l.price === 'number'
-                    ? l.price.toFixed(2)
-                    : Number(l.price || 0).toFixed(2)}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {listings.map((listing: any) => (
+          <ListingCard
+            key={listing.id || listing.listingId}
+            listing={listing}
+          />
+        ))}
       </div>
     </section>
   );
