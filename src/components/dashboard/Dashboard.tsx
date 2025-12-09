@@ -163,12 +163,12 @@ function NewStoreCard({ store }: { store: StoreType }) {
     return (
        <div className="relative flex flex-col items-center gap-2 text-center">
             <Link href={`/store/${store.storeId}`} className="block">
-                <Avatar className="h-20 w-20 border-2 border-primary/50 transition-transform hover:scale-105">
+                <Avatar className="h-24 w-24 border-2 border-primary/50 transition-transform hover:scale-105">
                     <AvatarImage src={cardImage} alt={store.storeName} />
                     <AvatarFallback>{store.storeName.charAt(0)}</AvatarFallback>
                 </Avatar>
             </Link>
-            <div className="text-xs">
+            <div className="text-xs mt-2">
                 <p className="font-semibold truncate">{store.storeName}</p>
                 <Button asChild variant="link" className="h-auto p-0 text-xs">
                     <Link href={`/store/${store.storeId}`}>Visit Store</Link>
@@ -285,7 +285,7 @@ function NewListingsSection() {
         <p className="text-xs text-muted-foreground">Loading listings…</p>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
         {listings.map((listing: any) => (
           <ListingCard
             key={listing.id || listing.listingId}
