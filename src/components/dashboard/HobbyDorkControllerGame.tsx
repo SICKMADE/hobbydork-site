@@ -51,15 +51,15 @@ export default function HobbyDorkControllerGame() {
         i += 1;
 
         if (i < seq.length) {
-          setTimeout(step, 180);
+          setTimeout(step, 250); // Slightly slower for clarity
         } else {
           setInputIndex(0);
           setStatus('input');
         }
-      }, 450);
+      }, 500); // Hold light for longer
     };
 
-    setTimeout(step, 200);
+    setTimeout(step, 300);
   }, []);
 
   const startGame = () => {
@@ -86,7 +86,7 @@ export default function HobbyDorkControllerGame() {
     const expected = sequence[inputIndex];
 
     setActiveButton(key);
-    setTimeout(() => setActiveButton(null), 140);
+    setTimeout(() => setActiveButton(null), 150);
 
     if (key !== expected) {
       setStatus('failed');
@@ -101,137 +101,126 @@ export default function HobbyDorkControllerGame() {
 
       setTimeout(() => {
         playSequence(nextSeq);
-      }, 500);
+      }, 700);
     } else {
       setInputIndex((i) => i + 1);
     }
   };
 
   const statusLabel = (() => {
-    if (status === 'idle') return 'Press START to begin a new pattern.';
-    if (status === 'showing') return 'Watch the pattern on the controller…';
-    if (status === 'input') return 'Now copy the pattern exactly.';
+    if (status === 'idle') return 'Press START to begin the memory game.';
+    if (status === 'showing') return 'Watch the pattern…';
+    if (status === 'input') return `Round ${round}. Your turn!`;
     if (status === 'failed')
-      return `You messed up on round ${round}. Your score was ${lastScore}. Hit START to try again.`;
+      return `Game Over. You reached round ${round}. Your final score is ${lastScore}. Press START to play again.`;
     return '';
   })();
-  
-  const dpadBase = "absolute bg-neutral-800 transition-all duration-100 flex items-center justify-center text-black/40 text-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_inset_0_-1px_1px_rgba(0,0,0,0.5)]";
-  const dpadActive = "bg-emerald-500 !shadow-[inset_0_2px_3px_rgba(0,0,0,0.5)] translate-y-px";
 
-  const faceBtnBase = "flex h-12 w-12 items-center justify-center rounded-full bg-[#C0242E] font-bold text-white shadow-[inset_0_-3px_0_rgba(0,0,0,0.3),_0_3px_4px_rgba(0,0,0,0.4)] transition-transform duration-75 active:translate-y-px active:shadow-[inset_0_-1px_0_rgba(0,0,0,0.4)]";
-  const faceBtnActive = "bg-emerald-500 !shadow-[inset_0_3px_3px_rgba(0,0,0,0.5)] scale-95";
-
-  const startBtnBase = "h-5 w-14 rounded-md bg-neutral-600 shadow-[0_2px_2px_rgba(0,0,0,0.4)] transition-all active:translate-y-px active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.6)]";
-  const startBtnActive = "bg-emerald-500 !shadow-[inset_0_1px_2px_rgba(0,0,0,0.6)] translate-y-px";
-
+  const dpadBase = "absolute grid place-items-center bg-[#2B2B2B] shadow-[inset_0_1px_1px_#444,inset_0_-1px_1px_#111] transition-all duration-100";
+  const dpadActive = "brightness-150 bg-emerald-500";
+  const faceBtnActive = "brightness-125 !bg-emerald-500 scale-[0.97] translate-y-px";
 
   return (
     <Card className="rounded-2xl border bg-gradient-to-br from-[#2b2b2e] via-[#1b1b1d] to-black shadow-2xl">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between gap-4">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Gamepad2 className="h-4 w-4 text-emerald-400" />
               HobbyDork Controller
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              NES-style memory game. Watch the pattern (↑ ↓ ← → A B START),
-              then copy it. Each round adds one more move.
+              An NES-style memory game. Watch the pattern, then repeat it.
             </CardDescription>
           </div>
-          <div className="text-right text-[10px] sm:text-[11px] text-muted-foreground">
-            <div>Round: {round || '—'}</div>
+          <div className="text-right text-[10px] sm:text-[11px] text-muted-foreground whitespace-nowrap">
+            <div>Score: {round > 0 ? round - 1 : 0}</div>
             <div>Best: {lastScore || '—'}</div>
-            <div>Length: {sequence.length || 0}</div>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 pt-1">
-        <p className="text-xs text-muted-foreground">{statusLabel}</p>
-
+      <CardContent className="space-y-4 pt-0">
+        
         {/* Controller body */}
-        <div className="mx-auto flex h-[240px] max-w-2xl items-center justify-center">
-        <div className="relative flex h-[220px] w-full max-w-xl items-center justify-between rounded-[10px] bg-gradient-to-b from-[#d1d1d1] to-[#b3b3b3] p-6 shadow-[0_10px_20px_rgba(0,0,0,0.6),_inset_0_0_8px_rgba(255,255,255,0.4)] ring-1 ring-black/30">
+        <div className="mx-auto flex h-[240px] max-w-2xl items-center justify-center select-none">
+          <div className="relative flex h-[200px] w-full max-w-xl items-center justify-between rounded-lg bg-[#D1D1D1] p-5 shadow-[0_6px_12px_rgba(0,0,0,0.4),inset_0_2px_1px_#EAEAEA,inset_0_-2px_1px_#A0A0A0]">
             
             {/* Recessed black area */}
-            <div className="absolute left-1/4 top-[20%] h-[60%] w-1/2 rounded-md bg-black shadow-[inset_0_4px_8px_rgba(0,0,0,0.7)]" />
-            
+            <div className="absolute left-[28%] top-[22%] h-[56%] w-[44%] rounded-md bg-black/90 shadow-[inset_0_3px_5px_rgba(0,0,0,0.6)]" />
+
             <div className="relative z-10 flex w-full items-center justify-between">
               
               {/* D-Pad */}
-              <div className="relative h-24 w-24">
-                <div className="absolute left-0 top-0 h-full w-full rounded-md bg-black/50 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]" />
-                <div className={`${dpadBase} left-1/2 top-0 h-8 w-8 -translate-x-1/2 rounded-t-sm ${activeButton === 'UP' ? dpadActive : ''}`} onClick={() => handlePress('UP')}></div>
-                <div className={`${dpadBase} bottom-0 left-1/2 h-8 w-8 -translate-x-1/2 rounded-b-sm ${activeButton === 'DOWN' ? dpadActive : ''}`} onClick={() => handlePress('DOWN')}></div>
-                <div className={`${dpadBase} left-0 top-1/2 h-8 w-8 -translate-y-1/2 rounded-l-sm ${activeButton === 'LEFT' ? dpadActive : ''}`} onClick={() => handlePress('LEFT')}></div>
-                <div className={`${dpadBase} right-0 top-1/2 h-8 w-8 -translate-y-1/2 rounded-r-sm ${activeButton === 'RIGHT' ? dpadActive : ''}`} onClick={() => handlePress('RIGHT')}></div>
-                <div className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 bg-neutral-800" />
-                <div className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/50 shadow-[inset_0_1px_2px_black]" />
+              <div className="relative h-[84px] w-[84px] grid place-items-center">
+                  <div className="absolute h-full w-full bg-[#444] rounded-[50%] shadow-[inset_0_4px_6px_rgba(0,0,0,0.4)]" />
+                  <div className="relative h-[72px] w-[72px] ">
+                      <button type="button" onClick={() => handlePress('UP')} className={`${dpadBase} h-8 w-6 top-[-4px] left-1/2 -translate-x-1/2 rounded-t-sm ${activeButton === 'UP' ? dpadActive : ''}`} />
+                      <button type="button" onClick={() => handlePress('DOWN')} className={`${dpadBase} h-8 w-6 bottom-[-4px] left-1/2 -translate-x-1/2 rounded-b-sm ${activeButton === 'DOWN' ? dpadActive : ''}`} />
+                      <button type="button" onClick={() => handlePress('LEFT')} className={`${dpadBase} h-6 w-8 left-[-4px] top-1/2 -translate-y-1/2 rounded-l-sm ${activeButton === 'LEFT' ? dpadActive : ''}`} />
+                      <button type="button" onClick={() => handlePress('RIGHT')} className={`${dpadBase} h-6 w-8 right-[-4px] top-1/2 -translate-y-1/2 rounded-r-sm ${activeButton === 'RIGHT' ? dpadActive : ''}`} />
+                      <div className="absolute grid place-items-center h-6 w-6 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#2B2B2B]">
+                          <div className="h-3 w-3 rounded-full bg-black/50 shadow-[inset_0_1px_1px_black]"/>
+                      </div>
+                  </div>
               </div>
 
+
               {/* Middle: START/SELECT */}
-              <div className="flex flex-col items-center gap-4">
-                <div className="font-nintendo text-2xl font-black italic text-red-700/80 drop-shadow-sm">
+              <div className="flex flex-col items-center gap-3">
+                <div className="font-nintendo text-3xl font-black italic text-[#9F1D21] drop-shadow-[1px_1px_0px_#222]">
                   HobbyDork
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="flex flex-col items-center gap-1">
-                    <div className={`${startBtnBase}`} />
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Select</p>
+                  {/* SELECT */}
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="h-4 w-10 rounded-[3px] bg-[#2B2B2B] shadow-[0_2px_2px_rgba(0,0,0,0.4)]" />
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#454545]">Select</p>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <button type="button" onClick={() => { if(status === 'idle' || status === 'failed') startGame() }} className={`${startBtnBase} ${activeButton === 'START' ? startBtnActive : ''}`} />
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Start</p>
+                   {/* START */}
+                  <div className="flex flex-col items-center gap-1.5">
+                    <button type="button" onClick={() => { if(status === 'idle' || status === 'failed') startGame() }} className={`h-4 w-10 rounded-[3px] bg-[#2B2B2B] shadow-[0_2px_2px_rgba(0,0,0,0.4)] transition-all active:translate-y-px active:shadow-none ${activeButton === 'START' ? '!bg-emerald-500 shadow-none translate-y-px' : ''}`} />
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#454545]">Start</p>
                   </div>
                 </div>
               </div>
 
               {/* A / B buttons */}
-              <div className="relative h-24 w-40">
-                 <div className="absolute left-0 top-1/2 -translate-y-1/2 transform -rotate-[25deg] space-y-5">
-                    <div className="flex flex-col items-center">
-                        <button type="button" onClick={() => handlePress('B')} className={`${faceBtnBase} ${activeButton === 'B' ? faceBtnActive : ''}`} />
-                        <p className="mt-1 text-base font-bold uppercase text-neutral-600">B</p>
-                    </div>
-                 </div>
-                 <div className="absolute right-0 top-1/2 -translate-y-1/2 transform -rotate-[25deg] space-y-5">
-                     <div className="flex flex-col items-center">
-                        <button type="button" onClick={() => handlePress('A')} className={`${faceBtnBase} ${activeButton === 'A' ? faceBtnActive : ''}`} />
-                        <p className="mt-1 text-base font-bold uppercase text-neutral-600">A</p>
-                    </div>
-                </div>
+              <div className="relative h-[84px] w-[140px] grid place-items-center">
+                  <div className="absolute h-full w-full bg-[#444] rounded-[42px] transform -rotate-[25deg] shadow-[inset_0_4px_6px_rgba(0,0,0,0.4)]" />
+                  <div className="relative w-[130px] h-[50px] flex items-center justify-between transform -rotate-[25deg]">
+                        <div className="flex flex-col items-center gap-1">
+                            <button type="button" onClick={() => handlePress('B')} className={`flex h-11 w-11 items-center justify-center rounded-full bg-[#A02027] font-bold text-white shadow-[inset_0_-4px_0_#601418,0_2px_3px_rgba(0,0,0,0.4)] transition-transform duration-75 active:translate-y-px active:shadow-[inset_0_-2px_0_#601418] ${activeButton === 'B' ? faceBtnActive : ''}`} >
+                                <span className="block -translate-y-px">B</span>
+                            </button>
+                        </div>
+                        <div className="flex flex-col items-center gap-1">
+                            <button type="button" onClick={() => handlePress('A')} className={`flex h-11 w-11 items-center justify-center rounded-full bg-[#A02027] font-bold text-white shadow-[inset_0_-4px_0_#601418,0_2px_3px_rgba(0,0,0,0.4)] transition-transform duration-75 active:translate-y-px active:shadow-[inset_0_-2px_0_#601418] ${activeButton === 'A' ? faceBtnActive : ''}`} >
+                                <span className="block -translate-y-px">A</span>
+                            </button>
+                        </div>
+                  </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Controls + info */}
+        {/* Status text + controls */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-          <div className="flex gap-2">
+          <p className="text-xs text-center sm:text-left text-muted-foreground flex-1 min-w-[200px]">{statusLabel}</p>
+          <div className="flex gap-2 mx-auto sm:mx-0">
             <Button
               type="button"
               size="sm"
               onClick={startGame}
               disabled={status === 'showing' || status === 'input'}
             >
-              START
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={resetGame}
-            >
-              Reset
+              START GAME
             </Button>
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            Watch → Copy → Survive as many rounds as you can.
-          </p>
         </div>
       </CardContent>
     </Card>
   );
 }
+
