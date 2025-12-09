@@ -135,7 +135,7 @@ export default function HobbyDorkControllerGame() {
         <div className="mx-auto flex h-[280px] w-full items-center justify-center select-none p-4">
           {/* Controller Body */}
           <div
-            className="relative flex h-[180px] w-full max-w-2xl items-center justify-between rounded-lg bg-[#d1d5db] p-2 shadow-[0_4px_8px_rgba(0,0,0,0.3),inset_0_1px_1px_#E5E7EB,inset_0_-2px_1px_#9CA3AF]"
+            className="relative flex h-[220px] w-full max-w-4xl items-center justify-between rounded-lg bg-[#d1d5db] p-2 shadow-[0_4px_8px_rgba(0,0,0,0.3),inset_0_1px_1px_#E5E7EB,inset_0_-2px_1px_#9CA3AF]"
           >
             {/* Cord notch */}
             <div className="absolute top-[-4px] left-1/2 -translate-x-1/2 w-20 h-3 bg-[#9CA3AF] rounded-b-sm shadow-[inset_0_1px_1px_rgba(0,0,0,0.2)]" />
@@ -143,31 +143,31 @@ export default function HobbyDorkControllerGame() {
             {/* Black Faceplate */}
             <div className="absolute inset-x-4 inset-y-5 rounded bg-[#212121] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]" />
 
-            <div className="relative z-10 flex w-full h-full items-center justify-between px-6">
+            <div className="relative z-10 flex w-full h-full items-center justify-between px-10">
               {/* D-Pad */}
-              <div className="relative grid h-[90px] w-[90px] place-items-center">
-                <div className="absolute h-[86px] w-[86px] rounded-full bg-black/30 shadow-[inset_0_3px_5px_rgba(0,0,0,0.5)]" />
-                <div className="relative h-[86px] w-[86px]">
+              <div className="relative grid h-[120px] w-[120px] place-items-center">
+                <div className="absolute h-full w-full rounded-full bg-black/30 shadow-[inset_0_3px_5px_rgba(0,0,0,0.5)]" />
+                <div className="relative h-full w-full">
                   {/* Plus Shape */}
-                  <div className={cn("absolute h-full w-[28px] left-1/2 -translate-x-1/2 rounded-[3px] bg-[#374151] shadow-[0_1px_1px_#4B5563,inset_0_0_2px_#111827] transition-colors", (activeButton === 'UP' || activeButton === 'DOWN') && dpadActive )} />
-                  <div className={cn("absolute w-full h-[28px] top-1/2 -translate-y-1/2 rounded-[3px] bg-[#374151] shadow-[0_1px_1px_#4B5563,inset_0_0_2px_#111827] transition-colors", (activeButton === 'LEFT' || activeButton === 'RIGHT') && dpadActive)} />
+                  <div className={cn("absolute h-full w-[38px] left-1/2 -translate-x-1/2 rounded-md bg-[#374151] shadow-[0_1px_1px_#4B5563,inset_0_0_2px_#111827] transition-colors", (activeButton === 'UP' || activeButton === 'DOWN') && dpadActive )} />
+                  <div className={cn("absolute w-full h-[38px] top-1/2 -translate-y-1/2 rounded-md bg-[#374151] shadow-[0_1px_1px_#4B5563,inset_0_0_2px_#111827] transition-colors", (activeButton === 'LEFT' || activeButton === 'RIGHT') && dpadActive)} />
                   
                   {/* Center Circle */}
-                  <div className="absolute grid place-items-center h-6 w-6 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <div className="h-[18px] w-[18px] rounded-full bg-black/20 shadow-[inset_0_1px_2px_black]"/>
+                  <div className="absolute grid place-items-center h-8 w-8 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                    <div className="h-[24px] w-[24px] rounded-full bg-black/20 shadow-[inset_0_1px_2px_black]"/>
                   </div>
                   
                   {/* White Bevel Outline */}
-                  <div className="absolute h-[24px] w-[24px] top-[2px] left-1/2 -translate-x-1/2 border-t-2 border-l-2 border-r-2 border-white/20 rounded-t-[2px]" />
-                  <div className="absolute h-[24px] w-[24px] bottom-[2px] left-1/2 -translate-x-1/2 border-b-2 border-l-2 border-r-2 border-white/20 rounded-b-[2px]" />
-                  <div className="absolute w-[24px] h-[24px] left-[2px] top-1/2 -translate-y-1/2 border-l-2 border-t-2 border-b-2 border-white/20 rounded-l-[2px]" />
-                  <div className="absolute w-[24px] h-[24px] right-[2px] top-1/2 -translate-y-1/2 border-r-2 border-t-2 border-b-2 border-white/20 rounded-r-[2px]" />
+                  <div className="absolute h-[32px] w-[32px] top-[3px] left-1/2 -translate-x-1/2 border-t-2 border-l-2 border-r-2 border-white/20 rounded-t-md" />
+                  <div className="absolute h-[32px] w-[32px] bottom-[3px] left-1/2 -translate-x-1/2 border-b-2 border-l-2 border-r-2 border-white/20 rounded-b-md" />
+                  <div className="absolute w-[32px] h-[32px] left-[3px] top-1/2 -translate-y-1/2 border-l-2 border-t-2 border-b-2 border-white/20 rounded-l-md" />
+                  <div className="absolute w-[32px] h-[32px] right-[3px] top-1/2 -translate-y-1/2 border-r-2 border-t-2 border-b-2 border-white/20 rounded-r-md" />
 
                   {/* Interactive Buttons */}
-                  <button type="button" onClick={() => handlePress('UP')} className="absolute h-8 w-8 top-0 left-1/2 -translate-x-1/2" />
-                  <button type="button" onClick={() => handlePress('DOWN')} className="absolute h-8 w-8 bottom-0 left-1/2 -translate-x-1/2" />
-                  <button type="button" onClick={() => handlePress('LEFT')} className="absolute h-8 w-8 left-0 top-1/2 -translate-y-1/2" />
-                  <button type="button" onClick={() => handlePress('RIGHT')} className="absolute h-8 w-8 right-0 top-1/2 -translate-y-1/2" />
+                  <button type="button" onClick={() => handlePress('UP')} className="absolute h-10 w-10 top-0 left-1/2 -translate-x-1/2" />
+                  <button type="button" onClick={() => handlePress('DOWN')} className="absolute h-10 w-10 bottom-0 left-1/2 -translate-x-1/2" />
+                  <button type="button" onClick={() => handlePress('LEFT')} className="absolute h-10 w-10 left-0 top-1/2 -translate-y-1/2" />
+                  <button type="button" onClick={() => handlePress('RIGHT')} className="absolute h-10 w-10 right-0 top-1/2 -translate-y-1/2" />
                 </div>
               </div>
 
@@ -193,16 +193,16 @@ export default function HobbyDorkControllerGame() {
               </div>
 
               {/* A / B buttons */}
-              <div className="relative grid h-[100px] w-[140px] place-items-center">
-                <div className="absolute h-[60px] w-full rounded-full bg-black/30 shadow-[inset_0_3px_5px_rgba(0,0,0,0.7)] transform -rotate-[25deg]" />
-                <div className="relative w-full h-[88px] flex items-center justify-between transform -rotate-[25deg] pl-2 pr-1">
+              <div className="relative grid h-[120px] w-[180px] place-items-center">
+                <div className="absolute h-[80px] w-full rounded-full bg-black/30 shadow-[inset_0_3px_5px_rgba(0,0,0,0.7)] transform -rotate-[25deg]" />
+                <div className="relative w-full h-[100px] flex items-center justify-between transform -rotate-[25deg] pl-4 pr-2">
                     <div className="flex flex-col items-center gap-2">
-                        <button type="button" onClick={() => handlePress('B')} className={cn("flex h-[56px] w-[56px] items-center justify-center rounded-full bg-[#ab2432] shadow-[inset_0_-4px_rgba(0,0,0,0.3),0_2px_3px_rgba(0,0,0,0.4)] transition-transform duration-75 active:translate-y-px active:shadow-none", activeButton === 'B' && btnActive)} />
-                        <p className="text-base font-bold uppercase text-red-700/80 tracking-widest transform rotate-[25deg]">B</p>
+                        <button type="button" onClick={() => handlePress('B')} className={cn("flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#ab2432] shadow-[inset_0_-5px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.4)] transition-transform duration-75 active:translate-y-px active:shadow-none", activeButton === 'B' && btnActive)} />
+                        <p className="text-xl font-bold uppercase text-red-700/80 tracking-widest transform rotate-[25deg]">B</p>
                     </div>
                     <div className="flex flex-col items-center gap-2">
-                        <button type="button" onClick={() => handlePress('A')} className={cn("flex h-[56px] w-[56px] items-center justify-center rounded-full bg-[#ab2432] shadow-[inset_0_-4px_rgba(0,0,0,0.3),0_2px_3px_rgba(0,0,0,0.4)] transition-transform duration-75 active:translate-y-px active:shadow-none", activeButton === 'A' && btnActive)} />
-                        <p className="text-base font-bold uppercase text-red-700/80 tracking-widest transform rotate-[25deg]">A</p>
+                        <button type="button" onClick={() => handlePress('A')} className={cn("flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#ab2432] shadow-[inset_0_-5px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.4)] transition-transform duration-75 active:translate-y-px active:shadow-none", activeButton === 'A' && btnActive)} />
+                        <p className="text-xl font-bold uppercase text-red-700/80 tracking-widest transform rotate-[25deg]">A</p>
                     </div>
                 </div>
               </div>
