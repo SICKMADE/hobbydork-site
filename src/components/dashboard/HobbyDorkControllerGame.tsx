@@ -134,70 +134,70 @@ export default function HobbyDorkControllerGame() {
       <CardContent className="space-y-4 pt-0">
         
         {/* Controller body */}
-        <div className="mx-auto flex h-[280px] w-full items-center justify-center select-none p-4">
+        <div className="mx-auto flex h-[320px] w-full items-center justify-center select-none p-4">
           
           <div 
-              className="relative flex h-[140px] w-full max-w-lg items-center justify-between rounded-lg bg-[#D1D1D1] p-2 shadow-[0_4px_8px_rgba(0,0,0,0.3),inset_0_1px_1px_#EAEAEA,inset_0_-2px_1px_#A0A0A0]"
+              className="relative flex h-[180px] w-full max-w-2xl items-center justify-between rounded-lg bg-[#D1D1D1] p-2 shadow-[0_4px_8px_rgba(0,0,0,0.3),inset_0_1px_1px_#EAEAEA,inset_0_-2px_1px_#A0A0A0]"
           >
             {/* Cord notch */}
-            <div className="absolute top-[-4px] left-1/2 -translate-x-1/2 w-16 h-2 bg-[#A0A0A0] rounded-b-sm shadow-[inset_0_1px_1px_rgba(0,0,0,0.2)]" />
+            <div className="absolute top-[-4px] left-1/2 -translate-x-1/2 w-20 h-3 bg-[#A0A0A0] rounded-b-sm shadow-[inset_0_1px_1px_rgba(0,0,0,0.2)]" />
 
             {/* Black Faceplate */}
-            <div className="absolute inset-x-3 inset-y-4 rounded bg-black/90 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]" />
+            <div className="absolute inset-x-4 inset-y-5 rounded bg-black/90 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]" />
             
-            <div className="relative z-10 flex w-full h-full items-center justify-between px-5">
+            <div className="relative z-10 flex w-full h-full items-center justify-between px-6">
               
               {/* D-Pad */}
-              <div className="relative grid h-[72px] w-[72px] place-items-center">
+              <div className="relative grid h-[90px] w-[90px] place-items-center">
                 {/* Circular depression */}
                 <div className="absolute h-full w-full rounded-full bg-black/50 shadow-[inset_0_3px_5px_rgba(0,0,0,0.7)]" />
-                <div className="relative h-[68px] w-[68px]">
+                <div className="relative h-[86px] w-[86px]">
                   {/* Plus Shape */}
-                  <div className={cn("absolute h-full w-[22px] left-1/2 -translate-x-1/2 rounded-[3px] bg-[#4a4a4a] shadow-[0_1px_1px_#666,inset_0_0_2px_#222]", activeButton === 'UP' && dpadActive, activeButton === 'DOWN' && dpadActive )} />
-                  <div className={cn("absolute w-full h-[22px] top-1/2 -translate-y-1/2 rounded-[3px] bg-[#4a4a4a] shadow-[0_1px_1px_#666,inset_0_0_2px_#222]", activeButton === 'LEFT' && dpadActive, activeButton === 'RIGHT' && dpadActive )} />
+                  <div className={cn("absolute h-full w-[28px] left-1/2 -translate-x-1/2 rounded-[3px] bg-[#4a4a4a] shadow-[0_1px_1px_#666,inset_0_0_2px_#222]", activeButton === 'UP' && dpadActive, activeButton === 'DOWN' && dpadActive )} />
+                  <div className={cn("absolute w-full h-[28px] top-1/2 -translate-y-1/2 rounded-[3px] bg-[#4a4a4a] shadow-[0_1px_1px_#666,inset_0_0_2px_#222]", activeButton === 'LEFT' && dpadActive, activeButton === 'RIGHT' && dpadActive )} />
                   
                   {/* Center Circle */}
-                  <div className="absolute grid place-items-center h-5 w-5 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <div className="h-[14px] w-[14px] rounded-full bg-black/40 shadow-[inset_0_1px_2px_black]"/>
+                  <div className="absolute grid place-items-center h-6 w-6 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                    <div className="h-[18px] w-[18px] rounded-full bg-black/40 shadow-[inset_0_1px_2px_black]"/>
                   </div>
 
                   {/* Interactive Buttons */}
-                  <button type="button" onClick={() => handlePress('UP')} className="absolute h-6 w-6 top-0 left-1/2 -translate-x-1/2" />
-                  <button type="button" onClick={() => handlePress('DOWN')} className="absolute h-6 w-6 bottom-0 left-1/2 -translate-x-1/2" />
-                  <button type="button" onClick={() => handlePress('LEFT')} className="absolute h-6 w-6 left-0 top-1/2 -translate-y-1/2" />
-                  <button type="button" onClick={() => handlePress('RIGHT')} className="absolute h-6 w-6 right-0 top-1/2 -translate-y-1/2" />
+                  <button type="button" onClick={() => handlePress('UP')} className="absolute h-8 w-8 top-0 left-1/2 -translate-x-1/2" />
+                  <button type="button" onClick={() => handlePress('DOWN')} className="absolute h-8 w-8 bottom-0 left-1/2 -translate-x-1/2" />
+                  <button type="button" onClick={() => handlePress('LEFT')} className="absolute h-8 w-8 left-0 top-1/2 -translate-y-1/2" />
+                  <button type="button" onClick={() => handlePress('RIGHT')} className="absolute h-8 w-8 right-0 top-1/2 -translate-y-1/2" />
                 </div>
               </div>
 
 
               {/* Middle: Logo, Start/Select */}
               <div className="flex-shrink-0 flex flex-col items-center justify-center text-[#d81e27]">
-                  <p className="font-bold text-3xl italic tracking-tight">HobbyDork</p>
-                  <div className="mt-2 flex gap-4">
-                      <div className="flex flex-col items-center gap-1">
-                          <button type="button" className="h-4 w-12 rounded-[3px] bg-[#333] shadow-[0_1px_1px_rgba(255,255,255,0.2)]" />
-                          <p className="text-xs font-bold uppercase tracking-wider">SELECT</p>
+                  <p className="font-bold text-4xl italic tracking-tight">HobbyDork</p>
+                  <div className="mt-3 flex gap-5">
+                      <div className="flex flex-col items-center gap-1.5">
+                          <button type="button" className="h-5 w-14 rounded-[4px] bg-[#333] shadow-[0_1px_1px_rgba(255,255,255,0.2)]" />
+                          <p className="text-sm font-bold uppercase tracking-wider">SELECT</p>
                       </div>
-                      <div className="flex flex-col items-center gap-1">
-                          <button type="button" onClick={() => { if(status === 'idle' || status === 'failed') { setActiveButton('START'); startGame(); } }} className={cn(`h-4 w-12 rounded-[3px] bg-[#333] shadow-[0_1px_1px_rgba(255,255,255,0.2)] transition-all`, activeButton === 'START' && 'bg-emerald-500')} />
-                          <p className="text-xs font-bold uppercase tracking-wider">START</p>
+                      <div className="flex flex-col items-center gap-1.5">
+                          <button type="button" onClick={() => { if(status === 'idle' || status === 'failed') { setActiveButton('START'); startGame(); } }} className={cn(`h-5 w-14 rounded-[4px] bg-[#333] shadow-[0_1px_1px_rgba(255,255,255,0.2)] transition-all`, activeButton === 'START' && 'bg-emerald-500')} />
+                          <p className="text-sm font-bold uppercase tracking-wider">START</p>
                       </div>
                   </div>
               </div>
 
               {/* A / B buttons */}
-              <div className="relative grid h-[80px] w-[130px] place-items-center">
+              <div className="relative grid h-[100px] w-[160px] place-items-center">
                 {/* Angled depression */}
-                <div className="absolute h-[64px] w-full rounded-full bg-black/50 shadow-[inset_0_3px_5px_rgba(0,0,0,0.7)] transform -rotate-[25deg]" />
+                <div className="absolute h-[80px] w-full rounded-full bg-black/50 shadow-[inset_0_3px_5px_rgba(0,0,0,0.7)] transform -rotate-[25deg]" />
                 
-                <div className="relative w-full h-[70px] flex items-center justify-between transform -rotate-[25deg] pl-2 pr-1">
-                    <div className="flex flex-col items-center gap-1.5">
-                        <button type="button" onClick={() => handlePress('B')} className={cn(`flex h-12 w-12 items-center justify-center rounded-full bg-[#d81e27] shadow-[inset_0_-4px_rgba(0,0,0,0.3),0_2px_3px_rgba(0,0,0,0.4)] transition-transform duration-75`, activeButton === 'B' && btnActive)} />
-                        <p className="text-sm font-bold uppercase text-red-700/80 tracking-widest">B</p>
+                <div className="relative w-full h-[88px] flex items-center justify-between transform -rotate-[25deg] pl-2 pr-1">
+                    <div className="flex flex-col items-center gap-2">
+                        <button type="button" onClick={() => handlePress('B')} className={cn(`flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[#d81e27] shadow-[inset_0_-4px_rgba(0,0,0,0.3),0_2px_3px_rgba(0,0,0,0.4)] transition-transform duration-75`, activeButton === 'B' && btnActive)} />
+                        <p className="text-base font-bold uppercase text-red-700/80 tracking-widest">B</p>
                     </div>
-                    <div className="flex flex-col items-center gap-1.5">
-                        <button type="button" onClick={() => handlePress('A')} className={cn(`flex h-12 w-12 items-center justify-center rounded-full bg-[#d81e27] shadow-[inset_0_-4px_rgba(0,0,0,0.3),0_2px_3px_rgba(0,0,0,0.4)] transition-transform duration-75`, activeButton === 'A' && btnActive)} />
-                        <p className="text-sm font-bold uppercase text-red-700/80 tracking-widest">A</p>
+                    <div className="flex flex-col items-center gap-2">
+                        <button type="button" onClick={() => handlePress('A')} className={cn(`flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[#d81e27] shadow-[inset_0_-4px_rgba(0,0,0,0.3),0_2px_3px_rgba(0,0,0,0.4)] transition-transform duration-75`, activeButton === 'A' && btnActive)} />
+                        <p className="text-base font-bold uppercase text-red-700/80 tracking-widest">A</p>
                     </div>
                 </div>
               </div>
