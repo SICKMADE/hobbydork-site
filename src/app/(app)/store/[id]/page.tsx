@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, ChangeEvent } from 'react';
@@ -507,7 +508,7 @@ export default function StorePage() {
           )}
 
           {!listingsLoading && listings && listings.length > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {listings.map((listing: any) => (
                 <ListingCard
                   key={listing.id || listing.listingId}
