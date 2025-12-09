@@ -532,7 +532,7 @@ export default function StorePage() {
                             src={listing.primaryImageUrl}
                             alt={listing.title}
                             fill
-                            className="object-cover"
+                            className="object-contain"
                           />
                         </div>
                       )}
