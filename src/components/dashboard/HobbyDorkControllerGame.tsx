@@ -186,7 +186,7 @@ export default function HobbyDorkControllerGame() {
                     <p className="text-[9px] font-bold uppercase tracking-wider text-red-700">Select</p>
                   </div>
                   <div className="flex flex-col items-center gap-1">
-                    <button type="button" onClick={() => handlePress('START')} className={`${startBtnBase} ${activeButton === 'START' ? startBtnActive : ''}`} />
+                    <button type="button" onClick={() => { if(status === 'idle' || status === 'failed') startGame() }} className={`${startBtnBase} ${activeButton === 'START' ? startBtnActive : ''}`} />
                     <p className="text-[9px] font-bold uppercase tracking-wider text-red-700">Start</p>
                   </div>
                 </div>
@@ -237,3 +237,5 @@ export default function HobbyDorkControllerGame() {
     </Card>
   );
 }
+
+    
