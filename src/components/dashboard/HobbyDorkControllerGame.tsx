@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Gamepad2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 type ButtonKey = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT' | 'A' | 'B' | 'START';
 
@@ -51,15 +50,15 @@ export default function HobbyDorkControllerGame() {
         i += 1;
 
         if (i < seq.length) {
-          setTimeout(step, 250);
+          setTimeout(step, 180);
         } else {
           setInputIndex(0);
           setStatus('input');
         }
-      }, 500);
+      }, 450);
     };
 
-    setTimeout(step, 300);
+    setTimeout(step, 220);
   }, []);
 
   const startGame = () => {
@@ -72,17 +71,25 @@ export default function HobbyDorkControllerGame() {
     playSequence(seq);
   };
 
+  const resetGame = () => {
+    setSequence([]);
+    setRound(0);
+    setInputIndex(0);
+    setActiveButton(null);
+    setStatus('idle');
+  };
+
   const handlePress = (key: ButtonKey) => {
     if (status !== 'input') return;
 
     const expected = sequence[inputIndex];
 
     setActiveButton(key);
-    setTimeout(() => setActiveButton(null), 150);
+    setTimeout(() => setActiveButton(null), 140);
 
     if (key !== expected) {
       setStatus('failed');
-      setLastScore(round > 0 ? round - 1 : 0);
+      setLastScore(round -1);
       return;
     }
 
@@ -93,23 +100,35 @@ export default function HobbyDorkControllerGame() {
 
       setTimeout(() => {
         playSequence(nextSeq);
-      }, 700);
+      }, 500);
     } else {
       setInputIndex((i) => i + 1);
     }
   };
 
   const statusLabel = (() => {
-    if (status === 'idle') return 'Press START to begin the memory game.';
-    if (status === 'showing') return 'Watch the pattern…';
-    if (status === 'input') return `Round ${round}. Your turn!`;
+    if (status === 'idle') return 'Press START to begin a new pattern.';
+    if (status === 'showing') return 'Watch the pattern light up on the pad…';
+    if (status === 'input') return 'Now copy the pattern exactly.';
     if (status === 'failed')
-      return `Game Over. Final score: ${lastScore}. Press START to play again.`;
+      return `You messed up on round ${round}. Your score was ${lastScore}. Hit START to try again.`;
     return '';
   })();
-  
-  const dpadActive = 'bg-neutral-600';
-  const btnActive = 'translate-y-px !shadow-none';
+
+  const dpadSquare =
+    'absolute flex items-center justify-center bg-[#2d2d2d] text-[12px] font-semibold text-zinc-50 rounded-[3px] border border-black/80 shadow-[0_1px_0_rgba(255,255,255,0.14)] transition-all';
+  const dpadActive =
+    'border-emerald-400 bg-emerald-600/90 shadow-inner translate-y-px';
+
+  const faceBtnBase =
+    'flex items-center justify-center rounded-full border border-black/80 text-[11px] font-bold text-zinc-50 shadow-[0_4px_0_rgba(0,0,0,0.6)] transition-all';
+  const faceBtnActive =
+    'border-emerald-400 shadow-inner translate-y-px ring-2 ring-emerald-400/60';
+
+  const startSelectBase =
+    'h-6 rounded-full border border-[#5e5b59] bg-transparent text-[9px] font-semibold uppercase tracking-[0.2em] text-[#8b1919] transition-all';
+ const startSelectActive =
+    'border-emerald-400 bg-emerald-700/85 text-zinc-50 shadow-inner translate-y-px';
 
   return (
     <Card className="rounded-2xl border bg-gradient-to-br from-[#2b2b2e] via-[#1b1b1d] to-black shadow-2xl overflow-hidden">
@@ -121,105 +140,101 @@ export default function HobbyDorkControllerGame() {
               HobbyDork Controller
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              An NES-style memory game. Watch the pattern, then repeat it.
+              NES-style memory game. Watch the pattern, then copy it. Each
+              round adds one more move.
             </CardDescription>
           </div>
-          <div className="text-right text-[10px] sm:text-[11px] text-muted-foreground whitespace-nowrap">
-            <div>Score: {round > 0 ? round - 1 : 0}</div>
+          <div className="text-right text-[10px] sm:text-[11px] text-muted-foreground">
+            <div>Round: {round || '—'}</div>
             <div>Best: {lastScore || '—'}</div>
+            <div>Length: {sequence.length || 0}</div>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 pt-0">
-        <div className="mx-auto flex h-[320px] w-full items-center justify-center select-none p-4">
-          {/* Controller Body */}
-          <div
-            className="relative flex h-[140px] w-full max-w-lg items-center justify-between rounded-lg bg-[#d1d5db] p-2 shadow-[0_4px_8px_rgba(0,0,0,0.3),inset_0_1px_1px_#E5E7EB,inset_0_-2px_1px_#9CA3AF]"
-          >
-            {/* Cord notch */}
-            <div className="absolute top-[-4px] left-1/2 -translate-x-1/2 w-16 h-3 bg-[#9CA3AF] rounded-b-sm shadow-[inset_0_1px_1px_rgba(0,0,0,0.2)]" />
-            
-            {/* Black Faceplate */}
-            <div className="absolute inset-x-4 inset-y-6 rounded bg-[#212121] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]" />
+      <CardContent className="space-y-4 pt-1">
+        <p className="h-4 text-xs text-muted-foreground">{statusLabel}</p>
 
-            <div className="relative z-10 flex w-full h-full items-center justify-between px-6">
-              {/* D-Pad */}
-              <div className="relative grid h-[72px] w-[72px] place-items-center">
-                <div className="absolute h-full w-full rounded-full bg-black/30 shadow-[inset_0_3px_5px_rgba(0,0,0,0.5)]" />
-                <div className="relative h-full w-full">
-                  {/* Plus Shape */}
-                  <div className={cn("absolute h-full w-[24px] left-1/2 -translate-x-1/2 rounded-sm bg-[#374151] shadow-[0_1px_1px_#4B5563,inset_0_0_2px_#111827] transition-colors", (activeButton === 'UP' || activeButton === 'DOWN') && dpadActive )} />
-                  <div className={cn("absolute w-full h-[24px] top-1/2 -translate-y-1/2 rounded-sm bg-[#374151] shadow-[0_1px_1px_#4B5563,inset_0_0_2px_#111827] transition-colors", (activeButton === 'LEFT' || activeButton === 'RIGHT') && dpadActive)} />
-                  
-                  {/* Center Circle */}
-                  <div className="absolute grid place-items-center h-5 w-5 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <div className="h-[18px] w-[18px] rounded-full bg-black/20 shadow-[inset_0_1px_2px_black]"/>
-                  </div>
-                  
-                  {/* White Bevel Outline */}
-                  <div className="absolute h-[20px] w-[20px] top-[2px] left-1/2 -translate-x-1/2 border-t border-l border-r border-white/20 rounded-t-sm" />
-                  <div className="absolute h-[20px] w-[20px] bottom-[2px] left-1/2 -translate-x-1/2 border-b border-l border-r border-white/20 rounded-b-sm" />
-                  <div className="absolute w-[20px] h-[20px] left-[2px] top-1/2 -translate-y-1/2 border-l border-t border-b border-white/20 rounded-l-sm" />
-                  <div className="absolute w-[20px] h-[20px] right-[2px] top-1/2 -translate-y-1/2 border-r border-t border-b border-white/20 rounded-r-sm" />
+        {/* WIDE CONTROLLER BODY */}
+        <div className="mx-auto flex h-[260px] w-[580px] items-center justify-center">
+            <div className="relative h-full w-full rounded-[20px] bg-[#c7c4bf] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.7)] ring-1 ring-black/50">
+                {/* Black faceplate */}
+                <div className="relative h-full w-full rounded-[10px] bg-gradient-to-b from-[#3f3d40] via-[#111] to-[#18181a] px-8 py-4 flex items-center justify-between gap-8">
+                    
+                    {/* LEFT: D-PAD */}
+                    <div className="flex-shrink-0">
+                        <div className="relative h-28 w-28 rounded-[10px] bg-[#272528] shadow-[0_0_0_1px_rgba(0,0,0,0.9)] flex items-center justify-center">
+                            {/* cross background */}
+                            <div className="absolute h-[80px] w-[26px] rounded-[4px] bg-[#121214]" />
+                            <div className="absolute h-[26px] w-[80px] rounded-[4px] bg-[#121214]" />
 
-                  {/* Interactive Buttons */}
-                  <button type="button" onClick={() => handlePress('UP')} className="absolute h-6 w-6 top-0 left-1/2 -translate-x-1/2" />
-                  <button type="button" onClick={() => handlePress('DOWN')} className="absolute h-6 w-6 bottom-0 left-1/2 -translate-x-1/2" />
-                  <button type="button" onClick={() => handlePress('LEFT')} className="absolute h-6 w-6 left-0 top-1/2 -translate-y-1/2" />
-                  <button type="button" onClick={() => handlePress('RIGHT')} className="absolute h-6 w-6 right-0 top-1/2 -translate-y-1/2" />
-                </div>
-              </div>
-
-              {/* Center Section */}
-              <div className="flex-shrink-0 flex flex-col items-center justify-center -translate-y-2">
-                 <div className="flex gap-4">
-                    <div className="flex flex-col items-center gap-1.5">
-                      <p className="text-[9px] font-bold uppercase text-[#d81e27]">SELECT</p>
-                      <div className="h-4 w-10 rounded-sm bg-[#9CA3AF] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)] flex items-center justify-center">
-                          <div className="h-3 w-9 rounded-sm bg-[#374151] shadow-[0_1px_1px_rgba(255,255,255,0.2)]"/>
-                      </div>
+                            <button type="button" onClick={() => handlePress('UP')} className={`${dpadSquare} top-1 h-9 w-9 ${ activeButton === 'UP' ? dpadActive : '' }`}>↑</button>
+                            <button type="button" onClick={() => handlePress('DOWN')} className={`${dpadSquare} bottom-1 h-9 w-9 ${ activeButton === 'DOWN' ? dpadActive : '' }`}>↓</button>
+                            <button type="button" onClick={() => handlePress('LEFT')} className={`${dpadSquare} left-1 h-9 w-9 ${ activeButton === 'LEFT' ? dpadActive : '' }`}>←</button>
+                            <button type="button" onClick={() => handlePress('RIGHT')} className={`${dpadSquare} right-1 h-9 w-9 ${ activeButton === 'RIGHT' ? dpadActive : '' }`}>→</button>
+                        </div>
                     </div>
-                    <div className="flex flex-col items-center gap-1.5">
-                      <p className="text-[9px] font-bold uppercase text-[#d81e27]">START</p>
-                      <button type="button" onClick={() => { if(status === 'idle' || status === 'failed') { setActiveButton('START'); startGame(); } }} className={cn("h-4 w-10 rounded-sm bg-[#9CA3AF] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)] flex items-center justify-center transition-all", activeButton === 'START' && 'bg-emerald-500')}>
-                           <div className={cn("h-3 w-9 rounded-sm bg-[#374151] shadow-[0_1px_1px_rgba(255,255,255,0.2)] transition-all", activeButton === 'START' && 'bg-emerald-800')}/>
-                      </button>
-                    </div>
-                  </div>
-              </div>
 
-              {/* A / B buttons */}
-              <div className="relative grid h-[72px] w-[110px] place-items-center">
-                <div className="absolute h-[48px] w-full rounded-full bg-black/30 shadow-[inset_0_3px_5px_rgba(0,0,0,0.7)] transform -rotate-[25deg]" />
-                <div className="relative w-full h-[60px] flex items-center justify-between transform -rotate-[25deg] pl-2 pr-1">
-                    <div className="flex flex-col items-center gap-2">
-                        <p className="text-sm font-bold uppercase text-red-700/80 tracking-widest transform rotate-[25deg]">B</p>
-                        <button type="button" onClick={() => handlePress('B')} className={cn("flex h-[44px] w-[44px] items-center justify-center rounded-full bg-[#ab2432] shadow-[inset_0_-3px_rgba(0,0,0,0.3),0_2px_2px_rgba(0,0,0,0.4)] transition-transform duration-75 active:translate-y-px active:shadow-none", activeButton === 'B' && btnActive)} />
+                    {/* MIDDLE: SELECT / START & LOGO */}
+                    <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                        <div className="text-center text-[18px] font-bold tracking-[0.18em] text-[#c62429] uppercase">HobbyDork</div>
+                        <div className="flex items-center justify-center gap-4">
+                            <div className="flex flex-col items-center gap-1">
+                                <button type="button" className={`${startSelectBase} w-20`}>
+                                    <div className="h-4 w-12 rounded-md bg-[#5e5b59]"/>
+                                </button>
+                                <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#8b1919]">Select</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-1">
+                                 <button type="button" onClick={() => handlePress('START')} className={`${startSelectBase} w-20 ${ activeButton === 'START' ? startSelectActive : '' }`}>
+                                    <div className="h-4 w-12 rounded-md bg-[#5e5b59]"/>
+                                </button>
+                                <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#8b1919]">Start</span>
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex flex-col items-center gap-2">
-                         <p className="text-sm font-bold uppercase text-red-700/80 tracking-widest transform rotate-[25deg]">A</p>
-                        <button type="button" onClick={() => handlePress('A')} className={cn("flex h-[44px] w-[44px] items-center justify-center rounded-full bg-[#ab2432] shadow-[inset_0_-3px_rgba(0,0,0,0.3),0_2px_2px_rgba(0,0,0,0.4)] transition-transform duration-75 active:translate-y-px active:shadow-none", activeButton === 'A' && btnActive)} />
+                    
+                    {/* RIGHT: A / B buttons */}
+                    <div className="flex-shrink-0">
+                         <div className="relative w-[180px] h-[80px] flex items-center justify-center -rotate-[25deg]">
+                            <div className="absolute w-full h-full bg-black/30 rounded-full" />
+                             <div className="flex items-center gap-6">
+                                <button type="button" onClick={() => handlePress('B')} className={`${faceBtnBase} h-14 w-14 bg-[#b02026] ${ activeButton === 'B' ? faceBtnActive : '' }`}>B</button>
+                                <button type="button" onClick={() => handlePress('A')} className={`${faceBtnBase} h-14 w-14 bg-[#d3262f] ${ activeButton === 'A' ? faceBtnActive : '' }`}>A</button>
+                            </div>
+                        </div>
+                         <div className="mt-2 flex w-full items-center justify-between px-2 text-[9px] font-semibold uppercase tracking-[0.25em] text-[#c62429]">
+                            <span>B</span>
+                            <span>A</span>
+                        </div>
                     </div>
                 </div>
-              </div>
             </div>
-          </div>
         </div>
 
-        {/* Status text + controls */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-          <p className="text-xs text-center sm:text-left text-muted-foreground flex-1 min-w-[200px]">{statusLabel}</p>
-          <div className="flex gap-2 mx-auto sm:mx-0">
+
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+          <div className="flex gap-2">
             <Button
               type="button"
               size="sm"
               onClick={startGame}
-              disabled={status === 'showing' || status === 'input'}
+              disabled={status === 'showing'}
             >
-              START GAME
+              START
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={resetGame}
+            >
+              Reset
             </Button>
           </div>
+          <p className="text-[11px] text-muted-foreground">
+            Watch → Copy → Survive as many rounds as you can.
+          </p>
         </div>
       </CardContent>
     </Card>
