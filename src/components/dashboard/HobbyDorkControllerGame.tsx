@@ -148,7 +148,7 @@ export default function HobbyDorkControllerGame() {
         <p className="h-4 text-xs text-muted-foreground">{statusLabel}</p>
 
         {/* WIDE CONTROLLER BODY */}
-        <div className="mx-auto flex h-[220px] w-full max-w-[580px] items-center justify-center">
+        <div className="mx-auto flex h-[240px] w-full max-w-[580px] items-center justify-center">
             <div className="relative h-full w-full rounded-[12px] bg-gradient-to-b from-neutral-300 to-neutral-200 p-4 shadow-[0_12px_30px_rgba(0,0,0,0.6)] ring-1 ring-black/50">
                 {/* Black faceplate */}
                 <div className="relative h-full w-full rounded-[6px] bg-gradient-to-b from-[#3f3d40] via-[#111] to-[#18181a] px-8 py-4 flex items-center justify-between gap-6">
