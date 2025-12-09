@@ -116,14 +116,15 @@ export default function HobbyDorkControllerGame() {
     return '';
   })();
   
-  const dpadBase = "absolute bg-neutral-700 transition-all duration-75 flex items-center justify-center text-black/50 text-xl";
-  const dpadActive = "bg-emerald-500 !shadow-inner translate-y-px";
+  const dpadBase = "absolute bg-neutral-800 transition-all duration-100 flex items-center justify-center text-black/40 text-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_inset_0_-1px_1px_rgba(0,0,0,0.5)]";
+  const dpadActive = "bg-emerald-500 !shadow-[inset_0_2px_3px_rgba(0,0,0,0.5)] translate-y-px";
 
-  const faceBtnBase = "flex h-12 w-12 items-center justify-center rounded-full bg-red-700 font-bold text-white shadow-[inset_0_-3px_0_rgba(0,0,0,0.4),_0_2px_3px_rgba(0,0,0,0.5)] transition-all";
-  const faceBtnActive = "bg-emerald-500 !shadow-inner translate-y-px";
+  const faceBtnBase = "flex h-12 w-12 items-center justify-center rounded-full bg-[#C0242E] font-bold text-white shadow-[inset_0_-3px_0_rgba(0,0,0,0.3),_0_3px_4px_rgba(0,0,0,0.4)] transition-transform duration-75 active:translate-y-px active:shadow-[inset_0_-1px_0_rgba(0,0,0,0.4)]";
+  const faceBtnActive = "bg-emerald-500 !shadow-[inset_0_3px_3px_rgba(0,0,0,0.5)] scale-95";
 
-  const startBtnBase = "h-5 w-14 rounded-md bg-neutral-600 shadow-[0_2px_2px_rgba(0,0,0,0.4)] transition-all";
-  const startBtnActive = "bg-emerald-500 !shadow-inner translate-y-px";
+  const startBtnBase = "h-5 w-14 rounded-md bg-neutral-600 shadow-[0_2px_2px_rgba(0,0,0,0.4)] transition-all active:translate-y-px active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.6)]";
+  const startBtnActive = "bg-emerald-500 !shadow-[inset_0_1px_2px_rgba(0,0,0,0.6)] translate-y-px";
+
 
   return (
     <Card className="rounded-2xl border bg-gradient-to-br from-[#2b2b2e] via-[#1b1b1d] to-black shadow-2xl">
@@ -152,22 +153,22 @@ export default function HobbyDorkControllerGame() {
 
         {/* Controller body */}
         <div className="mx-auto flex h-[240px] max-w-2xl items-center justify-center">
-          <div className="relative flex h-[220px] w-full max-w-xl items-center justify-between rounded-[10px] bg-neutral-400 p-6 shadow-[0_10px_20px_rgba(0,0,0,0.6),_inset_0_0_8px_rgba(255,255,255,0.4)] ring-1 ring-black/30">
+        <div className="relative flex h-[220px] w-full max-w-xl items-center justify-between rounded-[10px] bg-gradient-to-b from-[#d1d1d1] to-[#b3b3b3] p-6 shadow-[0_10px_20px_rgba(0,0,0,0.6),_inset_0_0_8px_rgba(255,255,255,0.4)] ring-1 ring-black/30">
             
             {/* Recessed black area */}
-            <div className="absolute left-1/4 top-[20%] h-[60%] w-1/2 bg-black shadow-[inset_0_4px_8px_rgba(0,0,0,0.7)]" />
+            <div className="absolute left-1/4 top-[20%] h-[60%] w-1/2 rounded-md bg-black shadow-[inset_0_4px_8px_rgba(0,0,0,0.7)]" />
             
             <div className="relative z-10 flex w-full items-center justify-between">
               
               {/* D-Pad */}
               <div className="relative h-24 w-24">
-                <div className="absolute left-1/2 top-1/2 h-full w-8 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-neutral-700 shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
-                <div className="absolute left-1/2 top-1/2 h-8 w-full -translate-x-1/2 -translate-y-1/2 rounded-sm bg-neutral-700 shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
-                
-                <button type="button" onClick={() => handlePress('UP')} className={`${dpadBase} left-1/2 top-0 h-8 w-8 -translate-x-1/2 rounded-t-sm ${activeButton === 'UP' ? dpadActive : ''}`}>▲</button>
-                <button type="button" onClick={() => handlePress('DOWN')} className={`${dpadBase} bottom-0 left-1/2 h-8 w-8 -translate-x-1/2 rounded-b-sm ${activeButton === 'DOWN' ? dpadActive : ''}`}>▼</button>
-                <button type="button" onClick={() => handlePress('LEFT')} className={`${dpadBase} left-0 top-1/2 h-8 w-8 -translate-y-1/2 rounded-l-sm ${activeButton === 'LEFT' ? dpadActive : ''}`}>◀</button>
-                <button type="button" onClick={() => handlePress('RIGHT')} className={`${dpadBase} right-0 top-1/2 h-8 w-8 -translate-y-1/2 rounded-r-sm ${activeButton === 'RIGHT' ? dpadActive : ''}`}>▶</button>
+                <div className="absolute left-0 top-0 h-full w-full rounded-md bg-black/50 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]" />
+                <div className={`${dpadBase} left-1/2 top-0 h-8 w-8 -translate-x-1/2 rounded-t-sm ${activeButton === 'UP' ? dpadActive : ''}`} onClick={() => handlePress('UP')}></div>
+                <div className={`${dpadBase} bottom-0 left-1/2 h-8 w-8 -translate-x-1/2 rounded-b-sm ${activeButton === 'DOWN' ? dpadActive : ''}`} onClick={() => handlePress('DOWN')}></div>
+                <div className={`${dpadBase} left-0 top-1/2 h-8 w-8 -translate-y-1/2 rounded-l-sm ${activeButton === 'LEFT' ? dpadActive : ''}`} onClick={() => handlePress('LEFT')}></div>
+                <div className={`${dpadBase} right-0 top-1/2 h-8 w-8 -translate-y-1/2 rounded-r-sm ${activeButton === 'RIGHT' ? dpadActive : ''}`} onClick={() => handlePress('RIGHT')}></div>
+                <div className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 bg-neutral-800" />
+                <div className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/50 shadow-[inset_0_1px_2px_black]" />
               </div>
 
               {/* Middle: START/SELECT */}
