@@ -24,11 +24,12 @@ import {
   Package,
   HeartHandshake,
   Bell,
+  History,
+  Users,
 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/use-auth';
-import { usePathname, useRouter } from 'next/navigation';
-
+import { useRouter, usePathname } from 'next/navigation';
 import {
   useFirestore,
   useCollection,
@@ -37,8 +38,8 @@ import {
 
 import {
   collection,
-  query,
   orderBy,
+  query,
 } from 'firebase/firestore';
 
 import {
@@ -47,35 +48,31 @@ import {
   AvatarFallback,
 } from '@/components/ui/avatar';
 
-const RedLineSeparator = () => (
-  <div className="h-0.5 w-full bg-red-600" />
-);
-
 type NotificationDoc = {
   id?: string;
-  title?: string;
-  body?: string;
-  type?: string;
-  createdAt?: any;
-  readAt?: any | null;
   isRead?: boolean;
+  readAt?: any | null;
 };
 
+const RedLineSeparator = () => (
+  <div className="w-full h-[2px] bg-gradient-to-r from-red-900 via-red-600 to-red-900 rounded-full mb-2" />
+);
+
 export default function SidebarNav() {
-  const { user, logout, profile } = useAuth();
-  const pathname = usePathname();
+  const { user, profile, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const firestore = useFirestore();
+
+  const displayName = profile?.displayName || user?.email || 'My account';
+  const avatarUrl = (profile as any)?.avatarUrl || '';
 
   const handleLogout = async () => {
     await logout();
+    router.push('/login');
   };
 
-  const isSeller = !!profile?.isSeller && !!profile?.storeId;
-  const role = (profile as any)?.role as string | undefined;
-
-  const currentPath = pathname ?? '';
-
+  // Notifications for current user
   const notificationsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return query(
@@ -85,7 +82,7 @@ export default function SidebarNav() {
   }, [firestore, user?.uid]);
 
   const { data: notifications } =
-    useCollection<NotificationDoc>(notificationsQuery as any);
+    useCollection<NotificationDoc>(notificationsQuery);
 
   const unreadNotificationsCount =
     (notifications || []).filter((n) => !n.isRead && !n.readAt).length;
@@ -93,13 +90,16 @@ export default function SidebarNav() {
   const mainMenuItems = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/search', label: 'Browse', icon: Search },
+    { href: '/stores', label: 'Stores', icon: Users },
     { href: '/iso24', label: 'ISO24', icon: Newspaper },
     { href: '/chat', label: 'Community', icon: MessageSquare },
   ];
 
   const personalMenuItems = [
     { href: '/profile', label: 'Profile', icon: User },
+    { href: '/activity', label: 'My Activity', icon: History },
     { href: '/orders', label: 'My Orders', icon: Package },
+    { href: '/sales', label: 'My Sales', icon: HeartHandshake },
     { href: '/watchlist', label: 'Watchlist', icon: Heart },
     { href: '/favorites', label: 'Favorite Stores', icon: Store },
     { href: '/cart', label: 'Cart', icon: ShoppingCart },
@@ -113,18 +113,12 @@ export default function SidebarNav() {
   ];
 
   const adminMenuItems = [
-    { href: '/admin', label: 'Admin Dashboard', icon: Settings },
-    { href: '/admin/users', label: 'Manage Users', icon: User },
-    { href: '/admin/spotlight', label: 'Spotlight', icon: Star },
+    { href: '/admin', label: 'Admin Dashboard', icon: Star },
   ];
 
-  const displayName =
-    (profile as any)?.displayName ||
-    user?.email ||
-    'My account';
-
-  const avatarUrl =
-    (profile as any)?.avatarUrl || '';
+  const helpMenuItems = [
+    { href: '/help', label: 'Help & FAQ', icon: HelpCircle },
+  ];
 
   return (
     <>
@@ -133,7 +127,7 @@ export default function SidebarNav() {
         {user && (
           <div className="flex items-center gap-3 rounded-lg border bg-background/80 px-3 py-2">
             <Avatar className="h-9 w-9">
-              <AvatarImage src={avatarUrl || undefined} />
+              <AvatarImage src={avatarUrl} />
               <AvatarFallback>
                 {displayName.charAt(0).toUpperCase()}
               </AvatarFallback>
@@ -143,7 +137,7 @@ export default function SidebarNav() {
                 {displayName}
               </div>
               <div className="text-[11px] text-muted-foreground truncate">
-                {isSeller ? 'Seller' : 'Collector'}
+                {profile?.isSeller ? 'Seller' : 'Collector'}
               </div>
             </div>
           </div>
@@ -162,22 +156,29 @@ export default function SidebarNav() {
           >
             <SidebarMenu>
               <RedLineSeparator />
-              {mainMenuItems.map((item) => (
-                <SidebarMenuItem key={item.label}>
-                  <SidebarMenuButton
-                    isActive={currentPath === item.href}
-                    onClick={() => router.push(item.href)}
-                    className="justify-start gap-4 text-base font-semibold tracking-wide"
-                  >
-                    <item.icon className="h-5 w-5" />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                Main
+              </p>
+              {mainMenuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      onClick={() => router.push(item.href)}
+                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </div>
 
-          {/* My Vault */}
+          {/* My Stuff */}
           <div
             className="bg-background rounded-lg p-2"
             style={{
@@ -188,49 +189,40 @@ export default function SidebarNav() {
             <SidebarMenu>
               <RedLineSeparator />
               <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                My Vault
+                My Stuff
               </p>
-              {personalMenuItems.map((item) => (
-                <SidebarMenuItem key={item.label}>
-                  <SidebarMenuButton
-                    isActive={currentPath.startsWith(item.href)}
-                    onClick={() => router.push(item.href)}
-                    className="justify-start gap-4 text-base font-semibold tracking-wide"
-                  >
-                    <item.icon className="h-5 w-5" />
-                    <span className="flex-1">
-                      {item.label}
-                    </span>
-                    {item.href === '/notifications' &&
-                      unreadNotificationsCount > 0 && (
-                        <span className="ml-auto inline-flex items-center justify-center rounded-full bg-red-600 text-[10px] font-bold px-1.5 py-0.5 text-white">
+              {personalMenuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                const showBadge =
+                  item.href === '/notifications' &&
+                  unreadNotificationsCount > 0;
+
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      onClick={() => router.push(item.href)}
+                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{item.label}</span>
+                      {showBadge && (
+                        <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
                           {unreadNotificationsCount > 9
                             ? '9+'
                             : unreadNotificationsCount}
                         </span>
                       )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-
-              {/* My Sales – sellers only */}
-              {isSeller && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={currentPath.startsWith('/sales')}
-                    onClick={() => router.push('/sales')}
-                    className="justify-start gap-4 text-base font-semibold tracking-wide"
-                  >
-                    <HeartHandshake className="h-5 w-5" />
-                    <span className="flex-1">My Sales</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </div>
 
-          {/* My Store */}
-          {user && (
+          {/* My Store (seller only) */}
+          {profile?.isSeller && (
             <div
               className="bg-background rounded-lg p-2"
               style={{
@@ -244,58 +236,46 @@ export default function SidebarNav() {
                   My Store
                 </p>
 
-                {isSeller ? (
-                  <>
-                    {/* Link to your store page */}
-                    {profile?.storeId && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          isActive={currentPath.startsWith(`/store/${profile.storeId}`)}
-                          onClick={() =>
-                            router.push(`/store/${profile.storeId}`)
-                          }
-                          className="justify-start gap-4 text-base font-semibold tracking-wide"
-                        >
-                          <Store className="h-5 w-5" />
-                          <span>My Store</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-
-                    {sellerMenuItems.map((item) => (
-                      <SidebarMenuItem key={item.label}>
-                        <SidebarMenuButton
-                          isActive={currentPath.startsWith(item.href)}
-                          onClick={() => router.push(item.href)}
-                          className="justify-start gap-4 text-base font-semibold tracking-wide"
-                        >
-                          <item.icon className="h-5 w-5" />
-                          <span>{item.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </>
-                ) : (
-                  // Not a seller → Become a seller
+                {/* Direct link to public store page */}
+                {profile?.storeId && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      isActive={currentPath.startsWith('/store/setup')}
+                      isActive={pathname.startsWith(
+                        `/store/${profile.storeId}`,
+                      )}
                       onClick={() =>
-                        router.push('/store/setup?redirect=/listings')
+                        router.push(`/store/${profile.storeId}`)
                       }
                       className="justify-start gap-4 text-base font-semibold tracking-wide"
                     >
                       <Store className="h-5 w-5" />
-                      <span>Become a seller</span>
+                      <span>My Store</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}
+
+                {sellerMenuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href;
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        onClick={() => router.push(item.href)}
+                        className="justify-start gap-4 text-base font-semibold tracking-wide"
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </div>
           )}
 
-          {/* Admin (admin + moderators) */}
-          {(role === 'ADMIN' || role === 'MODERATOR') && (
+          {/* Admin */}
+          {profile?.role === 'ADMIN' && (
             <div
               className="bg-background rounded-lg p-2"
               style={{
@@ -308,23 +288,27 @@ export default function SidebarNav() {
                 <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                   Admin
                 </p>
-                {adminMenuItems.map((item) => (
-                  <SidebarMenuItem key={item.label}>
-                    <SidebarMenuButton
-                      isActive={currentPath.startsWith(item.href)}
-                      onClick={() => router.push(item.href)}
-                      className="justify-start gap-4 text-base font-semibold tracking-wide"
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {adminMenuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href;
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        onClick={() => router.push(item.href)}
+                        className="justify-start gap-4 text-base font-semibold tracking-wide"
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </div>
           )}
 
-          {/* Help / Logout */}
+          {/* Help + Logout */}
           <div
             className="bg-background rounded-lg p-2"
             style={{
@@ -334,15 +318,27 @@ export default function SidebarNav() {
           >
             <SidebarMenu>
               <RedLineSeparator />
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => router.push('/help')}
-                  className="justify-start gap-4 text-base font-semibold tracking-wide"
-                >
-                  <HelpCircle className="h-5 w-5" />
-                  <span>Help</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                Help & Account
+              </p>
+
+              {helpMenuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      onClick={() => router.push(item.href)}
+                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={handleLogout}

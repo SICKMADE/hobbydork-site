@@ -23,11 +23,10 @@ import StoreCard from '@/components/StoreCard';
 import type { Store as StoreType } from '@/lib/types';
 import { StandaloneVaultDoor } from './StandaloneVaultDoor';
 
-import vaultImg from './hobbydork-vault.png';
 import genieImg from './genie.png';
 
 /* =======================
-   Ask HobbyDork (8-ball)
+   Ask HobbyDork (8-ball) helpers
    ======================= */
 
 const BUY_ANSWERS = [
@@ -61,140 +60,8 @@ function getRandomAnswer(type: 'BUY' | 'SELL') {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-function AskHobbyDorkSection() {
-  const [question, setQuestion] = useState<'BUY' | 'SELL' | null>(null);
-  const [answer, setAnswer] = useState<string | null>(null);
-  const [isThinking, setIsThinking] = useState(false);
-
-  const handleAsk = (type: 'BUY' | 'SELL') => {
-    setQuestion(type);
-    setIsThinking(true);
-
-    setTimeout(() => {
-      setAnswer(getRandomAnswer(type));
-      setIsThinking(false);
-    }, 500);
-  };
-
-  const label =
-    question === 'BUY'
-      ? 'Should I buy this item?'
-      : question === 'SELL'
-      ? 'Should I sell this item?'
-      : null;
-
-  return (
-    <div className="rounded-2xl border bg-gradient-to-br from-zinc-900/90 via-zinc-900 to-black p-6 sm:p-8 shadow-xl h-full">
-      <div className="grid items-center gap-6 sm:grid-cols-[auto,minmax(0,1fr)]">
-        <div className="flex justify-center">
-          <Image
-            src={genieImg}
-            alt="genie"
-            className="h-auto w-32 sm:w-40 drop-shadow-[0_0_18px_rgba(0,0,0,0.75)]"
-            priority
-          />
-        </div>
-
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
-              HobbyDork Genie
-            </p>
-            <h2 className="text-3xl font-black uppercase tracking-[0.18em]">
-              Ask The Vault
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Hit one of the buttons and let HobbyDork give you a brutally honest answer.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleAsk('BUY')}
-              disabled={isThinking}
-              className="border-emerald-500/60 bg-emerald-500/5 hover:bg-emerald-500/15"
-            >
-              Should I buy this item?
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleAsk('SELL')}
-              disabled={isThinking}
-              className="border-rose-500/60 bg-rose-500/5 hover:bg-rose-500/15"
-            >
-              Should I sell this item?
-            </Button>
-          </div>
-
-          <div className="mt-2 rounded-xl border border-zinc-800 bg-black/40 p-4 text-sm">
-            {isThinking && (
-              <p className="text-muted-foreground">
-                HobbyDork is flipping a coin in the back room…
-              </p>
-            )}
-            {!isThinking && answer && label && (
-              <div className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {label}
-                </p>
-                <p className="text-base font-semibold">{answer}</p>
-              </div>
-            )}
-            {!isThinking && !answer && (
-              <p className="text-muted-foreground">
-                Pick BUY or SELL and let the genie decide your fate.
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* =======================
-   Vault Easter egg card
-   ======================= */
-
-function VaultEasterEggSection() {
-  return (
-    <div className="space-y-6 rounded-2xl border bg-card/90 p-6 shadow-md sm:p-8">
-      <div className="flex flex-col gap-6 md:flex-row md:items-center">
-        <div className="flex justify-center md:justify-start">
-          <Image
-            src={vaultImg}
-            alt="HobbyDork trying to unlock the vault"
-            className="max-h-40 w-auto drop-shadow-[0_0_18px_rgba(0,0,0,0.7)]"
-            priority
-          />
-        </div>
-        <div className="space-y-1 text-center md:text-left">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-yellow-400/80">
-            Easter Egg
-          </p>
-          <h2 className="text-2xl font-semibold">
-            Can you unlock the HobbyDork vault?
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Tap the door, punch in the secret 4-digit PIN, and hit the winner
-            screen if you get it right.
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-4 flex justify-center">
-        <StandaloneVaultDoor />
-      </div>
-    </div>
-  );
-}
-
-/* =======================
-   Store Spotlight row
-   (static glow around whole row)
+   Spotlight stores
    ======================= */
 
 function SpotlightStoresSection() {
@@ -227,14 +94,14 @@ function SpotlightStoresSection() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-300/90">
                 Store Spotlight
               </p>
-              <span className="rounded-full bg-amber-400 text-[10px] font-semibold uppercase tracking-[0.2em] text-black px-2 py-0.5">
+              <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-black">
                 Paid
               </span>
             </div>
             <h2 className="mt-1 text-xl font-semibold">
               Featured HobbyDork Stores
             </h2>
-            <p className="mt-1 text-[11px] text-muted-foreground max-w-xl">
+            <p className="mt-1 max-w-xl text-[11px] text-muted-foreground">
               Weekly paid spots from the HobbyDork Market. Scroll sideways to
               see who bought their way to the front of the vault.
             </p>
@@ -261,12 +128,78 @@ function SpotlightStoresSection() {
                 key={storeWithId.storeId}
                 className="flex-[0_0_280px] max-w-[320px]"
               >
-                {/* Uses your existing StoreCard; card size unchanged */}
                 <StoreCard store={storeWithId} />
               </div>
             );
           })}
         </div>
+      </div>
+    </section>
+  );
+}
+
+/* =======================
+   New stores (recent storefronts)
+   ======================= */
+
+function NewStoresSection() {
+  const firestore = useFirestore();
+
+  const newStoresQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'storefronts'),
+      where('status', '==', 'ACTIVE'),
+      orderBy('createdAt', 'desc'),
+      limit(18),
+    );
+  }, [firestore]);
+
+  const { data: stores, isLoading } =
+    useCollection<StoreType>(newStoresQuery as any);
+
+  if (!stores || stores.length === 0) return null;
+
+  return (
+    <section className="rounded-2xl border bg-card/90 p-4 sm:p-6 shadow-md">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
+            New Stores
+          </p>
+          <h2 className="text-xl font-semibold">Fresh faces in the Vault</h2>
+          <p className="text-[11px] text-muted-foreground">
+            Stores that just opened up shop on HobbyDork.
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/search?tab=stores">Browse stores</Link>
+        </Button>
+      </div>
+
+      {isLoading && (
+        <p className="text-xs text-muted-foreground">Loading stores…</p>
+      )}
+
+      <div className="flex gap-4 overflow-x-auto pb-2">
+        {stores.map((store) => {
+          const id = (store as any).storeId ?? (store as any).id;
+          if (!id) return null;
+
+          const storeWithId = {
+            ...(store as any),
+            storeId: id,
+          } as StoreType;
+
+          return (
+            <div
+              key={id}
+              className="flex-[0_0_260px] max-w-xs"
+            >
+              <StoreCard store={storeWithId} />
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -325,7 +258,7 @@ function NewListingsSection() {
               href={`/listings/${l.listingId ?? l.id}`}
               className="group flex w-60 flex-[0_0_auto] flex-col overflow-hidden rounded-xl border bg-background/90 text-left shadow-sm transition hover:border-primary hover:bg-background"
             >
-              <div className="relative w-full aspect-[4/3] bg-black/40">
+              <div className="relative aspect-[4/3] w-full bg-black/40">
                 {primaryUrl && (
                   <Image
                     src={primaryUrl}
@@ -395,7 +328,7 @@ function ISO24SummarySection() {
   };
 
   return (
-    <section className="rounded-2xl border bg-card/90 p-4 sm:p-6 shadow-md h-full">
+    <section className="rounded-2xl border bg-card/90 p-4 sm:p-6 shadow-md">
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-fuchsia-400/80">
@@ -442,26 +375,135 @@ function ISO24SummarySection() {
 }
 
 /* =======================
+   Vault + Genie combined section
+   ======================= */
+
+function VaultAndGenieSection() {
+  const [question, setQuestion] = useState<'BUY' | 'SELL' | null>(null);
+  const [answer, setAnswer] = useState<string | null>(null);
+  const [isThinking, setIsThinking] = useState(false);
+
+  const handleAsk = (type: 'BUY' | 'SELL') => {
+    setQuestion(type);
+    setIsThinking(true);
+
+    setTimeout(() => {
+      setAnswer(getRandomAnswer(type));
+      setIsThinking(false);
+    }, 500);
+  };
+
+  const label =
+    question === 'BUY'
+      ? 'Should I buy this item?'
+      : question === 'SELL'
+      ? 'Should I sell this item?'
+      : null;
+
+  return (
+    <section className="rounded-2xl border bg-gradient-to-br from-zinc-900 via-black to-zinc-950 p-6 sm:p-8 shadow-xl">
+      <div className="grid items-center gap-8 lg:grid-cols-2">
+        {/* Left: Vault / Easter egg */}
+        <div className="space-y-5">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div className="relative flex justify-center sm:justify-start">
+              <div className="rounded-2xl border border-zinc-700/70 bg-black/50 p-3">
+                <StandaloneVaultDoor />
+              </div>
+            </div>
+            <div className="space-y-1 text-center sm:text-left">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-yellow-300/80">
+                Hidden Vault
+              </p>
+              <h2 className="text-2xl font-semibold">
+                Unlock the HobbyDork vault?
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Tap the door, punch in the secret 4-digit PIN, and hit the winner
+                screen if you guess it.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Ask HobbyDork (BUY / SELL) */}
+        <div className="space-y-4 rounded-2xl border border-zinc-800 bg-black/50 p-4 sm:p-5">
+          <div className="flex items-start gap-4">
+              <Image
+                src={genieImg}
+                alt="HobbyDork genie"
+                className="w-24 sm:w-28 drop-shadow-[0_0_22px_rgba(0,0,0,0.9)]"
+                priority
+              />
+            <div className="flex-1 space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
+                HobbyDork Genie
+                </p>
+                <h3 className="text-xl font-bold tracking-[0.1em] uppercase">
+                Ask The Vault
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                Hit a button and let the genie decide your fate.
+                </p>
+            </div>
+          </div>
+
+
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleAsk('BUY')}
+              disabled={isThinking}
+              className="border-emerald-500/60 bg-emerald-500/5 hover:bg-emerald-500/15"
+            >
+              Should I buy this item?
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleAsk('SELL')}
+              disabled={isThinking}
+              className="border-rose-500/60 bg-rose-500/5 hover:bg-rose-500/15"
+            >
+              Should I sell this item?
+            </Button>
+          </div>
+
+          <div className="mt-2 rounded-xl border border-zinc-800 bg-black/60 p-4 text-sm">
+            {isThinking && (
+              <p className="text-muted-foreground">
+                HobbyDork is flipping a coin in the back room…
+              </p>
+            )}
+            {!isThinking && answer && label && (
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {label}
+                </p>
+                <p className="text-base font-semibold">{answer}</p>
+              </div>
+            )}
+            {!isThinking && !answer && (
+              <p className="text-muted-foreground">
+                Pick BUY or SELL and let the genie decide your fate.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+
+/* =======================
    Main Dashboard
    ======================= */
 
 export default function Dashboard() {
   const { profile, loading } = useAuth();
   const displayName = profile?.displayName ?? 'Collector';
-
-  const isSeller = !!profile?.isSeller && !!profile?.storeId;
-
-  const primaryCtaLabel = !profile
-    ? 'Sign in to sell'
-    : isSeller
-    ? 'Create listing'
-    : 'Become a seller';
-
-  const primaryCtaHref = !profile
-    ? '/login?redirect=/listings'
-    : isSeller
-    ? '/listings/create'
-    : '/store/setup?redirect=/listings';
 
   return (
     <div className="space-y-10 lg:space-y-12">
@@ -475,9 +517,9 @@ export default function Dashboard() {
             <h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">
               Welcome, {loading ? '...' : displayName}
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground max-w-xl">
+            <p className="mt-2 max-w-xl text-sm text-muted-foreground">
               See what&apos;s hot, what just hit the vault, and crack open the secret
-              HobbyDork Vault to win something crazy!.
+              HobbyDork Vault to win something crazy.
             </p>
           </div>
           <div className="flex gap-3">
@@ -488,8 +530,8 @@ export default function Dashboard() {
             >
               <Link href="/search">Browse listings</Link>
             </Button>
-            <Button asChild disabled={loading}>
-              <Link href={primaryCtaHref}>{primaryCtaLabel}</Link>
+            <Button asChild>
+              <Link href="/listings/create">Create listing</Link>
             </Button>
           </div>
         </div>
@@ -497,16 +539,10 @@ export default function Dashboard() {
 
       {/* Rows */}
       <SpotlightStoresSection />
+      <NewStoresSection />
       <NewListingsSection />
-      
-      {/* ISO and Genie row */}
-      <section className="grid gap-6 md:grid-cols-2">
-        <ISO24SummarySection />
-        <AskHobbyDorkSection />
-      </section>
-      
-      {/* Vault section */}
-      <VaultEasterEggSection />
+      <ISO24SummarySection />
+      <VaultAndGenieSection />
     </div>
   );
 }

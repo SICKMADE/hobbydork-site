@@ -2,6 +2,7 @@
 import AppLayout from "@/components/layout/AppLayout";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail } from "lucide-react";
 
@@ -67,6 +68,36 @@ export default function HelpPage() {
                         </div>
                     </CardContent>
                 </Card>
+            </div>
+
+            <div className="max-w-2xl mx-auto py-8 px-4 space-y-4">
+                <h1 className="text-3xl font-bold">Help &amp; Legal</h1>
+                <p className="text-sm text-muted-foreground">
+                Basic info, rules, and legal pages for HobbyDork.
+                </p>
+
+            <ul className="space-y-2 text-sm">
+                <li>
+                    <Link href="/terms" className="text-primary underline">
+                    Terms of Service
+                    </Link>
+                </li>
+                <li>
+                    <Link href="/privacy" className="text-primary underline">
+                      Privacy Policy
+                    </Link>
+                </li>
+                <li>
+                    <Link href="/community-rules" className="text-primary underline">
+                       Community &amp; Content Rules
+                    </Link>
+                </li>
+                <li>
+                     <Link href="/seller-terms" className="text-primary underline">
+                       Seller Terms
+                    </Link>
+                </li>
+                </ul>
             </div>
         </AppLayout>
     );
