@@ -8,9 +8,12 @@ import Link from 'next/link';
 
 interface StoreCardProps {
   store: StoreType;
+  cardImage?: string | null;
 }
 
-export default function StoreCard({ store }: StoreCardProps) {
+export default function StoreCard({ store, cardImage }: StoreCardProps) {
+  const displayImage = cardImage || store.avatarUrl;
+
   return (
     <Card className={cn(
         "relative overflow-hidden group transition-all duration-300 hover:shadow-2xl bg-card",
@@ -27,13 +30,13 @@ export default function StoreCard({ store }: StoreCardProps) {
             </div>
         )}
         <CardHeader className="flex flex-row items-center gap-4">
-          {store.avatarUrl && (
+          {displayImage && (
             <Image
-                src={store.avatarUrl}
+                src={displayImage}
                 alt={`${store.storeName} logo`}
                 width={64}
                 height={64}
-                className="rounded-lg border-2 border-primary/50"
+                className="rounded-lg border-2 border-primary/50 object-cover"
                 data-ai-hint="store logo"
             />
           )}

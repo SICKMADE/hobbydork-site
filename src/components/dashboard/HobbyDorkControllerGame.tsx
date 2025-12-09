@@ -131,7 +131,7 @@ export default function HobbyDorkControllerGame() {
               HobbyDork Controller
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              NES-style memory game. Watch the pattern, then copy it. Each
+              NES-style memory game.  Watch the pattern, then copy it. Each
               round adds one more move.
             </CardDescription>
           </div>
