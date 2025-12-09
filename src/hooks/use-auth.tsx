@@ -14,9 +14,9 @@ import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { placeholderImages } from '@/lib/placeholder-images';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import defaultPfp from '@/components/layout/hobbydork-head.png';
 
 interface SignupData {
   email: string;
@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         uid: newUser.uid,
         email: newUser.email!,
         displayName: displayName, 
-        avatar: placeholderImages['user-avatar-1']?.imageUrl || `https://picsum.photos/seed/${newUser.uid}/100/100`,
+        avatar: defaultPfp.src,
         status: 'ACTIVE',
         role: 'USER',
         isSeller: false,
