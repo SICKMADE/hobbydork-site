@@ -119,7 +119,7 @@ export default function HobbyDorkControllerGame() {
   const faceBtnActive =
     'border-emerald-400 shadow-[inset_0_3px_6px_rgba(0,255,150,0.4),0_1px_2px_rgba(0,0,0,0.6)] ring-2 ring-emerald-400/80 bg-emerald-600 translate-y-0.5';
 
-  const dPadActive = 'bg-emerald-500/90 shadow-[inset_0_1px_2px_rgba(0,255,150,0.5)]';
+  const dPadActive = 'bg-emerald-500/90 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),inset_0_0_8px_rgba(110,231,183,0.6)] translate-y-px';
 
   return (
     <Card className="rounded-2xl border bg-gradient-to-br from-[#2b2b2e] via-[#1b1b1d] to-black shadow-2xl overflow-hidden">
@@ -154,26 +154,26 @@ export default function HobbyDorkControllerGame() {
                     
                     {/* LEFT: D-PAD */}
                     <div className="flex-shrink-0">
-                        <div className="relative h-[110px] w-[110px] flex items-center justify-center">
+                        <div className="relative h-[120px] w-[120px] flex items-center justify-center">
                             {/* Circular depression */}
-                            <div className="absolute h-full w-full rounded-full bg-black/30 shadow-inner" />
+                            <div className="absolute h-full w-full rounded-full bg-black/30 shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]" />
                             
                             {/* D-Pad cross */}
                             <div className="absolute h-full w-full flex items-center justify-center">
-                               <div className="absolute h-[calc(100%-12px)] w-[36px] bg-neutral-700 rounded-[3px] shadow-md border-t border-neutral-800 border-b border-neutral-900" />
-                               <div className="absolute w-[calc(100%-12px)] h-[36px] bg-neutral-700 rounded-[3px] shadow-md border-l border-neutral-800 border-r border-neutral-900" />
-                               <div className="absolute h-[calc(100%-12px)] w-[36px] bg-gradient-to-b from-neutral-600 to-neutral-800 rounded-[3px]" />
-                               <div className="absolute w-[calc(100%-12px)] h-[36px] bg-gradient-to-r from-neutral-600 to-neutral-800 rounded-[3px]" />
+                               <div className="absolute h-[calc(100%-12px)] w-[40px] bg-neutral-700 rounded-[3px] shadow-md border-t border-neutral-800 border-b border-neutral-900" />
+                               <div className="absolute w-[calc(100%-12px)] h-[40px] bg-neutral-700 rounded-[3px] shadow-md border-l border-neutral-800 border-r border-neutral-900" />
+                               <div className="absolute h-[calc(100%-12px)] w-[40px] bg-gradient-to-b from-neutral-600 to-neutral-800 rounded-[3px]" />
+                               <div className="absolute w-[calc(100%-12px)] h-[40px] bg-gradient-to-r from-neutral-600 to-neutral-800 rounded-[3px]" />
                             </div>
                             
                             {/* Central circle for realism */}
-                            <div className="absolute h-5 w-5 rounded-full bg-black/40 shadow-inner border border-black/80" />
+                            <div className="absolute h-5 w-5 rounded-full bg-gradient-to-br from-neutral-600 to-neutral-800 shadow-inner border border-black/80" />
 
                             {/* Clickable zones */}
-                            <button type="button" onClick={() => handlePress('UP')} className={`absolute top-0 h-[42px] w-[36px] flex items-center justify-center pt-1 rounded-t-[3px] transition-colors ${activeButton === 'UP' ? dPadActive : ''}`}><span className="w-0 h-0 border-x-4 border-x-transparent border-b-[6px] border-b-black/40"></span></button>
-                            <button type="button" onClick={() => handlePress('DOWN')} className={`absolute bottom-0 h-[42px] w-[36px] flex items-center justify-center pb-1 rounded-b-[3px] transition-colors ${activeButton === 'DOWN' ? dPadActive : ''}`}><span className="w-0 h-0 border-x-4 border-x-transparent border-t-[6px] border-t-black/40"></span></button>
-                            <button type="button" onClick={() => handlePress('LEFT')} className={`absolute left-0 w-[42px] h-[36px] flex items-center justify-center pl-1 rounded-l-[3px] transition-colors ${activeButton === 'LEFT' ? dPadActive : ''}`}><span className="w-0 h-0 border-y-4 border-y-transparent border-r-[6px] border-r-black/40"></span></button>
-                            <button type="button" onClick={() => handlePress('RIGHT')} className={`absolute right-0 w-[42px] h-[36px] flex items-center justify-center pr-1 rounded-r-[3px] transition-colors ${activeButton === 'RIGHT' ? dPadActive : ''}`}><span className="w-0 h-0 border-y-4 border-y-transparent border-l-[6px] border-l-black/40"></span></button>
+                            <button type="button" onClick={() => handlePress('UP')} className={`absolute top-0 h-[46px] w-[40px] flex items-center justify-center pt-1 rounded-t-[3px] transition-colors ${activeButton === 'UP' ? dPadActive : ''}`}><span className="w-0 h-0 border-x-4 border-x-transparent border-b-[6px] border-b-black/40"></span></button>
+                            <button type="button" onClick={() => handlePress('DOWN')} className={`absolute bottom-0 h-[46px] w-[40px] flex items-center justify-center pb-1 rounded-b-[3px] transition-colors ${activeButton === 'DOWN' ? dPadActive : ''}`}><span className="w-0 h-0 border-x-4 border-x-transparent border-t-[6px] border-t-black/40"></span></button>
+                            <button type="button" onClick={() => handlePress('LEFT')} className={`absolute left-0 w-[46px] h-[40px] flex items-center justify-center pl-1 rounded-l-[3px] transition-colors ${activeButton === 'LEFT' ? dPadActive : ''}`}><span className="w-0 h-0 border-y-4 border-y-transparent border-r-[6px] border-r-black/40"></span></button>
+                            <button type="button" onClick={() => handlePress('RIGHT')} className={`absolute right-0 w-[46px] h-[40px] flex items-center justify-center pr-1 rounded-r-[3px] transition-colors ${activeButton === 'RIGHT' ? dPadActive : ''}`}><span className="w-0 h-0 border-y-4 border-y-transparent border-l-[6px] border-l-black/40"></span></button>
                         </div>
                     </div>
 
