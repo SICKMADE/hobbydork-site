@@ -78,7 +78,7 @@ type ListingDoc = {
   primaryImageUrl?: string;
   price: number;
   quantityAvailable: number;
-  status: 'ACTIVE' | 'DRAFT' | 'SOLD' | 'HIDDEN';
+  state: 'ACTIVE' | 'DRAFT' | 'SOLD' | 'HIDDEN';
   category?:
     | 'COMIC_BOOKS'
     | 'SPORTS_CARDS'
@@ -192,7 +192,7 @@ export default function StorePage() {
     return query(
       collection(firestore, 'listings'),
       where('storeId', '==', storeId),
-      where('status', '==', 'ACTIVE'),
+      where('state', '==', 'ACTIVE'),
       orderBy('createdAt', 'desc'),
     );
   }, [firestore, storeId]);
@@ -228,7 +228,7 @@ export default function StorePage() {
     );
   }
 
-  if (!store || store.status !== 'ACTIVE') {
+  if (!store || (store as any).status !== 'ACTIVE') {
     return (
       <AppLayout>
         <PlaceholderContent
