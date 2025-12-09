@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useCallback } from 'react';
@@ -116,17 +117,17 @@ export default function HobbyDorkControllerGame() {
   })();
 
   const dpadSquare =
-    'absolute flex items-center justify-center bg-[#2d2d2d] text-[12px] font-semibold text-zinc-50 rounded-[3px] border border-black/80 shadow-[0_1px_0_rgba(255,255,255,0.14)] transition-all';
+    'absolute flex items-center justify-center bg-[#2d2d2d] text-[12px] font-semibold text-zinc-50 rounded-[3px] border-t border-t-zinc-500 border-l border-l-zinc-500 border-r border-r-black/80 border-b border-b-black/80 shadow-[inset_0_2px_1px_rgba(255,255,255,0.1)] transition-all';
   const dpadActive =
     'border-emerald-400 bg-emerald-600/90 shadow-inner translate-y-px';
 
   const faceBtnBase =
-    'flex items-center justify-center rounded-full border border-black/80 text-[11px] font-bold text-zinc-50 shadow-[0_4px_0_rgba(0,0,0,0.6)] transition-all';
+    'flex items-center justify-center rounded-full border-b-4 border-black/50 text-[11px] font-bold text-zinc-50 shadow-[inset_0_2px_3px_rgba(255,255,255,0.2),_0_2px_3px_rgba(0,0,0,0.4)] transition-transform active:translate-y-0.5 active:border-b-2';
   const faceBtnActive =
     'border-emerald-400 shadow-inner translate-y-px ring-2 ring-emerald-400/60';
 
   const startSelectBase =
-    'h-6 rounded-full border border-[#5e5b59] bg-transparent text-[9px] font-semibold uppercase tracking-[0.2em] text-[#8b1919] transition-all';
+    'h-7 w-24 rounded-lg border-2 border-zinc-900 bg-zinc-700/80 text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-400 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),_inset_0_-1px_1px_rgba(0,0,0,0.5)] transition-all active:shadow-inner active:translate-y-px';
  const startSelectActive =
     'border-emerald-400 bg-emerald-700/85 text-zinc-50 shadow-inner translate-y-px';
 
@@ -156,17 +157,20 @@ export default function HobbyDorkControllerGame() {
         <p className="h-4 text-xs text-muted-foreground">{statusLabel}</p>
 
         {/* WIDE CONTROLLER BODY */}
-        <div className="mx-auto flex h-[260px] w-[580px] items-center justify-center">
-            <div className="relative h-full w-full rounded-[20px] bg-[#c7c4bf] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.7)] ring-1 ring-black/50">
+        <div className="mx-auto flex h-[280px] w-full max-w-[640px] items-center justify-center">
+            <div className="relative h-full w-full rounded-[20px] bg-gradient-to-b from-neutral-300 to-neutral-200 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.7)] ring-1 ring-black/50">
                 {/* Black faceplate */}
                 <div className="relative h-full w-full rounded-[10px] bg-gradient-to-b from-[#3f3d40] via-[#111] to-[#18181a] px-8 py-4 flex items-center justify-between gap-8">
                     
                     {/* LEFT: D-PAD */}
                     <div className="flex-shrink-0">
-                        <div className="relative h-28 w-28 rounded-[10px] bg-[#272528] shadow-[0_0_0_1px_rgba(0,0,0,0.9)] flex items-center justify-center">
+                        <div className="relative h-28 w-28 rounded-[10px] bg-transparent flex items-center justify-center">
+                            {/* Circular depression */}
+                            <div className="absolute h-full w-full rounded-full bg-black/30 shadow-inner" />
+
                             {/* cross background */}
-                            <div className="absolute h-[80px] w-[26px] rounded-[4px] bg-[#121214]" />
-                            <div className="absolute h-[26px] w-[80px] rounded-[4px] bg-[#121214]" />
+                            <div className="absolute h-[84px] w-[28px] rounded-[4px] bg-[#121214] shadow-md" />
+                            <div className="absolute h-[28px] w-[84px] rounded-[4px] bg-[#121214] shadow-md" />
 
                             <button type="button" onClick={() => handlePress('UP')} className={`${dpadSquare} top-1 h-9 w-9 ${ activeButton === 'UP' ? dpadActive : '' }`}>↑</button>
                             <button type="button" onClick={() => handlePress('DOWN')} className={`${dpadSquare} bottom-1 h-9 w-9 ${ activeButton === 'DOWN' ? dpadActive : '' }`}>↓</button>
@@ -177,17 +181,15 @@ export default function HobbyDorkControllerGame() {
 
                     {/* MIDDLE: SELECT / START & LOGO */}
                     <div className="flex-1 flex flex-col items-center justify-center gap-4">
-                        <div className="text-center text-[18px] font-bold tracking-[0.18em] text-[#c62429] uppercase">HobbyDork</div>
+                        <div className="text-center text-[18px] font-black tracking-[0.18em] text-[#c62429] uppercase">HobbyDork</div>
                         <div className="flex items-center justify-center gap-4">
-                            <div className="flex flex-col items-center gap-1">
-                                <button type="button" className={`${startSelectBase} w-20`}>
-                                    <div className="h-4 w-12 rounded-md bg-[#5e5b59]"/>
+                            <div className="flex flex-col items-center gap-2">
+                                <button type="button" className={`${startSelectBase}`}>
                                 </button>
                                 <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#8b1919]">Select</span>
                             </div>
-                            <div className="flex flex-col items-center gap-1">
-                                 <button type="button" onClick={() => handlePress('START')} className={`${startSelectBase} w-20 ${ activeButton === 'START' ? startSelectActive : '' }`}>
-                                    <div className="h-4 w-12 rounded-md bg-[#5e5b59]"/>
+                            <div className="flex flex-col items-center gap-2">
+                                 <button type="button" onClick={() => handlePress('START')} className={`${startSelectBase} ${ activeButton === 'START' ? startSelectActive : '' }`}>
                                 </button>
                                 <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#8b1919]">Start</span>
                             </div>
@@ -197,10 +199,9 @@ export default function HobbyDorkControllerGame() {
                     {/* RIGHT: A / B buttons */}
                     <div className="flex-shrink-0">
                          <div className="relative w-[180px] h-[80px] flex items-center justify-center -rotate-[25deg]">
-                            <div className="absolute w-full h-full bg-black/30 rounded-full" />
                              <div className="flex items-center gap-6">
-                                <button type="button" onClick={() => handlePress('B')} className={`${faceBtnBase} h-14 w-14 bg-[#b02026] ${ activeButton === 'B' ? faceBtnActive : '' }`}>B</button>
-                                <button type="button" onClick={() => handlePress('A')} className={`${faceBtnBase} h-14 w-14 bg-[#d3262f] ${ activeButton === 'A' ? faceBtnActive : '' }`}>A</button>
+                                <button type="button" onClick={() => handlePress('B')} className={`${faceBtnBase} h-16 w-16 bg-[#b02026] ${ activeButton === 'B' ? faceBtnActive : '' }`}>B</button>
+                                <button type="button" onClick={() => handlePress('A')} className={`${faceBtnBase} h-16 w-16 bg-[#b02026] ${ activeButton === 'A' ? faceBtnActive : '' }`}>A</button>
                             </div>
                         </div>
                          <div className="mt-2 flex w-full items-center justify-between px-2 text-[9px] font-semibold uppercase tracking-[0.25em] text-[#c62429]">
