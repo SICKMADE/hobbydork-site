@@ -345,10 +345,10 @@ function VaultAndGenieSection() {
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-zinc-800 bg-black/50 p-4 sm:p-5">
           <div className="flex w-full items-start gap-3">
             <div className="flex-1 space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
                 HobbyDork Genie
               </p>
-              <h3 className="text-4xl font-bold uppercase tracking-wider">
+              <h3 className="text-5xl font-bold uppercase tracking-wider">
                 Ask HobbyDork
               </h3>
               <p className="text-xs text-muted-foreground pt-1">
