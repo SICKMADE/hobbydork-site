@@ -290,91 +290,6 @@ function NewListingsSection() {
 }
 
 /* =======================
-   ISO24 row
-   ======================= */
-
-function ISO24SummarySection() {
-  const firestore = useFirestore();
-
-  const isoQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, 'iso24Posts'),
-      where('status', '==', 'ACTIVE'),
-      orderBy('expiresAt', 'asc'),
-      limit(20),
-    );
-  }, [firestore]);
-
-  const { data: isoPosts, isLoading } =
-    useCollection<any>(isoQuery);
-
-  if (!isoPosts || isoPosts.length === 0) return null;
-
-  const formatCategory = (cat: string | undefined) =>
-    (cat || '')
-      .toLowerCase()
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-
-  const timeLeft = (expiresAt: any) => {
-    if (!expiresAt?.toDate) return '';
-    const ms = expiresAt.toDate().getTime() - Date.now();
-    if (ms <= 0) return 'Expired';
-    const hours = Math.floor(ms / (1000 * 60 * 60));
-    if (hours < 24) return `${hours}h left`;
-    const days = Math.floor(hours / 24);
-    return `${days}d left`;
-  };
-
-  return (
-    <section className="rounded-2xl border bg-card/90 p-4 sm:p-6 shadow-md">
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-fuchsia-400/80">
-            ISO24
-          </p>
-          <h2 className="text-xl font-semibold">In Search Of (24 hours)</h2>
-        </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/iso24">View all</Link>
-        </Button>
-      </div>
-
-      {isLoading && (
-        <p className="text-xs text-muted-foreground">
-          Loading ISO posts…
-        </p>
-      )}
-
-      <div className="flex gap-4 overflow-x-auto pb-2">
-        {isoPosts.map((iso: any) => (
-          <div
-            key={iso.id ?? iso.isoId}
-            className="flex w-64 flex-[0_0_auto] flex-col rounded-xl border bg-background/90 p-3 text-xs"
-          >
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                {formatCategory(iso.category)}
-              </span>
-              <span className="text-[10px] text-muted-foreground">
-                {timeLeft(iso.expiresAt)}
-              </span>
-            </div>
-            <p className="line-clamp-2 text-[13px] font-semibold">
-              {iso.title}
-            </p>
-            <p className="mt-1 line-clamp-3 whitespace-pre-line text-[12px] text-muted-foreground">
-              {iso.description}
-            </p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* =======================
    Vault + Genie combined section
    ======================= */
 
@@ -427,66 +342,68 @@ function VaultAndGenieSection() {
         </div>
 
         {/* Right: Ask HobbyDork (BUY / SELL) */}
-        <div className="space-y-4 rounded-2xl border border-zinc-800 bg-black/50 p-4 sm:p-5">
-          <div className="flex items-start gap-4">
-              <Image
-                src={genieImg}
-                alt="HobbyDork genie"
-                className="w-24 sm:w-28 drop-shadow-[0_0_22px_rgba(0,0,0,0.9)]"
-                priority
-              />
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-zinc-800 bg-black/50 p-4 sm:p-5">
+          <div className="flex w-full items-start gap-4">
             <div className="flex-1 space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
                 HobbyDork Genie
-                </p>
-                <h3 className="text-xl font-bold tracking-[0.1em] uppercase">
+              </p>
+              <h3 className="text-2xl font-bold tracking-[0.1em] uppercase">
                 Ask The Vault
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                Hit a button and let the genie decide your fate.
-                </p>
+              </h3>
             </div>
+            <Image
+              src={genieImg}
+              alt="HobbyDork genie"
+              className="w-24 sm:w-28 drop-shadow-[0_0_22px_rgba(0,0,0,0.9)]"
+              priority
+            />
           </div>
 
+          <p className="text-center text-xs text-muted-foreground">
+            Can't decide? Let the HobbyDork genie determine your fate.
+          </p>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex w-full flex-col gap-3 sm:flex-row">
             <Button
               type="button"
               variant="outline"
+              size="lg"
               onClick={() => handleAsk('BUY')}
               disabled={isThinking}
-              className="border-emerald-500/60 bg-emerald-500/5 hover:bg-emerald-500/15"
+              className="flex-1 border-emerald-500/60 bg-emerald-500/5 text-base hover:bg-emerald-500/15"
             >
-              Should I buy this item?
+              Should I BUY?
             </Button>
             <Button
               type="button"
               variant="outline"
+              size="lg"
               onClick={() => handleAsk('SELL')}
               disabled={isThinking}
-              className="border-rose-500/60 bg-rose-500/5 hover:bg-rose-500/15"
+              className="flex-1 border-rose-500/60 bg-rose-500/5 text-base hover:bg-rose-500/15"
             >
-              Should I sell this item?
+              Should I SELL?
             </Button>
           </div>
 
-          <div className="mt-2 rounded-xl border border-zinc-800 bg-black/60 p-4 text-sm">
+          <div className="mt-2 w-full rounded-xl border border-zinc-800 bg-black/60 p-4 text-center">
             {isThinking && (
-              <p className="text-muted-foreground">
-                HobbyDork is flipping a coin in the back room…
+              <p className="text-lg text-muted-foreground">
+                The genie is thinking...
               </p>
             )}
             {!isThinking && answer && label && (
               <div className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                   {label}
                 </p>
-                <p className="text-base font-semibold">{answer}</p>
+                <p className="text-xl font-bold text-primary">{answer}</p>
               </div>
             )}
             {!isThinking && !answer && (
-              <p className="text-muted-foreground">
-                Pick BUY or SELL and let the genie decide your fate.
+              <p className="text-lg text-muted-foreground">
+                The Vault awaits your question.
               </p>
             )}
           </div>
@@ -495,7 +412,6 @@ function VaultAndGenieSection() {
     </section>
   );
 }
-
 
 /* =======================
    Main Dashboard
@@ -518,7 +434,7 @@ export default function Dashboard() {
               Welcome, {loading ? '...' : displayName}
             </h1>
             <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-              See what&apos;s hot, what just hit the vault, and crack open the secret
+              See what's hot, what just hit the vault, and crack open the secret
               HobbyDork Vault to win something crazy.
             </p>
           </div>
@@ -541,7 +457,6 @@ export default function Dashboard() {
       <SpotlightStoresSection />
       <NewStoresSection />
       <NewListingsSection />
-      <ISO24SummarySection />
       <VaultAndGenieSection />
     </div>
   );
