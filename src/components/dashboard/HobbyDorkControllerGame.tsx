@@ -90,7 +90,7 @@ export default function HobbyDorkControllerGame() {
 
     if (key !== expected) {
       setStatus('failed');
-      setLastScore(round);
+      setLastScore(round > 0 ? round - 1 : 0);
       return;
     }
 
@@ -112,7 +112,7 @@ export default function HobbyDorkControllerGame() {
     if (status === 'showing') return 'Watch the pattern on the controller…';
     if (status === 'input') return 'Now copy the pattern exactly.';
     if (status === 'failed')
-      return `You messed up on round ${round}. Hit START to try again.`;
+      return `You messed up on round ${round}. Your score was ${lastScore}. Hit START to try again.`;
     return '';
   })();
 
@@ -156,12 +156,12 @@ export default function HobbyDorkControllerGame() {
 
         {/* Controller body */}
         <div className="mx-auto flex max-w-2xl justify-center">
-          <div className="relative flex w-full max-w-lg flex-col rounded-[20px] bg-[#b4b1ad] p-4 shadow-[0_15px_40px_rgba(0,0,0,0.65)] ring-1 ring-black/40">
+          <div className="relative flex h-[180px] w-full max-w-lg items-center justify-between rounded-[20px] bg-[#b4b1ad] px-6 py-4 shadow-[0_15px_40px_rgba(0,0,0,0.65)] ring-1 ring-black/40">
             {/* Black stripe area */}
-            <div className="absolute left-0 top-[30%] h-[40%] w-full bg-black/90 shadow-[inset_0_2px_4px_rgba(255,255,255,0.05),_inset_0_-2px_4px_rgba(255,255,255,0.05)]" />
+            <div className="absolute left-1/4 top-1/2 h-[60%] w-1/2 -translate-y-1/2 bg-black/90 shadow-[inset_0_2px_4px_rgba(255,255,255,0.05),_inset_0_-2px_4px_rgba(255,255,255,0.05)]" />
             
             {/* Main controller layout */}
-            <div className="relative z-10 flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative z-10 flex w-full items-center justify-between">
               {/* LEFT: D-PAD */}
               <div className="flex h-[120px] w-[120px] items-center justify-center">
                 <div className="relative h-full w-full">
@@ -177,6 +177,9 @@ export default function HobbyDorkControllerGame() {
 
               {/* MIDDLE: START/SELECT */}
               <div className="flex flex-col items-center gap-4">
+                <div className="font-nintendo text-lg font-black italic text-red-700/80">
+                  HobbyDork
+                </div>
                 <div className="flex items-center gap-3">
                   <div className="flex flex-col items-center gap-1">
                     <div className={`${startBtnBase}`} />
@@ -186,9 +189,6 @@ export default function HobbyDorkControllerGame() {
                     <button type="button" onClick={() => handlePress('START')} className={`${startBtnBase} ${activeButton === 'START' ? startBtnActive : ''}`} />
                     <p className="text-[9px] font-bold uppercase tracking-wider text-red-700">Start</p>
                   </div>
-                </div>
-                <div className="font-nintendo text-[11px] font-black italic text-red-700/80">
-                  HobbyDork
                 </div>
               </div>
 
