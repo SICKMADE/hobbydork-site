@@ -194,7 +194,7 @@ function NewStoresSection() {
           </p>
         </div>
         <Button asChild variant="outline" size="sm">
-          <Link href="/search?tab=stores">Browse stores</Link>
+          <Link href="/stores">Browse stores</Link>
         </Button>
       </div>
 
