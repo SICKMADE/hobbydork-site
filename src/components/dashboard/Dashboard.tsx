@@ -24,6 +24,8 @@ import { Button } from '@/components/ui/button';
 import StoreCard from '@/components/StoreCard';
 import type { Store as StoreType, User } from '@/lib/types';
 import { StandaloneVaultDoor } from './StandaloneVaultDoor';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Store } from 'lucide-react';
 
 import genieImg from './genie.png';
 
@@ -130,7 +132,7 @@ function SpotlightStoresSection() {
                 key={storeWithId.storeId}
                 className="flex-[0_0_280px] max-w-[320px]"
               >
-                <StoreCard store={storeWithId} cardImage={(storeWithId as any).storeImageUrl} />
+                <StoreCard store={storeWithId} cardImage={(storeWithId as any).storeImageUrl} layout="spotlight" />
               </div>
             );
           })}
@@ -152,10 +154,23 @@ function NewStoreCard({ store }: { store: StoreType }) {
     }, [firestore, store.ownerUid]);
     
     const { data: owner } = useDoc<User>(ownerRef);
+    const cardImage = owner?.avatar;
 
-    const cardImage = owner?.avatar; // Use owner's PFP
-
-    return <StoreCard store={store} cardImage={cardImage} />;
+    return (
+      <Link href={`/store/${store.storeId}`} className="group flex flex-col items-center gap-3 text-center transition-transform hover:-translate-y-1">
+          <Avatar className="h-24 w-24 border-2 border-primary/20 ring-4 ring-background group-hover:border-primary transition-all">
+              <AvatarImage src={cardImage} alt={store.storeName} />
+              <AvatarFallback>{store.storeName?.charAt(0) || 'S'}</AvatarFallback>
+          </Avatar>
+          <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{store.storeName}</p>
+              <Button variant="ghost" size="sm" className="h-auto px-3 py-1 text-xs text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary">
+                  <Store className="mr-1.5 h-3 w-3" />
+                  Visit Store
+              </Button>
+          </div>
+      </Link>
+    );
 }
 
 
@@ -202,7 +217,7 @@ function NewStoresSection() {
         <p className="text-xs text-muted-foreground">Loading stores…</p>
       )}
 
-      <div className="flex gap-4 overflow-x-auto pb-2">
+      <div className="flex gap-8 overflow-x-auto pb-2 pt-4">
         {stores.map((store) => {
           const id = (store as any).storeId ?? (store as any).id;
           if (!id) return null;
@@ -215,7 +230,7 @@ function NewStoresSection() {
           return (
             <div
               key={id}
-              className="flex-[0_0_260px] max-w-xs"
+              className="flex-[0_0_120px] max-w-xs"
             >
               <NewStoreCard store={storeWithId} />
             </div>

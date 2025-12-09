@@ -9,11 +9,50 @@ import Link from 'next/link';
 interface StoreCardProps {
   store: StoreType;
   cardImage?: string | null;
+  layout?: 'default' | 'spotlight';
 }
 
-export default function StoreCard({ store, cardImage }: StoreCardProps) {
+export default function StoreCard({ store, cardImage, layout = 'default' }: StoreCardProps) {
   const displayImage = cardImage || store.avatarUrl;
 
+  if (layout === 'spotlight') {
+    return (
+      <Card className={cn(
+        "relative overflow-hidden group transition-all duration-300 hover:shadow-2xl bg-card",
+        store.isSpotlighted ? "border-primary/50 hover:shadow-primary/20" : "hover:border-primary/50 hover:shadow-primary/20"
+      )}>
+        {store.isSpotlighted && (
+          <div className="absolute top-2 right-2 bg-primary text-primary-foreground px-2 py-1 text-xs font-bold rounded-full flex items-center gap-1 z-10">
+            <Star className="h-3 w-3" />
+            <span>SPOTLIGHT</span>
+          </div>
+        )}
+        <div className="relative aspect-video w-full">
+          {displayImage && (
+              <Image
+                  src={displayImage}
+                  alt={`${store.storeName} banner`}
+                  fill
+                  className="object-cover"
+                  data-ai-hint="store banner"
+              />
+          )}
+        </div>
+        <div className="p-4">
+            <CardTitle className="text-lg font-bold text-card-foreground">{store.storeName}</CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-1 line-clamp-2">{store.about}</CardDescription>
+            <Link href={`/store/${store.storeId}`} passHref>
+              <Button variant="outline" className="w-full mt-4">
+                <Store className="mr-2 h-4 w-4" />
+                Visit Store
+              </Button>
+            </Link>
+        </div>
+      </Card>
+    );
+  }
+
+  // Default layout
   return (
     <Card className={cn(
         "relative overflow-hidden group transition-all duration-300 hover:shadow-2xl bg-card",
