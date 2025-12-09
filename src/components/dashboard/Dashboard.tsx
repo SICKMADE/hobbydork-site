@@ -343,14 +343,17 @@ function VaultAndGenieSection() {
 
         {/* Right: Ask HobbyDork (BUY / SELL) */}
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-zinc-800 bg-black/50 p-4 sm:p-5">
-          <div className="flex w-full items-start gap-4">
-            <div className="flex-1 space-y-1">
+          <div className="flex w-full items-start gap-3">
+            <div className="flex-1 space-y-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
                 HobbyDork Genie
               </p>
-              <h3 className="text-2xl font-bold tracking-[0.1em] uppercase">
-                Ask The Vault
+              <h3 className="text-4xl font-bold uppercase tracking-wider">
+                Ask HobbyDork
               </h3>
+              <p className="text-xs text-muted-foreground pt-1">
+                Can't decide? Let the HobbyDork genie determine your fate.
+              </p>
             </div>
             <Image
               src={genieImg}
@@ -359,10 +362,6 @@ function VaultAndGenieSection() {
               priority
             />
           </div>
-
-          <p className="text-center text-xs text-muted-foreground">
-            Can't decide? Let the HobbyDork genie determine your fate.
-          </p>
 
           <div className="flex w-full flex-col gap-3 sm:flex-row">
             <Button
