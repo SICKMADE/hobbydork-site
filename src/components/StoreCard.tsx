@@ -33,7 +33,7 @@ export default function StoreCard({ store, cardImage, layout = 'default' }: Stor
                   src={displayImage}
                   alt={`${store.storeName} banner`}
                   fill
-                  className="object-cover"
+                  className="object-contain"
                   data-ai-hint="store banner"
               />
           )}

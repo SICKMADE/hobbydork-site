@@ -243,7 +243,7 @@ export default function StorePage() {
   const ratingCount = store.ratingCount ?? 0;
   const itemsSold = store.itemsSold ?? 0;
 
-  // Big storefront image – show whole image, not zoomed in
+  // Big storefront image
   const storeImage =
     storeImageOverride ||
     store.storeImageUrl ||
