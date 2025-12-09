@@ -104,7 +104,7 @@ export default function HobbyDorkControllerGame() {
     if (status === 'showing') return 'Watch the pattern…';
     if (status === 'input') return `Round ${round}. Your turn!`;
     if (status === 'failed')
-      return `Game Over. You reached round ${round - 1}. Your final score is ${lastScore}. Press START to play again.`;
+      return `Game Over. Final score: ${lastScore}. Press START to play again.`;
     return '';
   })();
 
@@ -135,11 +135,11 @@ export default function HobbyDorkControllerGame() {
         
         {/* Controller body */}
         <div className="mx-auto flex h-[280px] w-full items-center justify-center select-none p-4">
-          {/* Main Gray Body */}
-          <div className="relative flex h-[140px] w-full max-w-2xl items-center justify-between rounded-lg bg-[#D1D1D1] p-3 shadow-[0_6px_12px_rgba(0,0,0,0.4),inset_0_2px_1px_#EAEAEA,inset_0_-2px_1px_#A0A0A0]">
-            
-            {/* Top Notch */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1.5 bg-[#C1C1C1] rounded-b-sm shadow-[inset_0_-1px_1px_rgba(0,0,0,0.1)]"/>
+          
+          <div 
+              className="relative flex h-[140px] w-full max-w-2xl items-center justify-between rounded-lg bg-[#d1d1d1] p-3 shadow-[0_6px_12px_rgba(0,0,0,0.4),inset_0_2px_1px_#eaeaea,inset_0_-2px_1px_#a0a0a0]"
+              style={{ width: '340px' }}
+          >
 
             {/* Black Faceplate */}
             <div className="absolute inset-x-4 inset-y-5 rounded-md bg-black shadow-[inset_0_4px_8px_rgba(0,0,0,0.6)]" />
@@ -151,8 +151,8 @@ export default function HobbyDorkControllerGame() {
                 <div className="absolute h-full w-full rounded-full bg-black/60 shadow-[inset_0_4px_6px_rgba(0,0,0,0.7)]" />
                 <div className="relative h-[68px] w-[68px]">
                   {/* Plus Shape */}
-                  <div className="absolute h-full w-[22px] left-1/2 -translate-x-1/2 rounded-[2px] bg-[#4A4A4A] shadow-[inset_0_0_2px_#222,0_1px_0_#666]" />
-                  <div className="absolute w-full h-[22px] top-1/2 -translate-y-1/2 rounded-[2px] bg-[#4A4A4A] shadow-[inset_0_0_2px_#222,0_1px_0_#666]" />
+                  <div className="absolute h-full w-[22px] left-1/2 -translate-x-1/2 rounded-[2px] bg-[#4a4a4a] shadow-[inset_0_0_2px_#222,0_1px_0_#666]" />
+                  <div className="absolute w-full h-[22px] top-1/2 -translate-y-1/2 rounded-[2px] bg-[#4a4a4a] shadow-[inset_0_0_2px_#222,0_1px_0_#666]" />
                   
                   {/* Center Circle */}
                   <div className="absolute grid place-items-center h-5 w-5 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -169,8 +169,8 @@ export default function HobbyDorkControllerGame() {
 
 
               {/* Middle: Logo, Start/Select */}
-              <div className="flex-shrink-0 flex flex-col items-center justify-center gap-4 text-[#D81E27]">
-                <div className="font-nintendo text-3xl font-black italic text-[#9F1D21] drop-shadow-[1px_1px_0px_#222]">
+              <div className="flex-shrink-0 flex flex-col items-center justify-center gap-4 text-[#d81e27]">
+                <div className="font-nintendo text-3xl font-black italic text-[#9f1d21] drop-shadow-[1px_1px_0px_#222]">
                   HobbyDork
                 </div>
                 <div className="flex w-full items-center justify-center gap-6">
