@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import StoreCard from '@/components/StoreCard';
 import type { Store as StoreType } from '@/lib/types';
 import { StandaloneVaultDoor } from './StandaloneVaultDoor';
+import HobbyDorkControllerGame from '@/components/dashboard/HobbyDorkControllerGame';
 
 import genieImg from './genie.png';
 
@@ -317,8 +318,8 @@ function VaultAndGenieSection() {
 
   return (
     <section className="rounded-2xl border bg-gradient-to-br from-zinc-900 via-black to-zinc-950 p-6 sm:p-8 shadow-xl">
-      <div className="grid items-center gap-8 lg:grid-cols-2">
-        {/* Left: Vault / Easter egg */}
+      <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1.1fr),auto,minmax(0,1fr)]">
+        {/* Left: Vault / Easter egg (your vault door image/component) */}
         <div className="space-y-5">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <div className="relative flex justify-center sm:justify-start">
@@ -334,77 +335,90 @@ function VaultAndGenieSection() {
                 Unlock the HobbyDork vault?
               </h2>
               <p className="text-sm text-muted-foreground">
-                Tap the door, punch in the secret 4-digit PIN, and hit the winner
-                screen if you guess it.
+                Tap the door, punch in the secret 4-digit PIN, and hit the
+                winner screen if you guess it. The genie swears it knows the
+                code… but it’s not telling.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Right: Ask HobbyDork (BUY / SELL) */}
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-zinc-800 bg-black/50 p-4 sm:p-5">
-          <div className="flex w-full items-start gap-3">
-            <div className="flex-1 space-y-2">
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
-                HobbyDork Genie
-              </p>
-              <h3 className="text-5xl font-bold uppercase tracking-wider">
-                Ask HobbyDork
-              </h3>
-              <p className="text-xs text-muted-foreground pt-1">
-                Can't decide? Let the HobbyDork genie determine your fate.
-              </p>
-            </div>
-            <Image
-              src={genieImg}
-              alt="HobbyDork genie"
-              className="w-24 sm:w-28 drop-shadow-[0_0_22px_rgba(0,0,0,0.9)]"
-              priority
-            />
-          </div>
+        {/* Divider between vault + genie on desktop */}
+        <div className="hidden h-full items-stretch justify-center lg:flex">
+          <div className="h-full w-px bg-gradient-to-b from-zinc-700/0 via-zinc-700/80 to-zinc-700/0" />
+        </div>
 
-          <div className="flex w-full flex-col gap-3 sm:flex-row">
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => handleAsk('BUY')}
-              disabled={isThinking}
-              className="flex-1 border-emerald-500/60 bg-emerald-500/5 text-base hover:bg-emerald-500/15"
-            >
-              Should I BUY?
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => handleAsk('SELL')}
-              disabled={isThinking}
-              className="flex-1 border-rose-500/60 bg-rose-500/5 text-base hover:bg-rose-500/15"
-            >
-              Should I SELL?
-            </Button>
-          </div>
+        {/* Right: Ask The Dork (BUY / SELL) */}
+        <div>
+          {/* Horizontal divider on mobile between vault and genie */}
+          <div className="mb-4 h-px w-full bg-zinc-800/80 lg:hidden" />
 
-          <div className="mt-2 w-full rounded-xl border border-zinc-800 bg-black/60 p-4 text-center">
-            {isThinking && (
-              <p className="text-lg text-muted-foreground">
-                The genie is thinking...
-              </p>
-            )}
-            {!isThinking && answer && label && (
-              <div className="space-y-1">
-                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  {label}
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-zinc-800 bg-black/50 p-4 sm:p-5">
+            <div className="flex w-full items-start gap-3">
+              <div className="flex-1 space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-300/80">
+                  HobbyDork Genie
                 </p>
-                <p className="text-xl font-bold text-primary">{answer}</p>
+                {/* Cool genie-style “ASK THE DORK” text */}
+                <h3 className="bg-gradient-to-r from-cyan-300 via-emerald-300 to-violet-400 bg-clip-text text-3xl font-black uppercase tracking-[0.35em] text-transparent sm:text-4xl">
+                  ASK THE DORK
+                </h3>
+                <p className="pt-1 text-xs text-muted-foreground">
+                  Can&apos;t decide if you should buy or sell? The genie has an
+                  opinion — you might not like it, but you&apos;ll get one.
+                </p>
               </div>
-            )}
-            {!isThinking && !answer && (
-              <p className="text-lg text-muted-foreground">
-                The Vault awaits your question.
-              </p>
-            )}
+              <Image
+                src={genieImg}
+                alt="HobbyDork genie"
+                className="w-24 sm:w-28 drop-shadow-[0_0_22px_rgba(0,0,0,0.9)]"
+                priority
+              />
+            </div>
+
+            <div className="flex w-full flex-col gap-3 sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={() => handleAsk('BUY')}
+                disabled={isThinking}
+                className="flex-1 border-emerald-500/60 bg-emerald-500/5 text-base hover:bg-emerald-500/15"
+              >
+                Should I BUY?
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={() => handleAsk('SELL')}
+                disabled={isThinking}
+                className="flex-1 border-rose-500/60 bg-rose-500/5 text-base hover:bg-rose-500/15"
+              >
+                Should I SELL?
+              </Button>
+            </div>
+
+            <div className="mt-2 w-full rounded-xl border border-zinc-800 bg-black/60 p-4 text-center">
+              {isThinking && (
+                <p className="text-lg text-muted-foreground">
+                  The genie is thinking...
+                </p>
+              )}
+              {!isThinking && answer && label && (
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    {label}
+                  </p>
+                  <p className="text-xl font-bold text-primary">{answer}</p>
+                </div>
+              )}
+              {!isThinking && !answer && (
+                <p className="text-lg text-muted-foreground">
+                  The Vault awaits your question.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -433,8 +447,8 @@ export default function Dashboard() {
               Welcome, {loading ? '...' : displayName}
             </h1>
             <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-              See what's hot, what just hit the vault, and crack open the secret
-              HobbyDork Vault to win something crazy.
+              See what&apos;s hot, what just hit the vault, and play with the
+              genie and controller while you&apos;re here.
             </p>
           </div>
           <div className="flex gap-3">
@@ -456,6 +470,10 @@ export default function Dashboard() {
       <SpotlightStoresSection />
       <NewStoresSection />
       <NewListingsSection />
+
+      {/* NES-style HobbyDork controller game dropped into the dashboard */}
+      <HobbyDorkControllerGame />
+
       <VaultAndGenieSection />
     </div>
   );

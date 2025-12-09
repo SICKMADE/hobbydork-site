@@ -151,7 +151,7 @@ export default function SidebarNav() {
             className="bg-background rounded-lg p-2"
             style={{
               boxShadow:
-                'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)',
+                '2px 2px 8px rgba(0,0,0,0.5), -2px -2px 8px rgba(255,255,255,0.08)',
             }}
           >
             <SidebarMenu>
@@ -183,7 +183,7 @@ export default function SidebarNav() {
             className="bg-background rounded-lg p-2"
             style={{
               boxShadow:
-                'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)',
+                '2px 2px 8px rgba(0,0,0,0.5), -2px -2px 8px rgba(255,255,255,0.08)',
             }}
           >
             <SidebarMenu>
@@ -227,7 +227,7 @@ export default function SidebarNav() {
               className="bg-background rounded-lg p-2"
               style={{
                 boxShadow:
-                  'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)',
+                  '2px 2px 8px rgba(0,0,0,0.5), -2px -2px 8px rgba(255,255,255,0.08)',
               }}
             >
               <SidebarMenu>
@@ -280,7 +280,7 @@ export default function SidebarNav() {
               className="bg-background rounded-lg p-2"
               style={{
                 boxShadow:
-                  'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)',
+                  '2px 2px 8px rgba(0,0,0,0.5), -2px -2px 8px rgba(255,255,255,0.08)',
               }}
             >
               <SidebarMenu>
@@ -313,7 +313,7 @@ export default function SidebarNav() {
             className="bg-background rounded-lg p-2"
             style={{
               boxShadow:
-                'inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05)',
+                '2px 2px 8px rgba(0,0,0,0.5), -2px -2px 8px rgba(255,255,255,0.08)',
             }}
           >
             <SidebarMenu>
