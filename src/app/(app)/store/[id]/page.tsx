@@ -55,6 +55,7 @@ import {
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { ReportUserDialog } from '@/components/moderation/ReportUserDialog';
+import ListingCard from '@/components/ListingCard';
 
 type StoreDoc = {
   id?: string;
@@ -72,6 +73,7 @@ type StoreDoc = {
 
 type ListingDoc = {
   id?: string;
+  listingId: string;
   storeId: string;
   ownerUid: string;
   title: string;
@@ -505,71 +507,13 @@ export default function StorePage() {
           )}
 
           {!listingsLoading && listings && listings.length > 0 && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {listings.map((listing) => {
-                const createdText = listing.createdAt
-                  ? formatDistanceToNow(
-                      listing.createdAt.toDate
-                        ? listing.createdAt.toDate()
-                        : listing.createdAt,
-                      { addSuffix: true },
-                    )
-                  : null;
-
-                const categoryLabel = listing.category
-                  ? CATEGORY_LABELS[listing.category]
-                  : undefined;
-
-                return (
-                  <Link
-                    key={listing.id}
-                    href={`/listings/${listing.id}`}
-                  >
-                    <Card className="h-full overflow-hidden transition hover:-translate-y-0.5 hover:shadow-md">
-                      {listing.primaryImageUrl && (
-                        <div className="relative aspect-square w-full bg-muted">
-                          <Image
-                            src={listing.primaryImageUrl}
-                            alt={listing.title}
-                            fill
-                            className="object-contain"
-                          />
-                        </div>
-                      )}
-                      <CardContent className="space-y-1 py-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold">
-                              {listing.title}
-                            </p>
-                          </div>
-                          <div className="flex flex-col items-end gap-1">
-                            <span className="text-sm font-bold">
-                              ${listing.price.toFixed(2)}
-                            </span>
-                            {categoryLabel && (
-                              <Badge
-                                variant="outline"
-                                className="text-[10px]"
-                              >
-                                {categoryLabel}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground">
-                          <span>
-                            {listing.quantityAvailable} in stock
-                          </span>
-                          {createdText && (
-                            <span>Listed {createdText}</span>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                );
-              })}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {listings.map((listing: any) => (
+                <ListingCard
+                  key={listing.id || listing.listingId}
+                  listing={listing}
+                />
+              ))}
             </div>
           )}
         </div>
