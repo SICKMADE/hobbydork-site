@@ -117,7 +117,7 @@ export default function HobbyDorkControllerGame() {
   })();
   
   const faceBtnActive =
-    'border-emerald-400 shadow-[inset_0_3px_6px_rgba(0,255,150,0.4)] ring-2 ring-emerald-400/80 bg-emerald-600';
+    'border-emerald-400 shadow-[inset_0_3px_6px_rgba(0,255,150,0.4),0_1px_2px_rgba(0,0,0,0.6)] ring-2 ring-emerald-400/80 bg-emerald-600 translate-y-0.5';
 
   const startSelectActive =
     'border-emerald-400 bg-emerald-700/85 text-zinc-50 shadow-inner translate-y-px';
@@ -158,9 +158,14 @@ export default function HobbyDorkControllerGame() {
                         <div className="relative h-[90px] w-[90px] flex items-center justify-center">
                             {/* Circular depression */}
                             <div className="absolute h-full w-full rounded-full bg-black/30 shadow-inner" />
+                            
                             {/* D-Pad cross */}
-                            <div className="absolute h-[calc(100%-10px)] w-[30px] bg-gradient-to-b from-[#3a3a3a] to-[#2a2a2a] rounded-[3px] shadow-md border-t border-zinc-500/80 border-b border-black/80" />
-                            <div className="absolute w-[calc(100%-10px)] h-[30px] bg-gradient-to-r from-[#3a3a3a] to-[#2a2a2a] rounded-[3px] shadow-md border-l border-zinc-500/80 border-r border-black/80" />
+                            <div className="absolute h-full w-full flex items-center justify-center">
+                               <div className="absolute h-[calc(100%-12px)] w-[30px] bg-neutral-700 rounded-[3px] shadow-md border-t border-neutral-800 border-b border-neutral-900" />
+                               <div className="absolute w-[calc(100%-12px)] h-[30px] bg-neutral-700 rounded-[3px] shadow-md border-l border-neutral-800 border-r border-neutral-900" />
+                               <div className="absolute h-[calc(100%-12px)] w-[30px] bg-gradient-to-b from-neutral-600 to-neutral-800 rounded-[3px]" />
+                               <div className="absolute w-[calc(100%-12px)] h-[30px] bg-gradient-to-r from-neutral-600 to-neutral-800 rounded-[3px]" />
+                            </div>
                             
                             {/* Central circle */}
                             <div className="absolute h-4 w-4 rounded-full bg-black/40 shadow-inner" />
@@ -189,11 +194,11 @@ export default function HobbyDorkControllerGame() {
                     </div>
                     
                     {/* RIGHT: A / B buttons */}
-                    <div className="flex-shrink-0">
+                     <div className="flex-shrink-0">
                          <div className="relative w-[150px] h-[70px] flex items-center justify-center">
                              <div className="flex items-center gap-4">
-                                <button type="button" onClick={() => handlePress('B')} className={`h-14 w-14 rounded-full bg-[#b02026] text-white text-lg font-bold border-b-4 border-black/50 shadow-[inset_0_2px_3px_rgba(255,255,255,0.2),_0_2px_3px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:border-b-2 transition-all ${ activeButton === 'B' ? faceBtnActive : '' }`}>B</button>
-                                <button type="button" onClick={() => handlePress('A')} className={`h-14 w-14 rounded-full bg-[#b02026] text-white text-lg font-bold border-b-4 border-black/50 shadow-[inset_0_2px_3px_rgba(255,255,255,0.2),_0_2px_3px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:border-b-2 transition-all ${ activeButton === 'A' ? faceBtnActive : '' }`}>A</button>
+                                <button type="button" onClick={() => handlePress('B')} className={`h-14 w-14 rounded-full bg-gradient-to-b from-[#c62429] to-[#8b1919] text-white text-lg font-bold border-b-4 border-black/50 shadow-[inset_0_2px_3px_rgba(255,255,255,0.2),_0_4px_6px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:border-b-2 transition-all ${ activeButton === 'B' ? faceBtnActive : '' }`}>B</button>
+                                <button type="button" onClick={() => handlePress('A')} className={`h-14 w-14 rounded-full bg-gradient-to-b from-[#c62429] to-[#8b1919] text-white text-lg font-bold border-b-4 border-black/50 shadow-[inset_0_2px_3px_rgba(255,255,255,0.2),_0_4px_6px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:border-b-2 transition-all ${ activeButton === 'A' ? faceBtnActive : '' }`}>A</button>
                             </div>
                         </div>
                          <div className="flex w-full items-center justify-around px-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-[#c62429]">
