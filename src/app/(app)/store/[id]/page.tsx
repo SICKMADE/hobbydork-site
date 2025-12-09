@@ -527,7 +527,7 @@ export default function StorePage() {
                   >
                     <Card className="h-full overflow-hidden transition hover:-translate-y-0.5 hover:shadow-md">
                       {listing.primaryImageUrl && (
-                        <div className="relative h-32 w-full bg-muted">
+                        <div className="relative aspect-square w-full bg-muted">
                           <Image
                             src={listing.primaryImageUrl}
                             alt={listing.title}
