@@ -117,7 +117,7 @@ export default function HobbyDorkControllerGame() {
   })();
   
   const faceBtnActive =
-    'border-emerald-400 shadow-inner translate-y-px ring-2 ring-emerald-400/60';
+    'border-emerald-400 shadow-[inset_0_3px_6px_rgba(0,255,150,0.4)] ring-2 ring-emerald-400/80 bg-emerald-600';
 
   const startSelectActive =
     'border-emerald-400 bg-emerald-700/85 text-zinc-50 shadow-inner translate-y-px';
@@ -148,7 +148,7 @@ export default function HobbyDorkControllerGame() {
         <p className="h-4 text-xs text-muted-foreground">{statusLabel}</p>
 
         {/* WIDE CONTROLLER BODY */}
-        <div className="mx-auto flex h-[240px] w-full max-w-[580px] items-center justify-center">
+        <div className="mx-auto flex h-[280px] w-full max-w-[640px] items-center justify-center">
             <div className="relative h-full w-full rounded-[12px] bg-gradient-to-b from-neutral-300 to-neutral-200 p-4 shadow-[0_12px_30px_rgba(0,0,0,0.6)] ring-1 ring-black/50">
                 {/* Black faceplate */}
                 <div className="relative h-full w-full rounded-[6px] bg-gradient-to-b from-[#3f3d40] via-[#111] to-[#18181a] px-8 py-4 flex items-center justify-between gap-6">
@@ -159,28 +159,31 @@ export default function HobbyDorkControllerGame() {
                             {/* Circular depression */}
                             <div className="absolute h-full w-full rounded-full bg-black/30 shadow-inner" />
                             {/* D-Pad cross */}
-                            <div className="absolute h-full w-10 bg-[#2d2d2d] rounded-[3px] shadow-md border-t border-zinc-500 border-b border-black/80" />
-                            <div className="absolute w-full h-10 bg-[#2d2d2d] rounded-[3px] shadow-md border-l border-zinc-500 border-r border-black/80" />
+                            <div className="absolute h-[calc(100%-10px)] w-[30px] bg-gradient-to-b from-[#3a3a3a] to-[#2a2a2a] rounded-[3px] shadow-md border-t border-zinc-500/80 border-b border-black/80" />
+                            <div className="absolute w-[calc(100%-10px)] h-[30px] bg-gradient-to-r from-[#3a3a3a] to-[#2a2a2a] rounded-[3px] shadow-md border-l border-zinc-500/80 border-r border-black/80" />
+                            
+                            {/* Central circle */}
+                            <div className="absolute h-4 w-4 rounded-full bg-black/40 shadow-inner" />
 
                             {/* Clickable zones */}
-                            <button type="button" onClick={() => handlePress('UP')} className={`absolute top-0 h-10 w-10 text-zinc-400 text-xs flex items-start justify-center pt-1 rounded-t-md transition-colors ${activeButton === 'UP' ? 'bg-emerald-500/80' : ''}`}>▲</button>
-                            <button type="button" onClick={() => handlePress('DOWN')} className={`absolute bottom-0 h-10 w-10 text-zinc-400 text-xs flex items-end justify-center pb-1 rounded-b-md transition-colors ${activeButton === 'DOWN' ? 'bg-emerald-500/80' : ''}`}>▼</button>
-                            <button type="button" onClick={() => handlePress('LEFT')} className={`absolute left-0 h-10 w-10 text-zinc-400 text-xs flex items-center justify-start pl-1 rounded-l-md transition-colors ${activeButton === 'LEFT' ? 'bg-emerald-500/80' : ''}`}>◄</button>
-                            <button type="button" onClick={() => handlePress('RIGHT')} className={`absolute right-0 h-10 w-10 text-zinc-400 text-xs flex items-center justify-end pr-1 rounded-r-md transition-colors ${activeButton === 'RIGHT' ? 'bg-emerald-500/80' : ''}`}>►</button>
+                            <button type="button" onClick={() => handlePress('UP')} className={`absolute top-0 h-[35px] w-[30px] flex items-center justify-center pt-1 rounded-t-[3px] transition-colors ${activeButton === 'UP' ? 'bg-emerald-500/90' : ''}`}><span className="w-0 h-0 border-x-4 border-x-transparent border-b-[6px] border-b-black/40"></span></button>
+                            <button type="button" onClick={() => handlePress('DOWN')} className={`absolute bottom-0 h-[35px] w-[30px] flex items-center justify-center pb-1 rounded-b-[3px] transition-colors ${activeButton === 'DOWN' ? 'bg-emerald-500/90' : ''}`}><span className="w-0 h-0 border-x-4 border-x-transparent border-t-[6px] border-t-black/40"></span></button>
+                            <button type="button" onClick={() => handlePress('LEFT')} className={`absolute left-0 w-[35px] h-[30px] flex items-center justify-center pl-1 rounded-l-[3px] transition-colors ${activeButton === 'LEFT' ? 'bg-emerald-500/90' : ''}`}><span className="w-0 h-0 border-y-4 border-y-transparent border-r-[6px] border-r-black/40"></span></button>
+                            <button type="button" onClick={() => handlePress('RIGHT')} className={`absolute right-0 w-[35px] h-[30px] flex items-center justify-center pr-1 rounded-r-[3px] transition-colors ${activeButton === 'RIGHT' ? 'bg-emerald-500/90' : ''}`}><span className="w-0 h-0 border-y-4 border-y-transparent border-l-[6px] border-l-black/40"></span></button>
                         </div>
                     </div>
 
                     {/* MIDDLE: SELECT / START & LOGO */}
-                    <div className="flex-1 flex flex-col items-center justify-center gap-3">
-                        <div className="text-center text-[18px] font-black tracking-[0.18em] text-[#c62429] uppercase">HobbyDork</div>
+                    <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                        <div className="text-center text-[20px] font-black tracking-[0.18em] text-[#c62429] uppercase">HobbyDork</div>
                         <div className="flex items-center justify-center gap-4">
                              <div className="flex flex-col items-center gap-1.5">
                                 <button type="button" className={`h-4 w-12 rounded bg-zinc-700/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),_inset_0_-1px_1px_rgba(0,0,0,0.5)] active:shadow-inner`}></button>
-                                <span className="text-[8px] font-semibold uppercase tracking-[0.1em] text-[#8b1919]">Select</span>
+                                <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[#8b1919]">Select</span>
                             </div>
                             <div className="flex flex-col items-center gap-1.5">
-                                 <button type="button" onClick={() => handlePress('START')} className={`h-4 w-12 rounded bg-zinc-700/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),_inset_0_-1px_1px_rgba(0,0,0,0.5)] active:shadow-inner transition-colors ${ activeButton === 'START' ? 'bg-emerald-700/85' : '' }`}></button>
-                                <span className="text-[8px] font-semibold uppercase tracking-[0.1em] text-[#8b1919]">Start</span>
+                                 <button type="button" onClick={() => handlePress('START')} className={`h-4 w-12 rounded bg-zinc-700/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),_inset_0_-1px_1px_rgba(0,0,0,0.5)] active:shadow-inner transition-colors ${ activeButton === 'START' ? 'bg-emerald-700/95 shadow-inner' : '' }`}></button>
+                                <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[#8b1919]">Start</span>
                             </div>
                         </div>
                     </div>
@@ -189,11 +192,11 @@ export default function HobbyDorkControllerGame() {
                     <div className="flex-shrink-0">
                          <div className="relative w-[150px] h-[70px] flex items-center justify-center">
                              <div className="flex items-center gap-4">
-                                <button type="button" onClick={() => handlePress('B')} className={`h-14 w-14 rounded-full bg-[#b02026] text-white text-lg font-bold border-b-4 border-black/50 shadow-[inset_0_2px_3px_rgba(255,255,255,0.2),_0_2px_3px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:border-b-2 transition-transform ${ activeButton === 'B' ? faceBtnActive : '' }`}>B</button>
-                                <button type="button" onClick={() => handlePress('A')} className={`h-14 w-14 rounded-full bg-[#b02026] text-white text-lg font-bold border-b-4 border-black/50 shadow-[inset_0_2px_3px_rgba(255,255,255,0.2),_0_2px_3px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:border-b-2 transition-transform ${ activeButton === 'A' ? faceBtnActive : '' }`}>A</button>
+                                <button type="button" onClick={() => handlePress('B')} className={`h-14 w-14 rounded-full bg-[#b02026] text-white text-lg font-bold border-b-4 border-black/50 shadow-[inset_0_2px_3px_rgba(255,255,255,0.2),_0_2px_3px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:border-b-2 transition-all ${ activeButton === 'B' ? faceBtnActive : '' }`}>B</button>
+                                <button type="button" onClick={() => handlePress('A')} className={`h-14 w-14 rounded-full bg-[#b02026] text-white text-lg font-bold border-b-4 border-black/50 shadow-[inset_0_2px_3px_rgba(255,255,255,0.2),_0_2px_3px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:border-b-2 transition-all ${ activeButton === 'A' ? faceBtnActive : '' }`}>A</button>
                             </div>
                         </div>
-                         <div className="flex w-full items-center justify-around px-2 text-[9px] font-semibold uppercase tracking-[0.25em] text-[#c62429]">
+                         <div className="flex w-full items-center justify-around px-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-[#c62429]">
                             <span>B</span>
                             <span>A</span>
                         </div>
