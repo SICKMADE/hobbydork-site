@@ -134,9 +134,9 @@ export default function HobbyDorkControllerGame() {
       <CardContent className="space-y-4 pt-0">
         
         {/* Controller body */}
-        <div className="mx-auto flex h-[280px] max-w-3xl items-center justify-center select-none p-4">
+        <div className="mx-auto flex h-[280px] items-center justify-center select-none p-4">
           {/* Main Gray Body */}
-          <div className="relative flex h-[240px] w-full max-w-3xl items-center justify-between rounded-lg bg-[#D1D1D1] p-3 shadow-[0_6px_12px_rgba(0,0,0,0.4),inset_0_2px_1px_#EAEAEA,inset_0_-2px_1px_#A0A0A0]">
+          <div className="relative flex h-[140px] w-full max-w-2xl items-center justify-between rounded-lg bg-[#D1D1D1] p-3 shadow-[0_6px_12px_rgba(0,0,0,0.4),inset_0_2px_1px_#EAEAEA,inset_0_-2px_1px_#A0A0A0]">
             {/* Top notch */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1.5 bg-[#C1C1C1] rounded-b-sm shadow-[inset_0_-1px_1px_rgba(0,0,0,0.1)]"/>
 
