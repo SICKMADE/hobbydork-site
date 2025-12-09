@@ -132,16 +132,16 @@ export default function HobbyDorkControllerGame() {
       </CardHeader>
 
       <CardContent className="space-y-4 pt-0">
-        <div className="mx-auto flex h-[280px] w-full items-center justify-center select-none p-4">
+        <div className="mx-auto flex h-[320px] w-full items-center justify-center select-none p-4">
           {/* Controller Body */}
           <div
-            className="relative flex h-[220px] w-full max-w-4xl items-center justify-between rounded-lg bg-[#d1d5db] p-2 shadow-[0_4px_8px_rgba(0,0,0,0.3),inset_0_1px_1px_#E5E7EB,inset_0_-2px_1px_#9CA3AF]"
+            className="relative flex h-[260px] w-full max-w-4xl items-center justify-between rounded-lg bg-[#d1d5db] p-2 shadow-[0_4px_8px_rgba(0,0,0,0.3),inset_0_1px_1px_#E5E7EB,inset_0_-2px_1px_#9CA3AF]"
           >
             {/* Cord notch */}
             <div className="absolute top-[-4px] left-1/2 -translate-x-1/2 w-20 h-3 bg-[#9CA3AF] rounded-b-sm shadow-[inset_0_1px_1px_rgba(0,0,0,0.2)]" />
             
             {/* Black Faceplate */}
-            <div className="absolute inset-x-4 inset-y-5 rounded bg-[#212121] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]" />
+            <div className="absolute inset-x-4 inset-y-8 rounded bg-[#212121] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]" />
 
             <div className="relative z-10 flex w-full h-full items-center justify-between px-10">
               {/* D-Pad */}
