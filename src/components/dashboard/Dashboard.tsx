@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -28,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Store } from 'lucide-react';
 
 import genieImg from './genie.png';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 
 /* =======================
    Ask HobbyDork (8-ball) helpers
@@ -157,19 +159,26 @@ function NewStoreCard({ store }: { store: StoreType }) {
     const cardImage = owner?.avatar;
 
     return (
-      <Link href={`/store/${store.storeId}`} className="group flex flex-col items-center gap-3 text-center transition-transform hover:-translate-y-1">
-          <Avatar className="h-24 w-24 border-2 border-primary/20 ring-4 ring-background group-hover:border-primary transition-all">
-              <AvatarImage src={cardImage} alt={store.storeName} />
-              <AvatarFallback>{store.storeName?.charAt(0) || 'S'}</AvatarFallback>
-          </Avatar>
-          <div className="space-y-1">
-              <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{store.storeName}</p>
-              <Button variant="ghost" size="sm" className="h-auto px-3 py-1 text-xs text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary">
-                  <Store className="mr-1.5 h-3 w-3" />
-                  Visit Store
-              </Button>
-          </div>
-      </Link>
+        <Link href={`/store/${store.storeId}`} className="block h-full">
+            <Card className="h-full flex flex-col overflow-hidden hover:shadow-lg transition-shadow group">
+                <div className="relative w-full aspect-[4/3] bg-muted flex items-center justify-center">
+                    {cardImage ? (
+                        <Image
+                            src={cardImage}
+                            alt={store.storeName}
+                            fill
+                            sizes="(min-width: 1024px) 250px, 50vw"
+                            className="object-contain transition-transform group-hover:scale-105"
+                        />
+                    ) : (
+                        <Store className="h-10 w-10 text-muted-foreground" />
+                    )}
+                </div>
+                <CardHeader className="flex-1 p-3">
+                    <CardTitle className="text-xs font-semibold line-clamp-2">{store.storeName}</CardTitle>
+                </CardHeader>
+            </Card>
+        </Link>
     );
 }
 
@@ -217,7 +226,7 @@ function NewStoresSection() {
         <p className="text-xs text-muted-foreground">Loading stores…</p>
       )}
 
-      <div className="flex gap-8 overflow-x-auto pb-2 pt-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {stores.map((store) => {
           const id = (store as any).storeId ?? (store as any).id;
           if (!id) return null;
@@ -230,7 +239,6 @@ function NewStoresSection() {
           return (
             <div
               key={id}
-              className="flex-[0_0_120px] max-w-xs"
             >
               <NewStoreCard store={storeWithId} />
             </div>
