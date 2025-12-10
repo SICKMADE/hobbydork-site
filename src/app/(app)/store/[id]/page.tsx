@@ -4,7 +4,7 @@
 import { useState, ChangeEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 
 import AppLayout from '@/components/layout/AppLayout';
@@ -50,6 +50,7 @@ import {
   Flag,
   Upload,
   Eye,
+  Edit,
 } from 'lucide-react';
 
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -138,6 +139,7 @@ function renderStars(avg: number | null | undefined, size = 14) {
 export default function StorePage() {
   const params = useParams<{ id: string }>();
   const storeId = params?.id;
+  const router = useRouter();
 
   const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
@@ -244,6 +246,10 @@ export default function StorePage() {
   const handleCopyLink = () => {
     if (!shareUrl || typeof navigator === 'undefined') return;
     navigator.clipboard.writeText(shareUrl).catch(() => {});
+    toast({
+        title: "Store link copied!",
+        description: "You can now share it with others."
+    })
   };
 
   const handleStoreImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -318,7 +324,15 @@ export default function StorePage() {
             disabled={uploadingImage}
           />
         </label>
-
+        <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-xs comic-button"
+            onClick={() => router.push('/profile')}
+        >
+            <Edit className="h-3 w-3" />
+            Edit Profile
+        </Button>
         <Button
           size="sm"
           variant="outline"
@@ -381,7 +395,7 @@ export default function StorePage() {
             onClick={() => handleCopyLink()}
           >
             <Link2 className="h-4 w-4" />
-            Copy link
+            Copy store link
           </Button>
 
           {!isOwner && (
@@ -429,7 +443,7 @@ export default function StorePage() {
       ) : listings && listings.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {listings.map((listing: any) => (
-            <div key={listing.id || listing.listingId} className="comic-panel !p-0 overflow-hidden border-4 border-black">
+            <div key={listing.id || listing.listingId} className="comic-panel !p-0 overflow-hidden border-black">
                 <ListingCard listing={listing} />
             </div>
           ))}
