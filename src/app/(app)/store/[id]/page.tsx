@@ -289,7 +289,7 @@ export default function StorePage() {
   <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-5">
 
     {/* -------------------- POSTER WITH TAPE -------------------- */}
-    <Card className="comic-panel !p-0 overflow-hidden relative">
+    <Card className="comic-panel !p-0 overflow-visible relative bg-muted/30">
         <div className="tape-corner top-left"></div>
         <div className="tape-corner top-right"></div>
         <div className="tape-corner bottom-left"></div>
@@ -299,7 +299,7 @@ export default function StorePage() {
             src={poster}
             alt="Store Poster"
             fill
-            className="object-cover"
+            className="object-contain p-4"
           />
         </div>
     </Card>
