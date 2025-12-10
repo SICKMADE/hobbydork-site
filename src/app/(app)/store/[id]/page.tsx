@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, ChangeEvent } from 'react';
@@ -46,7 +45,6 @@ import {
 import {
   Star,
   MessageCircle,
-  ShoppingBag,
   Link2,
   Flag,
   Upload,
@@ -59,13 +57,12 @@ import { ReportUserDialog } from '@/components/moderation/ReportUserDialog';
 import ListingCard from '@/components/ListingCard';
 
 type StoreDoc = {
-  id?: string;
   ownerUid: string;
   storeName: string;
   slug?: string;
   about?: string;
-  avatarUrl?: string;       // legacy store avatar/logo
-  storeImageUrl?: string;   // big storefront image
+  avatarUrl?: string;
+  storeImageUrl?: string;
   ratingAverage?: number;
   ratingCount?: number;
   itemsSold?: number;
@@ -82,13 +79,7 @@ type ListingDoc = {
   price: number;
   quantityAvailable: number;
   state: 'ACTIVE' | 'DRAFT' | 'SOLD' | 'HIDDEN';
-  category?:
-    | 'COMIC_BOOKS'
-    | 'SPORTS_CARDS'
-    | 'POKEMON_CARDS'
-    | 'VIDEO_GAMES'
-    | 'TOYS'
-    | 'OTHER';
+  category?: string;
   createdAt?: any;
 };
 
@@ -106,18 +97,6 @@ type OwnerProfile = {
   photoURL?: string;
   profileImageUrl?: string;
   displayName?: string;
-};
-
-const CATEGORY_LABELS: Record<
-  NonNullable<ListingDoc['category']>,
-  string
-> = {
-  COMIC_BOOKS: 'Comic books',
-  SPORTS_CARDS: 'Sports cards',
-  POKEMON_CARDS: 'Pokémon cards',
-  VIDEO_GAMES: 'Video games',
-  TOYS: 'Toys',
-  OTHER: 'Other',
 };
 
 function renderStars(avg: number | null | undefined, size = 14) {
@@ -165,9 +144,7 @@ export default function StorePage() {
 
   const [reportOpen, setReportOpen] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [storeImageOverride, setStoreImageOverride] = useState<string | null>(
-    null,
-  );
+  const [storeImageOverride, setStoreImageOverride] = useState<string | null>(null);
   const [viewAsBuyer, setViewAsBuyer] = useState(false);
 
   // Store doc
@@ -176,12 +153,9 @@ export default function StorePage() {
     return doc(firestore, 'storefronts', storeId);
   }, [firestore, storeId]);
 
-  const {
-    data: store,
-    isLoading: storeLoading,
-  } = useDoc<StoreDoc>(storeRef as any);
+  const { data: store, isLoading: storeLoading } = useDoc<StoreDoc>(storeRef as any);
 
-  // Owner profile doc (this is where the real avatar lives)
+  // Owner profile doc
   const ownerRef = useMemoFirebase(() => {
     if (!firestore || !store?.ownerUid) return null;
     return doc(firestore, 'users', store.ownerUid);
@@ -189,35 +163,29 @@ export default function StorePage() {
 
   const { data: ownerProfile } = useDoc<OwnerProfile>(ownerRef as any);
 
-  // Listings for the store
+  // Listings
   const listingsQuery = useMemoFirebase(() => {
     if (!firestore || !storeId) return null;
     return query(
       collection(firestore, 'listings'),
       where('storeId', '==', storeId),
       where('state', '==', 'ACTIVE'),
-      orderBy('createdAt', 'desc'),
+      orderBy('createdAt', 'desc')
     );
   }, [firestore, storeId]);
 
-  const {
-    data: listings,
-    isLoading: listingsLoading,
-  } = useCollection<ListingDoc>(listingsQuery as any);
+  const { data: listings, isLoading: listingsLoading } = useCollection(listingsQuery as any);
 
   // Reviews
   const reviewsQuery = useMemoFirebase(() => {
     if (!firestore || !storeId) return null;
     return query(
       collection(firestore, 'storefronts', storeId, 'reviews'),
-      orderBy('createdAt', 'desc'),
+      orderBy('createdAt', 'desc')
     );
   }, [firestore, storeId]);
 
-  const {
-    data: reviews,
-    isLoading: reviewsLoading,
-  } = useCollection<ReviewDoc>(reviewsQuery as any);
+  const { data: reviews, isLoading: reviewsLoading } = useCollection(reviewsQuery as any);
 
   if (authLoading || storeLoading) {
     return (
@@ -246,14 +214,14 @@ export default function StorePage() {
   const ratingCount = store.ratingCount ?? 0;
   const itemsSold = store.itemsSold ?? 0;
 
-  // Big storefront image
-  const storeImage =
+  // Poster image
+  const poster =
     storeImageOverride ||
     store.storeImageUrl ||
     store.avatarUrl ||
-    'https://via.placeholder.com/900x600?text=Storefront';
+    'https://via.placeholder.com/540x420?text=Storefront';
 
-  // THIS is the profile picture: prefer user.avatar, then fallbacks
+  // Owner avatar
   const ownerAvatar =
     ownerProfile?.avatar ||
     ownerProfile?.avatarUrl ||
@@ -273,15 +241,11 @@ export default function StorePage() {
       : '';
 
   const handleCopyLink = () => {
-    if (!shareUrl) return;
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(shareUrl).catch(() => {});
-    }
+    if (!shareUrl || typeof navigator === 'undefined') return;
+    navigator.clipboard.writeText(shareUrl).catch(() => {});
   };
 
-  const handleStoreImageChange = async (
-    e: ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleStoreImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !firestore || !storeId) return;
 
@@ -289,10 +253,7 @@ export default function StorePage() {
       setUploadingImage(true);
 
       const storage = getStorage();
-      const imageRef = ref(
-        storage,
-        `storefronts/${storeId}/store-image-${Date.now()}`,
-      );
+      const imageRef = ref(storage, `storefronts/${storeId}/poster-${Date.now()}`);
 
       await uploadBytes(imageRef, file);
       const url = await getDownloadURL(imageRef);
@@ -306,15 +267,15 @@ export default function StorePage() {
       setStoreImageOverride(url);
 
       toast({
-        title: 'Store image updated',
-        description: 'Your storefront image has been saved.',
+        title: 'Poster updated',
+        description: 'Your storefront poster has been replaced.',
       });
     } catch (err: any) {
       console.error(err);
       toast({
         variant: 'destructive',
-        title: 'Error uploading image',
-        description: err?.message ?? 'Could not update store image.',
+        title: 'Upload error',
+        description: err?.message ?? 'Failed to update poster.',
       });
     } finally {
       setUploadingImage(false);
@@ -323,272 +284,237 @@ export default function StorePage() {
   };
 
   return (
-    <AppLayout>
-      <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-4">
-        {/* Storefront card + header */}
-        <Card>
-          <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:gap-6">
-            {/* BIG STOREFRONT IMAGE */}
-            <div className="w-full md:w-3/5">
-              <div className="relative mx-auto h-56 w-full overflow-hidden rounded-xl border bg-muted sm:h-64">
-                <Image
-                  src={storeImage}
-                  alt={`${store.storeName} storefront`}
-                  fill
-                  className="object-contain"
-                />
+<AppLayout>
+  <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
+
+    {/* -------------------- POSTER WITH TAPE -------------------- */}
+    <Card className="p-4 comic-panel">
+      <CardContent className="flex flex-col items-center gap-6">
+
+        <div
+          className="relative"
+          style={{
+            width: "420px",
+            height: "540px",
+          }}
+        >
+          {/* TOP LEFT */}
+          <div className="absolute -top-4 -left-4 w-20 h-6 bg-yellow-200/80 rotate-[-12deg] shadow-md" />
+          {/* TOP RIGHT */}
+          <div className="absolute -top-4 -right-4 w-20 h-6 bg-yellow-200/80 rotate-[12deg] shadow-md" />
+          {/* BOTTOM LEFT */}
+          <div className="absolute -bottom-4 -left-4 w-20 h-6 bg-yellow-200/80 rotate-[8deg] shadow-md" />
+          {/* BOTTOM RIGHT */}
+          <div className="absolute -bottom-4 -right-4 w-20 h-6 bg-yellow-200/80 rotate-[-8deg] shadow-md" />
+
+          {/* POSTER */}
+          <div className="relative w-full h-full rounded-md border-4 border-black/80 shadow-xl overflow-hidden bg-neutral-800">
+            <Image
+              src={poster}
+              alt="Store Poster"
+              fill
+              className="object-cover"
+            />
+          </div>
+        </div>
+
+        {/* OWNER CONTROLS */}
+        {showOwnerControls && (
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+            <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted comic-button">
+              <Upload className="h-3 w-3" />
+              {uploadingImage ? "Uploading…" : "Change poster"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleStoreImageChange}
+                disabled={uploadingImage}
+              />
+            </label>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs comic-button"
+              onClick={() => setViewAsBuyer((v) => !v)}
+            >
+              <Eye className="h-3 w-3" />
+              {viewAsBuyer ? "Back to owner view" : "View as buyer"}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+
+    {/* -------------------- STORE INFO -------------------- */}
+    <Card className="comic-panel">
+      <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-start">
+
+        <Avatar className="h-16 w-16 border-4 border-black comic-avatar-shadow">
+          <AvatarImage src={ownerAvatar} />
+          <AvatarFallback>{store.storeName?.charAt(0)?.toUpperCase()}</AvatarFallback>
+        </Avatar>
+
+        <div className="flex-1 space-y-1">
+          <CardTitle className="text-xl font-bold comic-title">
+            {store.storeName}
+          </CardTitle>
+
+          {store.about && (
+            <CardDescription className="text-sm">
+              {store.about}
+            </CardDescription>
+          )}
+
+          {/* Ratings */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {ratingCount > 0 ? (
+              <div className="flex items-center gap-1">
+                {renderStars(ratingAverage, 16)}
+                <span className="text-xs">
+                  {ratingAverage?.toFixed(1)} • {ratingCount} review{ratingCount === 1 ? "" : "s"}
+                </span>
               </div>
+            ) : (
+              <span className="text-xs">No reviews yet</span>
+            )}
 
-              {showOwnerControls && (
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                  <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium hover:bg-muted">
-                    <Upload className="h-3 w-3" />
-                    <span>
-                      {uploadingImage
-                        ? 'Uploading...'
-                        : 'Change storefront image'}
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleStoreImageChange}
-                      disabled={uploadingImage}
-                    />
-                  </label>
-
-                  {/* View-as-buyer toggle */}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 gap-1 text-[11px]"
-                    onClick={() => setViewAsBuyer((v) => !v)}
-                  >
-                    <Eye className="h-3 w-3" />
-                    {viewAsBuyer ? 'Back to owner view' : 'View as buyer'}
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Store details / owner info / actions */}
-            <div className="flex flex-1 flex-col justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <Avatar className="h-14 w-14 md:h-16 md:w-16">
-                  <AvatarImage src={ownerAvatar} />
-                  <AvatarFallback>
-                    {store.storeName?.charAt(0).toUpperCase() || 'S'}
-                  </AvatarFallback>
-                </Avatar>
-
-                <div className="space-y-1">
-                  <CardTitle className="text-lg md:text-xl">
-                    {store.storeName}
-                  </CardTitle>
-                  {store.slug && (
-                    <p className="text-[11px] text-muted-foreground">
-                      hobbydork.app/store/{store.slug}
-                    </p>
-                  )}
-                  {store.about && (
-                    <CardDescription className="text-xs md:text-sm">
-                      {store.about}
-                    </CardDescription>
-                  )}
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    {ratingCount > 0 ? (
-                      <div className="flex items-center gap-1">
-                        {renderStars(ratingAverage, 14)}
-                        <span className="text-[11px] text-muted-foreground">
-                          {ratingAverage?.toFixed(1)} • {ratingCount} review
-                          {ratingCount === 1 ? '' : 's'}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-[11px] text-muted-foreground">
-                        No reviews yet
-                      </span>
-                    )}
-                    {itemsSold > 0 && (
-                      <Badge variant="outline" className="text-[11px]">
-                        {itemsSold} item{itemsSold === 1 ? '' : 's'} sold
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <Button
-                  asChild
-                  size="sm"
-                  variant="outline"
-                  className="gap-1"
-                >
-                  <Link
-                    href={`/messages/new?recipientUid=${store.ownerUid}`}
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    Message seller
-                  </Link>
-                </Button>
-
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="gap-1"
-                  onClick={handleCopyLink}
-                  disabled={!shareUrl}
-                >
-                  <Link2 className="h-4 w-4" />
-                  Copy store link
-                </Button>
-
-                {showBuyerControls && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="gap-1 text-red-500 hover:text-red-500"
-                    onClick={() => setReportOpen(true)}
-                  >
-                    <Flag className="h-4 w-4" />
-                    Report seller
-                  </Button>
-                )}
-
-                {showOwnerControls && (
-                  <Button
-                    asChild
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-[11px]"
-                  >
-                    <Link href="/profile">
-                      Edit profile / store info
-                    </Link>
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Listings */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShoppingBag className="h-4 w-4 text-primary" />
-              <h2 className="text-sm font-semibold tracking-tight">
-                Active listings
-              </h2>
-            </div>
-            {showOwnerControls && (
-              <Button asChild size="sm" variant="outline">
-                <Link href="/listings/create">Create listing</Link>
-              </Button>
+            {itemsSold > 0 && (
+              <Badge variant="outline" className="text-xs border-black">
+                {itemsSold} item{itemsSold === 1 ? "" : "s"} sold
+              </Badge>
             )}
           </div>
-
-          {listingsLoading && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Skeleton className="h-40 w-full" />
-              <Skeleton className="h-40 w-full" />
-            </div>
-          )}
-
-          {!listingsLoading && (!listings || listings.length === 0) && (
-            <Card>
-              <CardContent className="py-6 text-sm text-muted-foreground">
-                No active listings yet.
-              </CardContent>
-            </Card>
-          )}
-
-          {!listingsLoading && listings && listings.length > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {listings.map((listing: any) => (
-                <ListingCard
-                  key={listing.id || listing.listingId}
-                  listing={listing}
-                />
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Reviews */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold tracking-tight">
-              Reviews
-            </h2>
-          </div>
+        {/* ACTIONS */}
+        <div className="flex flex-col justify-end items-end gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1 comic-button"
+            onClick={() => handleCopyLink()}
+          >
+            <Link2 className="h-4 w-4" />
+            Copy link
+          </Button>
 
-          {reviewsLoading && (
-            <div className="space-y-2">
-              <Skeleton className="h-14 w-full" />
-              <Skeleton className="h-14 w-full" />
-            </div>
+          {!isOwner && (
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="gap-1 comic-button"
+            >
+              <Link href={`/messages/new?recipientUid=${store.ownerUid}`}>
+                <MessageCircle className="h-4 w-4" />
+                Message seller
+              </Link>
+            </Button>
           )}
 
-          {!reviewsLoading && (!reviews || reviews.length === 0) && (
-            <Card>
-              <CardContent className="py-6 text-sm text-muted-foreground">
-                No reviews yet.
-              </CardContent>
-            </Card>
-          )}
-
-          {!reviewsLoading && reviews && reviews.length > 0 && (
-            <div className="space-y-2">
-              {reviews.map((review) => {
-                const createdText = review.createdAt
-                  ? formatDistanceToNow(
-                      review.createdAt.toDate
-                        ? review.createdAt.toDate()
-                        : review.createdAt,
-                      { addSuffix: true },
-                    )
-                  : null;
-
-                return (
-                  <Card key={review.id}>
-                    <CardContent className="flex gap-3 py-3 text-sm">
-                      <div className="mt-1">
-                        {renderStars(review.rating, 12)}
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        {review.comment && (
-                          <p className="text-sm">{review.comment}</p>
-                        )}
-                        <p className="text-[11px] text-muted-foreground">
-                          {createdText && `Left ${createdText}`}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+          {!isOwner && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1 text-red-500 hover:text-red-500 comic-button"
+              onClick={() => setReportOpen(true)}
+            >
+              <Flag className="h-4 w-4" />
+              Report
+            </Button>
           )}
         </div>
+      </CardContent>
+    </Card>
+
+    {/* -------------------- LISTINGS -------------------- */}
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-bold comic-title">Active listings</h2>
       </div>
 
-      {showBuyerControls && (
-        <ReportUserDialog
-          open={reportOpen}
-          onOpenChange={setReportOpen}
-          targetUid={store.ownerUid}
-          targetDisplayName={store.storeName}
-          context={{
-            source: 'STORE',
-            storeId: storeId || null,
-          }}
-        />
+      {listingsLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      ) : listings && listings.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {listings.map((listing: any) => (
+            <ListingCard key={listing.id || listing.listingId} listing={listing} />
+          ))}
+        </div>
+      ) : (
+        <Card className="comic-panel">
+          <CardContent className="py-6 text-sm">
+            No active listings.
+          </CardContent>
+        </Card>
       )}
-    </AppLayout>
+    </div>
+
+    {/* -------------------- REVIEWS -------------------- */}
+    <div className="space-y-3 pb-10">
+      <h2 className="text-lg font-bold comic-title">Reviews</h2>
+
+      {reviewsLoading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-14 w-full" />
+        </div>
+      ) : reviews && reviews.length > 0 ? (
+        <div className="space-y-3">
+          {reviews.map((review: any) => {
+            const createdText = review.createdAt
+              ? formatDistanceToNow(
+                  review.createdAt.toDate ? review.createdAt.toDate() : review.createdAt,
+                  { addSuffix: true }
+                )
+              : null;
+
+            return (
+              <Card key={review.id} className="comic-panel">
+                <CardContent className="flex gap-3 py-3 text-sm">
+                  <div className="mt-1">{renderStars(review.rating, 14)}</div>
+                  <div className="flex-1 space-y-1">
+                    {review.comment && <p className="text-sm">{review.comment}</p>}
+                    {createdText && (
+                      <p className="text-xs">Left {createdText}</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <Card className="comic-panel">
+          <CardContent className="py-6 text-sm">
+            No reviews yet.
+          </CardContent>
+        </Card>
+      )}
+    </div>
+
+    {/* REPORT DIALOG */}
+    {showBuyerControls && (
+      <ReportUserDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        targetUid={store.ownerUid}
+        targetDisplayName={store.storeName}
+        context={{
+          source: 'STORE',
+          storeId: storeId || null,
+        }}
+      />
+    )}
+
+  </div>
+</AppLayout>
   );
 }
