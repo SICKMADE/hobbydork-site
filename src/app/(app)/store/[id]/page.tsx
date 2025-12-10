@@ -219,7 +219,7 @@ export default function StorePage() {
     storeImageOverride ||
     store.storeImageUrl ||
     store.avatarUrl ||
-    'https://via.placeholder.com/540x420?text=Storefront';
+    'https://via.placeholder.com/900x400?text=Storefront';
 
   // Owner avatar
   const ownerAvatar =
@@ -288,25 +288,10 @@ export default function StorePage() {
   <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
 
     {/* -------------------- POSTER WITH TAPE -------------------- */}
-    <Card className="p-4 comic-panel">
-      <CardContent className="flex flex-col items-center gap-6">
+    <Card className="comic-panel">
+      <CardContent className="flex flex-col items-center gap-6 p-4">
 
-        <div
-          className="relative"
-          style={{
-            width: "420px",
-            height: "540px",
-          }}
-        >
-          {/* TOP LEFT */}
-          <div className="absolute -top-4 -left-4 w-20 h-6 bg-yellow-200/80 rotate-[-12deg] shadow-md" />
-          {/* TOP RIGHT */}
-          <div className="absolute -top-4 -right-4 w-20 h-6 bg-yellow-200/80 rotate-[12deg] shadow-md" />
-          {/* BOTTOM LEFT */}
-          <div className="absolute -bottom-4 -left-4 w-20 h-6 bg-yellow-200/80 rotate-[8deg] shadow-md" />
-          {/* BOTTOM RIGHT */}
-          <div className="absolute -bottom-4 -right-4 w-20 h-6 bg-yellow-200/80 rotate-[-8deg] shadow-md" />
-
+        <div className="relative w-full aspect-[16/7]">
           {/* POSTER */}
           <div className="relative w-full h-full rounded-md border-4 border-black/80 shadow-xl overflow-hidden bg-neutral-800">
             <Image
