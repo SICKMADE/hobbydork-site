@@ -25,7 +25,8 @@ type ReportSource =
   | 'LISTING'
   | 'STORE'
   | 'PROFILE'
-  | 'OTHER';
+  | 'OTHER'
+  | 'COMMUNITY_CHAT';
 
 export type ReportUserDialogProps = {
   open: boolean;
@@ -39,7 +40,9 @@ export type ReportUserDialogProps = {
     source?: ReportSource;
     listingId?: string | null;
     storeId?: string | null;
+    messageId?: string | null; // <-- ADD THIS LINE
   };
+  
 };
 
 const REASONS = [

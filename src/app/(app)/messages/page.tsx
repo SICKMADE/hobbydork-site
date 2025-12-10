@@ -47,27 +47,22 @@ type ConversationDoc = {
   createdAt?: any;
 };
 
-
 export default function MessagesPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
 
-  // Just filter by participants; we'll sort in JS
   const conversationsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-  
+
     return query(
       collection(firestore, 'conversations'),
       where('participantUids', 'array-contains', user.uid),
     );
   }, [firestore, user?.uid]);
-  
 
-  const {
-    data: conversations,
-    isLoading,
-  } = useCollection<ConversationDoc>(conversationsQuery as any);
+  const { data: conversations, isLoading } =
+    useCollection<ConversationDoc>(conversationsQuery as any);
 
   if (authLoading) {
     return (
@@ -102,60 +97,65 @@ export default function MessagesPage() {
     );
   }
 
-  // Normalize & sort by lastMessageAt (newest first)
-  const items = (conversations || [])
-  .map((c: any) => {
-    const conv = c as ConversationDoc & { id: string };
-    const participantArray =
-      conv.participants || conv.participantUids || [];
-    const otherUid =
-      participantArray.find((p) => p !== user.uid) || '';
-    const otherName =
-      conv.participantDisplayNames?.[otherUid] || 'User';
-    const otherAvatar =
-      conv.participantAvatarUrls?.[otherUid] || '';
+  const items =
+    (conversations || [])
+      .map((c: any) => {
+        const conv = c as ConversationDoc & { id: string };
+        const participantArray =
+          conv.participants || conv.participantUids || [];
+        const otherUid =
+          participantArray.find((p) => p !== user.uid) || '';
+        const otherName =
+          conv.participantDisplayNames?.[otherUid] || 'User';
+        const otherAvatar =
+          conv.participantAvatarUrls?.[otherUid] || '';
 
+        const lastAt = conv.lastMessageAt?.toDate
+          ? conv.lastMessageAt.toDate()
+          : null;
+        const lastAtText =
+          lastAt &&
+          formatDistanceToNow(lastAt, { addSuffix: true });
 
-      const lastAt = conv.lastMessageAt?.toDate
-        ? conv.lastMessageAt.toDate()
-        : null;
-      const lastAtText =
-        lastAt &&
-        formatDistanceToNow(lastAt, { addSuffix: true });
-
-      const tsForSort = lastAt
-        ? lastAt.getTime()
-        : conv.createdAt?.toDate
+        const tsForSort = lastAt
+          ? lastAt.getTime()
+          : conv.createdAt?.toDate
           ? conv.createdAt.toDate().getTime()
           : 0;
 
-      return {
-        id: conv.id!,
-        otherUid,
-        otherName,
-        otherAvatar,
-        lastMessageText:
-          conv.lastMessageText || 'Tap to view conversation',
-        lastAtText,
-        sortKey: tsForSort,
-      };
-    })
-    .sort((a, b) => b.sortKey - a.sortKey);
+        return {
+          id: conv.id!,
+          otherUid,
+          otherName,
+          otherAvatar,
+          lastMessageText:
+            conv.lastMessageText || 'Tap to view conversation',
+          lastAtText,
+          sortKey: tsForSort,
+        };
+      })
+      .sort((a, b) => b.sortKey - a.sortKey);
 
   return (
     <AppLayout>
       <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5 text-primary" />
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                Messages
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Private conversations with other collectors.
-              </p>
-            </div>
+
+        {/* PERMISSIONS BANNER */}
+        {profile?.status !== 'ACTIVE' && (
+          <div className="border-2 border-red-600 bg-red-900/20 text-red-300 p-4 rounded-lg text-sm font-semibold">
+            Your account is currently restricted. Messaging is disabled.
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <MessageCircle className="h-5 w-5 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Messages
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              Private conversations with other collectors.
+            </p>
           </div>
         </div>
 
@@ -174,9 +174,7 @@ export default function MessagesPage() {
           >
             <div className="mt-4 flex justify-center">
               <Button asChild>
-                <Link href="/search">
-                  Browse listings
-                </Link>
+                <Link href="/search">Browse listings</Link>
               </Button>
             </div>
           </PlaceholderContent>
@@ -187,10 +185,12 @@ export default function MessagesPage() {
             {items.map((conv) => (
               <Card
                 key={conv.id}
-                className="cursor-pointer hover:bg-muted/70 transition-colors"
-                onClick={() =>
-                  router.push(`/messages/${conv.id}`)
-                }
+                className={`cursor-pointer hover:bg-muted/70 transition-colors ${
+                  profile?.status !== 'ACTIVE'
+                    ? 'opacity-40 pointer-events-none'
+                    : ''
+                }`}
+                onClick={() => router.push(`/messages/${conv.id}`)}
               >
                 <CardHeader className="py-3 flex flex-row items-center gap-3">
                   <Avatar className="h-9 w-9">
@@ -199,14 +199,20 @@ export default function MessagesPage() {
                       {conv.otherName.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
+
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-sm truncate">
                       {conv.otherName}
                     </CardTitle>
-                    <CardDescription className="text-xs line-clamp-1">
-                      {conv.lastMessageText}
+
+                    {/* RED PREVIEW BUBBLE */}
+                    <CardDescription className="text-xs">
+                      <span className="message-preview-red">
+                        {conv.lastMessageText}
+                      </span>
                     </CardDescription>
                   </div>
+
                   {conv.lastAtText && (
                     <span className="text-[11px] text-muted-foreground">
                       {conv.lastAtText}
@@ -217,6 +223,7 @@ export default function MessagesPage() {
             ))}
           </div>
         )}
+
       </div>
     </AppLayout>
   );

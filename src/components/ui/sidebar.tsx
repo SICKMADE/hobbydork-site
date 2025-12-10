@@ -128,7 +128,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
             return (
               <Sheet open={open} onOpenChange={setOpen}>
                   <SheetContent side="left" className="p-0 w-64 border-r-0">
-                      <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
+                      <div className="flex flex-col h-full bg-[#1c1c1c] text-sidebar-foreground">
                           {children}
                       </div>
                   </SheetContent>
@@ -141,7 +141,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
             <aside
                 ref={ref}
                 className={cn(
-                    "fixed top-0 left-0 h-full w-64 z-20 bg-sidebar text-sidebar-foreground border-r border-sidebar-border",
+                    "fixed top-0 left-0 h-full w-64 z-20 bg-[#1c1c1c] text-sidebar-foreground border-r border-sidebar-border",
                     className
                 )}
                 {...props}
