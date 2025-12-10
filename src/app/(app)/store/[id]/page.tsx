@@ -332,7 +332,7 @@ export default function StorePage() {
     )}
 
     {/* -------------------- STORE INFO -------------------- */}
-    <Card className="comic-panel bg-neutral-200 text-black">
+    <Card className="comic-panel bg-card text-card-foreground">
       <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-start">
 
         <Avatar className="h-16 w-16 border-4 border-black comic-avatar-shadow">
@@ -341,12 +341,12 @@ export default function StorePage() {
         </Avatar>
 
         <div className="flex-1 space-y-1">
-          <CardTitle className="text-xl font-bold comic-title text-black">
+          <CardTitle className="text-xl font-bold comic-title text-foreground">
             {store.storeName}
           </CardTitle>
 
           {store.about && (
-            <CardDescription className="text-sm !text-gray-800">
+            <CardDescription className="text-sm !text-muted-foreground">
               {store.about}
             </CardDescription>
           )}
@@ -356,16 +356,16 @@ export default function StorePage() {
             {ratingCount > 0 ? (
               <div className="flex items-center gap-1">
                 {renderStars(ratingAverage, 16)}
-                <span className="text-xs text-gray-600">
+                <span className="text-xs text-muted-foreground">
                   {ratingAverage?.toFixed(1)} • {ratingCount} review{ratingCount === 1 ? "" : "s"}
                 </span>
               </div>
             ) : (
-              <span className="text-xs text-gray-600">No reviews yet</span>
+              <span className="text-xs text-muted-foreground">No reviews yet</span>
             )}
 
             {itemsSold > 0 && (
-              <Badge variant="outline" className="text-xs border-black text-black">
+              <Badge variant="outline" className="text-xs border-foreground/30 text-foreground">
                 {itemsSold} item{itemsSold === 1 ? "" : "s"} sold
               </Badge>
             )}
@@ -429,7 +429,9 @@ export default function StorePage() {
       ) : listings && listings.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {listings.map((listing: any) => (
-            <ListingCard key={listing.id || listing.listingId} listing={listing} />
+            <div key={listing.id || listing.listingId} className="comic-panel !p-0 overflow-hidden">
+                <ListingCard listing={listing} />
+            </div>
           ))}
         </div>
       ) : (
@@ -461,13 +463,13 @@ export default function StorePage() {
               : null;
 
             return (
-              <Card key={review.id} className="comic-panel bg-neutral-200 text-black">
+              <Card key={review.id} className="comic-panel bg-card text-foreground">
                 <CardContent className="flex gap-3 py-3 text-sm">
                   <div className="mt-1">{renderStars(review.rating, 14)}</div>
                   <div className="flex-1 space-y-1">
-                    {review.comment && <p className="text-sm text-gray-800">{review.comment}</p>}
+                    {review.comment && <p className="text-sm text-foreground/80">{review.comment}</p>}
                     {createdText && (
-                      <p className="text-xs text-gray-600">Left {createdText}</p>
+                      <p className="text-xs text-muted-foreground">Left {createdText}</p>
                     )}
                   </div>
                 </CardContent>
@@ -476,8 +478,8 @@ export default function StorePage() {
           })}
         </div>
       ) : (
-        <Card className="comic-panel bg-neutral-200 text-black">
-          <CardContent className="py-6 text-sm text-gray-600">
+        <Card className="comic-panel bg-card text-foreground">
+          <CardContent className="py-6 text-sm text-muted-foreground">
             No reviews yet.
           </CardContent>
         </Card>
