@@ -332,7 +332,7 @@ export default function StorePage() {
     )}
 
     {/* -------------------- STORE INFO -------------------- */}
-    <Card className="comic-panel !bg-white !text-black">
+    <Card className="comic-panel bg-neutral-200 text-black">
       <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-start">
 
         <Avatar className="h-16 w-16 border-4 border-black comic-avatar-shadow">
@@ -461,7 +461,7 @@ export default function StorePage() {
               : null;
 
             return (
-              <Card key={review.id} className="comic-panel !bg-white !text-black">
+              <Card key={review.id} className="comic-panel bg-neutral-200 text-black">
                 <CardContent className="flex gap-3 py-3 text-sm">
                   <div className="mt-1">{renderStars(review.rating, 14)}</div>
                   <div className="flex-1 space-y-1">
@@ -476,7 +476,7 @@ export default function StorePage() {
           })}
         </div>
       ) : (
-        <Card className="comic-panel !bg-white !text-black">
+        <Card className="comic-panel bg-neutral-200 text-black">
           <CardContent className="py-6 text-sm text-gray-600">
             No reviews yet.
           </CardContent>
