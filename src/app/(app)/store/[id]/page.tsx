@@ -429,7 +429,7 @@ export default function StorePage() {
       ) : listings && listings.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {listings.map((listing: any) => (
-            <div key={listing.id || listing.listingId} className="comic-panel !p-0 overflow-hidden">
+            <div key={listing.id || listing.listingId} className="comic-panel !p-0 overflow-hidden border-4 border-black">
                 <ListingCard listing={listing} />
             </div>
           ))}
