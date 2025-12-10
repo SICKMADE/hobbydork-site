@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, ChangeEvent } from 'react';
@@ -219,7 +220,7 @@ export default function StorePage() {
     storeImageOverride ||
     store.storeImageUrl ||
     store.avatarUrl ||
-    'https://via.placeholder.com/900x400?text=Storefront';
+    'https://via.placeholder.com/1200x400?text=Storefront';
 
   // Owner avatar
   const ownerAvatar =
@@ -285,52 +286,46 @@ export default function StorePage() {
 
   return (
 <AppLayout>
-  <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
+  <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-5">
 
     {/* -------------------- POSTER WITH TAPE -------------------- */}
-    <Card className="comic-panel">
-      <CardContent className="flex flex-col items-center gap-6 p-4">
-
-        <div className="relative w-full aspect-[16/7]">
-          {/* POSTER */}
-          <div className="relative w-full h-full rounded-md border-4 border-black/80 shadow-xl overflow-hidden bg-neutral-800">
-            <Image
-              src={poster}
-              alt="Store Poster"
-              fill
-              className="object-cover"
-            />
-          </div>
+    <Card className="comic-panel !p-0 overflow-hidden">
+        <div className="relative w-full aspect-[2.5/1]">
+          <Image
+            src={poster}
+            alt="Store Poster"
+            fill
+            className="object-cover"
+          />
         </div>
-
-        {/* OWNER CONTROLS */}
-        {showOwnerControls && (
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-            <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted comic-button">
-              <Upload className="h-3 w-3" />
-              {uploadingImage ? "Uploading…" : "Change poster"}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleStoreImageChange}
-                disabled={uploadingImage}
-              />
-            </label>
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 px-2 text-xs comic-button"
-              onClick={() => setViewAsBuyer((v) => !v)}
-            >
-              <Eye className="h-3 w-3" />
-              {viewAsBuyer ? "Back to owner view" : "View as buyer"}
-            </Button>
-          </div>
-        )}
-      </CardContent>
     </Card>
+    
+    {/* OWNER CONTROLS */}
+    {showOwnerControls && (
+      <div className="flex flex-wrap items-center justify-center gap-2 -mt-2">
+        <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted comic-button">
+          <Upload className="h-3 w-3" />
+          {uploadingImage ? "Uploading…" : "Change poster"}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleStoreImageChange}
+            disabled={uploadingImage}
+          />
+        </label>
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 px-2 text-xs comic-button"
+          onClick={() => setViewAsBuyer((v) => !v)}
+        >
+          <Eye className="h-3 w-3" />
+          {viewAsBuyer ? "Back to owner view" : "View as buyer"}
+        </Button>
+      </div>
+    )}
 
     {/* -------------------- STORE INFO -------------------- */}
     <Card className="comic-panel">
