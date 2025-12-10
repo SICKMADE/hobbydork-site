@@ -398,7 +398,7 @@ export default function StorePage() {
             Copy store link
           </Button>
 
-          {showBuyerControls && !isOwner && (
+          {showBuyerControls && (
             <Button
               asChild
               size="sm"
@@ -412,7 +412,7 @@ export default function StorePage() {
             </Button>
           )}
 
-          {showBuyerControls && !isOwner && (
+          {showBuyerControls && (
             <Button
               size="sm"
               variant="outline"
