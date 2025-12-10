@@ -289,7 +289,11 @@ export default function StorePage() {
   <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-5">
 
     {/* -------------------- POSTER WITH TAPE -------------------- */}
-    <Card className="comic-panel !p-0 overflow-hidden">
+    <Card className="comic-panel !p-0 overflow-hidden relative">
+        <div className="tape-corner top-left"></div>
+        <div className="tape-corner top-right"></div>
+        <div className="tape-corner bottom-left"></div>
+        <div className="tape-corner bottom-right"></div>
         <div className="relative w-full aspect-[2.5/1]">
           <Image
             src={poster}
