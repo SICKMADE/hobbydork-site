@@ -390,9 +390,8 @@ export default function StorePage() {
         <div className="flex flex-col justify-end items-end gap-2">
           <Button
             size="sm"
-            variant="outline"
-            className="gap-1 comic-button"
             onClick={() => handleCopyLink()}
+            className="gap-1 bg-red-500 text-white shadow-[0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[0_0px_0_#7f1010] transition-all"
           >
             <Link2 className="h-4 w-4" />
             Copy store link
@@ -402,8 +401,7 @@ export default function StorePage() {
             <Button
               asChild
               size="sm"
-              variant="outline"
-              className="gap-1 comic-button"
+              className="gap-1 bg-red-500 text-white shadow-[0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[0_0px_0_#7f1010] transition-all"
             >
               <Link href={`/messages/new?recipientUid=${store.ownerUid}`}>
                 <MessageCircle className="h-4 w-4" />
@@ -415,8 +413,7 @@ export default function StorePage() {
           {showBuyerControls && (
             <Button
               size="sm"
-              variant="outline"
-              className="gap-1 text-red-500 hover:text-red-500 comic-button"
+              className="gap-1 bg-red-500 text-white shadow-[0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[0_0px_0_#7f1010] transition-all"
               onClick={() => setReportOpen(true)}
             >
               <Flag className="h-4 w-4" />
