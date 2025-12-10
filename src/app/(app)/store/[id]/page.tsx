@@ -346,7 +346,7 @@ export default function StorePage() {
     )}
 
     {/* -------------------- STORE INFO -------------------- */}
-    <Card className="comic-panel bg-neutral-100 text-black">
+    <Card className="comic-panel bg-neutral-200 text-black">
       <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-start">
 
         <Avatar className="h-16 w-16 border-4 border-black comic-avatar-shadow">
@@ -388,10 +388,10 @@ export default function StorePage() {
 
         {/* ACTIONS */}
         <div className="flex flex-col justify-end items-end gap-2">
-          <Button
+           <Button
             size="sm"
             onClick={() => handleCopyLink()}
-            className="gap-1 bg-gradient-to-b from-red-400 to-red-600 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_0px_0_#7f1010] transition-all"
+            className="gap-1 h-9 bg-red-500 text-white shadow-[0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[0_0px_0_#7f1010] transition-all rounded-md"
           >
             <Link2 className="h-4 w-4" />
             Copy store link
@@ -401,7 +401,7 @@ export default function StorePage() {
             <Button
               asChild
               size="sm"
-              className="gap-1 bg-gradient-to-b from-red-400 to-red-600 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_0px_0_#7f1010] transition-all"
+              className="gap-1 h-9 bg-red-500 text-white shadow-[0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[0_0px_0_#7f1010] transition-all rounded-md"
             >
               <Link href={`/messages/new?recipientUid=${store.ownerUid}`}>
                 <MessageCircle className="h-4 w-4" />
@@ -413,7 +413,7 @@ export default function StorePage() {
           {showBuyerControls && (
             <Button
               size="sm"
-              className="gap-1 bg-gradient-to-b from-red-400 to-red-600 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_0px_0_#7f1010] transition-all"
+              className="gap-1 h-9 bg-red-500 text-white shadow-[0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[0_0px_0_#7f1010] transition-all rounded-md"
               onClick={() => setReportOpen(true)}
             >
               <Flag className="h-4 w-4" />
@@ -474,7 +474,7 @@ export default function StorePage() {
               : null;
 
             return (
-              <Card key={review.id} className="comic-panel bg-neutral-100 text-black">
+              <Card key={review.id} className="comic-panel bg-neutral-200 text-black">
                 <CardContent className="flex gap-3 py-3 text-sm">
                   <div className="mt-1">{renderStars(review.rating, 14)}</div>
                   <div className="flex-1 space-y-1">
@@ -489,7 +489,7 @@ export default function StorePage() {
           })}
         </div>
       ) : (
-        <Card className="comic-panel bg-neutral-100 text-black">
+        <Card className="comic-panel bg-neutral-200 text-black">
           <CardContent className="py-6 text-sm text-neutral-500">
             No reviews yet.
           </CardContent>
