@@ -332,7 +332,7 @@ export default function StorePage() {
     )}
 
     {/* -------------------- STORE INFO -------------------- */}
-    <Card className="comic-panel">
+    <Card className="comic-panel bg-white text-black">
       <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-start">
 
         <Avatar className="h-16 w-16 border-4 border-black comic-avatar-shadow">
@@ -341,12 +341,12 @@ export default function StorePage() {
         </Avatar>
 
         <div className="flex-1 space-y-1">
-          <CardTitle className="text-xl font-bold comic-title">
+          <CardTitle className="text-xl font-bold comic-title text-black">
             {store.storeName}
           </CardTitle>
 
           {store.about && (
-            <CardDescription className="text-sm">
+            <CardDescription className="text-sm text-gray-800">
               {store.about}
             </CardDescription>
           )}
@@ -356,16 +356,16 @@ export default function StorePage() {
             {ratingCount > 0 ? (
               <div className="flex items-center gap-1">
                 {renderStars(ratingAverage, 16)}
-                <span className="text-xs">
+                <span className="text-xs text-gray-600">
                   {ratingAverage?.toFixed(1)} • {ratingCount} review{ratingCount === 1 ? "" : "s"}
                 </span>
               </div>
             ) : (
-              <span className="text-xs">No reviews yet</span>
+              <span className="text-xs text-gray-600">No reviews yet</span>
             )}
 
             {itemsSold > 0 && (
-              <Badge variant="outline" className="text-xs border-black">
+              <Badge variant="outline" className="text-xs border-black text-black">
                 {itemsSold} item{itemsSold === 1 ? "" : "s"} sold
               </Badge>
             )}
@@ -461,13 +461,13 @@ export default function StorePage() {
               : null;
 
             return (
-              <Card key={review.id} className="comic-panel">
+              <Card key={review.id} className="comic-panel bg-white text-black">
                 <CardContent className="flex gap-3 py-3 text-sm">
                   <div className="mt-1">{renderStars(review.rating, 14)}</div>
                   <div className="flex-1 space-y-1">
-                    {review.comment && <p className="text-sm">{review.comment}</p>}
+                    {review.comment && <p className="text-sm text-gray-800">{review.comment}</p>}
                     {createdText && (
-                      <p className="text-xs">Left {createdText}</p>
+                      <p className="text-xs text-gray-600">Left {createdText}</p>
                     )}
                   </div>
                 </CardContent>
@@ -476,8 +476,8 @@ export default function StorePage() {
           })}
         </div>
       ) : (
-        <Card className="comic-panel">
-          <CardContent className="py-6 text-sm">
+        <Card className="comic-panel bg-white text-black">
+          <CardContent className="py-6 text-sm text-gray-600">
             No reviews yet.
           </CardContent>
         </Card>
