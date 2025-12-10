@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -55,7 +56,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
   return (
     <Link href={`/listings/${listingId}`} className="block">
       <Card className="h-full flex flex-col overflow-hidden hover:shadow-lg transition-shadow border-0">
-        {/* Image section – NOT zoomed in */}
+        {/* Image section – NOW it will fill the container */}
         <div className="relative w-full aspect-[3/4] bg-muted flex items-center justify-center">
           {primaryImageUrl ? (
             <Image
@@ -63,7 +64,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
               alt={title}
               fill
               sizes="(min-width: 1024px) 250px, 50vw"
-              className="object-contain"
+              className="object-cover"
             />
           ) : (
             <div className="text-xs text-muted-foreground px-4 text-center">
