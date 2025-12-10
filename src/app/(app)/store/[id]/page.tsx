@@ -346,7 +346,7 @@ export default function StorePage() {
     )}
 
     {/* -------------------- STORE INFO -------------------- */}
-    <Card className="comic-panel bg-card text-card-foreground">
+    <Card className="comic-panel bg-neutral-100 text-black">
       <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-start">
 
         <Avatar className="h-16 w-16 border-4 border-black comic-avatar-shadow">
@@ -355,12 +355,12 @@ export default function StorePage() {
         </Avatar>
 
         <div className="flex-1 space-y-1">
-          <CardTitle className="text-xl font-bold comic-title text-foreground">
+          <CardTitle className="text-xl font-bold comic-title text-black">
             {store.storeName}
           </CardTitle>
 
           {store.about && (
-            <CardDescription className="text-sm !text-muted-foreground">
+            <CardDescription className="text-sm !text-neutral-600">
               {store.about}
             </CardDescription>
           )}
@@ -370,16 +370,16 @@ export default function StorePage() {
             {ratingCount > 0 ? (
               <div className="flex items-center gap-1">
                 {renderStars(ratingAverage, 16)}
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-neutral-500">
                   {ratingAverage?.toFixed(1)} • {ratingCount} review{ratingCount === 1 ? "" : "s"}
                 </span>
               </div>
             ) : (
-              <span className="text-xs text-muted-foreground">No reviews yet</span>
+              <span className="text-xs text-neutral-500">No reviews yet</span>
             )}
 
             {itemsSold > 0 && (
-              <Badge variant="outline" className="text-xs border-foreground/30 text-foreground">
+              <Badge variant="outline" className="text-xs border-black/30 text-black">
                 {itemsSold} item{itemsSold === 1 ? "" : "s"} sold
               </Badge>
             )}
@@ -391,7 +391,7 @@ export default function StorePage() {
           <Button
             size="sm"
             onClick={() => handleCopyLink()}
-            className="gap-1 bg-red-500 text-white shadow-[0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[0_0px_0_#7f1010] transition-all"
+            className="gap-1 bg-gradient-to-b from-red-400 to-red-600 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_0px_0_#7f1010] transition-all"
           >
             <Link2 className="h-4 w-4" />
             Copy store link
@@ -401,7 +401,7 @@ export default function StorePage() {
             <Button
               asChild
               size="sm"
-              className="gap-1 bg-red-500 text-white shadow-[0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[0_0px_0_#7f1010] transition-all"
+              className="gap-1 bg-gradient-to-b from-red-400 to-red-600 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_0px_0_#7f1010] transition-all"
             >
               <Link href={`/messages/new?recipientUid=${store.ownerUid}`}>
                 <MessageCircle className="h-4 w-4" />
@@ -413,7 +413,7 @@ export default function StorePage() {
           {showBuyerControls && (
             <Button
               size="sm"
-              className="gap-1 bg-red-500 text-white shadow-[0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[0_0px_0_#7f1010] transition-all"
+              className="gap-1 bg-gradient-to-b from-red-400 to-red-600 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_0px_0_#7f1010] transition-all"
               onClick={() => setReportOpen(true)}
             >
               <Flag className="h-4 w-4" />
@@ -440,7 +440,7 @@ export default function StorePage() {
       ) : listings && listings.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {listings.map((listing: any) => (
-            <div key={listing.id || listing.listingId} className="comic-panel !p-0 overflow-hidden border-black">
+            <div key={listing.id || listing.listingId} className="comic-panel !p-0 overflow-hidden border-4 border-black">
                 <ListingCard listing={listing} />
             </div>
           ))}
@@ -474,13 +474,13 @@ export default function StorePage() {
               : null;
 
             return (
-              <Card key={review.id} className="comic-panel bg-card text-foreground">
+              <Card key={review.id} className="comic-panel bg-neutral-100 text-black">
                 <CardContent className="flex gap-3 py-3 text-sm">
                   <div className="mt-1">{renderStars(review.rating, 14)}</div>
                   <div className="flex-1 space-y-1">
-                    {review.comment && <p className="text-sm text-foreground/80">{review.comment}</p>}
+                    {review.comment && <p className="text-sm text-black/80">{review.comment}</p>}
                     {createdText && (
-                      <p className="text-xs text-muted-foreground">Left {createdText}</p>
+                      <p className="text-xs text-neutral-500">Left {createdText}</p>
                     )}
                   </div>
                 </CardContent>
@@ -489,8 +489,8 @@ export default function StorePage() {
           })}
         </div>
       ) : (
-        <Card className="comic-panel bg-card text-foreground">
-          <CardContent className="py-6 text-sm text-muted-foreground">
+        <Card className="comic-panel bg-neutral-100 text-black">
+          <CardContent className="py-6 text-sm text-neutral-500">
             No reviews yet.
           </CardContent>
         </Card>
@@ -515,3 +515,4 @@ export default function StorePage() {
 </AppLayout>
   );
 }
+
