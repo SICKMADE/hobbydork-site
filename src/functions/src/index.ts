@@ -250,7 +250,7 @@ export const onOrderUpdate = functions
             batch.update(storeRef, { itemsSold: FieldValue.increment(totalQuantitySold) });
         }
     
-        if (!batch.isEmpty) {
+        if (totalQuantitySold > 0) {
             notifPromises.push(batch.commit());
         }
     }
