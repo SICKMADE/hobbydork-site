@@ -66,7 +66,7 @@ export default function SidebarNav() {
   const firestore = useFirestore();
 
   const displayName = profile?.displayName || user?.email || 'My account';
-  const avatarUrl = (profile as any)?.avatarUrl || '';
+  const avatarUrl = profile?.avatar ?? '';
 
   const handleLogout = async () => {
     await logout();

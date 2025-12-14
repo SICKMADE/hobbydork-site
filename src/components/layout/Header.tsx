@@ -48,7 +48,7 @@ export default function Header() {
   }, [firestore, user?.uid]);
 
   const { data: notifications } =
-    useCollection<NotificationDoc>(notifQuery as any);
+    useCollection<NotificationDoc>(notifQuery);
 
   const unreadCount =
     (notifications || []).filter(
@@ -122,7 +122,7 @@ export default function Header() {
             <Input
               type="search"
               placeholder="Search listings, ISO posts, or stores..."
-              className="h-10 w-full rounded-full bg-white text-black border-2 border-red-500 pl-9 pr-4 text-sm"
+              className="h-10 w-full rounded-full bg-input text-foreground border-2 border-red-500 pl-9 pr-4 text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={onKeyDown}

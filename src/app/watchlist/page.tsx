@@ -4,6 +4,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
+import { watchlistConverter } from '@/firebase/firestore/converters';
 import type { Listing, WatchlistItem } from "@/lib/types";
 import PlaceholderContent from "@/components/PlaceholderContent";
 import ListingCard from "@/components/ListingCard";
@@ -37,7 +38,7 @@ export default function WatchlistPage() {
 
     const watchlistQuery = useMemoFirebase(() => {
         if (!firestore || !profile) return null;
-        return collection(firestore, `users/${profile.uid}/watchlist`);
+        return collection(firestore, `users/${profile.uid}/watchlist`).withConverter(watchlistConverter);
     }, [firestore, profile]);
 
     const { data: watchlistItems, isLoading } = useCollection<WatchlistItem>(watchlistQuery);

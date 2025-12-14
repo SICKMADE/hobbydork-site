@@ -39,7 +39,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={cn(
-        'flex flex-col h-screen',
+        'flex flex-col min-h-screen',
         'md:ml-64'
       )}
     >

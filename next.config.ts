@@ -2,9 +2,8 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  experimental: {
-    appDir: true,
-  },
+  // 'appDir' is not required for this Next.js version and causes
+  // a type error during build; remove the experimental flag.
   images: {
     remotePatterns: [
       // Firebase Storage (default API domain)

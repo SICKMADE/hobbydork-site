@@ -24,7 +24,12 @@ import {
 
 import { Button } from '@/components/ui/button';
 import StoreCard from '@/components/StoreCard';
-import type { Store as StoreType, User } from '@/lib/types';
+import type { Store as StoreType, User, Listing } from '@/lib/types';
+import {
+  listingConverter,
+  storeConverter,
+  spotlightConverter,
+} from '@/firebase/firestore/converters';
 import { StandaloneVaultDoor } from './StandaloneVaultDoor';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Store } from 'lucide-react';
@@ -81,11 +86,11 @@ function SpotlightStoresSection() {
       collection(firestore, 'storefronts'),
       where('isSpotlighted', '==', true),
       limit(20),
-    );
+    ).withConverter(storeConverter);
   }, [firestore]);
 
   const { data: spotlightStores, isLoading } =
-    useCollection<StoreType>(spotlightQuery as any);
+    useCollection<StoreType>(spotlightQuery);
 
   if (!spotlightStores || spotlightStores.length === 0) return null;
 
@@ -126,8 +131,8 @@ function SpotlightStoresSection() {
         <div className="mt-2 flex gap-4 overflow-x-auto pb-2">
           {spotlightStores.map((slot) => {
             const storeWithId = {
-              ...(slot as any),
-              storeId: (slot as any).storeId ?? (slot as any).id,
+              ...slot,
+              storeId: slot.storeId ?? slot.id,
               isSpotlighted: true,
             } as StoreType;
 
@@ -136,7 +141,7 @@ function SpotlightStoresSection() {
                 key={storeWithId.storeId}
                 className="flex-[0_0_280px] max-w-[320px]"
               >
-                <StoreCard store={storeWithId} cardImage={(storeWithId as any).storeImageUrl} layout="spotlight" />
+                <StoreCard store={storeWithId} cardImage={storeWithId.avatarUrl} layout="spotlight" />
               </div>
             );
           })}
@@ -193,11 +198,11 @@ function NewStoresSection() {
       where('status', '==', 'ACTIVE'),
       orderBy('createdAt', 'desc'),
       limit(18),
-    );
+    ).withConverter(storeConverter);
   }, [firestore]);
 
   const { data: stores, isLoading } =
-    useCollection<StoreType>(newStoresQuery as any);
+    useCollection<StoreType>(newStoresQuery);
 
   if (!stores || stores.length === 0) return null;
 
@@ -224,11 +229,11 @@ function NewStoresSection() {
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
         {stores.map((store) => {
-          const id = (store as any).storeId ?? (store as any).id;
+          const id = store.storeId ?? store.id;
           if (!id) return null;
 
           const storeWithId = {
-            ...(store as any),
+            ...store,
             storeId: id,
           } as StoreType;
 
@@ -259,11 +264,11 @@ function NewListingsSection() {
       where('state', '==', 'ACTIVE'),
       orderBy('createdAt', 'desc'),
       limit(12),
-    );
+    ).withConverter(listingConverter);
   }, [firestore]);
 
-  const { data: listings, isLoading } =
-    useCollection<any>(newListingsQuery);
+  const { data: listings, isLoading: listingsLoading } =
+    useCollection<Listing>(newListingsQuery);
 
   if (!listings || listings.length === 0) return null;
 
@@ -281,12 +286,12 @@ function NewListingsSection() {
         </Button>
       </div>
 
-      {isLoading && (
+      {listingsLoading && (
         <p className="text-xs text-muted-foreground">Loading listings…</p>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-        {listings.map((listing: any) => (
+        {listings.map((listing) => (
           <ListingCard
             key={listing.id || listing.listingId}
             listing={listing}

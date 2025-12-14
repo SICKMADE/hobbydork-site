@@ -25,10 +25,11 @@ export default function ISO24Card({ post, onMessageSeller }: ISO24CardProps) {
   const firestore = useFirestore();
 
   // Support multiple possible field names: creatorUid, userUid, ownerUid
+  const record = post as unknown as Record<string, unknown>;
   const creatorUid =
-    (post as any).creatorUid ||
-    (post as any).userUid ||
-    (post as any).ownerUid ||
+    (record.creatorUid as string) ||
+    (record.userUid as string) ||
+    (record.ownerUid as string) ||
     "";
 
   const userRef = useMemoFirebase(() => {
@@ -38,10 +39,10 @@ export default function ISO24Card({ post, onMessageSeller }: ISO24CardProps) {
 
   const { data: user } = useDoc<User>(userRef);
 
-  const expiresAt =
-    (post as any).expiresAt && (post as any).expiresAt.toDate
-      ? (post as any).expiresAt.toDate()
-      : null;
+  const expiresField = (record.expiresAt as unknown) ?? null;
+  const expiresAt = expiresField && typeof (expiresField as { toDate?: unknown }).toDate === 'function'
+    ? (expiresField as { toDate: () => Date }).toDate()
+    : null;
   const expiresIn = expiresAt
     ? formatDistanceToNow(expiresAt, { addSuffix: true })
     : "soon";

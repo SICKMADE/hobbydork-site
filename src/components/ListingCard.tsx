@@ -17,22 +17,19 @@ interface ListingCardProps {
 
 export default function ListingCard({ listing }: ListingCardProps) {
   // Some older queries may use listingId instead of id
-  const anyListing = listing as any;
-  const listingId: string | undefined =
-    anyListing.id || anyListing.listingId;
+  const listingId: string | undefined = listing.id || listing.listingId;
 
   if (!listingId) return null;
 
-  const title: string = anyListing.title ?? 'Untitled listing';
-  const price: number = Number(anyListing.price ?? 0);
-  const category: string = anyListing.category ?? 'OTHER';
-  const condition: string = anyListing.condition ?? 'UNKNOWN';
+  const title: string = listing.title ?? 'Untitled listing';
+  const price: number = Number(listing.price ?? 0);
+  const category: string = listing.category ?? 'OTHER';
+  const condition: string = listing.condition ?? 'UNKNOWN';
   const quantityAvailable: number = Number(
-    anyListing.quantityAvailable ?? 0,
+    listing.quantityAvailable ?? 0,
   );
-  const state: string = anyListing.state ?? 'ACTIVE';
-  const primaryImageUrl: string | undefined =
-    anyListing.primaryImageUrl;
+  const state: string = listing.state ?? 'ACTIVE';
+  const primaryImageUrl: string | undefined = listing.primaryImageUrl ?? undefined;
 
   const isActive = state === 'ACTIVE';
   const isSoldOut = state === 'SOLD_OUT' || quantityAvailable <= 0;

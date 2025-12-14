@@ -55,7 +55,7 @@ export function useCollection<T = DocumentData>(
     return () => {
       unsubscribe();
     };
-  }, [queryRef ? (queryRef as any).path?.canonicalString?.() ?? 'q' : 'no-query']);
+  }, [queryRef]);
 
   return { data, isLoading, error };
 }

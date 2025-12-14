@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuth } from '@/hooks/use-auth';
-import { useToast } from '@/hooks/use-toast.tsx';
+import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';

@@ -28,6 +28,7 @@ import {
   updateDoc,
   serverTimestamp,
 } from 'firebase/firestore';
+import { listingConverter, reviewConverter } from '@/firebase/firestore/converters';
 
 import {
   Card,
@@ -55,7 +56,7 @@ import {
 } from 'lucide-react';
 
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useToast } from '@/hooks/use-toast.tsx';
+import { useToast } from '@/hooks/use-toast';
 import { ReportUserDialog } from '@/components/moderation/ReportUserDialog';
 import ListingCard from '@/components/ListingCard';
 
@@ -72,19 +73,9 @@ type StoreDoc = {
   status: 'ACTIVE' | 'INACTIVE';
 };
 
-type ListingDoc = {
-  id?: string;
-  listingId: string;
-  storeId: string;
-  ownerUid: string;
-  title: string;
-  primaryImageUrl?: string;
-  price: number;
-  quantityAvailable: number;
-  state: 'ACTIVE' | 'DRAFT' | 'SOLD' | 'HIDDEN';
-  category?: string;
-  createdAt?: any;
-};
+import type { Listing } from '@/lib/types';
+
+type ListingDoc = Listing;
 
 type ReviewDoc = {
   id?: string;
@@ -157,7 +148,7 @@ export default function StorePage() {
     return doc(firestore, 'storefronts', storeId);
   }, [firestore, storeId]);
 
-  const { data: store, isLoading: storeLoading } = useDoc<StoreDoc>(storeRef as any);
+  const { data: store, isLoading: storeLoading } = useDoc<StoreDoc>(storeRef);
 
   // Owner profile doc
   const ownerRef = useMemoFirebase(() => {
@@ -165,7 +156,7 @@ export default function StorePage() {
     return doc(firestore, 'users', store.ownerUid);
   }, [firestore, store?.ownerUid]);
 
-  const { data: ownerProfile } = useDoc<OwnerProfile>(ownerRef as any);
+  const { data: ownerProfile } = useDoc<OwnerProfile>(ownerRef);
 
   // Listings
   const listingsQuery = useMemoFirebase(() => {
@@ -175,10 +166,10 @@ export default function StorePage() {
       where('storeId', '==', storeId),
       where('state', '==', 'ACTIVE'),
       orderBy('createdAt', 'desc')
-    );
+    ).withConverter(listingConverter);
   }, [firestore, storeId]);
 
-  const { data: listings, isLoading: listingsLoading } = useCollection(listingsQuery as any);
+  const { data: listings, isLoading: listingsLoading } = useCollection<Listing>(listingsQuery);
 
   // Reviews
   const reviewsQuery = useMemoFirebase(() => {
@@ -186,10 +177,10 @@ export default function StorePage() {
     return query(
       collection(firestore, 'storefronts', storeId, 'reviews'),
       orderBy('createdAt', 'desc')
-    );
+    ).withConverter(reviewConverter);
   }, [firestore, storeId]);
 
-  const { data: reviews, isLoading: reviewsLoading } = useCollection(reviewsQuery as any);
+  const { data: reviews, isLoading: reviewsLoading } = useCollection<ReviewDoc>(reviewsQuery);
 
   if (authLoading || storeLoading) {
     return (
@@ -203,7 +194,7 @@ export default function StorePage() {
     );
   }
 
-  if (!store || (store as any).status !== 'ACTIVE') {
+  if (!store || store.status !== 'ACTIVE') {
     return (
       <AppLayout>
         <PlaceholderContent
@@ -440,7 +431,7 @@ export default function StorePage() {
         </div>
       ) : listings && listings.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {listings.map((listing: any) => (
+          {listings.map((listing) => (
             <div key={listing.id || listing.listingId} className="comic-panel !p-0 overflow-hidden border-4 border-black">
                 <ListingCard listing={listing} />
             </div>

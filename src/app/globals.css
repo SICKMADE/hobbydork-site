@@ -2,10 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Restore your app background + text defaults */
+/* CSS theme variables used by Tailwind (hsl(var(--...))) */
+:root {
+  --background: 220 11% 12%;
+  --foreground: 0 0% 100%;
+  --muted: 220 10% 16%;
+  --muted-foreground: 210 8% 70%;
+  --card: 220 12% 14%;
+  --card-foreground: 0 0% 100%;
+  --border: 220 12% 16%;
+  --input: 220 12% 16%;
+  --ring: 220 10% 60%;
+  --primary: 45 100% 50%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 210 16% 18%;
+  --secondary-foreground: 0 0% 100%;
+  --accent: 45 100% 50%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 78% 62%;
+  --destructive-foreground: 0 0% 100%;
+  --popover: 220 12% 14%;
+  --popover-foreground: 0 0% 100%;
+  --sidebar-accent: 45 95% 52%;
+  --sidebar-accent-foreground: 0 0% 0%;
+  --sidebar-border: 220 12% 16%;
+  --sidebar-ring: 45 95% 52%;
+  --chart-1: 210 16% 60%;
+  --chart-2: 180 60% 50%;
+  --chart-3: 260 60% 60%;
+  --chart-4: 30 100% 50%;
+  --chart-5: 330 80% 60%;
+  --sidebar-background: 220 12% 14%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-primary: 45 95% 52%;
+  --sidebar-primary-foreground: 0 0% 0%;
+}
+
+/* Restore your app background + text defaults (use CSS variables for theme) */
 body {
-  background: #2d2d2d;
-  color: white;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 /* MAIN APP SHELL RESTORE */

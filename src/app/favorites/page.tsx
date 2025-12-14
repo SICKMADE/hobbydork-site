@@ -4,6 +4,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
+import { favoriteStoreConverter } from '@/firebase/firestore/converters';
 import type { Store, FavoriteStoreItem } from "@/lib/types";
 import PlaceholderContent from "@/components/PlaceholderContent";
 import StoreCard from "@/components/StoreCard";
@@ -35,7 +36,7 @@ export default function FavoritesPage() {
 
     const favoritesQuery = useMemoFirebase(() => {
         if (!firestore || !profile) return null;
-        return collection(firestore, `users/${profile.uid}/favoriteStores`);
+        return collection(firestore, `users/${profile.uid}/favoriteStores`).withConverter(favoriteStoreConverter);
     }, [firestore, profile]);
 
     const { data: favoriteItems, isLoading } = useCollection<FavoriteStoreItem>(favoritesQuery);

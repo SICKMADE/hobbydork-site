@@ -28,7 +28,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useFirestore } from "@/firebase";
 import { doc, updateDoc } from "firebase/firestore";
-import { useToast } from "@/hooks/use-toast.tsx";
+import { useToast } from "@/hooks/use-toast";
 import { getInitials } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";

@@ -28,7 +28,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useFirestore } from '@/firebase';
 import { doc, runTransaction, serverTimestamp, collection } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast.tsx';
+import { useToast } from '@/hooks/use-toast';
 import { placeholderImages } from '@/lib/placeholder-images';
 import AppLayout from '@/components/layout/AppLayout';
 import { Label } from '@/components/ui/label';
@@ -192,7 +192,7 @@ export default function CreateStorePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const methods = useForm<SellerFormValues>({
-    resolver: zodResolver(step === 1 ? storeSchema : sellerSchema),
+    resolver: zodResolver(step === 1 ? storeSchema : sellerSchema) as any,
     mode: 'onChange',
     defaultValues: {
       about: '',
@@ -200,7 +200,7 @@ export default function CreateStorePage() {
       paymentIdentifier: profile?.paymentIdentifier || '',
       goodsAndServicesAgreed: profile?.goodsAndServicesAgreed || false,
     },
-  });
+  } as any);
 
   // Already a seller? bounce away
   useEffect(() => {

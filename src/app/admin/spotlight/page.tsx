@@ -44,7 +44,8 @@ import {
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast.tsx';
+import { useToast } from '@/hooks/use-toast';
+import { spotlightConverter } from '@/firebase/firestore/converters';
 import type { SpotlightSlot } from '@/lib/types';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -75,10 +76,13 @@ export default function AdminSpotlightPage() {
 
   const slotsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'spotlightSlots');
+    // Typed converter so useCollection<SpotlightSlot> receives a Query<SpotlightSlot>
+    return collection(firestore, 'spotlightSlots').withConverter(spotlightConverter);
   }, [firestore]);
 
-  const { data: slots, isLoading } = useCollection<SpotlightSlot>(slotsQuery);
+  const { data: slots, isLoading } = useCollection<SpotlightSlot>(
+    slotsQuery as any
+  );
 
   const syncStoreSpotlight = async (
     storeId: string,
