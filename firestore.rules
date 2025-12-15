@@ -1,0 +1,253 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userStatus() {
+      return userDoc().data.status;
+    }
+
+    function userIsActive() {
+      return isSignedIn() && userStatus() == "ACTIVE";
+    }
+
+    function userIsAdmin() {
+      return isSignedIn() && userDoc().data.role == "ADMIN";
+    }
+
+    function userIsSeller() {
+      return isSignedIn()
+        && userDoc().data.isSeller == true
+        && userDoc().data.storeId != "";
+    }
+
+    function userCanCreateStore() {
+      // User must be active, not already a seller, and be creating a store for themselves
+      return userIsActive()
+        && userDoc().data.isSeller != true
+        && userDoc().data.storeId == ""
+        && userDoc().data.goodsAndServicesAgreed == true
+        && request.resource.data.ownerUid == request.auth.uid;
+    }
+
+    // USERS
+    match /users/{uid} {
+      // Any signed-in user can read basic user docs
+      allow read: if isSignedIn();
+
+      // CREATE: user can create their own doc with role "USER" and status "ACTIVE"
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == "USER"
+        && request.resource.data.status == "ACTIVE";
+
+      // UPDATE:
+      // - Normal user can update their own doc,
+      //   BUT role, status, and displayName cannot change.
+      // - Admin can update other fields too, but must also respect displayName immutability.
+      allow update: if isSignedIn() && (
+        (
+          request.auth.uid == uid
+          // role cannot change
+          && resource.data.role == request.resource.data.role
+          // status cannot change
+          && resource.data.status == request.resource.data.status
+          // displayName cannot change
+          && resource.data.displayName == request.resource.data.displayName
+        )
+        ||
+        (
+          userIsAdmin()
+          // even admin cannot change displayName
+          && resource.data.displayName == request.resource.data.displayName
+        )
+      );
+
+      // Only admin can delete user docs
+      allow delete: if userIsAdmin();
+
+      // Subcollections are owned by the user.
+      match /notifications/{notificationId} {
+        allow read, write: if request.auth.uid == uid || userIsAdmin();
+      }
+      match /watchlist/{listingId} {
+        allow read, write: if request.auth.uid == uid || userIsAdmin();
+      }
+      match /favoriteStores/{storeId} {
+        allow read, write: if request.auth.uid == uid || userIsAdmin();
+      }
+    }
+
+    // STORES
+    match /storefronts/{storeId} {
+      // All logged-in users can read stores
+      allow read: if isSignedIn();
+
+      // CREATE: allow an ACTIVE non-seller to create exactly one store for themselves,
+      // or allow admin to create a store.
+      allow create: if isSignedIn() && (
+        userCanCreateStore() || userIsAdmin()
+      );
+
+      // UPDATE:
+      // - Seller who owns the store OR admin can update other fields,
+      //   BUT storeName and slug cannot change.
+      allow update: if isSignedIn()
+        && (
+          (userIsSeller() && resource.data.ownerUid == request.auth.uid)
+          || userIsAdmin()
+        )
+        // storeName must not change
+        && resource.data.storeName == request.resource.data.storeName
+        // if slug exists, it must not change either
+        && (
+          !("slug" in resource.data)
+          || resource.data.slug == request.resource.data.slug
+        );
+
+      // DELETE: only seller or admin can delete
+      allow delete: if isSignedIn() && (
+        (userIsSeller() && resource.data.ownerUid == request.auth.uid)
+        || userIsAdmin()
+      );
+
+      match /reviews/{reviewId} {
+        allow read: if isSignedIn();
+        // The buyer of the corresponding order can create one review.
+        allow create: if isSignedIn()
+          && get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.buyerUid == request.auth.uid
+          && !existsAfter(/databases/$(database)/documents/storefronts/$(storeId)/reviews/$(request.resource.data.orderId));
+        // Reviews are immutable by users.
+        allow update, delete: if userIsAdmin();
+      }
+    }
+
+    // LISTINGS
+    match /listings/{listingId} {
+      // All logged-in users can read listings (get + list)
+      allow read: if isSignedIn();
+
+      // Only sellers (or admin) can manage their own listings
+      allow create, update, delete: if isSignedIn() && (
+        (userIsSeller() && request.resource.data.ownerUid == request.auth.uid)
+        || userIsAdmin()
+      );
+    }
+
+// ORDERS
+match /orders/{orderId} {
+
+  // Buyer, seller or admin can read ANY order (get + list/query)
+  allow read: if request.auth != null &&
+    (
+      request.auth.uid == resource.data.buyerUid ||
+      request.auth.uid == resource.data.sellerUid ||
+      userIsAdmin()
+    );
+
+  // Any signed-in user can create an order where they are the buyer
+  allow create: if request.auth != null &&
+    request.auth.uid == request.resource.data.buyerUid;
+
+  // Buyer, seller or admin can update
+  allow update: if request.auth != null &&
+    (
+      request.auth.uid == resource.data.buyerUid ||
+      request.auth.uid == resource.data.sellerUid ||
+      userIsAdmin()
+    );
+
+  // Only admin can delete
+  allow delete: if userIsAdmin();
+}
+
+
+    // ISO24 posts
+    match /iso24Posts/{isoId} {
+      // All logged-in users can read ISO24 posts (get + list/query)
+      allow read: if isSignedIn();
+
+      // Only ACTIVE users or admin can create/update/delete ISO24 posts
+      allow create, update, delete: if userIsActive() || userIsAdmin();
+
+     // Comments on ISO posts
+      match /comments/{commentId} {
+        // Any signed-in user can read comments
+        allow read: if isSignedIn();
+
+        // Only ACTIVE users can create comments, and only as themselves
+        allow create: if userIsActive()
+          && request.resource.data.authorUid == request.auth.uid;
+
+        // Author or admin can edit/delete their comment
+        allow update, delete: if isSignedIn() && (
+          resource.data.authorUid == request.auth.uid ||
+          userIsAdmin()
+        );
+      }
+    }
+
+
+    // Community chat
+    match /communityMessages/{messageId} {
+      // Readable by all logged-in users
+      allow read: if isSignedIn();
+
+      // Only ACTIVE users or admin can create
+      allow create: if userIsActive() || userIsAdmin();
+
+      // Only admin can update/delete messages (moderation)
+      allow update, delete: if userIsAdmin();
+    }
+
+    // Conversations and messages
+    match /conversations/{conversationId} {
+      allow read, update: if isSignedIn()
+        && (request.auth.uid in resource.data.participantUids || userIsAdmin());
+
+      allow create: if isSignedIn();
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() &&
+          (
+            request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantUids
+            || userIsAdmin()
+          );
+
+        allow create: if isSignedIn();
+      }
+    }
+
+    // Reports
+    match /reports/{reportId} {
+      // Any logged-in user can create a report
+      allow create: if isSignedIn();
+
+      // Reporter can read their own reports; admin can read all
+      allow read: if isSignedIn() &&
+        (resource.data.reporterUid == request.auth.uid || userIsAdmin());
+
+      // Only admin can update/delete a report
+      allow update, delete: if userIsAdmin();
+    }
+
+    // Spotlight slots
+    match /spotlightSlots/{slotId} {
+      allow read: if isSignedIn();
+      // Only admin/backend should manage spotlight slots
+      allow create, update, delete: if userIsAdmin();
+    }
+
+    // Fallback to deny all access
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

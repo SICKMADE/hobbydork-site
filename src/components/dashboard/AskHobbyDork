@@ -1,0 +1,110 @@
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+
+const BUY_ANSWERS = [
+  'Yeah, you should buy it.',
+  'Looks good. Pull the trigger.',
+  'If you really want it, grab it.',
+  'This one belongs in your collection.',
+  'Only buy it if you love it.',
+  'It’s fine, but you don’t need it.',
+  'Pass. This one is not worth it.',
+  'Condition and price don’t line up. Skip it.',
+  'Wait for a cleaner copy.',
+  'Hold off. A better deal will show up.',
+];
+
+const SELL_ANSWERS = [
+  'Yeah, you should sell it.',
+  'Move it and upgrade later.',
+  'Dump it. You won’t miss it.',
+  'Sell it and chase something you actually want.',
+  'Easy to replace? Then list it.',
+  'Keep it. You’re not done with this one.',
+  'Hold it a bit longer.',
+  'If you still like it, don’t sell it.',
+  'This belongs in your collection, not on a sales table.',
+  'Sell something you care about less.',
+];
+
+function getRandomAnswer(kind) {
+  const pool = kind === 'BUY' ? BUY_ANSWERS : SELL_ANSWERS;
+  const idx = Math.floor(Math.random() * pool.length);
+  return pool[idx];
+}
+
+function AskHobbyDork() {
+  const [answer, setAnswer] = useState(null);
+  const [isShaking, setIsShaking] = useState(false);
+
+  const handleAsk = (kind) => {
+    setIsShaking(true);
+
+    setTimeout(() => {
+      setAnswer(getRandomAnswer(kind));
+      setIsShaking(false);
+    }, 400);
+  };
+
+  return (
+    <Card className="border-none bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+      <CardContent className="pt-4 space-y-4">
+        <p className="text-xs uppercase tracking-[0.25em] text-slate-400">
+          Ask HobbyDork
+        </p>
+        <p className="text-sm text-slate-300">
+          Think about your item, then tap one of the buttons. HobbyDork will
+          give you an answer—no takesies backsies.
+        </p>
+
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            size="sm"
+            className="flex-1 bg-emerald-500 hover:bg-emerald-600"
+            onClick={() => handleAsk('BUY')}
+          >
+            Should I buy it?
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="flex-1 border-red-500 text-red-400 hover:bg-red-500/10"
+            onClick={() => handleAsk('SELL')}
+          >
+            Should I sell it?
+          </Button>
+        </div>
+
+        <div
+          className={cn(
+            'mt-2 flex h-28 items-center justify-center rounded-xl border border-slate-700 bg-slate-950/70 px-4 text-center text-sm',
+            isShaking && 'animate-pulse',
+          )}
+        >
+          {answer ? (
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                HobbyDork says:
+              </p>
+              <p className="text-base font-semibold">{answer}</p>
+            </div>
+          ) : (
+            <p className="text-slate-500 text-sm">
+              No answer yet. Ask if you should{' '}
+              <span className="font-semibold text-emerald-400">buy</span> or{' '}
+              <span className="font-semibold text-red-400">sell</span>.
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default AskHobbyDork;

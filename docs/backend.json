@@ -1,0 +1,826 @@
+
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user within the HobbyDork VaultVerse application.",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique identifier for the user entity (matches Firebase Auth UID)."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": ["string", "null"],
+          "description": "The user's display name."
+        },
+        "avatar": {
+          "type": "string",
+          "description": "URL to the user's avatar image."
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the user account (ACTIVE, LIMITED, SUSPENDED).",
+          "enum": [
+            "ACTIVE",
+            "LIMITED",
+            "SUSPENDED"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "USER",
+            "ADMIN"
+          ]
+        },
+        "isSeller": {
+          "type": "boolean",
+          "description": "True if the user has completed seller onboarding and created a store."
+        },
+        "storeId": {
+          "type": ["string", "null"],
+          "description": "The ID of the store owned by the user, if any."
+        },
+        "paymentMethod": {
+          "type": ["string", "null"],
+          "enum": [
+            "PAYPAL",
+            "VENMO",
+            null
+          ]
+        },
+        "paymentIdentifier": {
+          "type": ["string", "null"]
+        },
+        "emailVerified": {
+          "type": "boolean"
+        },
+        "oneAccountAcknowledged": {
+          "type": "boolean"
+        },
+        "goodsAndServicesAgreed": {
+          "type": "boolean"
+        },
+        "notifyMessages": {
+          "type": "boolean"
+        },
+        "notifyOrders": {
+          "type": "boolean"
+        },
+        "notifyISO24": {
+          "type": "boolean"
+        },
+        "notifySpotlight": {
+          "type": "boolean"
+        },
+        "blockedUsers": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+      },
+      "required": [
+        "uid",
+        "email",
+        "displayName",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "role",
+        "isSeller",
+        "emailVerified",
+        "oneAccountAcknowledged",
+        "goodsAndServicesAgreed",
+        "notifyMessages",
+        "notifyOrders",
+        "notifyISO24",
+        "notifySpotlight",
+        "blockedUsers"
+      ]
+    },
+    "Store": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Store",
+      "type": "object",
+      "description": "Represents a user's store within the HobbyDork VaultVerse application.",
+      "properties": {
+        "storeId": {
+          "type": "string",
+          "description": "Unique identifier for the store entity (matches document ID)."
+        },
+        "ownerUid": {
+          "type": "string",
+          "description": "Reference to the User who owns the store."
+        },
+        "storeName": {
+          "type": "string",
+          "description": "Name of the store."
+        },
+        "slug": {
+          "type": "string",
+          "description": "Unique, lowercased, store URL slug."
+        },
+        "about": {
+          "type": "string",
+          "description": "'About' section for the store."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "URL to the store's avatar image.",
+          "format": "uri"
+        },
+        "ratingAverage": {
+          "type": "number",
+          "description": "Average rating of the store."
+        },
+        "ratingCount": {
+          "type": "number",
+          "description": "Total number of ratings."
+        },
+        "itemsSold": {
+          "type": "number",
+          "description": "Total number of items sold."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "HIDDEN",
+            "DISABLED"
+          ]
+        },
+        "isSpotlighted": {
+          "type": "boolean"
+        },
+        "spotlightUntil": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Timestamp until the store is spotlighted."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "storeId",
+        "ownerUid",
+        "storeName",
+        "slug",
+        "about",
+        "avatarUrl",
+        "status",
+        "isSpotlighted",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Listing": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Listing",
+      "type": "object",
+      "description": "Represents a collectible listing within the HobbyDork VaultVerse application.",
+      "properties": {
+        "listingId": {
+          "type": "string",
+          "description": "Unique identifier for the listing entity (matches document ID)."
+        },
+        "storeId": {
+          "type": "string",
+          "description": "Reference to the Store the listing belongs to."
+        },
+        "ownerUid": {
+          "type": "string",
+          "description": "UID of the user who owns the listing."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the listing."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the collectible."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the collectible."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the collectible."
+        },
+        "condition": {
+          "type": "string",
+          "description": "Condition of the collectible.",
+          "enum": [
+            "NEW",
+            "LIKE_NEW",
+            "VERY_GOOD",
+            "GOOD",
+            "FAIR",
+            "POOR"
+          ]
+        },
+        "quantityTotal": {
+          "type": "number",
+          "description": "The initial total quantity of the item."
+        },
+        "quantityAvailable": {
+          "type": "number",
+          "description": "The current number of items available for sale."
+        },
+        "state": {
+          "type": "string",
+          "description": "The current state of the listing.",
+          "enum": [
+            "DRAFT",
+            "ACTIVE",
+            "HIDDEN",
+            "SOLD"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "description": "Keywords associated with the listing.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "imageUrls": {
+          "type": "array",
+          "description": "Array of URLs for the listing images.",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "primaryImageUrl": {
+          "type": ["string", "null"],
+          "description": "The primary image URL for the listing.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "listingId",
+        "storeId",
+        "ownerUid",
+        "title",
+        "category",
+        "description",
+        "price",
+        "condition",
+        "quantityTotal",
+        "quantityAvailable",
+        "state",
+        "imageUrls",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Order": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Order",
+      "type": "object",
+      "description": "Represents an order within the HobbyDork VaultVerse application.",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "description": "Unique identifier for the order entity."
+        },
+        "buyerUid": {
+          "type": "string",
+          "description": "Reference to the User who placed the order."
+        },
+        "sellerUid": {
+          "type": "string",
+          "description": "Reference to the User who owns the store."
+        },
+        "storeId": {
+          "type": "string",
+          "description": "Reference to the Store where order was placed."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "listingId": { "type": "string" },
+              "title": { "type": "string" },
+              "quantity": { "type": "number" },
+              "pricePerUnit": { "type": "number" }
+            },
+            "required": ["listingId", "title", "quantity", "pricePerUnit"]
+          }
+        },
+        "totalPrice": {
+          "type": "number"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "PENDING_PAYMENT",
+            "PAYMENT_SENT",
+            "SHIPPED",
+            "DELIVERED",
+            "COMPLETED",
+            "CANCELLED"
+          ]
+        },
+        "buyerShippingAddress": {
+            "type": ["object", "null"],
+            "properties": {
+                "name": {"type": "string"},
+                "address1": {"type": "string"},
+                "address2": {"type": ["string", "null"]},
+                "city": {"type": "string"},
+                "state": {"type": "string"},
+                "zip": {"type": "string"},
+                "country": {"type": "string"}
+            },
+            "required": ["name", "address1", "city", "state", "zip", "country"]
+        },
+        "paymentMethod": {
+            "type": "string",
+            "enum": ["PAYPAL", "VENMO"]
+        },
+        "paymentIdentifier": {
+            "type": "string"
+        },
+        "trackingNumber": {
+          "type": ["string", "null"]
+        },
+        "trackingCarrier": {
+          "type": ["string", "null"]
+        },
+        "cancelReason": {
+          "type": ["string", "null"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reviewId": {
+            "type": "string",
+            "description": "ID of the review associated with this order."
+        }
+      },
+      "required": [
+        "orderId",
+        "buyerUid",
+        "sellerUid",
+        "storeId",
+        "items",
+        "totalPrice",
+        "state",
+        "paymentMethod",
+        "paymentIdentifier",
+        "createdAt",
+        "updatedAt",
+        "buyerShippingAddress"
+      ]
+    },
+    "Review": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Review",
+        "type": "object",
+        "description": "Represents a review for a completed order.",
+        "properties": {
+            "reviewId": { "type": "string", "description": "Unique ID, same as orderId"},
+            "orderId": { "type": "string" },
+            "storeId": { "type": "string" },
+            "sellerUid": { "type": "string" },
+            "buyerUid": { "type": "string" },
+            "buyerName": { "type": "string" },
+            "buyerAvatar": { "type": "string" },
+            "rating": { "type": "number", "minimum": 1, "maximum": 5 },
+            "comment": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["reviewId", "orderId", "storeId", "sellerUid", "buyerUid", "buyerName", "buyerAvatar", "rating", "comment", "createdAt"]
+    },
+    "CommunityMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CommunityMessage",
+      "type": "object",
+      "description": "A single message in the community chat.",
+      "properties": {
+        "messageId": {
+          "type": "string"
+        },
+        "senderUid": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "messageId",
+        "senderUid",
+        "text",
+        "createdAt"
+      ]
+    },
+    "ISO24": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ISO24 Post",
+      "type": "object",
+      "description": "Represents an 'In Search Of' post, visible for 24 hours.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ISO post."
+        },
+        "creatorUid": {
+          "type": "string",
+          "description": "The UID of the user who created the post."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the item being sought."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the item."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the item."
+        },
+        "imageUrl": {
+            "type": ["string", "null"],
+            "description": "Optional URL of an image for the item being sought.",
+            "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the post automatically expires."
+        },
+        "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "EXPIRED"]
+        }
+      },
+      "required": [
+        "id",
+        "creatorUid",
+        "title",
+        "category",
+        "description",
+        "createdAt",
+        "expiresAt",
+        "status"
+      ]
+    },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents an in-app notification for a user.",
+      "properties": {
+        "id": { "type": "string" },
+        "userUid": { "type": "string" },
+        "type": { "type": "string", "enum": ["MESSAGE", "ORDER", "ORDER_STATUS", "ISO24", "SPOTLIGHT", "GENERIC"] },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "relatedId": { "type": ["string", "null"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "userUid", "type", "title", "body", "relatedId", "createdAt", "read"]
+    },
+    "SpotlightSlot": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SpotlightSlot",
+      "type": "object",
+      "description": "Represents a time slot for a store to be featured on the homepage.",
+      "properties": {
+        "slotId": { "type": "string", "description": "Unique identifier for the spotlight slot." },
+        "storeId": { "type": "string", "description": "The ID of the store being spotlighted." },
+        "ownerUid": { "type": "string", "description": "The UID of the store's owner." },
+        "startAt": { "type": "string", "format": "date-time", "description": "Timestamp when the spotlight begins." },
+        "endAt": { "type": "string", "format": "date-time", "description": "Timestamp when the spotlight ends." },
+        "active": { "type": "boolean", "description": "Whether the spotlight slot is currently active." }
+      },
+      "required": ["slotId", "storeId", "ownerUid", "startAt", "endAt", "active"]
+    },
+    "Conversation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Conversation",
+      "type": "object",
+      "description": "Represents a direct message conversation between two users.",
+      "properties": {
+        "conversationId": { "type": "string" },
+        "participantUids": { "type": "array", "items": { "type": "string" } },
+        "lastMessageText": { "type": "string" },
+        "lastMessageAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["conversationId", "participantUids", "lastMessageText", "lastMessageAt", "createdAt"]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a single message within a conversation.",
+      "properties": {
+        "messageId": { "type": "string" },
+        "senderUid": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "readBy": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "An array of user UIDs who have read the message."
+        }
+      },
+      "required": ["messageId", "senderUid", "text", "createdAt", "readBy"]
+    },
+    "WatchlistItem": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "WatchlistItem",
+        "type": "object",
+        "description": "Represents a single item in a user's watchlist.",
+        "properties": {
+            "listingId": { "type": "string" },
+            "addedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["listingId", "addedAt"]
+    },
+    "FavoriteStoreItem": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "FavoriteStoreItem",
+        "type": "object",
+        "description": "Represents a single store in a user's favorite stores list.",
+        "properties": {
+            "storeId": { "type": "string" },
+            "addedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["storeId", "addedAt"]
+    },
+    "Report": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Report",
+        "type": "object",
+        "description": "Represents a user-submitted report against a user, listing, or order.",
+        "properties": {
+            "reportId": { "type": "string" },
+            "reporterUid": { "type": "string" },
+            "targetType": { "type": "string", "enum": ["USER", "LISTING", "ORDER"] },
+            "targetId": { "type": "string" },
+            "reason": { "type": "string" },
+            "details": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "status": { "type": "string", "enum": ["OPEN", "REVIEWED", "RESOLVED"] }
+        },
+        "required": ["reportId", "reporterUid", "targetType", "targetId", "reason", "details", "createdAt", "status"]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/entities/User"
+          },
+          "description": "Stores user profile data. Accessible only by the user themselves.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+       {
+        "path": "/users/{userId}/notifications/{notificationId}",
+        "definition": {
+          "entityName": "Notification",
+          "schema": { "$ref": "#/entities/Notification" },
+          "description": "Stores notifications for a specific user. Only readable by that user.",
+          "params": [
+            { "name": "userId", "description": "The ID of the user." },
+            { "name": "notificationId", "description": "The ID of the notification." }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/watchlist/{listingId}",
+        "definition": {
+          "entityName": "WatchlistItem",
+          "schema": { "$ref": "#/entities/WatchlistItem" },
+          "description": "Stores a single listing in a user's watchlist.",
+          "params": [
+            { "name": "userId", "description": "The ID of the user." },
+            { "name": "listingId", "description": "The ID of the listing being watched." }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/favoriteStores/{storeId}",
+        "definition": {
+          "entityName": "FavoriteStoreItem",
+          "schema": { "$ref": "#/entities/FavoriteStoreItem" },
+          "description": "Stores a single store in a user's favorite list.",
+          "params": [
+            { "name": "userId", "description": "The ID of the user." },
+            { "name": "storeId", "description": "The ID of the favorited store." }
+          ]
+        }
+      },
+      {
+        "path": "/storefronts/{storefrontId}",
+        "definition": {
+          "entityName": "Store",
+          "schema": {
+            "$ref": "#/entities/Store"
+          },
+          "description": "Stores store data. Publicly readable, but only the owner can edit.",
+          "params": [
+            {
+              "name": "storefrontId",
+              "description": "The unique identifier of the storefront."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/storefronts/{storefrontId}/reviews/{reviewId}",
+        "definition": {
+            "entityName": "Review",
+            "schema": { "$ref": "#/entities/Review" },
+            "description": "Stores reviews for a specific store. Publicly readable.",
+            "params": [
+                { "name": "storefrontId", "description": "The ID of the store." },
+                { "name": "reviewId", "description": "The ID of the review (same as orderId)." }
+            ]
+        }
+      },
+      {
+        "path": "/listings/{listingId}",
+        "definition": {
+          "entityName": "Listing",
+          "schema": {
+            "$ref": "#/entities/Listing"
+          },
+          "description": "Stores listing data. Publicly readable, only owner can edit.",
+          "params": [
+            {
+              "name": "listingId",
+              "description": "The unique identifier of the listing."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
+          "schema": {
+            "$ref": "#/entities/Order"
+          },
+          "description": "Stores order data. Accessible only by the buyer and seller.",
+          "params": [
+            {
+              "name": "orderId",
+              "description": "The unique identifier of the order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/communityMessages/{messageId}",
+        "definition": {
+          "entityName": "CommunityMessage",
+          "schema": {
+            "$ref": "#/entities/CommunityMessage"
+          },
+          "description": "Stores community chat messages. Readable by any signed-in user.",
+          "params": [
+            {
+              "name": "messageId",
+              "description": "The unique identifier of the chat message."
+            }
+          ]
+        }
+      },
+       {
+        "path": "/iso24Posts/{isoId}",
+        "definition": {
+          "entityName": "ISO24",
+          "schema": {
+            "$ref": "#/entities/ISO24"
+          },
+          "description": "Stores 'In Search Of' posts, which expire after 24 hours.",
+          "params": [
+            {
+              "name": "isoId",
+              "description": "The unique identifier of the ISO post."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/spotlightSlots/{slotId}",
+        "definition": {
+          "entityName": "SpotlightSlot",
+          "schema": {
+            "$ref": "#/entities/SpotlightSlot"
+          },
+          "description": "Stores data for store spotlights. Publicly readable, admin-only writes.",
+          "params": [
+            {
+              "name": "slotId",
+              "description": "The unique identifier of the spotlight slot."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/conversations/{conversationId}",
+        "definition": {
+          "entityName": "Conversation",
+          "schema": { "$ref": "#/entities/Conversation" },
+          "description": "Top-level document for a direct message conversation.",
+          "params": [
+            { "name": "conversationId", "description": "The unique ID for the conversation." }
+          ]
+        }
+      },
+      {
+        "path": "/conversations/{conversationId}/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": { "$ref": "#/entities/Message" },
+          "description": "Subcollection for messages within a conversation.",
+          "params": [
+            { "name": "conversationId", "description": "The ID of the parent conversation." },
+            { "name": "messageId", "description": "The unique ID for the message." }
+          ]
+        }
+      },
+      {
+        "path": "/reports/{reportId}",
+        "definition": {
+          "entityName": "Report",
+          "schema": { "$ref": "#/entities/Report" },
+          "description": "Stores user-submitted reports for admin review.",
+          "params": [
+            { "name": "reportId", "description": "The unique ID for the report." }
+          ]
+        }
+      }
+    ]
+  }
+}
+    
+
+    
