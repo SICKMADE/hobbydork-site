@@ -10,6 +10,7 @@ import {
   User as FirebaseUser,
   sendEmailVerification
 } from 'firebase/auth';
+import { getApp } from 'firebase/app';
 import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useUser, useDoc, useFirestore, useAuth as useFirebaseAuth, useMemoFirebase } from '@/firebase';
 import type { User as UserProfile } from '@/lib/types';
@@ -64,6 +65,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
+      try {
+        console.log('Auth login attempt', { email, appOptions: getApp()?.options });
+      } catch (e) {
+        console.warn('Could not read app options at login time', e);
+      }
+
       await signInWithEmailAndPassword(auth, email, password);
       toast({
         title: 'Login Successful',
@@ -71,12 +78,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return true;
     } catch (error: any) {
-      console.error("Login failed:", error);
-      toast({
-        title: 'Login Failed',
-        description: error.message || 'An unexpected error occurred.',
-        variant: 'destructive',
-      });
+        const code = error?.code;
+        try {
+          console.error('Login failed:', {
+            code,
+            message: error?.message,
+            customData: error?.customData,
+            stack: error?.stack,
+          });
+
+          // Some Error subclasses put useful fields on non-enumerable properties.
+          // Log introspection data so we can see them in production builds.
+          console.error('Login failed - toString:', String(error));
+          console.error('Login failed - instanceof Error:', error instanceof Error);
+          try {
+            const own = Object.getOwnPropertyNames(error || {});
+            console.error('Login failed - own property names:', own);
+            console.error('Login failed - descriptors:', Object.getOwnPropertyDescriptors(error || {}));
+          } catch (inspectErr) {
+            console.warn('Could not inspect error properties:', inspectErr);
+          }
+
+          try {
+            const serial = JSON.stringify({ code: error?.code, message: error?.message, customData: error?.customData });
+            console.error('Login failed - json:', serial);
+          } catch (serErr) {
+            console.warn('Could not stringify error:', serErr);
+          }
+          console.error('Login failed - raw error object:', error);
+        } catch (logErr) {
+          console.error('Error while logging login failure:', logErr);
+        }
+
+        let description = error?.message || 'An unexpected error occurred.';
+        if (code === 'auth/wrong-password') {
+          description = 'Incorrect password — please try again.';
+        } else if (code === 'auth/user-not-found') {
+          description = 'No account found for that email address.';
+        } else if (code === 'auth/too-many-requests') {
+          description = 'Too many failed attempts. Try again in a few minutes.';
+        } else if (code === 'auth/invalid-credential') {
+          description = 'Invalid credential. Please try again or contact support.';
+        }
+
+        toast({
+          title: 'Login Failed',
+          description,
+          variant: 'destructive',
+        });
       return false;
     }
   }, [auth, toast]);
