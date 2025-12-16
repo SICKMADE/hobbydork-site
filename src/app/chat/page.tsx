@@ -1,283 +1,292 @@
+"use client";
 
-'use client';
-
-import { useState, useEffect, useRef, FormEvent } from 'react';
-
-import AppLayout from '@/components/layout/AppLayout';
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-
-import { useAuth } from '@/hooks/use-auth';
-import {
-  useFirestore,
-  useCollection,
-  useMemoFirebase,
-  useDoc,
-} from '@/firebase';
-
+import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { db } from "@/firebase/client-provider";
 import {
   collection,
   addDoc,
-  serverTimestamp,
   query,
   orderBy,
-  Timestamp,
+  onSnapshot,
+  serverTimestamp,
+  deleteDoc,
   doc,
+  getDocs,
+  where,
   updateDoc,
-} from 'firebase/firestore';
+} from "firebase/firestore";
 
-import { Send, Store, MessageCircle, Flag } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
+export default function GroupChatPage() {
+  const { user, userData } = useAuth(); // userData contains role
+  const [messages, setMessages] = useState<any[]>([]);
+  const [text, setText] = useState("");
 
-import { ReportUserDialog } from '@/components/moderation/ReportUserDialog';
+  const [actionUser, setActionUser] = useState<any>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-import type { CommunityMessage, User } from '@/lib/types';
-
-type CommunityMessageWithId = CommunityMessage & { id: string };
-
-const MessageItem = ({ message }: { message: CommunityMessageWithId }) => {
-  const firestore = useFirestore();
-  const [reportOpen, setReportOpen] = useState(false);
-
-  // Guard senderUid so doc() never gets undefined
-  const userRef = useMemoFirebase(() => {
-    if (!firestore || !message?.senderUid) return null;
-    return doc(firestore, 'users', message.senderUid);
-  }, [firestore, message?.senderUid]);
-
-  const { data: author } = useDoc<User>(userRef as any);
-
-  const avatarSrc =
-    (author as any)?.avatar ||
-    (author as any)?.avatarUrl ||
-    (author as any)?.photoURL ||
-    (author as any)?.profileImageUrl ||
-    '';
-
-  const displayName =
-    (author as any)?.displayName ||
-    message.senderUid ||
-    'User';
-
-  const isSeller = !!(author as any)?.isSeller;
-  const storeId = (author as any)?.storeId as string | undefined;
-
-  const createdAt =
-    (message.createdAt as any as Timestamp | undefined) ?? undefined;
-
-  const timeLabel = createdAt
-    ? new Date(createdAt.seconds * 1000).toLocaleTimeString()
-    : '…';
-
-  const canViewStore = isSeller && !!storeId;
-
-  return (
-    <>
-      <div className="flex items-start gap-3 py-2">
-        {/* CLICKABLE avatar w/ dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <Avatar className="h-12 w-12 border">
-                <AvatarImage src={avatarSrc} alt={displayName} />
-                <AvatarFallback className="text-sm">
-                  {displayName.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-40" align="start">
-            <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground">
-              {displayName}
-            </div>
-            <DropdownMenuSeparator />
-            {canViewStore && (
-              <DropdownMenuItem
-                asChild
-                className="cursor-pointer text-xs"
-              >
-                <a href={`/store/${storeId}`}>
-                  <Store className="mr-2 h-3 w-3" />
-                  View store
-                </a>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem
-              asChild
-              className="cursor-pointer text-xs"
-            >
-              <a href={`/messages/new?recipientUid=${message.senderUid}`}>
-                <MessageCircle className="mr-2 h-3 w-3" />
-                Message user
-              </a>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="cursor-pointer text-xs text-red-500 focus:text-red-500"
-              onClick={() => setReportOpen(true)}
-            >
-              <Flag className="mr-2 h-3 w-3" />
-              Report user
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <div className="flex-1 space-y-0.5">
-          <div className="flex items-baseline gap-2">
-            <p className="text-sm font-semibold">{displayName}</p>
-            <p className="text-[11px] text-muted-foreground">
-              {timeLabel}
-            </p>
-          </div>
-          <p className="break-words text-sm text-foreground/90">
-            {message.text}
-          </p>
-        </div>
-      </div>
-
-      {/* Report dialog hooked to that user */}
-      <ReportUserDialog
-        open={reportOpen}
-        onOpenChange={setReportOpen}
-        targetUid={message.senderUid}
-        targetDisplayName={displayName}
-        context={{
-          source: 'COMMUNITY_CHAT',
-          messageId: message.id ?? null,
-        }}
-      />
-    </>
-  );
-};
-
-export default function ChatPage() {
-  const { user, profile } = useAuth();
-  const firestore = useFirestore();
-  const [newMessage, setNewMessage] = useState('');
-  const scrollBottomRef = useRef<HTMLDivElement | null>(null);
-
-  const messagesCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'communityMessages');
-  }, [firestore]);
-
-  const messagesQuery = useMemoFirebase(() => {
-    if (!messagesCollectionRef) return null;
-    return query(messagesCollectionRef, orderBy('createdAt', 'asc'));
-  }, [messagesCollectionRef]);
-
-  // keep this untyped + cast to dodge TS noise
-  const {
-    data: rawMessages,
-    isLoading,
-  } = useCollection(messagesQuery as any);
-
-  const messages: CommunityMessageWithId[] =
-    (rawMessages as any as CommunityMessageWithId[]) ?? [];
-
-  const handleSendMessage = async (e: FormEvent) => {
-    e.preventDefault();
-    if (
-      !newMessage.trim() ||
-      !user ||
-      !profile ||
-      !messagesCollectionRef
-    ) {
-      return;
-    }
-
-    try {
-      const messageData = {
-        senderUid: user.uid,
-        text: newMessage.trim(),
-        createdAt: serverTimestamp(),
-      };
-      const docRef = await addDoc(messagesCollectionRef, messageData);
-      await updateDoc(docRef, { messageId: docRef.id });
-      setNewMessage('');
-    } catch (error) {
-      console.error('Error sending message: ', error);
-    }
-  };
-
+  // LOAD LIVE MESSAGES
   useEffect(() => {
-    if (scrollBottomRef.current) {
-      scrollBottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    const qMsg = query(
+      collection(db, "groupChat"),
+      orderBy("createdAt", "asc")
+    );
+    const unsub = onSnapshot(qMsg, (snap) => {
+      setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setTimeout(() => bottomRef.current?.scrollIntoView(), 50);
+    });
+    return () => unsub();
+  }, []);
+
+  // SEND MESSAGE
+  async function send() {
+    if (!user || !text.trim()) return;
+
+    await addDoc(collection(db, "groupChat"), {
+      uid: user.uid,
+      displayName: userData.displayName,
+      avatar: userData.avatar || null,
+      role: userData.role || "USER",
+      text,
+      createdAt: serverTimestamp(),
+    });
+
+    setText("");
+  }
+
+  // DELETE SINGLE MESSAGE (admin/mod)
+  async function deleteMessage(messageId: string) {
+    await deleteDoc(doc(db, "groupChat", messageId));
+    setActionUser(null);
+  }
+
+  // DELETE ALL MESSAGES FROM USER (admin only)
+  async function deleteAllMessages(targetUid: string) {
+    const q = query(collection(db, "groupChat"), where("uid", "==", targetUid));
+    const snap = await getDocs(q);
+    const batchDeletes = snap.docs.map((d) => deleteDoc(d.ref));
+    await Promise.all(batchDeletes);
+    setActionUser(null);
+  }
+
+  // SUSPEND USER (mod/admin)
+  async function suspendUser(targetUid: string, hours: number) {
+    const until = new Date(Date.now() + hours * 60 * 60 * 1000);
+    const q = query(collection(db, "users"), where("uid", "==", targetUid));
+    const snap = await getDocs(q);
+
+    if (!snap.empty) {
+      await updateDoc(snap.docs[0].ref, {
+        status: "SUSPENDED",
+        suspendUntil: until,
+      });
     }
-  }, [messages.length]);
+    setActionUser(null);
+  }
+
+  // BAN USER (admin only)
+  async function banUser(targetUid: string) {
+    const q = query(collection(db, "users"), where("uid", "==", targetUid));
+    const snap = await getDocs(q);
+
+    if (!snap.empty) {
+      await updateDoc(snap.docs[0].ref, {
+        status: "BANNED",
+        suspendUntil: null,
+      });
+    }
+    setActionUser(null);
+  }
+
+  // VIEW STORE
+  async function viewStore(targetUid: string) {
+    const q = query(collection(db, "users"), where("uid", "==", targetUid));
+    const snap = await getDocs(q);
+
+    if (!snap.empty) {
+      const storeId = snap.docs[0].data().storeId;
+      window.location.href = `/store/${storeId}`;
+    }
+  }
+
+  if (!user) return <div className="p-6">Sign in required.</div>;
+
+  // ROLE BADGE STYLE
+  function roleNameStyle(role: string) {
+    if (role === "ADMIN") return "text-yellow-400 font-bold";
+    if (role === "MODERATOR") return "text-lime-400 font-semibold";
+    return "text-white";
+  }
+
+  function roleIcon(role: string) {
+    if (role === "ADMIN") return "👑 ";
+    if (role === "MODERATOR") return "🛡️ ";
+    return "";
+  }
 
   return (
-    <AppLayout>
-      {/* Wider on desktop, still full-width on mobile */}
-      <div className="flex h-[calc(100vh-4rem)] flex-col px-2 py-2 md:px-6 md:py-4">
-        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col rounded-lg border bg-background">
-          {/* Header */}
-          <div className="border-b px-4 py-3">
-            <h1 className="text-base font-semibold">Community Chat</h1>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Hang out with other collectors. Be cool or be gone.
+    <div className="max-w-3xl mx-auto p-4 flex flex-col h-[85vh]">
+
+      {/* ACTION MENU */}
+      {actionUser && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded p-6 space-y-4 w-72 shadow-xl">
+            <p className="font-semibold text-lg">
+              {roleIcon(actionUser.role)}
+              {actionUser.displayName}
             </p>
-          </div>
 
-          {/* Messages */}
-          <ScrollArea className="flex-1 px-4 py-3">
-            <div className="space-y-1.5 text-sm">
-              {isLoading && (
-                <p className="text-xs text-muted-foreground">
-                  Loading messages…
-                </p>
-              )}
-
-              {messages.map((msg) => (
-                <MessageItem key={msg.id} message={msg} />
-              ))}
-
-              <div ref={scrollBottomRef} />
-            </div>
-          </ScrollArea>
-
-          {/* Input */}
-          <div className="border-t px-4 py-3">
-            <form
-              onSubmit={handleSendMessage}
-              className="flex items-center gap-2"
+            {/* VIEW STORE */}
+            <Button
+              className="w-full"
+              onClick={() => viewStore(actionUser.uid)}
             >
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type your message..."
-                autoComplete="off"
-                disabled={!user || !profile}
-                className="text-sm"
-              />
-              <Button
-                type="submit"
-                size="icon"
-                disabled={!newMessage.trim() || !user || !profile}
-              >
-                <Send className="h-4 w-4" />
-                <span className="sr-only">Send</span>
-              </Button>
-            </form>
+              View Store
+            </Button>
+
+            {/* SEND DM */}
+            <Link
+              href={`/messages/${[user.uid, actionUser.uid].sort().join("_")}`}
+            >
+              <Button className="w-full">Send Message</Button>
+            </Link>
+
+            {/* REPORT */}
+            <Button
+              className="w-full bg-orange-500 text-white"
+              onClick={() => {
+                addDoc(collection(db, "reports"), {
+                  reporterUid: user.uid,
+                  targetUid: actionUser.uid,
+                  reason: "Live Chat Report",
+                  createdAt: serverTimestamp(),
+                });
+                setActionUser(null);
+              }}
+            >
+              Report User
+            </Button>
+
+            {/* MODERATOR & ADMIN ACTIONS */}
+            {(userData.role === "ADMIN" || userData.role === "MODERATOR") && (
+              <>
+                {/* Delete message */}
+                <Button
+                  className="w-full bg-red-500 text-white"
+                  onClick={() => deleteMessage(actionUser.messageId)}
+                >
+                  Delete Message
+                </Button>
+
+                {/* Suspend (mod/admin) */}
+                <Button
+                  className="w-full bg-blue-600 text-white"
+                  onClick={() => suspendUser(actionUser.uid, 24)}
+                >
+                  Suspend 24h
+                </Button>
+                <Button
+                  className="w-full bg-blue-600 text-white"
+                  onClick={() => suspendUser(actionUser.uid, 72)}
+                >
+                  Suspend 3d
+                </Button>
+              </>
+            )}
+
+            {/* ADMIN ONLY */}
+            {userData.role === "ADMIN" && (
+              <>
+                <Button
+                  className="w-full bg-blue-600 text-white"
+                  onClick={() => suspendUser(actionUser.uid, 168)}
+                >
+                  Suspend 7d
+                </Button>
+
+                <Button
+                  className="w-full bg-blue-600 text-white"
+                  onClick={() => suspendUser(actionUser.uid, 720)}
+                >
+                  Suspend 30d
+                </Button>
+
+                <Button
+                  className="w-full bg-red-700 text-white"
+                  onClick={() => banUser(actionUser.uid)}
+                >
+                  Ban User
+                </Button>
+
+                <Button
+                  className="w-full bg-red-700 text-white"
+                  onClick={() => deleteAllMessages(actionUser.uid)}
+                >
+                  Delete ALL Messages
+                </Button>
+              </>
+            )}
+
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => setActionUser(null)}
+            >
+              Close
+            </Button>
           </div>
         </div>
+      )}
+
+      {/* CHAT FEED */}
+      <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+        {messages.map((m) => (
+          <div key={m.id} className="flex gap-3 items-start">
+
+            {/* AVATAR */}
+            <div
+              onClick={() => setActionUser({ ...m, messageId: m.id })}
+              className="cursor-pointer"
+            >
+              {m.avatar ? (
+                <img
+                  src={m.avatar}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-gray-500 rounded-full" />
+              )}
+            </div>
+
+            {/* MESSAGE */}
+            <div>
+              <p className={`text-xs ${roleNameStyle(m.role)}`}>
+                {roleIcon(m.role)}
+                {m.displayName}
+              </p>
+              <div className="bg-gray-200 rounded p-2 max-w-xs">
+                {m.text}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <div ref={bottomRef} />
       </div>
-    </AppLayout>
+
+      {/* INPUT */}
+      <div className="flex gap-2 mt-4">
+        <Input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Say something…"
+        />
+        <Button onClick={send}>Send</Button>
+      </div>
+    </div>
   );
 }

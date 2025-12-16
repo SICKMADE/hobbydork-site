@@ -2,6 +2,7 @@
   "name": "nextn",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
@@ -64,6 +65,8 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "cross-env": "^7.0.3",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.35",
     "genkit-cli": "^1.20.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",

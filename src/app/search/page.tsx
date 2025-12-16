@@ -1,11 +1,14 @@
 
+import React, { Suspense } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import ClientSearch from './ClientSearch';
 
 export default function BrowsePage() {
   return (
     <AppLayout>
-      <ClientSearch />
+      <Suspense fallback={<div className="p-6">Loading search…</div>}>
+        <ClientSearch />
+      </Suspense>
     </AppLayout>
   );
 }

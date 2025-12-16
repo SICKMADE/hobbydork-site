@@ -1,0 +1,198 @@
+// ==========================
+// HOBBYDORK FIRESTORE RULES
+// ==========================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ----------------------------
+    // AUTHENTICATION REQUIRED
+    // ----------------------------
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.role == "ADMIN";
+    }
+
+    function isSeller(uid) {
+      return signedIn() && request.auth.uid == uid && request.auth.token.isSeller == true;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // ====================================
+    // USERS COLLECTION
+    // ====================================
+    match /users/{uid} {
+
+      // Anyone signed in can read basic profiles
+      allow read: if signedIn();
+
+      // Only user themselves or admin can update
+      allow update: if isSelf(uid) || isAdmin();
+
+      // No one except admin can modify roles or seller flags
+      allow update: if isAdmin();
+
+      // Block client from editing restricted fields
+      allow update: if !( "role" in request.resource.data
+                        || "isSeller" in request.resource.data
+                        || "stripeAccountId" in request.resource.data
+                        || "stripeChargesEnabled" in request.resource.data );
+    }
+
+    // ====================================
+    // LISTINGS
+    // ====================================
+    match /listings/{listingId} {
+
+      // Everyone can read listings
+      allow read: if true;
+
+      // Create listing ONLY if user is seller
+      allow create: if signedIn() && request.auth.token.isSeller == true;
+
+      // Update listing ONLY by the listing owner OR admin
+      allow update: if signedIn() &&
+                    (request.auth.uid == resource.data.ownerUid || isAdmin());
+
+      // Prevent listing owner from changing price after purchase
+      allow update: if !( "price" in request.resource.data
+                       && resource.data.status == "SOLD" );
+
+      // Prevent random field injection
+      allow update: if request.resource.data.keys().hasOnly([
+        "title", "description", "price", "images",
+        "shippingType", "shippingCost",
+        "weightLbs", "weightOz",
+        "length", "width", "height",
+        "uspsEstimate", "upsEstimate",
+        "condition", "category",
+        "status", "updatedAt", "ownerUid",
+        "storeId"
+      ]);
+
+      // Delete only by owner or admin
+      allow delete: if request.auth.uid == resource.data.ownerUid || isAdmin();
+    }
+
+    // ====================================
+    // ORDERS
+    // ====================================
+    match /orders/{orderId} {
+
+      allow read: if signedIn() &&
+                   (request.auth.uid == resource.data.buyerUid ||
+                    request.auth.uid == resource.data.sellerUid ||
+                    isAdmin());
+
+      // Buyer cannot modify order EXCEPT confirm delivery
+      allow update: if signedIn()
+                    && request.auth.uid == resource.data.buyerUid
+                    && request.resource.data.status == "DELIVERED";
+
+      // Seller may update tracking fields ONLY
+      allow update: if signedIn()
+                    && request.auth.uid == resource.data.sellerUid
+                    && request.resource.data.keys().hasOnly([
+                        "trackingNumber",
+                        "carrier",
+                        "status",
+                        "fulfilledAt"
+                    ]);
+
+      // Admin can update any order
+      allow update: if isAdmin();
+
+      // Create only via Stripe backend (block client writes)
+      allow create: if false;
+    }
+
+    // ====================================
+    // ISO-24 POSTS
+    // ====================================
+    match /iso24/{isoId} {
+
+      allow read: if true;
+
+      // Only signed-in users can create ISO posts
+      allow create: if signedIn();
+
+      // Only owner or admin can delete/edit
+      allow update, delete: if signedIn() &&
+                            (request.auth.uid == resource.data.ownerUid || isAdmin());
+
+      // Client cannot change expiration time
+      allow update: if !( "expiresAt" in request.resource.data );
+    }
+
+    // ====================================
+    // LIVE GROUP CHAT
+    // ====================================
+    match /groupChat/{msgId} {
+
+      allow read: if signedIn();
+
+      // Anyone signed-in may send a message
+      allow create: if signedIn();
+
+      // User may delete only their own messages
+      allow delete: if signedIn() && request.auth.uid == resource.data.senderUid;
+
+      // Admin + moderators can delete any message
+      allow update, delete: if isAdmin() || request.auth.token.role == "MODERATOR";
+    }
+
+    // ====================================
+    // PRIVATE MESSAGES (DM)
+    // messages/{uid}/threads/{otherUid}/messages/{msgId}
+    // ====================================
+    match /messages/{userA}/threads/{userB}/messages/{msgId} {
+
+      allow read: if signedIn() && (
+        request.auth.uid == userA || request.auth.uid == userB
+      );
+
+      allow create: if signedIn() &&
+                    (request.auth.uid == userA || request.auth.uid == userB);
+
+      // Only sender OR admin/mod can delete
+      allow delete: if signedIn() &&
+                    (request.auth.uid == resource.data.senderUid ||
+                     isAdmin() ||
+                     request.auth.token.role == "MODERATOR");
+    }
+
+    // ====================================
+    // REPORTS
+    // ====================================
+    match /reports/{reportId} {
+
+      allow read: if isAdmin() || request.auth.token.role == "MODERATOR";
+
+      // Any user may file a report
+      allow create: if signedIn();
+
+      // Only admin can update/resolve reports
+      allow update: if isAdmin();
+    }
+
+    // ====================================
+    // SPOTLIGHT SELLERS
+    // ====================================
+    match /spotlightSlots/{slotId} {
+
+      allow read: if true;
+
+      // Only admin may modify spotlight entries
+      allow update, create, delete: if isAdmin();
+    }
+
+  }
+}

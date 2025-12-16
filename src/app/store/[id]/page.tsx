@@ -1,510 +1,222 @@
+"use client";
 
-
-'use client';
-
-import { useState, ChangeEvent } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useParams, useRouter } from 'next/navigation';
-import { formatDistanceToNow } from 'date-fns';
-
-import AppLayout from '@/components/layout/AppLayout';
-import PlaceholderContent from '@/components/PlaceholderContent';
-import { useAuth } from '@/hooks/use-auth';
-
+import { useEffect, useState } from "react";
+import { db } from "@/firebase/client-provider";
 import {
-  useFirestore,
-  useDoc,
-  useCollection,
-  useMemoFirebase,
-} from '@/firebase';
-
-import {
-  doc,
   collection,
   query,
   where,
-  orderBy,
-  updateDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { listingConverter, reviewConverter } from '@/firebase/firestore/converters';
+  onSnapshot,
+  doc,
+  getDoc,
+} from "firebase/firestore";
+import Link from "next/link";
 
-import {
-  Card,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-} from '@/components/ui/avatar';
+export default function StorefrontPage({ params }: any) {
+  const { storeId } = params;
 
-import {
-  Star,
-  MessageCircle,
-  Link2,
-  Flag,
-  Upload,
-  Eye,
-  Edit,
-} from 'lucide-react';
+  const [user, setUser] = useState<any>(null);
+  const [listings, setListings] = useState([]);
 
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useToast } from '@/hooks/use-toast';
-import { ReportUserDialog } from '@/components/moderation/ReportUserDialog';
-import ListingCard from '@/components/ListingCard';
-
-type StoreDoc = {
-  ownerUid: string;
-  storeName: string;
-  slug?: string;
-  about?: string;
-  avatarUrl?: string;
-  storeImageUrl?: string;
-  ratingAverage?: number;
-  ratingCount?: number;
-  itemsSold?: number;
-  status: 'ACTIVE' | 'INACTIVE';
-};
-
-import type { Listing } from '@/lib/types';
-
-type ListingDoc = Listing;
-
-type ReviewDoc = {
-  id?: string;
-  rating: number;
-  comment?: string;
-  buyerUid: string;
-  createdAt?: any;
-};
-
-type OwnerProfile = {
-  avatar?: string;
-  avatarUrl?: string;
-  photoURL?: string;
-  profileImageUrl?: string;
-  displayName?: string;
-};
-
-function renderStars(avg: number | null | undefined, size = 14) {
-  const value = avg ?? 0;
-  const full = Math.floor(value);
-  const half = value - full >= 0.5;
-  const max = 5;
-
-  return (
-    <div className="flex items-center gap-0.5">
-      {Array.from({ length: max }).map((_, i) => {
-        const index = i + 1;
-        const isFull = index <= full;
-        const isHalf = !isFull && half && index === full + 1;
-
-        return (
-          <Star
-            key={i}
-            className="inline-block"
-            style={{
-              width: size,
-              height: size,
-              fill: isFull || isHalf ? 'currentColor' : 'none',
-            }}
-            strokeWidth={1.5}
-            color={
-              isFull || isHalf
-                ? 'hsl(var(--primary))'
-                : 'hsl(var(--muted-foreground))'
-            }
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-export default function StorePage() {
-  const params = useParams<{ id: string }>();
-  const storeId = params?.id;
-  const router = useRouter();
-
-  const { user, loading: authLoading } = useAuth();
-  const firestore = useFirestore();
-  const { toast } = useToast();
-
-  const [reportOpen, setReportOpen] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [storeImageOverride, setStoreImageOverride] = useState<string | null>(null);
-  const [viewAsBuyer, setViewAsBuyer] = useState(false);
-
-  // Store doc
-  const storeRef = useMemoFirebase(() => {
-    if (!firestore || !storeId) return null;
-    return doc(firestore, 'storefronts', storeId);
-  }, [firestore, storeId]);
-
-  const { data: store, isLoading: storeLoading } = useDoc<StoreDoc>(storeRef);
-
-  // Owner profile doc
-  const ownerRef = useMemoFirebase(() => {
-    if (!firestore || !store?.ownerUid) return null;
-    return doc(firestore, 'users', store.ownerUid);
-  }, [firestore, store?.ownerUid]);
-
-  const { data: ownerProfile } = useDoc<OwnerProfile>(ownerRef);
-
-  // Listings
-  const listingsQuery = useMemoFirebase(() => {
-    if (!firestore || !storeId) return null;
-    return query(
-      collection(firestore, 'listings'),
-      where('storeId', '==', storeId),
-      where('state', '==', 'ACTIVE'),
-      orderBy('createdAt', 'desc')
-    ).withConverter(listingConverter);
-  }, [firestore, storeId]);
-
-  const { data: listings, isLoading: listingsLoading } = useCollection<Listing>(listingsQuery);
-
-  // Reviews
-  const reviewsQuery = useMemoFirebase(() => {
-    if (!firestore || !storeId) return null;
-    return query(
-      collection(firestore, 'storefronts', storeId, 'reviews'),
-      orderBy('createdAt', 'desc')
-    ).withConverter(reviewConverter);
-  }, [firestore, storeId]);
-
-  const { data: reviews, isLoading: reviewsLoading } = useCollection<ReviewDoc>(reviewsQuery);
-
-  if (authLoading || storeLoading) {
-    return (
-      <AppLayout>
-        <div className="p-4 md:p-6 space-y-4 max-w-5xl mx-auto">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-40 w-full" />
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (!store || store.status !== 'ACTIVE') {
-    return (
-      <AppLayout>
-        <PlaceholderContent
-          title="Store not found"
-          description="This store does not exist or is not available."
-        />
-      </AppLayout>
-    );
-  }
-
-  const ratingAverage = store.ratingAverage ?? null;
-  const ratingCount = store.ratingCount ?? 0;
-  const itemsSold = store.itemsSold ?? 0;
-
-  // Poster image
-  const poster =
-    storeImageOverride ||
-    store.storeImageUrl ||
-    store.avatarUrl ||
-    'https://via.placeholder.com/1200x400?text=Storefront';
-
-  // Owner avatar
-  const ownerAvatar =
-    ownerProfile?.avatar ||
-    ownerProfile?.avatarUrl ||
-    ownerProfile?.photoURL ||
-    ownerProfile?.profileImageUrl ||
-    store.avatarUrl ||
-    '';
-
-  const isOwner = user?.uid === store.ownerUid;
-
-  const showOwnerControls = isOwner && !viewAsBuyer;
-  const showBuyerControls = !isOwner || viewAsBuyer;
-
-  const shareUrl =
-    typeof window !== 'undefined' && storeId
-      ? `${window.location.origin}/store/${storeId}`
-      : '';
-
-  const handleCopyLink = () => {
-    if (!shareUrl || typeof navigator === 'undefined') return;
-    navigator.clipboard.writeText(shareUrl).catch(() => {});
-    toast({
-        title: "Store link copied!",
-        description: "You can now share it with others."
-    })
-  };
-
-  const handleStoreImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !firestore || !storeId) return;
-
-    try {
-      setUploadingImage(true);
-
-      const storage = getStorage();
-      const imageRef = ref(storage, `storefronts/${storeId}/poster-${Date.now()}`);
-
-      await uploadBytes(imageRef, file);
-      const url = await getDownloadURL(imageRef);
-
-      const sfRef = doc(firestore, 'storefronts', storeId);
-      await updateDoc(sfRef, {
-        storeImageUrl: url,
-        updatedAt: serverTimestamp(),
-      });
-
-      setStoreImageOverride(url);
-
-      toast({
-        title: 'Poster updated',
-        description: 'Your storefront poster has been replaced.',
-      });
-    } catch (err: any) {
-      console.error(err);
-      toast({
-        variant: 'destructive',
-        title: 'Upload error',
-        description: err?.message ?? 'Failed to update poster.',
-      });
-    } finally {
-      setUploadingImage(false);
-      e.target.value = '';
+  useEffect(() => {
+    async function loadSeller() {
+      const snap = await getDoc(doc(db, "users", storeId));
+      if (snap.exists()) setUser(snap.data());
     }
-  };
+    loadSeller();
+  }, [storeId]);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "listings"),
+      where("ownerUid", "==", storeId),
+      where("status", "==", "ACTIVE")
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      setListings(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+
+    return () => unsub();
+  }, [storeId]);
+
+  if (!user) return <div className="p-6">Loading store…</div>;
+
+  const spotlightActive = user.hasActiveSpotlight;
+  const trustedSeller = user.totalSales >= 10;
 
   return (
-<AppLayout>
-  <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-5">
+    <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
 
-    {/* -------------------- POSTER WITH TAPE -------------------- */}
-    <Card className="comic-panel !p-0 overflow-visible relative bg-muted/30">
-        <div className="tape-corner top-left"></div>
-        <div className="tape-corner top-right"></div>
-        <div className="tape-corner bottom-left"></div>
-        <div className="tape-corner bottom-right"></div>
-        <div className="relative w-full aspect-[2.5/1]">
-          <Image
-            src={poster}
-            alt="Store Poster"
-            fill
-            className="object-contain p-4"
-          />
-        </div>
-    </Card>
-    
-    {/* OWNER CONTROLS */}
-    {showOwnerControls && (
-      <div className="flex flex-wrap items-center justify-center gap-2 -mt-2">
-        <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted comic-button">
-          <Upload className="h-3 w-3" />
-          {uploadingImage ? "Uploading…" : "Change poster"}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleStoreImageChange}
-            disabled={uploadingImage}
-          />
-        </label>
-        <Button
-            size="sm"
-            variant="outline"
-            className="h-7 px-2 text-xs comic-button"
-            onClick={() => router.push('/profile')}
-        >
-            <Edit className="h-3 w-3" />
-            Edit Profile
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 px-2 text-xs comic-button"
-          onClick={() => setViewAsBuyer((v) => !v)}
-        >
-          <Eye className="h-3 w-3" />
-          {viewAsBuyer ? "Back to owner view" : "View as buyer"}
-        </Button>
+      {/* SAFETY BANNER */}
+      <div className="bg-blue-100 border border-blue-300 p-3 rounded text-sm text-blue-900">
+        HobbyDork is a safe community.  
+        Adult content and foul language are prohibited.
       </div>
-    )}
 
-    {/* -------------------- STORE INFO -------------------- */}
-    <Card className="comic-panel bg-neutral-200 text-black">
-      <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-start">
+      {/* MOBILE LAYOUT (stacked) */}
+      <div className="md:hidden space-y-6">
 
-        <Avatar className="h-16 w-16 border-4 border-black comic-avatar-shadow">
-          <AvatarImage src={ownerAvatar} />
-          <AvatarFallback>{store.storeName?.charAt(0)?.toUpperCase()}</AvatarFallback>
-        </Avatar>
+        {/* SELLER HEADER */}
+        <div className="flex items-center gap-4">
+          <img
+            src={user.avatar || "/default-avatar.png"}
+            className="w-20 h-20 rounded-full object-cover"
+          />
 
-        <div className="flex-1 space-y-1">
-          <CardTitle className="text-xl font-bold comic-title text-black">
-            {store.storeName}
-          </CardTitle>
+          <div>
+            <p className="text-2xl font-bold">{user.displayName}</p>
+            <p className="text-gray-600 text-sm">Store ID: {user.storeId}</p>
 
-          {store.about && (
-            <CardDescription className="text-sm !text-neutral-600">
-              {store.about}
-            </CardDescription>
-          )}
-
-          {/* Ratings */}
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            {ratingCount > 0 ? (
-              <div className="flex items-center gap-1">
-                {renderStars(ratingAverage, 16)}
-                <span className="text-xs text-neutral-500">
-                  {ratingAverage?.toFixed(1)} • {ratingCount} review{ratingCount === 1 ? "" : "s"}
+            <div className="flex gap-2 mt-1">
+              {spotlightActive && (
+                <span className="px-2 py-1 bg-yellow-300 rounded text-xs">
+                  Spotlight
                 </span>
-              </div>
-            ) : (
-              <span className="text-xs text-neutral-500">No reviews yet</span>
-            )}
+              )}
 
-            {itemsSold > 0 && (
-              <Badge variant="outline" className="text-xs border-black/30 text-black">
-                {itemsSold} item{itemsSold === 1 ? "" : "s"} sold
-              </Badge>
-            )}
+              {trustedSeller && (
+                <span className="px-2 py-1 bg-green-300 rounded text-xs">
+                  Trusted Seller
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* ACTIONS */}
-        <div className="flex flex-col justify-end items-end gap-2">
-           <Button
-            size="sm"
-            onClick={() => handleCopyLink()}
-            className="gap-1 h-9 bg-red-500 text-white shadow-[0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[0_0px_0_#7f1010] transition-all rounded-md"
-          >
-            <Link2 className="h-4 w-4" />
-            Copy store link
-          </Button>
+        {/* ACTION BUTTONS */}
+        <div className="flex gap-3">
+          <Link href={`/messages/${storeId}`}>
+            <button className="flex-1 bg-blue-600 text-white px-4 py-2 rounded">
+              Message Seller
+            </button>
+          </Link>
 
-          {showBuyerControls && (
-            <Button
-              asChild
-              size="sm"
-              className="gap-1 h-9 bg-red-500 text-white shadow-[0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[0_0px_0_#7f1010] transition-all rounded-md"
-            >
-              <Link href={`/messages/new?recipientUid=${store.ownerUid}`}>
-                <MessageCircle className="h-4 w-4" />
-                Message seller
-              </Link>
-            </Button>
-          )}
-
-          {showBuyerControls && (
-            <Button
-              size="sm"
-              className="gap-1 h-9 bg-red-500 text-white shadow-[0_4px_0_#7f1010] active:translate-y-0.5 active:shadow-[0_0px_0_#7f1010] transition-all rounded-md"
-              onClick={() => setReportOpen(true)}
-            >
-              <Flag className="h-4 w-4" />
+          <Link href={`/report/seller/${storeId}`}>
+            <button className="flex-1 bg-red-600 text-white px-4 py-2 rounded">
               Report
-            </Button>
-          )}
+            </button>
+          </Link>
         </div>
-      </CardContent>
-    </Card>
 
-    {/* -------------------- LISTINGS -------------------- */}
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <h2 className="text-lg font-bold comic-title">Active listings</h2>
-      </div>
+        {/* ABOUT */}
+        {user.about && (
+          <div className="p-4 border bg-white rounded shadow">
+            <p className="font-semibold mb-1">About This Seller</p>
+            <p className="text-sm">{user.about}</p>
+          </div>
+        )}
 
-      {listingsLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      ) : listings && listings.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {listings.map((listing) => (
-            <div key={listing.id || listing.listingId} className="comic-panel !p-0 overflow-hidden border-4 border-black">
-                <ListingCard listing={listing} />
-            </div>
+        {/* LISTINGS (Mobile) */}
+        <div className="space-y-4">
+          <p className="text-xl font-bold">Active Listings</p>
+
+          {listings.map((l) => (
+            <Link key={l.id} href={`/listings/${l.id}`}>
+              <div className="flex gap-3 border p-3 rounded shadow bg-white">
+                <img
+                  src={l.images?.[0] || "/placeholder.png"}
+                  className="w-20 h-20 rounded object-cover"
+                />
+                <div>
+                  <p className="font-semibold">{l.title}</p>
+                  <p className="text-gray-700">${l.price}</p>
+                </div>
+              </div>
+            </Link>
           ))}
         </div>
-      ) : (
-        <Card className="comic-panel">
-          <CardContent className="py-6 text-sm">
-            No active listings.
-          </CardContent>
-        </Card>
-      )}
-    </div>
+      </div>
 
-    {/* -------------------- REVIEWS -------------------- */}
-    <div className="space-y-3 pb-10">
-      <h2 className="text-lg font-bold comic-title">Reviews</h2>
+      {/* DESKTOP LAYOUT */}
+      <div className="hidden md:block">
 
-      {reviewsLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
-        </div>
-      ) : reviews && reviews.length > 0 ? (
-        <div className="space-y-3">
-          {reviews.map((review: any) => {
-            const createdText = review.createdAt
-              ? formatDistanceToNow(
-                  review.createdAt.toDate ? review.createdAt.toDate() : review.createdAt,
-                  { addSuffix: true }
-                )
-              : null;
+        {/* GRID LAYOUT: LEFT = Seller info, RIGHT = Listings */}
+        <div className="grid grid-cols-3 gap-8">
 
-            return (
-              <Card key={review.id} className="comic-panel bg-neutral-200 text-black">
-                <CardContent className="flex gap-3 py-3 text-sm">
-                  <div className="mt-1">{renderStars(review.rating, 14)}</div>
-                  <div className="flex-1 space-y-1">
-                    {review.comment && <p className="text-sm text-black/80">{review.comment}</p>}
-                    {createdText && (
-                      <p className="text-xs text-neutral-500">Left {createdText}</p>
-                    )}
+          {/* LEFT SIDE (Seller Info) */}
+          <div className="col-span-1 space-y-4">
+
+            {/* Avatar + Name */}
+            <div className="p-6 bg-white border rounded shadow space-y-3 text-center">
+              <img
+                src={user.avatar || "/default-avatar.png"}
+                className="w-32 h-32 mx-auto rounded-full object-cover"
+              />
+
+              <p className="text-3xl font-bold">{user.displayName}</p>
+              <p className="text-gray-600 text-sm">Store ID: {user.storeId}</p>
+
+              <div className="flex justify-center gap-2">
+                {spotlightActive && (
+                  <span className="px-2 py-1 bg-yellow-300 rounded text-xs">
+                    Spotlight Seller
+                  </span>
+                )}
+
+                {trustedSeller && (
+                  <span className="px-2 py-1 bg-green-300 rounded text-xs">
+                    Trusted Seller
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="space-y-3">
+              <Link href={`/messages/${storeId}`}>
+                <button className="w-full bg-blue-600 text-white px-4 py-2 rounded">
+                  Message Seller
+                </button>
+              </Link>
+
+              <Link href={`/report/seller/${storeId}`}>
+                <button className="w-full bg-red-600 text-white px-4 py-2 rounded">
+                  Report Seller
+                </button>
+              </Link>
+            </div>
+
+            {/* About */}
+            {user.about && (
+              <div className="p-4 bg-white border rounded shadow">
+                <p className="font-semibold mb-1">About</p>
+                <p className="text-sm">{user.about}</p>
+              </div>
+            )}
+
+            {/* Stats */}
+            <div className="p-4 bg-white border rounded shadow text-sm">
+              <p><strong>Total Sales:</strong> {user.totalSales || 0}</p>
+              <p>
+                <strong>Joined:</strong>{" "}
+                {new Date(user.createdAt?.toDate()).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+
+          {/* RIGHT SIDE (Listings Grid) */}
+          <div className="col-span-2">
+            <p className="text-2xl font-bold mb-4">Active Listings</p>
+
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              {listings.map((l) => (
+                <Link key={l.id} href={`/listings/${l.id}`}>
+                  <div className="border p-3 bg-white rounded shadow hover:shadow-lg transition">
+                    <img
+                      src={l.images?.[0] || "/placeholder.png"}
+                      className="w-full h-40 object-cover rounded"
+                    />
+                    <p className="font-semibold mt-2">{l.title}</p>
+                    <p className="text-gray-700">${l.price}</p>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                </Link>
+              ))}
+            </div>
+          </div>
+
         </div>
-      ) : (
-        <Card className="comic-panel bg-neutral-200 text-black">
-          <CardContent className="py-6 text-sm text-neutral-500">
-            No reviews yet.
-          </CardContent>
-        </Card>
-      )}
+      </div>
     </div>
-
-    {/* REPORT DIALOG */}
-    {showBuyerControls && (
-      <ReportUserDialog
-        open={reportOpen}
-        onOpenChange={setReportOpen}
-        targetUid={store.ownerUid}
-        targetDisplayName={store.storeName}
-        context={{
-          source: 'STORE',
-          storeId: storeId || null,
-        }}
-      />
-    )}
-
-  </div>
-</AppLayout>
   );
 }
-

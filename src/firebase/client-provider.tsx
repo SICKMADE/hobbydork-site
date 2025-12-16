@@ -4,6 +4,7 @@ import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeFirebase } from './client-init';
 import { getStorage } from 'firebase/storage';
+import { getFunctions } from 'firebase/functions';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
@@ -65,6 +66,16 @@ export const storage = ((): any => {
     const s = clientSdks();
     if (!s) return undefined;
     return getStorage(s.firebaseApp);
+  } catch (e) {
+    return undefined;
+  }
+})();
+
+export const functions = ((): any => {
+  try {
+    const s = clientSdks();
+    if (!s) return undefined;
+    return getFunctions(s.firebaseApp);
   } catch (e) {
     return undefined;
   }

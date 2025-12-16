@@ -31,6 +31,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useFirestore } from '@/firebase';
 import { doc, runTransaction, serverTimestamp, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/firebase/client-provider';
 import AppLayout from '@/components/layout/AppLayout';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -45,20 +47,17 @@ const storeSchema = z.object({
 });
 
 const paymentSchema = z.object({
-  paymentMethod: z.enum(['PAYPAL', 'VENMO'], {
-    required_error: 'Please select a payment method.',
-  }),
-  paymentIdentifier: z
-    .string()
-    .min(3, 'Please enter your payment username or email.'),
+  stripeOnboarded: z
+    .boolean()
+    .refine((val) => val === true, {
+      message: 'You must complete Stripe onboarding to sell on this platform.',
+    }),
   goodsAndServicesAgreed: z
     .boolean()
     .refine((val) => val === true, {
       message: 'You must agree to the Goods & Services policy.',
     }),
 });
-
-const sellerSchema = storeSchema.merge(paymentSchema);
 
 type SellerFormValues = z.infer<typeof sellerSchema>;
 
@@ -124,6 +123,35 @@ const Step1Store = () => {
 
 const Step2Payment = () => {
   const { control } = useFormContext<SellerFormValues>();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isOnboarding, setIsOnboarding] = useState(false);
+
+  const handleStripeOnboard = async () => {
+    setIsOnboarding(true);
+    try {
+      const onboard = httpsCallable(functions, 'onboardStripe');
+      const result = await onboard({});
+      if (result.data.url) {
+        window.location.href = result.data.url;
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Onboarding Failed',
+          description: 'Failed to start Stripe onboarding.',
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to connect to Stripe.',
+      });
+    } finally {
+      setIsOnboarding(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 50 }}
@@ -131,53 +159,64 @@ const Step2Payment = () => {
       exit={{ opacity: 0, x: -50 }}
       className="space-y-8"
     >
-      <FormField
-        control={control}
-        name="paymentMethod"
-        render={({ field }) => (
-          <FormItem className="space-y-3">
-            <FormLabel>Preferred Payment Method</FormLabel>
-            <FormDescription>Required to receive payments from buyers.</FormDescription>
-            <FormControl>
-              <RadioGroup
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                className="flex flex-col space-y-1"
-              >
-                <FormItem className="flex items-center space-x-3 space-y-0">
-                  <FormControl>
-                    <RadioGroupItem value="PAYPAL" />
-                  </FormControl>
-                  <FormLabel className="font-normal">PayPal</FormLabel>
-                </FormItem>
-                <FormItem className="flex items-center space-x-3 space-y-0">
-                  <FormControl>
-                    <RadioGroupItem value="VENMO" />
-                  </FormControl>
-                  <FormLabel className="font-normal">Venmo</FormLabel>
-                </FormItem>
-              </RadioGroup>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={control}
-        name="paymentIdentifier"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>PayPal Email or Venmo Handle</FormLabel>
-            <FormControl>
-              <Input placeholder="Your payment username" {...field} />
-            </FormControl>
-            <FormDescription>
-              This will be shown to buyers at checkout. Make sure it&apos;s correct!
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <div className="space-y-4">
+        <div>
+          <FormLabel className="text-lg font-semibold">Stripe Payment Setup</FormLabel>
+          <FormDescription className="mt-2">
+            To sell on HobbyDork, you must connect a Stripe account for secure payment processing.
+            This is required for all sellers.
+          </FormDescription>
+        </div>
+
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-sm">S</span>
+              </div>
+              <div>
+                <h3 className="font-semibold">Stripe Connect</h3>
+                <p className="text-sm text-muted-foreground">Secure payment processing</p>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              onClick={handleStripeOnboard}
+              disabled={isOnboarding}
+              className="w-full bg-purple-600 hover:bg-purple-700"
+            >
+              {isOnboarding ? 'Connecting...' : 'Connect Stripe Account'}
+            </Button>
+
+            <p className="text-xs text-muted-foreground mt-3">
+              You'll be redirected to Stripe to complete verification. This usually takes 5-10 minutes.
+            </p>
+          </CardContent>
+        </Card>
+
+        <FormField
+          control={control}
+          name="stripeOnboarded"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={(checked) => field.onChange(!!checked)}
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel>
+                  I have completed Stripe onboarding and my account is ready to receive payments.
+                </FormLabel>
+                <FormMessage />
+              </div>
+            </FormItem>
+          )}
+        />
+      </div>
+
       <FormField
         control={control}
         name="goodsAndServicesAgreed"

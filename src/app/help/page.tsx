@@ -60,7 +60,7 @@ export default function HelpPage() {
                         <div className="mt-8 pt-8 border-t">
                             <h3 className="text-2xl font-semibold mb-4">Still need help?</h3>
                             <p className="text-muted-foreground mb-4">
-                                If you can't find the answer you're looking for, please don't hesitate to reach out to our support team.
+                                If you can&apos;t find the answer you&apos;re looking for, please don&apos;t hesitate to reach out to our support team.
                             </p>
                             <Button onClick={handleContactClick}>
                                 <Mail className="mr-2 h-4 w-4" />

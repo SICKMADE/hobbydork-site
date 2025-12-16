@@ -81,7 +81,7 @@ export default function AdminSpotlightPage() {
   }, [firestore]);
 
   const { data: slots, isLoading } = useCollection<SpotlightSlot>(
-    slotsQuery as any
+    slotsQuery
   );
 
   const syncStoreSpotlight = async (
@@ -91,7 +91,11 @@ export default function AdminSpotlightPage() {
   ) => {
     if (!firestore || !storeId) return;
     const storeRef = doc(firestore, 'storefronts', storeId);
-    const update: any = {
+    const update: {
+      isSpotlighted: boolean;
+      updatedAt: ReturnType<typeof serverTimestamp>;
+      spotlightUntil?: Date | null;
+    } = {
       isSpotlighted: active,
       updatedAt: serverTimestamp(),
     };
@@ -103,7 +107,7 @@ export default function AdminSpotlightPage() {
 
     try {
       await updateDoc(storeRef, update);
-    } catch (err) {
+    } catch (_err) {
       const contextualError = new FirestorePermissionError({
         path: storeRef.path,
         operation: 'update',
@@ -124,12 +128,12 @@ export default function AdminSpotlightPage() {
       const slot = slots?.find((s) => s.slotId === slotId);
       if (slot) {
         const endAt =
-          slot.endAt && (slot.endAt as any).toDate
-            ? (slot.endAt as any).toDate()
+          slot.endAt && slot.endAt.toDate
+            ? slot.endAt.toDate()
             : undefined;
         await syncStoreSpotlight(slot.storeId, newActive, endAt);
       }
-    } catch (err) {
+    } catch (_err) {
       const contextualError = new FirestorePermissionError({
         path: slotRef.path,
         operation: 'update',
@@ -163,7 +167,7 @@ export default function AdminSpotlightPage() {
           'The new slot has been added and the store is spotlighted.',
       });
       form.reset();
-    } catch (err: any) {
+    } catch (_err) {
       const contextualError = new FirestorePermissionError({
         path: 'spotlightSlots',
         operation: 'create',
@@ -294,8 +298,8 @@ export default function AdminSpotlightPage() {
                   )}
                   {slots?.map((slot) => {
                     const now = new Date();
-                    const start = (slot.startAt as any).toDate();
-                    const end = (slot.endAt as any).toDate();
+                    const start = slot.startAt.toDate();
+                    const end = slot.endAt.toDate();
                     const isActiveNow =
                       start <= now && end >= now && slot.active;
                     return (
