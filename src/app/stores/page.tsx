@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -9,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
+
+// ✅ DEFAULT STORE AVATAR
+import hobbydorkHead from '@/components/dashboard/hobbydork-head.png';
 
 type StorefrontDoc = {
   id?: string;
@@ -57,7 +59,7 @@ export default function StoresPage() {
 
           {!isLoading && (!stores || stores.length === 0) && (
             <p className="text-sm text-muted-foreground">
-              No active stores yet. Once sellers create stores, you&apos;ll see them here.
+              No active stores yet.
             </p>
           )}
 
@@ -68,7 +70,7 @@ export default function StoresPage() {
             const img =
               store.storeImageUrl ||
               store.avatarUrl ||
-              'https://via.placeholder.com/900x600?text=Storefront'
+              hobbydorkHead;
 
             return (
               <Link key={id} href={`/store/${id}`}>
@@ -79,16 +81,21 @@ export default function StoresPage() {
                       alt={store.storeName || 'Store image'}
                       fill
                       className="object-contain"
-                      />
+                    />
                   </div>
+
                   <CardHeader className="space-y-1 pb-2">
                     <CardTitle className="truncate text-base">
                       {store.storeName || 'Unnamed Store'}
                     </CardTitle>
+
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>
-                        {store.itemsSold ? `${store.itemsSold} items sold` : 'New store'}
+                        {store.itemsSold
+                          ? `${store.itemsSold} items sold`
+                          : 'New store'}
                       </span>
+
                       {typeof store.ratingAverage === 'number' &&
                         store.ratingCount &&
                         store.ratingCount > 0 && (
@@ -98,6 +105,7 @@ export default function StoresPage() {
                         )}
                     </div>
                   </CardHeader>
+
                   <CardContent className="pb-4 pt-1">
                     <p className="line-clamp-2 text-xs text-muted-foreground">
                       {store.about || 'No description yet.'}

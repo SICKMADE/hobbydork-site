@@ -42,12 +42,9 @@ export default function CommunityRulesPage() {
             <li>No malicious links, phishing, or malware.</li>
           </ul>
 
-          <h2 className="text-xl font-semibold">4. Use Goods &amp; Services</h2>
+          <h2 className="text-xl font-semibold">4. Use Stripe for All Payments</h2>
           <p>
-            To reduce scam risk, HobbyDork expects transactions to use Goods
-            &amp; Services (PayPal G&amp;S, etc.) whenever possible. If someone
-            pressures you into risky payment methods, you can refuse and report
-            them.
+            To reduce scam risk, HobbyDork requires all transactions to be processed through Stripe. Off-platform payments are not allowed. If someone pressures you into using other payment methods, you can refuse and report them.
           </p>
 
           <h2 className="text-xl font-semibold">

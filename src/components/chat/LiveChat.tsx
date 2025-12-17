@@ -16,15 +16,24 @@ import { useAuth } from "@/hooks/use-auth";
 import AvatarMenu from "./AvatarMenu"; // your menu component
 import ReportMessageModal from "./ReportMessageModal";
 
+type Message = {
+  id: string;
+  text: string;
+  senderUid: string;
+  createdAt?: { toDate: () => Date } | Date | null;
+};
+type MenuOpen = { uid: string; messageId: string } | null;
+type ReportModal = { open: boolean; uid: string | null; id: string | null };
+
 export default function LiveChat() {
   const { user, userData } = useAuth();
 
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [menuOpen, setMenuOpen] = useState(null);
-  const [reportModal, setReportModal] = useState({ open: false, uid: null, id: null });
+  const [menuOpen, setMenuOpen] = useState<MenuOpen>(null);
+  const [reportModal, setReportModal] = useState<ReportModal>({ open: false, uid: null, id: null });
 
-  const bottomRef = useRef(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
   // Load messages
   useEffect(() => {
@@ -35,17 +44,27 @@ export default function LiveChat() {
     );
 
     const unsub = onSnapshot(q, (snap) => {
-      setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setMessages(
+        snap.docs.map((d) => {
+          const data = d.data() as Partial<Message>;
+          return {
+            id: d.id,
+            text: data.text ?? "",
+            senderUid: data.senderUid ?? "",
+            createdAt: data.createdAt ?? null,
+          };
+        })
+      );
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     });
 
     return () => unsub();
   }, []);
 
-  async function sendMessage() {
+  async function sendMessage(): Promise<void> {
     if (!input.trim()) return;
 
-    if (userData.status === "SUSPENDED") {
+    if (userData?.status === "SUSPENDED") {
       alert("You are suspended and cannot send messages.");
       return;
     }
@@ -59,14 +78,18 @@ export default function LiveChat() {
     setInput("");
   }
 
-  function roleStyle(role) {
+
+  // Accept any type for role to resolve TS error from dynamic data
+  function roleStyle(role: any) {
     if (role === "ADMIN") return "text-yellow-500 font-bold";
     if (role === "MODERATOR") return "text-lime-500 font-semibold";
     if (role === "SELLER") return "text-blue-500";
     return "text-gray-800";
   }
 
-  function roleIcon(role) {
+
+  // Accept any type for role to resolve TS error from dynamic data
+  function roleIcon(role: any) {
     if (role === "ADMIN") return "👑";
     if (role === "MODERATOR") return "🛡️";
     return "";
@@ -116,7 +139,21 @@ export default function LiveChat() {
                       {roleIcon(ownerRole)} {m.senderUid}
                     </span>
                     <span className="text-xs text-gray-500">
-                      {m.createdAt?.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {(() => {
+                        if (!m.createdAt) return null;
+                        if (
+                          typeof m.createdAt === "object" &&
+                          m.createdAt !== null &&
+                          "toDate" in m.createdAt &&
+                          typeof (m.createdAt as any).toDate === "function"
+                        ) {
+                          return (m.createdAt as { toDate: () => Date }).toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                        }
+                        if (m.createdAt instanceof Date) {
+                          return m.createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                        }
+                        return null;
+                      })()}
                     </span>
                   </div>
 

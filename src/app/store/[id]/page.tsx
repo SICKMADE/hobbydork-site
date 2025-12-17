@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useEffect, useState } from "react";
 import { db } from "@/firebase/client-provider";
 import {
@@ -12,11 +13,17 @@ import {
 } from "firebase/firestore";
 import Link from "next/link";
 
-export default function StorefrontPage({ params }: any) {
-  const { storeId } = params;
+type PageProps = {
+  params: Promise<{
+    storeId: string;
+  }>;
+};
+
+export default function StorefrontPage({ params }: PageProps) {
+  const { storeId } = React.use(params);
 
   const [user, setUser] = useState<any>(null);
-  const [listings, setListings] = useState([]);
+  const [listings, setListings] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadSeller() {
@@ -54,10 +61,9 @@ export default function StorefrontPage({ params }: any) {
         Adult content and foul language are prohibited.
       </div>
 
-      {/* MOBILE LAYOUT (stacked) */}
+      {/* MOBILE LAYOUT */}
       <div className="md:hidden space-y-6">
 
-        {/* SELLER HEADER */}
         <div className="flex items-center gap-4">
           <img
             src={user.avatar || "/default-avatar.png"}
@@ -84,7 +90,6 @@ export default function StorefrontPage({ params }: any) {
           </div>
         </div>
 
-        {/* ACTION BUTTONS */}
         <div className="flex gap-3">
           <Link href={`/messages/${storeId}`}>
             <button className="flex-1 bg-blue-600 text-white px-4 py-2 rounded">
@@ -99,7 +104,6 @@ export default function StorefrontPage({ params }: any) {
           </Link>
         </div>
 
-        {/* ABOUT */}
         {user.about && (
           <div className="p-4 border bg-white rounded shadow">
             <p className="font-semibold mb-1">About This Seller</p>
@@ -107,7 +111,6 @@ export default function StorefrontPage({ params }: any) {
           </div>
         )}
 
-        {/* LISTINGS (Mobile) */}
         <div className="space-y-4">
           <p className="text-xl font-bold">Active Listings</p>
 
@@ -115,7 +118,7 @@ export default function StorefrontPage({ params }: any) {
             <Link key={l.id} href={`/listings/${l.id}`}>
               <div className="flex gap-3 border p-3 rounded shadow bg-white">
                 <img
-                  src={l.images?.[0] || "/placeholder.png"}
+                  src={l.images?.[0] || "/hobbydork-head.png"}
                   className="w-20 h-20 rounded object-cover"
                 />
                 <div>
@@ -130,14 +133,9 @@ export default function StorefrontPage({ params }: any) {
 
       {/* DESKTOP LAYOUT */}
       <div className="hidden md:block">
-
-        {/* GRID LAYOUT: LEFT = Seller info, RIGHT = Listings */}
         <div className="grid grid-cols-3 gap-8">
 
-          {/* LEFT SIDE (Seller Info) */}
           <div className="col-span-1 space-y-4">
-
-            {/* Avatar + Name */}
             <div className="p-6 bg-white border rounded shadow space-y-3 text-center">
               <img
                 src={user.avatar || "/default-avatar.png"}
@@ -162,7 +160,6 @@ export default function StorefrontPage({ params }: any) {
               </div>
             </div>
 
-            {/* Buttons */}
             <div className="space-y-3">
               <Link href={`/messages/${storeId}`}>
                 <button className="w-full bg-blue-600 text-white px-4 py-2 rounded">
@@ -177,7 +174,6 @@ export default function StorefrontPage({ params }: any) {
               </Link>
             </div>
 
-            {/* About */}
             {user.about && (
               <div className="p-4 bg-white border rounded shadow">
                 <p className="font-semibold mb-1">About</p>
@@ -185,7 +181,6 @@ export default function StorefrontPage({ params }: any) {
               </div>
             )}
 
-            {/* Stats */}
             <div className="p-4 bg-white border rounded shadow text-sm">
               <p><strong>Total Sales:</strong> {user.totalSales || 0}</p>
               <p>
@@ -195,7 +190,6 @@ export default function StorefrontPage({ params }: any) {
             </div>
           </div>
 
-          {/* RIGHT SIDE (Listings Grid) */}
           <div className="col-span-2">
             <p className="text-2xl font-bold mb-4">Active Listings</p>
 

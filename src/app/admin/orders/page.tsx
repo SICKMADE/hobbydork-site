@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { db } from "@/firebase/client-provider";
@@ -25,7 +25,7 @@ export default function AdminOrdersPage() {
     load();
   }, []);
 
-  if (loading) return <div className="p-6">Loading Orders</div>;
+  if (loading) return <div className="p-6">Loading Orders…</div>;
 
   // Update field helpers
   async function markFraud(id: string) {
@@ -130,16 +130,16 @@ export default function AdminOrdersPage() {
           <div className="space-y-1">
             {o.fraudFlag && (
               <p className="text-red-600 text-sm">
-                 FRAUD FLAG  {o.fraudReason}
+                🚨 FRAUD FLAG — {o.fraudReason}
               </p>
             )}
             {o.dispute && (
               <p className="text-orange-600 text-sm">
-                 DISPUTE  {o.disputeNotes}
+                ⚠️ DISPUTE — {o.disputeNotes}
               </p>
             )}
             {o.adminLocked && (
-              <p className="text-blue-600 text-sm"> Order Locked</p>
+              <p className="text-blue-600 text-sm">🔒 Order Locked</p>
             )}
           </div>
 

@@ -21,8 +21,7 @@ export default function SellerTermsPage() {
             <li>Your account must be in good standing.</li>
             <li>You must complete Store setup truthfully.</li>
             <li>
-              You agree to use safe payment methods (for example, Goods &amp;
-              Services).
+              All payments must be processed through Stripe. You agree not to use off-platform payment methods.
             </li>
           </ul>
 
@@ -41,16 +40,14 @@ export default function SellerTermsPage() {
           </h2>
           <ul className="list-disc pl-5 space-y-1">
             <li>
-              Payments are made directly to you using the payment methods you show
-              (PayPal G&amp;S, Venmo, etc.).
+              Payments are made directly to you through Stripe. No other payment methods are supported.
             </li>
             <li>
               You are responsible for any processor fees, chargebacks, and tax
               obligations.
             </li>
             <li>
-              You must not require risky payment methods (for example, Friends &amp;
-              Family to avoid fees).
+              You must not require or request any off-platform or risky payment methods.
             </li>
             <li>Ship items promptly and provide tracking where possible.</li>
           </ul>
@@ -74,8 +71,7 @@ export default function SellerTermsPage() {
           <p>
             HobbyDork is not a party to your transaction and does not resolve payment
             disputes, chargebacks, or shipping issues. Work directly with the buyer to
-            resolve problems and use Goods &amp; Services plus tracking to protect
-            both sides.
+            resolve problems and use Stripe plus tracking to protect both sides.
           </p>
 
           <h2 className="text-xl font-semibold">

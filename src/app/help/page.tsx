@@ -14,7 +14,7 @@ const faqItems = [
     },
     {
         question: "How do payments work?",
-        answer: "Payments are handled peer-to-peer (P2P) between buyers and sellers using PayPal or Venmo. When you proceed to checkout, you will be shown the seller's payment information. You must use the 'Goods & Services' option to ensure transaction protection. VaultVerse does not process payments directly."
+        answer: "All payments are processed securely through Stripe. When you proceed to checkout, you will be redirected to Stripe to complete your payment. HobbyDork does not support PayPal, Venmo, or other payment methods."
     },
     {
         question: "What is ISO24?",

@@ -13,9 +13,24 @@ import {
   doc,
 } from "firebase/firestore";
 
+
+type Report = {
+  id: string;
+  context: string;
+  reason: string;
+  details?: string;
+  reporterUid: string;
+  targetUid: string;
+  messageId?: string;
+  listingId?: string;
+  isoId?: string;
+  createdAt?: { toDate: () => Date };
+  resolved?: boolean;
+};
+
 export default function AdminReportsPage() {
   const { userData } = useAuth();
-  const [reports, setReports] = useState([]);
+  const [reports, setReports] = useState<Report[]>([] as Report[]);
   const [filter, setFilter] = useState("ALL");
 
   useEffect(() => {
@@ -24,7 +39,7 @@ export default function AdminReportsPage() {
     let q = query(collection(db, "reports"), orderBy("createdAt", "desc"));
 
     const unsub = onSnapshot(q, (snap) => {
-      setReports(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setReports(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Report));
     });
 
     return () => unsub();
@@ -38,7 +53,7 @@ export default function AdminReportsPage() {
     return r.context === filter;
   });
 
-  async function resolveReport(id) {
+  async function resolveReport(id: string) {
     await updateDoc(doc(db, "reports", id), {
       resolved: true,
       resolvedAt: new Date(),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { Listing } from '@/lib/types';
 import { db } from "@/firebase/client-provider";
 import {
   collection,
@@ -13,9 +14,10 @@ import {
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import Spinner from "@/components/ui/spinner";
 
 export default function ListingsSearchPage() {
-  const [listings, setListings] = useState<any[]>([]);
+  const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
 
   // filters
@@ -31,7 +33,7 @@ export default function ListingsSearchPage() {
     let q = query(collection(db, "listings"), where("status", "==", "ACTIVE"));
 
     const allSnap = await getDocs(q);
-    let data = allSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    let data = allSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as Listing[];
 
     // search
     if (search.trim() !== "") {
@@ -116,7 +118,10 @@ export default function ListingsSearchPage() {
 
       {/* LISTINGS */}
       {loading ? (
-        <div>Loading…</div>
+        <div className="flex flex-col items-center justify-center min-h-[300px]">
+          <Spinner size={64} />
+          <div className="mt-4 text-muted-foreground">Loading listings...</div>
+        </div>
       ) : listings.length === 0 ? (
         <div>No results.</div>
       ) : (
@@ -125,7 +130,7 @@ export default function ListingsSearchPage() {
             <Link key={l.id} href={`/listings/${l.id}`}>
               <div className="border rounded bg-white p-2 shadow hover:shadow-md transition cursor-pointer">
                 <img
-                  src={l.images?.[0]}
+                  src={l.primaryImageUrl ?? undefined}
                   className="w-full h-40 object-cover rounded"
                 />
                 <p className="mt-2 font-semibold">{l.title}</p>

@@ -35,10 +35,10 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 // FIXED: use boolean + refine instead of z.literal(true)
 const agreementsSchema = z.object({
-  agreeGoodsAndServices: z
+  agreeStripe: z
     .boolean()
     .refine((val) => val === true, {
-      message: 'You must agree to use Goods & Services.',
+      message: 'You must agree to use Stripe for all payments.',
     }),
   agreeTerms: z
     .boolean()
@@ -71,7 +71,7 @@ const StepAgreements = () => {
       <div className="space-y-4">
         <FormField
           control={control}
-          name="agreeGoodsAndServices"
+          name="agreeStripe"
           render={({ field }) => (
             <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
               <FormControl>
@@ -84,8 +84,7 @@ const StepAgreements = () => {
               </FormControl>
               <div className="space-y-1 leading-none">
                 <FormLabel>
-                  I agree to use Goods &amp; Services for all transactions for my
-                  own protection.
+                  I agree to use Stripe for all transactions for my own protection.
                 </FormLabel>
                 <FormMessage />
               </div>
@@ -186,7 +185,7 @@ export default function OnboardingPage() {
     resolver: zodResolver(agreementsSchema),
     mode: 'onChange',
     defaultValues: {
-      agreeGoodsAndServices: profile?.goodsAndServicesAgreed || false,
+      agreeStripe: profile?.goodsAndServicesAgreed || false,
       agreeTerms: false,
       agreeAge: false,
       agreeOneAccount: (profile as any)?.oneAccountAcknowledged || false,
@@ -207,7 +206,7 @@ export default function OnboardingPage() {
     const userProfileRef = doc(firestore, 'users', user.uid);
     const updateData = {
       oneAccountAcknowledged: values.agreeOneAccount,
-      goodsAndServicesAgreed: values.agreeGoodsAndServices,
+      goodsAndServicesAgreed: values.agreeStripe,
       updatedAt: serverTimestamp(),
     };
 

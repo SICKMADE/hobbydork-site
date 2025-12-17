@@ -20,10 +20,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import Spinner from "@/components/ui/spinner";
 import { useRouter } from "next/navigation";
 
 export default function CreateListingPage() {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -35,107 +36,96 @@ export default function CreateListingPage() {
   const [uploadProgress, setUploadProgress] = useState<number[]>([]);
 
   if (!user) {
-    return <div className="p-6">You must be signed in to create listings.</div>;
+    return <div className="p-6">You must be signed in.</div>;
+  }
+
+  if (userData && !userData.isSeller) {
+    return (
+      <div className="p-6">
+        You must set up a store first.
+        <br />
+        <a href="/store/setup" className="text-blue-600 underline">
+          Set up store
+        </a>
+      </div>
+    );
   }
 
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files) return;
-
-    setImages((prev) => [...prev, ...Array.from(files)]);
-  }
-
-  function removeImage(index: number) {
-    setImages((prev) => prev.filter((_, i) => i !== index));
+    if (!e.target.files) return;
+    setImages((prev) => [...prev, ...Array.from(e.target.files!)]);
   }
 
   async function handleSubmit() {
-    if (!title.trim()) {
-      toast({ title: "Missing Title", description: "Enter a title." });
-      return;
-    }
-
-    if (!price || isNaN(Number(price))) {
-      toast({ title: "Invalid Price", description: "Enter a valid price." });
+    if (!title.trim() || !price) {
+      toast({ title: "Missing fields" });
       return;
     }
 
     if (images.length === 0) {
-      toast({
-        title: "Missing Images",
-        description: "Upload at least one image.",
-      });
+      toast({ title: "Upload at least one image" });
       return;
     }
 
     setUploading(true);
-    setUploadProgress([]);
 
     try {
-      // Step 1: Create placeholder listing
+      // 1️⃣ Create listing
       const listingRef = await addDoc(collection(db, "listings"), {
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         price: Number(price),
-        userId: user.uid,
-        status: "ACTIVE",
+        ownerUid: user.uid,
+        storeId: userData.storeId,
+        state: "ACTIVE",
+        quantityAvailable: 1,
         images: [],
+        primaryImageUrl: "",
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
 
       const listingId = listingRef.id;
+      const urls: string[] = [];
 
-      // Step 2: Upload images to Storage /users/{uid}/listings/{listingId}/
-      const uploadedUrls: string[] = [];
-
+      // 2️⃣ Upload images
       for (let i = 0; i < images.length; i++) {
         const file = images[i];
-
         const path = `users/${user.uid}/listings/${listingId}/${file.name}`;
         const storageRef = ref(storage, path);
-
         const uploadTask = uploadBytesResumable(storageRef, file);
 
         await new Promise<void>((resolve, reject) => {
           uploadTask.on(
             "state_changed",
-            (snapshot) => {
-              const prog =
-                (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-
-              setUploadProgress((prev) => {
-                const copy = [...prev];
-                copy[i] = prog;
-                return copy;
+            (snap) => {
+              setUploadProgress((p) => {
+                const c = [...p];
+                c[i] = (snap.bytesTransferred / snap.totalBytes) * 100;
+                return c;
               });
             },
             reject,
             async () => {
               const url = await getDownloadURL(uploadTask.snapshot.ref);
-              uploadedUrls.push(url);
+              urls.push(url);
               resolve();
             }
           );
         });
       }
 
-      // Step 3: Update listing with image URLs
+      // 3️⃣ Update listing with images
       await updateDoc(doc(db, "listings", listingId), {
-        images: uploadedUrls,
+        images: urls,
+        primaryImageUrl: urls[0],
       });
 
-      toast({
-        title: "Listing Created",
-        description: "Your listing is now active.",
-      });
-
+      toast({ title: "Listing created" });
       router.push(`/listings/${listingId}`);
-    } catch (err: any) {
-      console.error(err);
-      toast({
-        title: "Error",
-        description: err.message || "Failed to create listing.",
-      });
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Failed to create listing" });
     } finally {
       setUploading(false);
     }
@@ -143,81 +133,16 @@ export default function CreateListingPage() {
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold mb-4">Create New Listing</h1>
+      <h1 className="text-3xl font-bold">Create Listing</h1>
 
-      {/* TITLE */}
-      <div className="space-y-1">
-        <label className="font-semibold">Title</label>
-        <Input
-          placeholder="Enter listing title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </div>
+      <Input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+      <Input type="number" placeholder="Price" value={price} onChange={(e) => setPrice(e.target.value)} />
+      <Textarea rows={4} placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
 
-      {/* PRICE */}
-      <div className="space-y-1">
-        <label className="font-semibold">Price (USD)</label>
-        <Input
-          placeholder="10"
-          type="number"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-        />
-      </div>
+      <Input type="file" multiple accept="image/*" onChange={handleImageSelect} />
 
-      {/* DESCRIPTION */}
-      <div className="space-y-1">
-        <label className="font-semibold">Description</label>
-        <Textarea
-          rows={4}
-          placeholder="Describe the item…"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </div>
-
-      {/* IMAGE UPLOAD */}
-      <div className="space-y-2">
-        <label className="font-semibold">Images</label>
-        <Input type="file" accept="image/*" multiple onChange={handleImageSelect} />
-
-        {/* PREVIEW GRID */}
-        {images.length > 0 && (
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            {images.map((file, index) => (
-              <div key={index} className="relative rounded overflow-hidden">
-                <img
-                  src={URL.createObjectURL(file)}
-                  className="w-full h-32 object-cover rounded"
-                />
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="absolute top-1 right-1 text-xs"
-                  onClick={() => removeImage(index)}
-                >
-                  X
-                </Button>
-
-                {uploadProgress[index] != null && (
-                  <div className="text-sm mt-1">
-                    Upload: {uploadProgress[index].toFixed(0)}%
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* SUBMIT BUTTON */}
-      <Button
-        onClick={handleSubmit}
-        disabled={uploading}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-      >
-        {uploading ? "Uploading…" : "Create Listing"}
+      <Button onClick={handleSubmit} disabled={uploading} className="w-full">
+        {uploading ? <Spinner size={20} /> : "Create Listing"}
       </Button>
     </div>
   );

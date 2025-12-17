@@ -1,269 +1,269 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
+import { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 
-import { db, storage } from "@/firebase/client-provider";
+import AppLayout from '@/components/layout/AppLayout';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+
+import {
+  useFirestore,
+  useDoc,
+  useCollection,
+  useMemoFirebase,
+} from '@/firebase';
+
+import { app } from '@/firebase/client-provider';
+
 import {
   doc,
-  getDoc,
-  updateDoc,
-} from "firebase/firestore";
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  addDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
+
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 import {
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-  deleteObject,
-} from "firebase/storage";
+  Card,
+  CardContent,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  MessageSquare,
+  Package,
+} from 'lucide-react';
 
-export default function EditListingPage({ params }: { params: { id: string } }) {
-  const listingId = params.id;
-  const { user } = useAuth();
-  const { toast } = useToast();
+import ListingCard from '@/components/ListingCard';
+
+export default function ListingDetailPage() {
+  const params = useParams();
   const router = useRouter();
+  const listingId = params?.id as string;
 
-  const [listing, setListing] = useState<any>(null);
-  const [title, setTitle] = useState("");
-  const [price, setPrice] = useState("");
-  const [description, setDescription] = useState("");
-  const [existingImages, setExistingImages] = useState<string[]>([]);
-  const [newImages, setNewImages] = useState<File[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<number[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
-  useEffect(() => {
-    async function loadListing() {
-      const refDoc = doc(db, "listings", listingId);
-      const snap = await getDoc(refDoc);
+  const [buying, setBuying] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
-      if (!snap.exists()) {
-        toast({ title: "Error", description: "Listing not found." });
-        router.push("/listings");
-        return;
-      }
+  // Listing
+  const listingRef = useMemoFirebase(() => {
+    if (!firestore || !listingId) return null;
+    return doc(firestore, 'listings', listingId);
+  }, [firestore, listingId]);
 
-      const data = snap.data();
-      setListing({ id: listingId, ...data });
-      setTitle(data.title);
-      setPrice(data.price);
-      setDescription(data.description || "");
-      setExistingImages(data.images || []);
-      setLoading(false);
-    }
+  const { data: listing, isLoading } = useDoc<any>(listingRef);
 
-    loadListing();
-  }, [listingId]);
+  // Similar items
+  const similarQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'listings'),
+      where('state', '==', 'ACTIVE'),
+      orderBy('createdAt', 'desc'),
+      limit(12),
+    );
+  }, [firestore]);
 
-  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files) return;
-    setNewImages((prev) => [...prev, ...Array.from(files)]);
-  }
+  const { data: similarListings } =
+    useCollection<any>(similarQuery as any);
 
-  async function handleRemoveExistingImage(url: string) {
-    if (!user) return;
+  const active = listing;
+  const isOwner = user && user.uid === active?.ownerUid;
+  const quantityAvailable = Number(active?.quantityAvailable ?? 1);
+  const isSoldOut =
+    active?.state === 'SOLD_OUT' || quantityAvailable <= 0;
 
-    try {
-      // Remove from Firestore array
-      const filtered = existingImages.filter((img) => img !== url);
-      setExistingImages(filtered);
+  const price = Number(active?.price ?? 0);
 
-      // Delete from Storage
-      const filePath = decodeURIComponent(url.split("/o/")[1].split("?")[0]);
-      const fileRef = ref(storage, filePath);
-
-      await deleteObject(fileRef);
-
-      toast({ title: "Removed", description: "Image deleted successfully." });
-    } catch (err) {
-      toast({ title: "Error", description: "Could not delete image." });
-    }
-  }
-
-  async function handleSave() {
-    if (!user || !listing) return;
-
-    if (listing.userId !== user.uid) {
-      toast({
-        title: "Unauthorized",
-        description: "You cannot edit someone else’s listing.",
-      });
-      return;
-    }
-
-    if (listing.status === "SOLD") {
-      toast({
-        title: "Not Allowed",
-        description: "You cannot edit a sold listing.",
-      });
-      return;
-    }
-
-    if (!title.trim()) {
-      toast({ title: "Missing Title" });
-      return;
-    }
-
-    if (!price || isNaN(Number(price))) {
-      toast({ title: "Invalid price" });
-      return;
-    }
-
-    setSaving(true);
+  // 🔥 STRIPE BUY NOW — THIS IS THE FIX
+  const handleBuyNow = async () => {
+    if (!firestore || !user || !active) return;
 
     try {
-      const newImageUrls: string[] = [];
+      setBuying(true);
+      console.log('BUY NOW CLICKED');
 
-      // Upload new images
-      for (let i = 0; i < newImages.length; i++) {
-        const file = newImages[i];
-
-        const path = `users/${user.uid}/listings/${listingId}/${file.name}`;
-        const storageRef = ref(storage, path);
-
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        await new Promise<void>((resolve, reject) => {
-          uploadTask.on(
-            "state_changed",
-            (snapshot) => {
-              const progress =
-                (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-              setUploadProgress((prev) => {
-                const copy = [...prev];
-                copy[i] = progress;
-                return copy;
-              });
-            },
-            reject,
-            async () => {
-              const url = await getDownloadURL(uploadTask.snapshot.ref);
-              newImageUrls.push(url);
-              resolve();
-            }
-          );
-        });
-      }
-
-      // Update Firestore listing
-      await updateDoc(doc(db, "listings", listingId), {
-        title,
-        price: Number(price),
-        description,
-        images: [...existingImages, ...newImageUrls],
+      // 1️⃣ Create order (unpaid)
+      const orderRef = await addDoc(collection(firestore, 'orders'), {
+        buyerUid: user.uid,
+        sellerUid: active.ownerUid,
+        storeId: active.storeId,
+        items: [
+          {
+            listingId,
+            title: active.title,
+            quantity,
+            price,
+          },
+        ],
+        subtotal: price * quantity,
+        state: 'PENDING_PAYMENT',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
 
-      toast({ title: "Saved", description: "Listing updated." });
-      router.push(`/listings/${listingId}`);
+      console.log('ORDER CREATED', orderRef.id);
+
+      // 2️⃣ Call Stripe Cloud Function (EXPLICIT APP + REGION)
+      const functions = getFunctions(app, 'us-central1');
+      const createCheckoutSession = httpsCallable(
+        functions,
+        'createCheckoutSession'
+      );
+
+      const res: any = await createCheckoutSession({
+        orderId: orderRef.id,
+        listingTitle: active.title,
+        amountCents: Math.round(price * quantity * 100),
+      });
+
+      console.log('STRIPE RESPONSE', res.data);
+
+      // 3️⃣ Redirect to Stripe
+      window.location.href = res.data.url;
     } catch (err: any) {
-      console.error(err);
+      console.error('BUY NOW ERROR', err);
       toast({
-        title: "Error",
-        description: err.message || "Could not update listing.",
+        title: 'Checkout failed',
+        description: err?.message ?? 'Stripe error',
+        variant: 'destructive',
       });
-    } finally {
-      setSaving(false);
+      setBuying(false);
     }
+  };
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="p-6">
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </AppLayout>
+    );
   }
 
-  if (loading) {
-    return <div className="p-6">Loading…</div>;
+  if (!active) {
+    return (
+      <AppLayout>
+        <div className="p-6">Listing not found</div>
+      </AppLayout>
+    );
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold mb-4">Edit Listing</h1>
+    <AppLayout>
+      <div className="max-w-6xl mx-auto p-6 space-y-8">
 
-      {/* TITLE */}
-      <div className="space-y-1">
-        <label className="font-semibold">Title</label>
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-      </div>
+        {/* TOP */}
+        <div className="grid gap-6 lg:grid-cols-2">
 
-      {/* PRICE */}
-      <div className="space-y-1">
-        <label className="font-semibold">Price (USD)</label>
-        <Input
-          type="number"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-        />
-      </div>
-
-      {/* DESCRIPTION */}
-      <div className="space-y-1">
-        <label className="font-semibold">Description</label>
-        <Textarea
-          rows={4}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </div>
-
-      {/* EXISTING IMAGES */}
-      <div className="space-y-2">
-        <label className="font-semibold">Existing Images</label>
-        {existingImages.length === 0 && <p>No images yet.</p>}
-
-        <div className="grid grid-cols-3 gap-4">
-          {existingImages.map((url, index) => (
-            <div key={index} className="relative rounded overflow-hidden">
-              <img src={url} className="w-full h-32 object-cover rounded" />
-
-              <Button
-                variant="destructive"
-                size="sm"
-                className="absolute top-1 right-1 text-xs"
-                onClick={() => handleRemoveExistingImage(url)}
-              >
-                X
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* NEW IMAGES */}
-      <div className="space-y-2">
-        <label className="font-semibold">Add More Images</label>
-        <Input type="file" accept="image/*" multiple onChange={handleImageSelect} />
-
-        {newImages.length > 0 && (
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            {newImages.map((file, index) => (
-              <div key={index} className="relative rounded overflow-hidden">
+          {/* IMAGE */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="h-[420px] bg-black flex items-center justify-center">
                 <img
-                  src={URL.createObjectURL(file)}
-                  className="w-full h-32 object-cover rounded"
+                  src={active.primaryImageUrl || '/placeholder.png'}
+                  className="max-h-full max-w-full object-contain"
                 />
-
-                {uploadProgress[index] != null && (
-                  <div className="text-sm mt-1">
-                    Upload: {uploadProgress[index].toFixed(0)}%
-                  </div>
-                )}
               </div>
-            ))}
+            </CardContent>
+          </Card>
+
+          {/* BUY BOX */}
+          <div className="space-y-4">
+            <h1 className="text-2xl font-bold">{active.title}</h1>
+
+            <div className="text-3xl font-bold">
+              ${price.toFixed(2)}
+            </div>
+
+            <Separator />
+
+            <Card>
+              <CardContent className="space-y-3 p-4">
+                {!isOwner && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span>Qty</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={quantityAvailable}
+                        value={quantity}
+                        onChange={(e) =>
+                          setQuantity(Number(e.target.value))
+                        }
+                        className="w-20 border rounded px-2"
+                      />
+                    </div>
+
+                    <Button
+                      onClick={handleBuyNow}
+                      disabled={buying || isSoldOut}
+                      className="w-full h-12 text-lg"
+                    >
+                      {buying ? 'Redirecting…' : 'Buy It Now'}
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      asChild
+                    >
+                      <Link
+                        href={`/messages/new?sellerUid=${active.ownerUid}&storeId=${active.storeId}`}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Message seller
+                      </Link>
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
+        </div>
+
+        {/* DESCRIPTION */}
+        <section>
+          <h2 className="text-lg font-semibold mb-2">
+            Description
+          </h2>
+          <p className="text-sm whitespace-pre-line">
+            {active.description || 'No description.'}
+          </p>
+        </section>
+
+        {/* SIMILAR */}
+        {similarListings && (
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold">
+              Similar items
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {similarListings
+                .filter((l: any) => l.id !== listingId)
+                .slice(0, 8)
+                .map((l: any) => (
+                  <ListingCard key={l.id} listing={l} />
+                ))}
+            </div>
+          </section>
         )}
       </div>
-
-      {/* SAVE BUTTON */}
-      <Button
-        onClick={handleSave}
-        disabled={saving}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-      >
-        {saving ? "Saving…" : "Save Changes"}
-      </Button>
-    </div>
+    </AppLayout>
   );
 }

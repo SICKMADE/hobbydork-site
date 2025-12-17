@@ -6,9 +6,16 @@ import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import Link from "next/link";
 
+type Order = {
+  id: string;
+  listingTitle: string;
+  amount: number;
+  status: string;
+};
+
 export default function SellerOrdersPage() {
   const { user } = useAuth();
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -19,7 +26,17 @@ export default function SellerOrdersPage() {
     );
 
     const unsub = onSnapshot(q, (snap) => {
-      setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setOrders(
+        snap.docs.map((d) => {
+          const data = d.data() as Partial<Order>;
+          return {
+            id: d.id,
+            listingTitle: data.listingTitle ?? "",
+            amount: typeof data.amount === "number" ? data.amount : 0,
+            status: data.status ?? "",
+          };
+        })
+      );
     });
 
     return () => unsub();

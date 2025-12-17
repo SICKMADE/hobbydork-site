@@ -432,6 +432,7 @@ function VaultAndGenieSection() {
 export default function Dashboard() {
   const { profile, loading } = useAuth();
   const displayName = profile?.displayName ?? 'Collector';
+  const isSeller = profile?.isSeller;
 
   return (
     <div className="space-y-10 lg:space-y-12">
@@ -451,13 +452,23 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button
-              asChild
-              variant="outline"
-              className="hidden sm:inline-flex"
-            >
-              <Link href="/search">Browse listings</Link>
-            </Button>
+            {!isSeller ? (
+              <Button
+                asChild
+                variant="outline"
+                className="hidden sm:inline-flex text-green-600 border-green-600"
+              >
+                <Link href="/store/setup">Apply to Become a Seller</Link>
+              </Button>
+            ) : (
+              <Button
+                asChild
+                variant="outline"
+                className="hidden sm:inline-flex"
+              >
+                <Link href="/search">Browse listings</Link>
+              </Button>
+            )}
             <Button asChild>
               <Link href="/listings/create">Create listing</Link>
             </Button>

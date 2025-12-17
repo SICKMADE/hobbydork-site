@@ -7,8 +7,7 @@
   "main": "lib/index.js",
   "scripts": {
     "lint": "eslint --ext .js,.ts .",
-    "build": "tsc -p tsconfig.json",
-    "prepare": "npm run build"
+    "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "firebase-admin": "^11.10.1",
@@ -16,9 +15,9 @@
     "stripe": "^14.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.2.2",
+    "@types/node": "^20.5.1",
     "eslint": "^8.57.0",
     "eslint-config-google": "^0.14.0",
-    "@types/node": "^20.5.1"
+    "typescript": "^5.9.3"
   }
 }

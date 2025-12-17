@@ -1,204 +1,359 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
-import { db } from "@/firebase/client-provider";
+import { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
+
+import AppLayout from '@/components/layout/AppLayout';
+import PlaceholderContent from '@/components/PlaceholderContent';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+
+import {
+  useFirestore,
+  useDoc,
+  useCollection,
+  useMemoFirebase,
+} from '@/firebase';
+
 import {
   doc,
-  getDoc,
-  addDoc,
   collection,
-} from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { functions } from "@/firebase/client-provider";
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
+  query,
+  where,
+  orderBy,
+  limit,
+  addDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
 
-export default function ListingDetailPage({ params }: { params: { id: string } }) {
-  const listingId = params.id;
-  const { user } = useAuth();
-  const { toast } = useToast();
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getApp } from 'firebase/app';
+
+import {
+  Card,
+  CardContent,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import Spinner from '@/components/ui/spinner';
+
+import {
+  Store as StoreIcon,
+  MessageSquare,
+  Star,
+  Package,
+} from 'lucide-react';
+import ListingCard from '@/components/ListingCard';
+
+type Listing = {
+  id?: string;
+  title: string;
+  description?: string;
+  price: number;
+  category: string;
+  condition?: string;
+  storeId: string;
+  ownerUid: string;
+  primaryImageUrl?: string;
+  imageUrls?: string[];
+  quantityAvailable?: number;
+  state: string;
+  createdAt?: any;
+};
+
+type Storefront = {
+  storeName: string;
+  ownerUid: string;
+  ratingAverage?: number;
+  ratingCount?: number;
+  itemsSold?: number;
+};
+
+export default function ListingDetailPage() {
+  const params = useParams();
   const router = useRouter();
+  const listingId = params?.id as string;
 
-  const [listing, setListing] = useState<any>(null);
-  const [seller, setSeller] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [buying, setBuying] = useState(false);
+  const { user } = useAuth();
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
-  useEffect(() => {
-    async function load() {
-      // Load listing
-      const listingRef = doc(db, "listings", listingId);
-      const listingSnap = await getDoc(listingRef);
+  const [redirecting, setRedirecting] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-      if (!listingSnap.exists()) {
-        setLoading(false);
-        return;
-      }
+  /* ---------------- LISTING ---------------- */
 
-      const listingData = { id: listingSnap.id, ...listingSnap.data() };
-      setListing(listingData);
+  const listingRef = useMemoFirebase(() => {
+    if (!firestore || !listingId) return null;
+    return doc(firestore, 'listings', listingId);
+  }, [firestore, listingId]);
 
-      // Load seller
-      const sellerRef = doc(db, "users", listingData.userId);
-      const sellerSnap = await getDoc(sellerRef);
+  const { data: listing, isLoading } = useDoc<Listing>(listingRef);
+  const activeListing = listing as any;
 
-      if (sellerSnap.exists()) {
-        setSeller({ id: sellerSnap.id, ...sellerSnap.data() });
-      }
+  /* ---------------- STORE ---------------- */
 
-      setLoading(false);
+  const storeRef = useMemoFirebase(() => {
+    if (!firestore || !activeListing?.storeId) return null;
+    return doc(firestore, 'storefronts', activeListing.storeId);
+  }, [firestore, activeListing?.storeId]);
+
+  const { data: store } = useDoc<Storefront>(storeRef);
+
+  /* ---------------- SIMILAR ---------------- */
+
+  const similarQuery = useMemoFirebase(() => {
+    if (!firestore || !activeListing?.category) return null;
+    return query(
+      collection(firestore, 'listings'),
+      where('state', '==', 'ACTIVE'),
+      where('category', '==', activeListing.category),
+      orderBy('createdAt', 'desc'),
+      limit(8)
+    );
+  }, [firestore, activeListing?.category]);
+
+  const { data: similarListings } =
+    useCollection<Listing>(similarQuery as any);
+
+  /* ---------------- IMAGES (RESTORED) ---------------- */
+
+  const imageUrls: string[] = (() => {
+    if (!activeListing) return [];
+    const urls: string[] = [];
+    if (activeListing.primaryImageUrl) {
+      urls.push(activeListing.primaryImageUrl);
     }
+    if (Array.isArray(activeListing.imageUrls)) {
+      for (const u of activeListing.imageUrls) {
+        if (u && u !== activeListing.primaryImageUrl) {
+          urls.push(u);
+        }
+      }
+    }
+    return urls;
+  })();
 
-    load();
-  }, [listingId]);
+  const mainImageUrl =
+    imageUrls[selectedImageIndex] ?? imageUrls[0];
 
-  async function handleBuyNow() {
+  /* ---------------- DERIVED ---------------- */
+
+  const price = Number(activeListing?.price ?? 0);
+  const quantityAvailable = Number(activeListing?.quantityAvailable ?? 1);
+  const isSoldOut =
+    activeListing?.state !== 'ACTIVE' || quantityAvailable <= 0;
+
+  const isOwner = user?.uid === activeListing?.ownerUid;
+
+  /* ---------------- BUY NOW (REGION FIXED) ---------------- */
+
+  const handleBuyNow = async () => {
     if (!user) {
-      toast({
-        title: "Sign In Required",
-        description: "You must login to purchase this item.",
-      });
-      return router.push("/onboarding");
-    }
-
-    if (user.uid === listing.userId) {
-      toast({
-        title: "Not Allowed",
-        description: "You cannot buy your own listing.",
-      });
+      router.push('/login');
       return;
     }
 
-    if (!seller?.stripeAccountId) {
-      toast({
-        title: "Seller Not Ready",
-        description: "This seller has not completed Stripe onboarding.",
+    if (!firestore || !activeListing || isOwner || isSoldOut) return;
+
+    try {
+      setRedirecting(true);
+
+      const orderRef = await addDoc(collection(firestore, 'orders'), {
+        buyerUid: user.uid,
+        sellerUid: activeListing.ownerUid,
+        storeId: activeListing.storeId,
+        items: [
+          {
+            listingId,
+            title: activeListing.title,
+            quantity,
+            price,
+          },
+        ],
+        subtotal: price * quantity,
+        state: 'PENDING_PAYMENT',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
-      return;
-    }
 
-    setBuying(true);
+      const functions = getFunctions(getApp(), 'us-central1');
+      const createCheckoutSession = httpsCallable(
+        functions,
+        'createCheckoutSession'
+      );
 
-    // Create order in Firestore
-    const orderRef = await addDoc(collection(db, "orders"), {
-      listingId: listing.id,
-      buyerId: user.uid,
-      sellerId: listing.sellerId,
-      title: listing.title,
-      price: listing.price,
-      state: "CREATED",
-      createdAt: new Date(),
-    });
-    const orderId = orderRef.id;
-
-    // Call Firebase Function
-    const createCheckout = httpsCallable(functions, "createCheckoutSession");
-    const result = await createCheckout({
-      orderId,
-      listingTitle: listing.title,
-      amountCents: Math.round(listing.price * 100),
-    });
-
-    setBuying(false);
-
-    if (result.data?.url) {
-      window.location.href = result.data.url;
-    } else {
-      toast({
-        title: "Checkout Error",
-        description: "Could not start checkout.",
+      const res: any = await createCheckoutSession({
+        orderId: orderRef.id,
+        amountCents: Math.round(price * quantity * 100),
+        listingTitle: activeListing.title,
       });
+
+      window.location.href = res.data.url;
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: 'Checkout failed',
+        description: err?.message ?? 'Stripe error',
+        variant: 'destructive',
+      });
+      setRedirecting(false);
     }
+  };
+
+  /* ---------------- LOADING / NOT FOUND ---------------- */
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex justify-center py-20">
+          <Spinner size={48} />
+        </div>
+      </AppLayout>
+    );
   }
 
-  if (loading) {
-    return <div className="p-6">Loading…</div>;
+  if (!activeListing) {
+    return (
+      <AppLayout>
+        <PlaceholderContent title="Listing not found" />
+      </AppLayout>
+    );
   }
 
-  if (!listing) {
-    return <div className="p-6">Listing not found.</div>;
-  }
-
-  // SOLD banner
-  const isSold = listing.status === "SOLD";
+  /* ---------------- RENDER ---------------- */
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
+    <AppLayout>
+      <div className="max-w-6xl mx-auto p-6 space-y-8">
 
-      {/* Image gallery */}
-      <div className="w-full">
-        {listing.images?.length > 0 ? (
-          <div className="w-full aspect-square relative rounded-lg overflow-hidden bg-gray-100">
-            <Image
-              src={listing.images[0]}
-              alt={listing.title}
-              fill
-              className="object-cover"
-            />
+        <div className="grid lg:grid-cols-2 gap-8">
+
+          {/* IMAGE */}
+          <div>
+            <Card>
+              <CardContent className="p-0">
+                <div className="relative aspect-[4/3] bg-muted">
+                  {mainImageUrl ? (
+                    <Image
+                      src={mainImageUrl}
+                      alt={activeListing.title}
+                      fill
+                      className="object-contain"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                      No image
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {imageUrls.length > 1 && (
+              <div className="flex gap-2 mt-3 overflow-x-auto">
+                {imageUrls.map((url, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedImageIndex(idx)}
+                    className={`relative h-20 w-20 border rounded ${
+                      idx === selectedImageIndex
+                        ? 'ring-2 ring-primary'
+                        : ''
+                    }`}
+                  >
+                    <Image
+                      src={url}
+                      alt=""
+                      fill
+                      className="object-contain"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="w-full h-64 rounded-lg bg-gray-200 flex items-center justify-center">
-            No Image
+
+          {/* DETAILS */}
+          <div className="space-y-4">
+
+            <div className="flex gap-2">
+              <Badge>{activeListing.category}</Badge>
+              {activeListing.condition && (
+                <Badge variant="outline">
+                  {activeListing.condition}
+                </Badge>
+              )}
+            </div>
+
+            <h1 className="text-3xl font-bold">
+              {activeListing.title}
+            </h1>
+
+            <div className="text-3xl font-bold text-green-500">
+              ${price.toFixed(2)}
+            </div>
+
+            <Separator />
+
+            <Card>
+              <CardContent className="space-y-3 py-4">
+                <div className="flex justify-between">
+                  <span>Qty</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={quantityAvailable}
+                    value={quantity}
+                    onChange={(e) =>
+                      setQuantity(
+                        Math.max(
+                          1,
+                          Math.min(quantityAvailable, Number(e.target.value))
+                        )
+                      )
+                    }
+                    className="w-20 border rounded px-2 py-1"
+                  />
+                </div>
+
+                <Button
+                  className="w-full"
+                  disabled={redirecting || isSoldOut}
+                  onClick={handleBuyNow}
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  {redirecting ? 'Redirecting…' : 'Buy It Now'}
+                </Button>
+
+                <Button variant="outline" className="w-full" asChild>
+                  <Link
+                    href={`/messages/new?sellerUid=${activeListing.ownerUid}&listingId=${listingId}`}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Message seller
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
-        )}
-      </div>
-
-      {/* Title + Price */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">{listing.title}</h1>
-
-        <p className="text-2xl font-semibold text-green-600">
-          ${listing.price}
-        </p>
-
-        {isSold && (
-          <span className="inline-block px-3 py-1 rounded bg-red-600 text-white font-semibold">
-            SOLD
-          </span>
-        )}
-      </div>
-
-      {/* Description */}
-      <div>
-        <h2 className="text-xl font-semibold mb-1">Description</h2>
-        <p className="text-gray-700 whitespace-pre-line">
-          {listing.description || "No description provided."}
-        </p>
-      </div>
-
-      {/* Seller info */}
-      {seller && (
-        <div className="border rounded p-4 space-y-1 bg-gray-50">
-          <p className="font-semibold">Seller</p>
-          <p>{seller.displayName || "Anonymous"}</p>
-
-          {seller.stripeAccountId ? (
-            <p className="text-green-600 text-sm">Stripe Verified Seller</p>
-          ) : (
-            <p className="text-red-600 text-sm">Not Stripe Verified</p>
-          )}
         </div>
-      )}
 
-      {/* Buy button */}
-      {!isSold && (
-        <Button
-          onClick={handleBuyNow}
-          disabled={buying}
-          className="w-full text-white bg-blue-600 hover:bg-blue-700"
-        >
-          {buying ? "Processing…" : "Buy Now"}
-        </Button>
-      )}
-
-      {isSold && (
-        <Button disabled className="w-full bg-gray-400 text-white">
-          SOLD OUT
-        </Button>
-      )}
-    </div>
+        {Array.isArray(similarListings) && similarListings.length > 0 && (
+          <section>
+            <h2 className="text-lg font-semibold mb-3">Similar items</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {similarListings.map((l: any) => (
+                <ListingCard key={l.id} listing={l} />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    </AppLayout>
   );
 }

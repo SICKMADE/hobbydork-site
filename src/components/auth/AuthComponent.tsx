@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -29,6 +30,7 @@ const signupSchema = z.object({
 
 export default function AuthComponent() {
   const { login, signup } = useAuth();
+  const { toast } = useToast();
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -41,15 +43,40 @@ export default function AuthComponent() {
   });
 
   async function onLogin(values: z.infer<typeof loginSchema>) {
-    await login(values.email, values.password);
+    try {
+      await login(values.email, values.password);
+    } catch (error: any) {
+      let message = 'Login failed. Please try again.';
+      if (error.code === 'auth/user-not-found') {
+        message = 'No account found with that email.';
+      } else if (error.code === 'auth/wrong-password') {
+        message = 'Incorrect password.';
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'Invalid email address.';
+      }
+      toast({ title: 'Login Error', description: message, variant: 'destructive' });
+    }
   }
 
   async function onSignup(values: z.infer<typeof signupSchema>) {
-    await signup({
-      email: values.email,
-      password: values.password,
-      displayName: values.displayName,
-    });
+    try {
+      await signup({
+        email: values.email,
+        password: values.password,
+        displayName: values.displayName,
+      });
+      toast({ title: 'Account created!', description: 'You can now log in.' });
+    } catch (error: any) {
+      let message = 'Signup failed. Please try again.';
+      if (error.code === 'auth/email-already-in-use') {
+        message = 'An account with that email already exists.';
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'Invalid email address.';
+      } else if (error.code === 'auth/weak-password') {
+        message = 'Password is too weak.';
+      }
+      toast({ title: 'Signup Error', description: message, variant: 'destructive' });
+    }
   }
 
   return (

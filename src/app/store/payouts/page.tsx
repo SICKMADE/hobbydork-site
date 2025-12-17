@@ -22,8 +22,9 @@ export default function PayoutsPage() {
         const getPayouts = httpsCallable(functions, "getStripePayouts");
         const result = await getPayouts({});
 
-        setBalance(result.data.balance);
-        setPayouts(result.data.payouts || []);
+        const data = result.data as { balance?: any; payouts?: any[] };
+        setBalance(data.balance);
+        setPayouts(data.payouts || []);
       } catch (err: any) {
         toast({ title: "Error", description: err.message });
       } finally {
