@@ -57,20 +57,35 @@ export function useDoc<T = any>(
     setIsLoading(true);
     setError(null);
   
-    const unsubscribe = onSnapshot(
-      memoizedDocRef,
-      (snap) => {
-        // @ts-expect-error generic
-        setData(snap.exists() ? { id: snap.id, ...snap.data() } : null);
-        setIsLoading(false);
-      },
-      (err) => {
-        setError(err);
-        setIsLoading(false);
-      },
-    );
-  
-    return () => unsubscribe();
+    try {
+      // Emit a stack trace so we can locate which component/doc started this subscription
+      console.trace('Firestore useDoc subscribing', memoizedDocRef?.path ?? memoizedDocRef);
+      const unsubscribe = onSnapshot(
+        memoizedDocRef,
+        (snap) => {
+          // @ts-expect-error generic
+          setData(snap.exists() ? { id: snap.id, ...snap.data() } : null);
+          setIsLoading(false);
+        },
+        (err) => {
+          setError(err);
+          setIsLoading(false);
+        },
+      );
+
+      return () => {
+        try {
+          unsubscribe();
+        } catch (e) {
+          console.warn('Error unsubscribing Firestore doc snapshot', e);
+        }
+      };
+    } catch (e: any) {
+      console.error('Firestore onSnapshot failed to subscribe (doc)', e);
+      setError(e);
+      setIsLoading(false);
+      return;
+    }
   }, [memoizedDocRef?.path]); // <<< change deps to this
   
 

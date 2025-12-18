@@ -10,6 +10,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { useToast } from "@/hooks/use-toast";
 
 type OrderStatus =
   | "PENDING_PAYMENT"
@@ -21,6 +22,8 @@ type OrderStatus =
 export default function OrderDetail({ params }: any) {
   const { user } = useAuth();
   const { id: orderId } = params;
+
+  const { toast } = useToast();
 
   const [order, setOrder] = useState<any>(null);
 
@@ -44,17 +47,36 @@ export default function OrderDetail({ params }: any) {
   /* ---------------- STRIPE PAY NOW ---------------- */
 
   async function payNow() {
-    const fn = httpsCallable(getFunctions(), "createCheckoutSession");
+    try {
+      const fn = httpsCallable(getFunctions(), "createCheckoutSession");
 
-    const amountCents = Math.round(order.subtotal * 100);
+      const amountCents = Math.round(order.subtotal * 100);
 
-    const res: any = await fn({
-      orderId: order.id,
-      listingTitle: order.items?.[0]?.title ?? "Order",
-      amountCents,
-    });
+      // eslint-disable-next-line no-console
+      console.info('[checkout] payNow calling createCheckoutSession', { orderId: order.id });
 
-    window.location.href = res.data.url;
+      const res: any = await fn({
+        orderId: order.id,
+        listingTitle: order.items?.[0]?.title ?? "Order",
+        amountCents,
+        appBaseUrl: window.location.origin,
+      });
+
+      const url = res?.data?.url;
+      if (!url) {
+        throw new Error("Stripe checkout URL missing");
+      }
+
+      window.location.href = url;
+    } catch (err: any) {
+      // eslint-disable-next-line no-console
+      console.error('[checkout] payNow failed', err);
+      toast({
+        title: "Checkout failed",
+        description: err?.message ?? "Stripe error",
+        variant: "destructive",
+      });
+    }
   }
 
   /* ---------------- SELLER ACTIONS ---------------- */

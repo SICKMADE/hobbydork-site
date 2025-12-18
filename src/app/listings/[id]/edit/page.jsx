@@ -15,8 +15,6 @@ import {
   useMemoFirebase,
 } from '@/firebase';
 
-import { app } from '@/firebase/client-provider';
-
 import {
   doc,
   collection,
@@ -49,7 +47,8 @@ import ListingCard from '@/components/ListingCard';
 export default function ListingDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const listingId = params?.id as string;
+  const rawId = params?.id;
+  const listingId = Array.isArray(rawId) ? rawId[0] : rawId;
 
   const { user } = useAuth();
   const firestore = useFirestore();
@@ -64,7 +63,7 @@ export default function ListingDetailPage() {
     return doc(firestore, 'listings', listingId);
   }, [firestore, listingId]);
 
-  const { data: listing, isLoading } = useDoc<any>(listingRef);
+  const { data: listing, isLoading } = useDoc(listingRef);
 
   // Similar items
   const similarQuery = useMemoFirebase(() => {
@@ -77,8 +76,7 @@ export default function ListingDetailPage() {
     );
   }, [firestore]);
 
-  const { data: similarListings } =
-    useCollection<any>(similarQuery as any);
+  const { data: similarListings } = useCollection(similarQuery);
 
   const active = listing;
   const isOwner = user && user.uid === active?.ownerUid;
@@ -118,23 +116,28 @@ export default function ListingDetailPage() {
       console.log('ORDER CREATED', orderRef.id);
 
       // 2️⃣ Call Stripe Cloud Function (EXPLICIT APP + REGION)
-      const functions = getFunctions(app, 'us-central1');
+      const functions = getFunctions(undefined, 'us-central1');
       const createCheckoutSession = httpsCallable(
         functions,
         'createCheckoutSession'
       );
 
-      const res: any = await createCheckoutSession({
+      const res = await createCheckoutSession({
         orderId: orderRef.id,
         listingTitle: active.title,
         amountCents: Math.round(price * quantity * 100),
+        appBaseUrl: window.location.origin,
       });
 
       console.log('STRIPE RESPONSE', res.data);
 
       // 3️⃣ Redirect to Stripe
-      window.location.href = res.data.url;
-    } catch (err: any) {
+      const url = res?.data?.url;
+      if (!url) {
+        throw new Error('Stripe checkout URL missing');
+      }
+      window.location.href = url;
+    } catch (err) {
       console.error('BUY NOW ERROR', err);
       toast({
         title: 'Checkout failed',
@@ -255,9 +258,9 @@ export default function ListingDetailPage() {
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {similarListings
-                .filter((l: any) => l.id !== listingId)
+                .filter((l) => l.id !== listingId)
                 .slice(0, 8)
-                .map((l: any) => (
+                .map((l) => (
                   <ListingCard key={l.id} listing={l} />
                 ))}
             </div>

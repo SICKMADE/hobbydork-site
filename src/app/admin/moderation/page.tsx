@@ -46,6 +46,8 @@ type ChatDoc = {
   text?: string;
 };
 
+const DEFAULT_SUSPEND_HOURS = 24;
+
 export default function AdminModerationPage() {
   const router = useRouter();
   const { user, profile, loading: authLoading } = useAuth();
@@ -128,20 +130,31 @@ export default function AdminModerationPage() {
 
   const updateUserStatus = async (
     targetUid: string | undefined,
-    status: 'ACTIVE' | 'LIMITED' | 'BANNED',
+    status: 'ACTIVE' | 'SUSPENDED' | 'BANNED',
+    suspendHours?: number,
   ) => {
-    if (!firestore || !targetUid || !isAdmin) return;
+    if (!firestore || !targetUid) return;
+    // Moderators can only suspend; banning is admin-only.
+    if (!isAdmin) {
+      if (!(isModerator && status === 'SUSPENDED')) return;
+    }
     setUpdatingUserId(targetUid);
     try {
       const userRef = doc(firestore, 'users', targetUid);
-      await updateDoc(userRef, { status });
+      if (status === 'SUSPENDED') {
+        const hours = suspendHours ?? DEFAULT_SUSPEND_HOURS;
+        const until = new Date(Date.now() + hours * 60 * 60 * 1000);
+        await updateDoc(userRef, { status, suspendUntil: until });
+      } else {
+        await updateDoc(userRef, { status });
+      }
     } finally {
       setUpdatingUserId(null);
     }
   };
 
   const suspendUser = (uid?: string) =>
-    updateUserStatus(uid, 'LIMITED');
+    updateUserStatus(uid, 'SUSPENDED', DEFAULT_SUSPEND_HOURS);
 
   const banUser = (uid?: string) =>
     updateUserStatus(uid, 'BANNED');
@@ -214,7 +227,7 @@ export default function AdminModerationPage() {
                             Delete listing
                           </Button>
 
-                          {isAdmin && ownerUid && (
+                          {isStaff && ownerUid && (
                             <>
                               <Button
                                 size="xs"
@@ -224,14 +237,16 @@ export default function AdminModerationPage() {
                               >
                                 Suspend owner
                               </Button>
-                              <Button
-                                size="xs"
-                                variant="destructive"
-                                disabled={updatingUserId === ownerUid}
-                                onClick={() => banUser(ownerUid)}
-                              >
-                                Ban owner
-                              </Button>
+                              {isAdmin && (
+                                <Button
+                                  size="xs"
+                                  variant="destructive"
+                                  disabled={updatingUserId === ownerUid}
+                                  onClick={() => banUser(ownerUid)}
+                                >
+                                  Ban owner
+                                </Button>
+                              )}
                             </>
                           )}
                         </div>
@@ -294,7 +309,7 @@ export default function AdminModerationPage() {
                             Delete ISO
                           </Button>
 
-                          {isAdmin && ownerUid && (
+                          {isStaff && ownerUid && (
                             <>
                               <Button
                                 size="xs"
@@ -304,14 +319,16 @@ export default function AdminModerationPage() {
                               >
                                 Suspend owner
                               </Button>
-                              <Button
-                                size="xs"
-                                variant="destructive"
-                                disabled={updatingUserId === ownerUid}
-                                onClick={() => banUser(ownerUid)}
-                              >
-                                Ban owner
-                              </Button>
+                              {isAdmin && (
+                                <Button
+                                  size="xs"
+                                  variant="destructive"
+                                  disabled={updatingUserId === ownerUid}
+                                  onClick={() => banUser(ownerUid)}
+                                >
+                                  Ban owner
+                                </Button>
+                              )}
                             </>
                           )}
                         </div>
@@ -376,7 +393,7 @@ export default function AdminModerationPage() {
                             Delete message
                           </Button>
 
-                          {isAdmin && authorUid && (
+                          {isStaff && authorUid && (
                             <>
                               <Button
                                 size="xs"
@@ -386,14 +403,16 @@ export default function AdminModerationPage() {
                               >
                                 Suspend author
                               </Button>
-                              <Button
-                                size="xs"
-                                variant="destructive"
-                                disabled={updatingUserId === authorUid}
-                                onClick={() => banUser(authorUid)}
-                              >
-                                Ban author
-                              </Button>
+                              {isAdmin && (
+                                <Button
+                                  size="xs"
+                                  variant="destructive"
+                                  disabled={updatingUserId === authorUid}
+                                  onClick={() => banUser(authorUid)}
+                                >
+                                  Ban author
+                                </Button>
+                              )}
                             </>
                           )}
                         </div>

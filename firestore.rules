@@ -9,6 +9,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
     function isServer() {
       return request.auth == null;
     }
@@ -26,19 +30,28 @@ service cloud.firestore {
     }
 
     function userStatus() {
-      return isSignedIn() ? userData().status : null;
+      return isSignedIn() && userDoc().data != null ? userData().status : null;
     }
 
     function userRole() {
-      return isSignedIn() ? userData().role : null;
+      return isSignedIn() && userDoc().data != null ? userData().role : null;
     }
 
     function userIsActive() {
-      return isSignedIn() && userStatus() == "ACTIVE";
+      // Email verification required for any "active" capabilities.
+      return isEmailVerified() && userStatus() == "ACTIVE";
     }
 
     function userIsAdmin() {
       return isSignedIn() && userRole() == "ADMIN";
+    }
+
+    function userIsModerator() {
+      return isSignedIn() && userRole() == "MODERATOR";
+    }
+
+    function userIsStaff() {
+      return userIsAdmin() || userIsModerator();
     }
 
     // Seller helpers
@@ -59,8 +72,9 @@ service cloud.firestore {
              userIsActive() &&
              !userIsSeller() &&
              userData().storeId == "" &&
-             userData().stripeTermsAgreed == true &&
-             userSellerStatus() == "APPROVED";
+             userData().stripeOnboarded == true &&
+             userData().stripeAccountId != null &&
+             userData().stripeTermsAgreed == true;
     }
 
     function userCanApplyToBeSeller() {
@@ -86,7 +100,14 @@ service cloud.firestore {
     // ------------- users -------------
 
     match /users/{userId} {
-      allow get, list: if isSignedIn();
+      // Unverified users may read ONLY their own user doc.
+      // Staff can read/list user docs for moderation/admin tasks.
+      allow get: if isSignedIn() &&
+                (
+                  uid() == userId ||
+                  (userIsActive() && userIsStaff())
+                );
+      allow list: if userIsActive() && userIsStaff();
 
       allow create: if isSignedIn() &&
                     uid() == userId &&
@@ -94,37 +115,66 @@ service cloud.firestore {
                     request.resource.data.status == "ACTIVE";
 
       allow update: if isSignedIn() &&
-                    (uid() == userId || userIsAdmin()) &&
-                    request.resource.data.role == resource.data.role &&
-                    request.resource.data.status == resource.data.status &&
-                    request.resource.data.displayName == resource.data.displayName;
+                    (
+                      (
+                        // Regular users cannot change role/status/displayName.
+                        uid() == userId &&
+                        request.resource.data.role == resource.data.role &&
+                        request.resource.data.status == resource.data.status &&
+                        request.resource.data.displayName == resource.data.displayName &&
+                        // Trophies are awarded server-side (Cloud Functions). Users cannot self-award.
+                        request.resource.data.trophies == resource.data.trophies
+                      )
+                      ||
+                      (
+                        // Admin can manage role/status/etc, but displayName stays immutable.
+                        userIsActive() &&
+                        userIsAdmin() &&
+                        request.resource.data.displayName == resource.data.displayName
+                      )
+                      ||
+                      (
+                        // Moderators can suspend users (but cannot ban, change roles, etc).
+                        userIsActive() &&
+                        userIsModerator() &&
+                        request.resource.data.role == resource.data.role &&
+                        request.resource.data.displayName == resource.data.displayName &&
+                        request.resource.data.status == "SUSPENDED" &&
+                        request.resource.data.suspendUntil is timestamp &&
+                        request.resource.data.suspendUntil > request.time &&
+                        request.resource.data.diff(resource.data).changedKeys().hasOnly([
+                          "status",
+                          "suspendUntil"
+                        ])
+                      )
+                    );
 
       allow delete: if userIsAdmin();
 
       match /notifications/{id} {
-        allow read, write: if isSignedIn() && uid() == userId;
+        allow read, write: if userIsActive() && uid() == userId;
       }
 
       match /watchlist/{listingId} {
-        allow read, write: if isSignedIn() && uid() == userId;
+        allow read, write: if userIsActive() && uid() == userId;
       }
 
       match /favoriteStores/{storeId} {
-        allow read, write: if isSignedIn() && uid() == userId;
+        allow read, write: if userIsActive() && uid() == userId;
       }
 
       match /storefronts/{storeId} {
-        allow read, write: if isSignedIn() && uid() == userId;
+        allow read, write: if userIsActive() && uid() == userId;
       }
     }
 
     // ------------- sellerApplications -------------
 
     match /sellerApplications/{applicationId} {
-      allow get, list: if isSignedIn() &&
+      allow get, list: if userIsActive() &&
                        (userIsAdmin() || resource.data.ownerUid == uid());
 
-      allow create: if isSignedIn() &&
+      allow create: if userIsActive() &&
                     userCanApplyToBeSeller() &&
                     request.resource.data.ownerUid == uid() &&
                     request.resource.data.status == "PENDING";
@@ -135,7 +185,7 @@ service cloud.firestore {
     // ------------- storefronts -------------
 
     match /storefronts/{storeId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if userIsActive();
 
       allow create: if isSignedIn() && (
         (
@@ -169,7 +219,7 @@ service cloud.firestore {
           ).data;
         }
 
-        allow get, list: if isSignedIn();
+        allow get, list: if userIsActive();
 
         allow create: if userIsActive() &&
                       request.resource.data.buyerUid == uid() &&
@@ -183,7 +233,7 @@ service cloud.firestore {
     // ------------- listings -------------
 
     match /listings/{listingId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if userIsActive();
 
       allow create: if isSignedIn() &&
                     ((userIsSeller() &&
@@ -191,15 +241,16 @@ service cloud.firestore {
                      userIsAdmin());
 
       allow update, delete: if isSignedIn() &&
-                            ((userIsSeller() &&
-                              resource.data.ownerUid == uid()) ||
-                             userIsAdmin());
+                            (
+                              (userIsSeller() && resource.data.ownerUid == uid()) ||
+                              (userIsActive() && userIsStaff())
+                            );
     }
 
     // ------------- orders (STRIPE FIX HERE) -------------
 
     match /orders/{orderId} {
-      allow get, list: if isSignedIn() &&
+      allow get, list: if userIsActive() &&
                        (
                          userIsAdmin() ||
                          resource.data.buyerUid == uid() ||
@@ -232,7 +283,7 @@ service cloud.firestore {
     // ------------- iso24Posts -------------
 
     match /iso24Posts/{isoId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if userIsActive();
 
       allow create: if isSignedIn() &&
                     (userIsActive() || userIsAdmin()) &&
@@ -240,13 +291,14 @@ service cloud.firestore {
 
       allow update, delete: if isSignedIn() &&
                             (
+                              (userIsActive() && userIsStaff()) ||
                               userIsAdmin() ||
                               (userIsActive() &&
                                resource.data.ownerUid == uid())
                             );
 
       match /comments/{commentId} {
-        allow get, list: if isSignedIn();
+        allow get, list: if userIsActive();
 
         allow create: if userIsActive() &&
                       request.resource.data.authorUid == uid();
@@ -263,33 +315,33 @@ service cloud.firestore {
     // ------------- communityMessages -------------
 
     match /communityMessages/{messageId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if userIsActive();
       allow create: if isSignedIn() &&
                     (userIsActive() || userIsAdmin());
-      allow update, delete: if userIsAdmin();
+      allow update, delete: if userIsActive() && userIsStaff();
     }
 
     // ------------- conversations -------------
 
     match /conversations/{conversationId} {
-      allow create: if isSignedIn() &&
+      allow create: if userIsActive() &&
                     request.resource.data.participantUids.hasAny([uid()]);
 
-      allow get, list, update: if isSignedIn() &&
+      allow get, list, update: if userIsActive() &&
                                (isConversationParticipant(conversationId) ||
                                 userIsAdmin());
 
       allow delete: if userIsAdmin();
 
       match /messages/{messageId} {
-        allow get, list: if isSignedIn() &&
+        allow get, list: if userIsActive() &&
                          (isConversationParticipant(conversationId) ||
                           userIsAdmin());
 
-        allow create: if isSignedIn() &&
+        allow create: if userIsActive() &&
                       isConversationParticipant(conversationId);
 
-        allow update, delete: if isSignedIn() &&
+        allow update, delete: if userIsActive() &&
                               (isConversationParticipant(conversationId) ||
                                userIsAdmin());
       }
@@ -298,20 +350,24 @@ service cloud.firestore {
     // ------------- reports -------------
 
     match /reports/{reportId} {
-      allow create: if isSignedIn() &&
+      allow create: if userIsActive() &&
                     request.resource.data.reporterUid == uid();
 
-      allow get, list: if isSignedIn() &&
-                       (userIsAdmin() ||
-                        resource.data.reporterUid == uid());
+      allow get, list: if userIsActive() &&
+                       (
+                         userIsStaff() ||
+                         resource.data.reporterUid == uid()
+                       );
 
-      allow update, delete: if userIsAdmin();
+      allow update: if userIsActive() && userIsStaff();
+
+      allow delete: if userIsAdmin();
     }
 
     // ------------- spotlightSlots -------------
 
     match /spotlightSlots/{slotId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if userIsActive();
       allow create, update, delete: if userIsAdmin();
     }
 

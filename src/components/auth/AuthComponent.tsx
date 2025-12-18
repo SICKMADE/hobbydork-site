@@ -16,9 +16,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import Logo from '../Logo';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -63,15 +63,23 @@ export default function AuthComponent() {
 
   async function onLogin(values: z.infer<typeof loginSchema>) {
     try {
-      await login(values.email, values.password);
-      // actual redirect happens in use-auth once verified
-    } catch (error: any) {
+      const cred = await login(values.email, values.password);
+      if (cred.user?.emailVerified) {
+        router.replace('/');
+      } else {
+        router.replace('/verify-email');
+      }
+    } catch (error: unknown) {
+      const code =
+        typeof error === 'object' && error && 'code' in error
+          ? String((error as { code: unknown }).code)
+          : '';
       let message = 'Login failed.';
-      if (error.code === 'auth/user-not-found') {
+      if (code === 'auth/user-not-found') {
         message = 'No account found with that email.';
-      } else if (error.code === 'auth/wrong-password') {
+      } else if (code === 'auth/wrong-password') {
         message = 'Incorrect password.';
-      } else if (error.code === 'auth/invalid-email') {
+      } else if (code === 'auth/invalid-email') {
         message = 'Invalid email address.';
       }
       toast({
@@ -93,13 +101,17 @@ export default function AuthComponent() {
       });
 
       router.push('/verify-email');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const code =
+        typeof error === 'object' && error && 'code' in error
+          ? String((error as { code: unknown }).code)
+          : '';
       let message = 'Signup failed.';
-      if (error.code === 'auth/email-already-in-use') {
+      if (code === 'auth/email-already-in-use') {
         message = 'An account with that email already exists.';
-      } else if (error.code === 'auth/invalid-email') {
+      } else if (code === 'auth/invalid-email') {
         message = 'Invalid email address.';
-      } else if (error.code === 'auth/weak-password') {
+      } else if (code === 'auth/weak-password') {
         message = 'Password is too weak.';
       }
       toast({
@@ -114,7 +126,15 @@ export default function AuthComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center">
-          <Logo />
+          <div className="w-24 h-24 relative">
+            <Image
+              src="/hobbydork-head.png"
+              alt="HobbyDork"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
@@ -201,6 +221,9 @@ export default function AuthComponent() {
                           <FormControl>
                             <Input {...field} />
                           </FormControl>
+                          <p className="text-xs text-muted-foreground">
+                            Choose carefully — this cannot be changed later.
+                          </p>
                           <FormMessage />
                         </FormItem>
                       )}

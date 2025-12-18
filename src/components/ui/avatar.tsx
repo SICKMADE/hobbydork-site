@@ -30,7 +30,6 @@ export const AvatarImage = React.forwardRef<
       alt={alt || "Avatar"}
       fill
       className={cn("object-cover", className)}
-      {...props}
     />
   );
 });

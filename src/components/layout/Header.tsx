@@ -102,6 +102,7 @@ export default function Header() {
               type="button"
               variant="ghost"
               size="icon"
+              aria-label="Notifications"
               className="relative ml-1"
               onClick={() => router.push('/notifications')}
             >
@@ -132,6 +133,7 @@ export default function Header() {
           {/* Red Nintendo search button */}
           <Button
             type="button"
+            aria-label="Search"
             onClick={runSearch}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white shadow-[0_6px_0_#7f1010] active:translate-y-1 active:shadow-[0_0px_0_#7f1010] transition-all"
           >

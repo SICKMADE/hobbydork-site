@@ -157,15 +157,67 @@ export default function ListingDetailPage() {
   /* ---------- BUY NOW (STRIPE) ---------- */
 
   const handleBuyNow = async () => {
+    // Helpful breadcrumb for debugging click -> redirect.
+    // eslint-disable-next-line no-console
+    console.info('[checkout] buyNow click', {
+      hasUser: !!user,
+      hasFirestore: !!firestore,
+      hasListing: !!activeListing,
+      isOwner,
+      isSoldOut,
+    });
+
     if (!user) {
+      toast({
+        title: 'Sign in required',
+        description: 'Please sign in to continue to Stripe checkout.',
+        variant: 'destructive',
+      });
       router.push('/login');
       return;
     }
 
-    if (!firestore || !activeListing || isOwner || isSoldOut) return;
+    if (!firestore) {
+      toast({
+        title: 'Checkout unavailable',
+        description: 'Firestore is not ready yet. Please refresh and try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!activeListing) {
+      toast({
+        title: 'Listing not ready',
+        description: 'Please wait for the listing to load and try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (isOwner) {
+      toast({
+        title: 'Not allowed',
+        description: 'You can’t purchase your own listing.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (isSoldOut) {
+      toast({
+        title: 'Sold out',
+        description: 'This item is not available for purchase.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     try {
       setRedirecting(true);
+
+      // eslint-disable-next-line no-console
+      console.info('[checkout] creating order doc');
 
       const orderRef = await addDoc(collection(firestore, 'orders'), {
         buyerUid: user.uid,
@@ -185,6 +237,9 @@ export default function ListingDetailPage() {
         updatedAt: serverTimestamp(),
       });
 
+      // eslint-disable-next-line no-console
+      console.info('[checkout] order created', { orderId: orderRef.id });
+
       const functions = getFunctions(getApp(), 'us-central1');
       const createCheckoutSession = httpsCallable(
         functions,
@@ -195,11 +250,21 @@ export default function ListingDetailPage() {
         orderId: orderRef.id,
         amountCents: Math.round(price * quantity * 100),
         listingTitle: activeListing.title,
+        appBaseUrl: window.location.origin,
       });
 
-      window.location.href = res.data.url;
+      // eslint-disable-next-line no-console
+      console.info('[checkout] createCheckoutSession response', res?.data);
+
+      const url = res?.data?.url;
+      if (!url) {
+        throw new Error('Stripe checkout URL missing');
+      }
+
+      window.location.href = url;
     } catch (err: any) {
-      console.error(err);
+      // eslint-disable-next-line no-console
+      console.error('[checkout] buyNow failed', err);
       toast({
         title: 'Checkout failed',
         description: err?.message ?? 'Stripe error',

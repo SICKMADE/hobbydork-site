@@ -72,11 +72,26 @@ export default function CartPage() {
   };
 
   const handleCheckout = async (shippingValues: z.infer<typeof shippingSchema>) => {
-    if (!profile || !firestore || !firstListing) return;
+    if (!profile || !firestore || !firstListing) {
+      toast({
+        variant: "destructive",
+        title: "Checkout unavailable",
+        description: "Please sign in and wait for the cart to finish loading.",
+      });
+      // eslint-disable-next-line no-console
+      console.info('[checkout] cart blocked', {
+        hasProfile: !!profile,
+        hasFirestore: !!firestore,
+        hasFirstListing: !!firstListing,
+      });
+      return;
+    }
 
     setIsCheckingOut(true);
 
     try {
+      // eslint-disable-next-line no-console
+      console.info('[checkout] cart creating order');
       const batch = writeBatch(firestore);
       const orderRef = doc(collection(firestore, "orders"));
 
@@ -101,18 +116,31 @@ export default function CartPage() {
       batch.set(orderRef, order);
       await batch.commit();
 
+      // eslint-disable-next-line no-console
+      console.info('[checkout] cart order committed', { orderId: orderRef.id });
+
       // 🔥 STRIPE CHECKOUT (Firebase)
       const fn = httpsCallable(getFunctions(), "createCheckoutSession");
       const res: any = await fn({
         orderId: orderRef.id,
         listingTitle: firstListing.title,
         amountCents: Math.round(subtotal * 100),
+        appBaseUrl: window.location.origin,
       });
 
+      // eslint-disable-next-line no-console
+      console.info('[checkout] cart createCheckoutSession response', res?.data);
+
       clearCart();
-      window.location.href = res.data.url;
+      const url = res?.data?.url;
+      if (!url) {
+        throw new Error("Stripe checkout URL missing");
+      }
+      window.location.href = url;
 
     } catch (err: any) {
+      // eslint-disable-next-line no-console
+      console.error('[checkout] cart failed', err);
       toast({ variant: "destructive", title: "Checkout failed", description: err.message });
       setIsCheckingOut(false);
     }
@@ -186,7 +214,12 @@ export default function CartPage() {
                     </div>
                     <div className="text-right">
                       <p>${(item.price * item.quantity).toFixed(2)}</p>
-                      <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.listingId)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Remove ${item.title}`}
+                        onClick={() => removeFromCart(item.listingId)}
+                      >
                         <Trash className="h-4 w-4" />
                       </Button>
                     </div>

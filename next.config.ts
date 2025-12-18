@@ -5,7 +5,10 @@ const nextConfig: NextConfig = {
   // 'appDir' is not required for this Next.js version and causes
   // a type error during build; remove the experimental flag.
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
   },
   images: {
     remotePatterns: [

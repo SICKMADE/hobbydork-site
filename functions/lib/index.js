@@ -36,17 +36,59 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getStripePayouts = exports.onboardStripe = exports.stripeWebhook = exports.createCheckoutSession = void 0;
+exports.awardIsoTrophy = exports.getStripePayouts = exports.onboardStripe = exports.stripeWebhook = exports.createCheckoutSession = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const stripe_1 = __importDefault(require("stripe"));
 admin.initializeApp();
 const db = admin.firestore();
 /**
- * 🔑 CHANGE THIS ONCE
- * MUST be a real HTTPS URL you control
+ * APP_BASE_URL should be provided via environment in production.
+ * Fallback order:
+ *  - process.env.APP_BASE_URL
+ *  - process.env.NEXT_PUBLIC_URL
+ *  - localhost (development)
  */
-const APP_BASE_URL = "http://localhost:3000"; // change later to prod domain
+const APP_BASE_URL = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_URL || "http://localhost:9002";
+function tryNormalizeOrigin(raw) {
+    if (typeof raw !== "string")
+        return null;
+    const trimmed = raw.trim();
+    if (!trimmed)
+        return null;
+    // Support accidental values like "localhost:9002" (no protocol)
+    const candidate = /^localhost(?::\d+)?(\/|$)/i.test(trimmed) || /^[\w.-]+:\d+(\/|$)/.test(trimmed)
+        ? `http://${trimmed}`
+        : trimmed;
+    try {
+        const url = new URL(candidate);
+        if (url.protocol !== "http:" && url.protocol !== "https:")
+            return null;
+        return url.origin;
+    }
+    catch {
+        return null;
+    }
+}
+function resolveAppBaseUrl(maybeBaseUrl, requestOriginHeader, requestRefererHeader) {
+    // If client explicitly sent appBaseUrl, validate it strictly.
+    if (typeof maybeBaseUrl === "string" && maybeBaseUrl.trim().length > 0) {
+        const normalized = tryNormalizeOrigin(maybeBaseUrl);
+        if (!normalized) {
+            throw new functions.https.HttpsError("invalid-argument", "Invalid appBaseUrl. Expected an absolute URL like https://example.com or http://localhost:9002");
+        }
+        return normalized;
+    }
+    // Fallback to callable request headers (usually correct for local dev ports).
+    const fromOrigin = tryNormalizeOrigin(requestOriginHeader);
+    if (fromOrigin)
+        return fromOrigin;
+    const fromReferer = tryNormalizeOrigin(requestRefererHeader);
+    if (fromReferer)
+        return fromReferer;
+    // Env fallback (production should set APP_BASE_URL).
+    return APP_BASE_URL;
+}
 /**
  * Stripe lazy init (Firebase Secrets)
  */
@@ -54,9 +96,10 @@ let stripeInstance = null;
 function getStripe() {
     if (stripeInstance)
         return stripeInstance;
-    const secret = process.env.STRIPE_SECRET;
+    // Prefer STRIPE_SECRET (set via Functions Secret Manager). Allow fallback to STRIPE_SECRET_KEY.
+    const secret = process.env.STRIPE_SECRET || process.env.STRIPE_SECRET_KEY;
     if (!secret) {
-        throw new Error("Missing STRIPE_SECRET");
+        throw new Error("Missing Stripe secret (STRIPE_SECRET or STRIPE_SECRET_KEY)");
     }
     stripeInstance = new stripe_1.default(secret, {
         apiVersion: "2023-10-16",
@@ -69,17 +112,24 @@ function getStripe() {
  * ===============================
  */
 exports.createCheckoutSession = functions
-    .runWith({ secrets: ["STRIPE_SECRET"] })
+    .runWith({ secrets: ["STRIPE_SECRET", "APP_BASE_URL"] })
     .https.onCall(async (data, context) => {
     try {
         if (!context.auth) {
             throw new functions.https.HttpsError("unauthenticated", "Authentication required");
         }
-        const { orderId, listingTitle, amountCents } = data;
+        const { orderId, listingTitle, amountCents, appBaseUrl } = data;
         if (!orderId || !listingTitle || !amountCents) {
             throw new functions.https.HttpsError("invalid-argument", "Missing required fields");
         }
         const stripe = getStripe();
+        const baseUrl = resolveAppBaseUrl(appBaseUrl, context.rawRequest?.headers?.origin, context.rawRequest?.headers?.referer);
+        console.info("createCheckoutSession baseUrl", {
+            baseUrl,
+            appBaseUrl,
+            origin: context.rawRequest?.headers?.origin,
+            referer: context.rawRequest?.headers?.referer,
+        });
         const session = await stripe.checkout.sessions.create({
             mode: "payment",
             payment_method_types: ["card"],
@@ -94,8 +144,8 @@ exports.createCheckoutSession = functions
                 },
             ],
             metadata: { orderId },
-            success_url: `${APP_BASE_URL}/orders/success?orderId=${orderId}`,
-            cancel_url: `${APP_BASE_URL}/orders/cancelled?orderId=${orderId}`,
+            success_url: `${baseUrl}/orders/success?orderId=${orderId}`,
+            cancel_url: `${baseUrl}/orders/cancelled?orderId=${orderId}`,
         });
         await db.collection("orders").doc(orderId).update({
             stripeSessionId: session.id,
@@ -153,12 +203,13 @@ exports.stripeWebhook = functions
  * ===============================
  */
 exports.onboardStripe = functions
-    .runWith({ secrets: ["STRIPE_SECRET"] })
-    .https.onCall(async (_data, context) => {
+    .runWith({ secrets: ["STRIPE_SECRET", "APP_BASE_URL"] })
+    .https.onCall(async (data, context) => {
     try {
         if (!context.auth) {
             throw new functions.https.HttpsError("unauthenticated", "Authentication required");
         }
+        const baseUrl = resolveAppBaseUrl(data?.appBaseUrl, context.rawRequest?.headers?.origin, context.rawRequest?.headers?.referer);
         const uid = context.auth.uid;
         const userRef = db.collection("users").doc(uid);
         const userSnap = await userRef.get();
@@ -182,8 +233,8 @@ exports.onboardStripe = functions
         }
         const accountLink = await stripe.accountLinks.create({
             account: accountId,
-            refresh_url: `${APP_BASE_URL}/store/dashboard`,
-            return_url: `${APP_BASE_URL}/store/dashboard`,
+            refresh_url: `${baseUrl}/onboarding/failed`,
+            return_url: `${baseUrl}/onboarding/success`,
             type: "account_onboarding",
         });
         return { url: accountLink.url };
@@ -221,4 +272,76 @@ exports.getStripePayouts = functions
         console.error("getStripePayouts failed:", err);
         throw new functions.https.HttpsError("internal", err.message || "Failed to fetch payouts");
     }
+});
+/**
+ * ===============================
+ * ISO24 TROPHIES
+ * ===============================
+ * Seller submits a fulfillment link under:
+ *   /iso24Posts/{isoId}/comments/{commentId}
+ * ISO owner approves a fulfillment, and we:
+ *  - close the ISO
+ *  - record fulfillment metadata
+ *  - increment seller's trophies
+ */
+exports.awardIsoTrophy = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "Authentication required");
+    }
+    // Keep consistent with rules that require verified email for active access.
+    if (context.auth.token.email_verified !== true) {
+        throw new functions.https.HttpsError("failed-precondition", "Email verification required");
+    }
+    const isoId = typeof data?.isoId === "string" ? data.isoId.trim() : "";
+    const commentId = typeof data?.commentId === "string" ? data.commentId.trim() : "";
+    if (!isoId || !commentId) {
+        throw new functions.https.HttpsError("invalid-argument", "Missing isoId or commentId");
+    }
+    const callerUid = context.auth.uid;
+    const isoRef = db.collection("iso24Posts").doc(isoId);
+    const commentRef = isoRef.collection("comments").doc(commentId);
+    await db.runTransaction(async (tx) => {
+        const isoSnap = await tx.get(isoRef);
+        if (!isoSnap.exists) {
+            throw new functions.https.HttpsError("not-found", "ISO not found");
+        }
+        const iso = isoSnap.data() || {};
+        const ownerUid = iso.ownerUid;
+        if (ownerUid !== callerUid) {
+            throw new functions.https.HttpsError("permission-denied", "Only the ISO owner can award a trophy");
+        }
+        if (iso.status !== "OPEN") {
+            throw new functions.https.HttpsError("failed-precondition", "ISO is not open");
+        }
+        if (iso.trophyAwardedAt) {
+            throw new functions.https.HttpsError("already-exists", "Trophy already awarded for this ISO");
+        }
+        const commentSnap = await tx.get(commentRef);
+        if (!commentSnap.exists) {
+            throw new functions.https.HttpsError("not-found", "Fulfillment link not found");
+        }
+        const comment = commentSnap.data() || {};
+        if (comment.type !== "FULFILLMENT") {
+            throw new functions.https.HttpsError("failed-precondition", "Selected comment is not a fulfillment");
+        }
+        const sellerUid = comment.authorUid;
+        const listingUrl = comment.listingUrl;
+        if (typeof sellerUid !== "string" || sellerUid.trim() === "") {
+            throw new functions.https.HttpsError("failed-precondition", "Fulfillment is missing sellerUid");
+        }
+        const sellerRef = db.collection("users").doc(sellerUid);
+        tx.update(isoRef, {
+            status: "CLOSED",
+            fulfilledByUid: sellerUid,
+            fulfilledCommentId: commentId,
+            fulfilledListingUrl: typeof listingUrl === "string" ? listingUrl : null,
+            trophyAwardedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        tx.update(sellerRef, {
+            trophies: admin.firestore.FieldValue.increment(1),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    });
+    return { ok: true };
 });

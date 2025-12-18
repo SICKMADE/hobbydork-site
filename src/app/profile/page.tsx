@@ -31,7 +31,7 @@ import { Label } from "@/components/ui/label";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db } from "@/firebase/client-provider";
 
-const DEFAULT_AVATAR = "/components/dashboard/hobbydork-head.png";
+const DEFAULT_AVATAR = "/hobbydork-head.png";
 
 const profileSchema = z.object({
   about: z

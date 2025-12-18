@@ -9,11 +9,21 @@ import {
   getDocs,
 } from "firebase/firestore";
 import Link from "next/link";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function AdminUserSearchPage() {
+  const { userData } = useAuth();
+  const role = userData.role;
+  const isAdmin = role === "ADMIN";
+  const isStaff = isAdmin || role === "MODERATOR";
+
   const [term, setTerm] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  if (!isStaff) {
+    return <div className="p-6">You do not have access.</div>;
+  }
 
   async function runSearch() {
     if (!term.trim()) return;
@@ -90,11 +100,13 @@ export default function AdminUserSearchPage() {
               </Link>
 
               {/* GO TO ADMIN USER PAGE (moderation tools) */}
-              <Link href={`/admin/users`}>
-                <button className="px-3 py-1 bg-blue-700 text-white rounded">
-                  Open in User Manager
-                </button>
-              </Link>
+              {isAdmin && (
+                <Link href={`/admin/users`}>
+                  <button className="px-3 py-1 bg-blue-700 text-white rounded">
+                    Open in User Manager
+                  </button>
+                </Link>
+              )}
 
               {/* SEND MESSAGE */}
               <Link

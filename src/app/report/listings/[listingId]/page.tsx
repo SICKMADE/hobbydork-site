@@ -39,16 +39,21 @@ export default function ReportListingPage({ params }: any) {
 
     setLoading(true);
 
-    await addDoc(collection(db, "reports"), {
-      reporterUid: user.uid,
-      targetUid: sellerUid,
-      listingId,
-      context: "listing",
-      reason,
-      details: details || null,
-      createdAt: serverTimestamp(),
-      resolved: false,
-    });
+      if (!user) {
+        setLoading(false);
+        return alert("You must be signed in to submit a report.");
+      }
+
+      await addDoc(collection(db, "reports"), {
+        reporterUid: user.uid,
+        targetUid: sellerUid,
+        listingId,
+        context: "listing",
+        reason,
+        details: details || null,
+        createdAt: serverTimestamp(),
+        resolved: false,
+      });
 
     setLoading(false);
     router.push("/report/submitted");

@@ -25,7 +25,7 @@ export default function ReportISO24Page({ params }: any) {
   // Load ISO post to get owner UID
   useEffect(() => {
     async function loadISO() {
-      const snap = await getDoc(doc(db, "iso24", isoId));
+      const snap = await getDoc(doc(db, "iso24Posts", isoId));
       if (snap.exists()) {
         const data = snap.data();
         setOwnerUid(data.ownerUid);
@@ -39,16 +39,21 @@ export default function ReportISO24Page({ params }: any) {
 
     setLoading(true);
 
-    await addDoc(collection(db, "reports"), {
-      reporterUid: user.uid,
-      targetUid: ownerUid,
-      isoId,
-      context: "iso24",
-      reason,
-      details: details || null,
-      createdAt: serverTimestamp(),
-      resolved: false,
-    });
+      if (!user) {
+        setLoading(false);
+        return alert("You must be signed in to submit a report.");
+      }
+
+      await addDoc(collection(db, "reports"), {
+        reporterUid: user.uid,
+        targetUid: ownerUid,
+        isoId,
+        context: "iso24",
+        reason,
+        details: details || null,
+        createdAt: serverTimestamp(),
+        resolved: false,
+      });
 
     setLoading(false);
     router.push("/report/submitted");

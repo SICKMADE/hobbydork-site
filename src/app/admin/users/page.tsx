@@ -9,8 +9,14 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function AdminUsersPage() {
+  const { userData } = useAuth();
+  if (userData.role !== "ADMIN") {
+    return <div className="p-6">You do not have access.</div>;
+  }
+
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

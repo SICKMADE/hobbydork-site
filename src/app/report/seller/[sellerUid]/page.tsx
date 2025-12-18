@@ -20,15 +20,20 @@ export default function ReportSellerPage({ params }: any) {
 
     setLoading(true);
 
-    await addDoc(collection(db, "reports"), {
-      reporterUid: user.uid,
-      targetUid: sellerUid,
-      context: "seller",
-      reason,
-      details: details || null,
-      createdAt: serverTimestamp(),
-      resolved: false,
-    });
+      if (!user) {
+        setLoading(false);
+        return alert("You must be signed in to submit a report.");
+      }
+
+      await addDoc(collection(db, "reports"), {
+        reporterUid: user.uid,
+        targetUid: sellerUid,
+        context: "seller",
+        reason,
+        details: details || null,
+        createdAt: serverTimestamp(),
+        resolved: false,
+      });
 
     setLoading(false);
     router.push("/report/submitted");

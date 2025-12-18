@@ -43,22 +43,33 @@ export default function LiveChat() {
       limit(400)
     );
 
-    const unsub = onSnapshot(q, (snap) => {
-      setMessages(
-        snap.docs.map((d) => {
-          const data = d.data() as Partial<Message>;
-          return {
-            id: d.id,
-            text: data.text ?? "",
-            senderUid: data.senderUid ?? "",
-            createdAt: data.createdAt ?? null,
-          };
-        })
-      );
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-    });
+    let unsub: (() => void) | undefined = undefined;
+    try {
+      unsub = onSnapshot(q, (snap) => {
+        setMessages(
+          snap.docs.map((d) => {
+            const data = d.data() as Partial<Message>;
+            return {
+              id: d.id,
+              text: data.text ?? "",
+              senderUid: data.senderUid ?? "",
+              createdAt: data.createdAt ?? null,
+            };
+          })
+        );
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+      });
+    } catch (err) {
+      console.error('LiveChat: onSnapshot failed', err);
+    }
 
-    return () => unsub();
+    return () => {
+      try {
+        if (typeof unsub === 'function') unsub();
+      } catch (e) {
+        console.warn('LiveChat: error during unsubscribe', e);
+      }
+    };
   }, []);
 
   async function sendMessage(): Promise<void> {
@@ -68,6 +79,8 @@ export default function LiveChat() {
       alert("You are suspended and cannot send messages.");
       return;
     }
+
+    if (!user) return alert("Please sign in to send a message.");
 
     await addDoc(collection(db, "groupChat"), {
       text: input,
@@ -110,8 +123,9 @@ export default function LiveChat() {
         <div className="flex-1 p-3 overflow-y-auto space-y-4">
 
           {messages.map((m) => {
-            const ownerRole = m.senderUid === user.uid ? userData.role : null;
-            const isSelf = m.senderUid === user.uid;
+            const uid = user?.uid ?? null;
+            const ownerRole = m.senderUid === uid ? userData?.role : null;
+            const isSelf = m.senderUid === uid;
 
             return (
               <div key={m.id} className="flex gap-2 items-start relative">

@@ -33,8 +33,13 @@ export default function AdminReportsPage() {
   const [reports, setReports] = useState<Report[]>([] as Report[]);
   const [filter, setFilter] = useState("ALL");
 
+  const role = userData.role;
+  const isAdmin = role === "ADMIN";
+  const isModerator = role === "MODERATOR";
+  const isStaff = isAdmin || isModerator;
+
   useEffect(() => {
-    if (userData.role !== "ADMIN") return;
+    if (!isStaff) return;
 
     let q = query(collection(db, "reports"), orderBy("createdAt", "desc"));
 
@@ -45,7 +50,7 @@ export default function AdminReportsPage() {
     return () => unsub();
   }, [userData]);
 
-  if (userData.role !== "ADMIN")
+  if (!isStaff)
     return <div className="p-6">You do not have access.</div>;
 
   const filtered = reports.filter((r) => {
@@ -151,13 +156,15 @@ export default function AdminReportsPage() {
                 Message User
               </a>
 
-              {/* ADMIN ACTIONS — SUSPEND / BAN */}
-              <a
-                href={`/admin/user/${r.targetUid}`}
-                className="px-3 py-2 border rounded bg-red-200 text-red-800"
-              >
-                Moderate User
-              </a>
+              {/* ADMIN ACTIONS */}
+              {isAdmin && (
+                <a
+                  href={`/admin/users`}
+                  className="px-3 py-2 border rounded bg-red-200 text-red-800"
+                >
+                  Open User Manager
+                </a>
+              )}
 
               {/* MARK RESOLVED */}
               {!r.resolved && (

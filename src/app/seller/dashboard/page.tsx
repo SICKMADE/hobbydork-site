@@ -14,7 +14,7 @@ export default function SellerDashboard() {
           HobbyDork is a safe community marketplace.  
           All sellers must follow strict safety rules and use secure Stripe payments.
         </p>
-        <Link href="/seller/onboarding">
+        <Link href="/become-seller">
           <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">
             Start Seller Onboarding
           </button>
@@ -41,7 +41,7 @@ export default function SellerDashboard() {
           HobbyDork minimizes seller fees and protects buyers & sellers by using secure Stripe transactions.
         </p>
 
-        <Link href="/seller/onboarding">
+        <Link href="/become-seller">
           <button className="mt-3 bg-blue-600 text-white px-3 py-1 rounded">
             Manage Stripe Account
           </button>

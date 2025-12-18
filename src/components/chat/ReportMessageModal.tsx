@@ -24,6 +24,11 @@ export default function ReportMessageModal({
 
     setLoading(true);
 
+    if (!user) {
+      setLoading(false);
+      return alert("You must be signed in to submit a report.");
+    }
+
     await addDoc(collection(db, "reports"), {
       reporterUid: user.uid,
       targetUid,

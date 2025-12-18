@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { db } from "@/firebase/client-provider";
 import {
   collection,
@@ -13,30 +14,31 @@ import {
 } from "firebase/firestore";
 import Link from "next/link";
 
-type PageProps = {
-  params: Promise<{
-    storeId: string;
-  }>;
-};
-
-export default function StorefrontPage({ params }: PageProps) {
-  const { storeId } = React.use(params);
+export default function StorefrontPage() {
+  // Route is /store/[id]
+  const params = useParams();
+  const storeId = Array.isArray(params?.id) ? params.id[0] : params?.id;
+  const storeIdStr = typeof storeId === "string" ? storeId : undefined;
 
   const [user, setUser] = useState<any>(null);
   const [listings, setListings] = useState<any[]>([]);
 
   useEffect(() => {
-    async function loadSeller() {
-      const snap = await getDoc(doc(db, "users", storeId));
+    const sid = storeIdStr;
+    if (!sid) return;
+    async function loadSeller(sellerId: string) {
+      const snap = await getDoc(doc(db, "users", sellerId));
       if (snap.exists()) setUser(snap.data());
     }
-    loadSeller();
-  }, [storeId]);
+    loadSeller(sid);
+  }, [storeIdStr]);
 
   useEffect(() => {
+    const sid = storeIdStr;
+    if (!sid) return;
     const q = query(
       collection(db, "listings"),
-      where("ownerUid", "==", storeId),
+      where("ownerUid", "==", sid),
       where("status", "==", "ACTIVE")
     );
 
@@ -45,12 +47,15 @@ export default function StorefrontPage({ params }: PageProps) {
     });
 
     return () => unsub();
-  }, [storeId]);
+  }, [storeIdStr]);
+
+  if (!storeIdStr) return <div className="p-6">Not found.</div>;
 
   if (!user) return <div className="p-6">Loading store…</div>;
 
   const spotlightActive = user.hasActiveSpotlight;
   const trustedSeller = user.totalSales >= 10;
+  const trophies = typeof user.trophies === "number" ? user.trophies : 0;
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
@@ -66,13 +71,14 @@ export default function StorefrontPage({ params }: PageProps) {
 
         <div className="flex items-center gap-4">
           <img
-            src={user.avatar || "/default-avatar.png"}
+            src={user.avatar || "/hobbydork-head.png"}
             className="w-20 h-20 rounded-full object-cover"
           />
 
           <div>
             <p className="text-2xl font-bold">{user.displayName}</p>
             <p className="text-gray-600 text-sm">Store ID: {user.storeId}</p>
+            <p className="text-gray-600 text-sm">Trophies: {trophies}</p>
 
             <div className="flex gap-2 mt-1">
               {spotlightActive && (
@@ -91,13 +97,13 @@ export default function StorefrontPage({ params }: PageProps) {
         </div>
 
         <div className="flex gap-3">
-          <Link href={`/messages/${storeId}`}>
+          <Link href={`/messages/${storeIdStr}`}>
             <button className="flex-1 bg-blue-600 text-white px-4 py-2 rounded">
               Message Seller
             </button>
           </Link>
 
-          <Link href={`/report/seller/${storeId}`}>
+          <Link href={`/report/seller/${storeIdStr}`}>
             <button className="flex-1 bg-red-600 text-white px-4 py-2 rounded">
               Report
             </button>
@@ -138,12 +144,13 @@ export default function StorefrontPage({ params }: PageProps) {
           <div className="col-span-1 space-y-4">
             <div className="p-6 bg-white border rounded shadow space-y-3 text-center">
               <img
-                src={user.avatar || "/default-avatar.png"}
+                src={user.avatar || "/hobbydork-head.png"}
                 className="w-32 h-32 mx-auto rounded-full object-cover"
               />
 
               <p className="text-3xl font-bold">{user.displayName}</p>
               <p className="text-gray-600 text-sm">Store ID: {user.storeId}</p>
+              <p className="text-gray-600 text-sm">Trophies: {trophies}</p>
 
               <div className="flex justify-center gap-2">
                 {spotlightActive && (
@@ -161,13 +168,13 @@ export default function StorefrontPage({ params }: PageProps) {
             </div>
 
             <div className="space-y-3">
-              <Link href={`/messages/${storeId}`}>
+              <Link href={`/messages/${storeIdStr}`}>
                 <button className="w-full bg-blue-600 text-white px-4 py-2 rounded">
                   Message Seller
                 </button>
               </Link>
 
-              <Link href={`/report/seller/${storeId}`}>
+              <Link href={`/report/seller/${storeIdStr}`}>
                 <button className="w-full bg-red-600 text-white px-4 py-2 rounded">
                   Report Seller
                 </button>
@@ -198,7 +205,7 @@ export default function StorefrontPage({ params }: PageProps) {
                 <Link key={l.id} href={`/listings/${l.id}`}>
                   <div className="border p-3 bg-white rounded shadow hover:shadow-lg transition">
                     <img
-                      src={l.images?.[0] || "/placeholder.png"}
+                      src={l.images?.[0] || "/hobbydork-head.png"}
                       className="w-full h-40 object-cover rounded"
                     />
                     <p className="font-semibold mt-2">{l.title}</p>

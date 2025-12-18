@@ -22,8 +22,8 @@ export default function CreateISO() {
     if (!user) return;
     if (!title.trim()) return;
 
-    await addDoc(collection(db, "iso24"), {
-      userId: user.uid,
+    await addDoc(collection(db, "iso24Posts"), {
+      ownerUid: user.uid,
       title,
       description: desc,
       status: "OPEN",

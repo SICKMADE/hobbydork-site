@@ -11,24 +11,34 @@ import { getFunctions, httpsCallable } from "firebase/functions";
 import { Button } from "@/components/ui/button";
 
 export default function BecomeSellerPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
 
   async function startStripeOnboarding() {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to connect Stripe.",
+        variant: "destructive",
+      });
+      router.push("/login");
+      return;
+    }
 
     setLoading(true);
 
     try {
       const fn = httpsCallable(
-        getFunctions(),
+        getFunctions(undefined, "us-central1"),
         "onboardStripe"
       );
 
-      const res: any = await fn({});
+      const res: any = await fn({
+        appBaseUrl: window.location.origin,
+      });
 
       if (!res?.data?.url) {
         throw new Error("Stripe onboarding URL missing");
@@ -59,7 +69,7 @@ export default function BecomeSellerPage() {
 
       <Button
         onClick={startStripeOnboarding}
-        disabled={loading}
+        disabled={loading || authLoading}
         className="w-full"
       >
         {loading ? "Redirecting to Stripe…" : "Connect Stripe & Become Seller"}

@@ -19,11 +19,22 @@ export default function NotifBell() {
       where("seen", "==", false)
     );
 
-    const unsub = onSnapshot(qNotif, (snap) => {
-      setCount(snap.size);
-    });
+    let unsub: (() => void) | undefined = undefined;
+    try {
+      unsub = onSnapshot(qNotif, (snap) => {
+        setCount(snap.size);
+      });
+    } catch (err) {
+      console.error('NotifBell: onSnapshot failed', err);
+    }
 
-    return () => unsub();
+    return () => {
+      try {
+        if (typeof unsub === 'function') unsub();
+      } catch (e) {
+        console.warn('NotifBell: error during unsubscribe', e);
+      }
+    };
   }, [user]);
 
   if (!user) return null;

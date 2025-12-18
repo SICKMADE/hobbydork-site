@@ -61,6 +61,10 @@ export default function SellerTermsPage() {
             <li>Running illegal raffles or gambling.</li>
             <li>Taking payment and intentionally failing to ship.</li>
             <li>
+              No offsite sales allowed. If suspected of selling or attempting to
+              sell offsite, sellers will be permanently banned without warning.
+            </li>
+            <li>
               Using multiple accounts to manipulate trust or get around bans.
             </li>
           </ul>

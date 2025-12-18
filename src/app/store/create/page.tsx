@@ -30,11 +30,10 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import { useFirestore } from '@/firebase';
-import { doc, runTransaction, serverTimestamp, collection } from 'firebase/firestore';
+import { doc, runTransaction, serverTimestamp, collection, updateDoc } from 'firebase/firestore';
 
 import { useToast } from '@/hooks/use-toast';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/firebase/client-provider';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 import AppLayout from '@/components/layout/AppLayout';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -47,10 +46,11 @@ import storeAvatar from '@/components/dashboard/hobbydork-head.png';
 
 const sellerSchema = z.object({
   about: z.string().min(10, 'About section must be at least 10 characters long.'),
-  stripeOnboarded: z.literal(true, {
-    errorMap: () => ({
-      message: 'You must complete Stripe onboarding to sell.',
-    }),
+  stripeOnboarded: z.boolean().refine((v) => v === true, {
+    message: 'You must complete Stripe onboarding to sell.',
+  }),
+  agreeSellerTerms: z.boolean().refine((v) => v === true, {
+    message: 'You must accept the Seller Terms.',
   }),
 });
 
@@ -121,14 +121,17 @@ const Step1Store = () => {
 
 const Step2Stripe = () => {
   const { control } = useFormContext<SellerFormValues>();
+  const { profile } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
   const startStripeOnboarding = async () => {
     setLoading(true);
     try {
-      const onboard = httpsCallable(functions, 'onboardStripe');
-      const res: any = await onboard({});
+      const onboard = httpsCallable(getFunctions(undefined, 'us-central1'), 'onboardStripe');
+      const res: any = await onboard({
+        appBaseUrl: window.location.origin,
+      });
       if (res.data?.url) window.location.href = res.data.url;
       else throw new Error('Stripe onboarding failed.');
     } catch (e: any) {
@@ -155,10 +158,10 @@ const Step2Stripe = () => {
           <Button
             type="button"
             onClick={startStripeOnboarding}
-            disabled={loading}
+            disabled={loading || !!profile?.stripeAccountId}
             className="w-full"
           >
-            {loading ? 'Connecting…' : 'Connect Stripe'}
+            {profile?.stripeAccountId ? 'Connected' : loading ? 'Connecting…' : 'Connect Stripe'}
           </Button>
         </CardContent>
       </Card>
@@ -168,9 +171,56 @@ const Step2Stripe = () => {
         name="stripeOnboarded"
         render={({ field }) => (
           <FormItem className="flex gap-3 items-start border p-4 rounded">
-            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+            <Checkbox checked={field.value} disabled={!!profile?.stripeAccountId} onCheckedChange={field.onChange} />
             <div>
               <FormLabel>Stripe onboarding completed</FormLabel>
+              <FormMessage />
+            </div>
+          </FormItem>
+        )}
+      />
+    </motion.div>
+  );
+};
+
+/* ---------------- STEP 3 ---------------- */
+
+const Step3SellerTerms = () => {
+  const { control } = useFormContext<SellerFormValues>();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 50 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -50 }}
+      className="space-y-6"
+    >
+      <Card>
+        <CardContent className="pt-6 space-y-3">
+          <p className="font-semibold">Seller Terms</p>
+          <p className="text-sm text-muted-foreground">
+            You must accept the Seller Terms before you can sell.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            No offsite sales allowed. If suspected of selling or attempting to sell offsite,
+            sellers will be permanently banned without warning.
+          </p>
+          <p className="text-sm">
+            <a href="/seller-terms" className="text-primary underline">
+              Read Seller Terms
+            </a>
+          </p>
+        </CardContent>
+      </Card>
+
+      <FormField
+        control={control}
+        name="agreeSellerTerms"
+        render={({ field }) => (
+          <FormItem className="flex gap-3 items-start border p-4 rounded">
+            <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(!!v)} />
+            <div>
+              <FormLabel>I agree to the Seller Terms</FormLabel>
               <FormMessage />
             </div>
           </FormItem>
@@ -183,7 +233,7 @@ const Step2Stripe = () => {
 /* ---------------- PAGE ---------------- */
 
 export default function CreateStorePage() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
@@ -196,9 +246,18 @@ export default function CreateStorePage() {
     mode: 'onChange',
     defaultValues: {
       about: '',
-      stripeOnboarded: true,
+      stripeOnboarded: profile?.stripeOnboarded ?? false,
+      agreeSellerTerms: !!profile?.stripeTermsAgreed,
     },
   });
+
+  // If profile loads after render, update the form value to reflect completion state
+  useEffect(() => {
+    if (profile && typeof methods.setValue === 'function') {
+      methods.setValue('stripeOnboarded', !!profile.stripeOnboarded || !!profile.stripeAccountId);
+      methods.setValue('agreeSellerTerms', !!profile.stripeTermsAgreed);
+    }
+  }, [profile]);
 
   async function onSubmit(values: SellerFormValues) {
     if (!user || !firestore || !profile?.displayName) return;
@@ -211,8 +270,16 @@ export default function CreateStorePage() {
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '');
 
-      const storeRef = doc(collection(firestore, 'storefronts'));
       const userRef = doc(firestore, 'users', user.uid);
+
+      // Persist seller-terms acceptance before creating the store so rules that
+      // read users/{uid} can validate it during storefront create.
+      await updateDoc(userRef, {
+        stripeTermsAgreed: true,
+        updatedAt: serverTimestamp(),
+      });
+
+      const storeRef = doc(collection(firestore, 'storefronts'));
 
       await runTransaction(firestore, async (tx) => {
         tx.update(userRef, {
@@ -254,13 +321,31 @@ export default function CreateStorePage() {
     }
   }
 
+  if (authLoading) {
+    return (
+      <AppLayout>
+        <div className="max-w-2xl mx-auto p-6">Loading…</div>
+      </AppLayout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <AppLayout>
+        <div className="max-w-2xl mx-auto p-6">You must be signed in.</div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle>{step === 1 ? 'Create Store' : 'Connect Stripe'}</CardTitle>
-            <CardDescription>Step {step} of 2</CardDescription>
+            <CardTitle>
+              {step === 1 ? 'Create Store' : step === 2 ? 'Connect Stripe' : 'Accept Seller Terms'}
+            </CardTitle>
+            <CardDescription>Step {step} of 3</CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -269,6 +354,7 @@ export default function CreateStorePage() {
                 <AnimatePresence mode="wait">
                   {step === 1 && <Step1Store key="s1" />}
                   {step === 2 && <Step2Stripe key="s2" />}
+                  {step === 3 && <Step3SellerTerms key="s3" />}
                 </AnimatePresence>
 
                 <div className="flex justify-between mt-6">
@@ -280,8 +366,10 @@ export default function CreateStorePage() {
                     <div />
                   )}
 
-                  {step < 2 ? (
-                    <Button onClick={() => setStep(2)}>Next</Button>
+                  {step < 3 ? (
+                    <Button type="button" onClick={() => setStep((s) => Math.min(3, s + 1))}>
+                      Next
+                    </Button>
                   ) : (
                     <Button type="submit" disabled={saving || !methods.formState.isValid}>
                       {saving ? 'Saving…' : 'Create Store'}

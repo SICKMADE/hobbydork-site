@@ -3,20 +3,29 @@
 import { useEffect, useState } from "react";
 import { db } from "@/firebase/client-provider";
 import { collection, getDocs, doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function AdminListingsPage() {
+  const { userData } = useAuth();
+  const role = userData.role;
+  const isStaff = role === "ADMIN" || role === "MODERATOR";
+
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
+      if (!isStaff) {
+        setLoading(false);
+        return;
+      }
       const snap = await getDocs(collection(db, "listings"));
       const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setItems(data);
       setLoading(false);
     }
     load();
-  }, []);
+  }, [isStaff]);
 
   async function remove(id: string) {
     const reason = prompt("Reason for removal:");
@@ -37,6 +46,7 @@ export default function AdminListingsPage() {
     });
   }
 
+  if (!isStaff) return <div className="p-6">You do not have access.</div>;
   if (loading) return <div className="p-6">Loading listings</div>;
 
   return (

@@ -44,7 +44,7 @@ export default function CreateListingPage() {
       <div className="p-6">
         You must set up a store first.
         <br />
-        <a href="/store/setup" className="text-blue-600 underline">
+        <a href="/store/create" className="text-blue-600 underline">
           Set up store
         </a>
       </div>

@@ -23,7 +23,7 @@ export default function SellerDashboardPage() {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<any>({
+  const [stats, setStats] = useState({
     totalRevenue: 0,
     totalSales: 0,
     activeListings: 0,

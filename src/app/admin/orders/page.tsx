@@ -10,8 +10,14 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import Link from "next/link";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function AdminOrdersPage() {
+  const { userData } = useAuth();
+  if (userData.role !== "ADMIN") {
+    return <div className="p-6">You do not have access.</div>;
+  }
+
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

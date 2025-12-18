@@ -24,21 +24,21 @@ import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
-import Logo from '@/components/Logo';
+import Image from 'next/image';
 import { useFirestore } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 // ✅ CLEAN AGREEMENTS — NO STRIPE / NO GOODS & SERVICES
 const agreementsSchema = z.object({
-  agreeTerms: z.literal(true, {
-    errorMap: () => ({ message: 'You must agree to the Terms.' }),
+  agreeTerms: z.boolean().refine((v) => v === true, {
+    message: 'You must agree to the Terms.',
   }),
-  agreeAge: z.literal(true, {
-    errorMap: () => ({ message: 'You must confirm you are 18 or older.' }),
+  agreeAge: z.boolean().refine((v) => v === true, {
+    message: 'You must confirm you are 18 or older.',
   }),
-  agreeOneAccount: z.literal(true, {
-    errorMap: () => ({ message: 'Only one account is allowed.' }),
+  agreeOneAccount: z.boolean().refine((v) => v === true, {
+    message: 'Only one account is allowed.',
   }),
 });
 
@@ -128,7 +128,9 @@ export default function OnboardingPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="max-w-xl w-full">
         <div className="mb-6 flex justify-center">
-          <Logo />
+          <div className="w-24 h-24 relative">
+            <Image src="/hobbydork-head.png" alt="HobbyDork" fill className="object-contain" />
+          </div>
         </div>
         <Card>
           <CardHeader>

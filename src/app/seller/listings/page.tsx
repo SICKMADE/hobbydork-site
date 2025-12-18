@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { Listing } from "@/lib/types";
 import { db } from "@/firebase/client-provider";
 import {
   collection,
@@ -13,7 +14,7 @@ import Link from "next/link";
 
 export default function SellerListings() {
   const { user } = useAuth();
-  const [listings, setListings] = useState([]);
+  const [listings, setListings] = useState<Partial<Listing>[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -24,7 +25,7 @@ export default function SellerListings() {
     );
 
     const unsub = onSnapshot(q, (snap) => {
-      setListings(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setListings(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Partial<Listing>) })));
     });
 
     return () => unsub();
@@ -37,7 +38,7 @@ export default function SellerListings() {
       {listings.map((l) => (
         <div key={l.id} className="border p-4 bg-white rounded shadow space-y-2">
           <p className="font-semibold">{l.title}</p>
-          <p>Status: {l.status}</p>
+          <p>Status: {l.state}</p>
 
           <Link href={`/listings/${l.id}`}>
             <button className="px-3 py-1 bg-blue-600 text-white rounded">

@@ -4,13 +4,15 @@
 
 /* CSS theme variables used by Tailwind (hsl(var(--...))) */
 :root {
-  --background: 220 11% 12%;
-  --foreground: 0 0% 100%;
+  --background: 220 11% 12%; /* dark background */
+  --foreground: 0 0% 100%; /* light foreground text */
   --muted: 220 10% 16%;
   --muted-foreground: 210 8% 70%;
-  --card: 220 12% 14%;
+  /* Cards/panels: slightly lighter than background for readable contrast */
+  --card: 220 13% 20%; /* lighter grey panel */
   --card-foreground: 0 0% 100%;
-  --border: 220 12% 16%;
+  /* Border: darker than card but still lighter than background to create subtle outline */
+  --border: 220 11% 24%;
   --input: 220 12% 16%;
   --ring: 220 10% 60%;
   --primary: 45 100% 50%;
@@ -40,7 +42,11 @@
 
 /* Restore your app background + text defaults (use CSS variables for theme) */
 body {
-  background: hsl(var(--background));
+  background-color: hsl(var(--background));
+  /* subtle textured overlay to give a faded grey texture on dark theme */
+  background-image: radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                    linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02));
+  background-size: 20px 20px, 100% 100%;
   color: hsl(var(--foreground));
 }
 
@@ -141,4 +147,45 @@ html, body {
   bottom: -14px;
   right: -14px;
   transform: rotate(-8deg);
+}
+
+/* --------------------------------------------------
+   Vendor-prefixed fallbacks & small accessibility helpers
+   These assist older browsers (Safari, older Edge) and
+   provide utilities for components that use backdrop-filter,
+   masks, and text-size adjustments.
+   -------------------------------------------------- */
+
+/* Respect user text-size settings across browsers */
+html, body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Cross-browser backdrop-filter utility */
+.backdrop-blur {
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* Cross-browser mask helpers (use with --mask-image CSS var or explicit url()) */
+.mask-image {
+  -webkit-mask-image: var(--mask-image);
+  mask-image: var(--mask-image);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+/* Ensure Safari and older WebKit support user-select when used */
+.user-select-auto {
+  -webkit-user-select: auto;
+  -moz-user-select: auto;
+  -ms-user-select: auto;
+  user-select: auto;
+}
+
+/* Utility to ensure icon-only buttons have visible focus in older browsers */
+.focus-outline-compat:focus {
+  outline: 2px solid rgba(255,255,255,0.85);
+  outline-offset: 2px;
 }

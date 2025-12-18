@@ -34,27 +34,42 @@ export function useCollection<T = DocumentData>(
     setIsLoading(true);
     setError(null);
 
-    const unsubscribe = onSnapshot(
-      queryRef as Query<T>,
-      (snap: QuerySnapshot<T>) => {
-        const docs: WithId<T>[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as T),
-        }));
-        setData(docs);
-        setIsLoading(false);
-      },
-      (err) => {
-        // IMPORTANT: do NOT throw here – just store the error
-        console.error('Firestore useCollection error', err);
-        setError(err);
-        setIsLoading(false);
-      },
-    );
+    try {
+      // Emit a stack trace so we can locate which component/query started this subscription
+      // (helps diagnose unexpected Watch stream state from the backend)
+      console.trace('Firestore useCollection subscribing', queryRef);
+      const unsubscribe = onSnapshot(
+        queryRef as Query<T>,
+        (snap: QuerySnapshot<T>) => {
+          const docs: WithId<T>[] = snap.docs.map((d) => ({
+            id: d.id,
+            ...(d.data() as T),
+          }));
+          setData(docs);
+          setIsLoading(false);
+        },
+        (err) => {
+          // IMPORTANT: do NOT throw here – just store the error
+          console.error('Firestore useCollection error', err);
+          setError(err as any);
+          setIsLoading(false);
+        },
+      );
 
-    return () => {
-      unsubscribe();
-    };
+      return () => {
+        try {
+          unsubscribe();
+        } catch (e) {
+          console.warn('Error unsubscribing Firestore snapshot', e);
+        }
+      };
+    } catch (e: any) {
+      // onSnapshot can throw synchronously for invalid queries/targets; capture that
+      console.error('Firestore onSnapshot failed to subscribe', e);
+      setError(e);
+      setIsLoading(false);
+      return;
+    }
   }, [queryRef]);
 
   return { data, isLoading, error };
