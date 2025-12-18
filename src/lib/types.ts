@@ -18,7 +18,7 @@ export type User = {
     paymentIdentifier: string | null;
     emailVerified: boolean;
     oneAccountAcknowledged: boolean;
-    goodsAndServicesAgreed: boolean;
+    stripeTermsAgreed: boolean;
     notifyMessages: boolean;
     notifyOrders: boolean;
     notifyISO24: boolean;

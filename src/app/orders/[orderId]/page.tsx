@@ -12,8 +12,6 @@ import {
 import { getFunctions, httpsCallable } from "firebase/functions";
 
 type OrderStatus =
-  | "REQUESTED"
-  | "INVOICED"
   | "PENDING_PAYMENT"
   | "PAID"
   | "SHIPPED"
@@ -22,49 +20,62 @@ type OrderStatus =
 
 export default function OrderDetail({ params }: any) {
   const { user } = useAuth();
-  const { orderId } = params;
+  const { id: orderId } = params;
 
   const [order, setOrder] = useState<any>(null);
 
   useEffect(() => {
     const ref = doc(db, "orders", orderId);
     const unsub = onSnapshot(ref, (snap) => {
-      setOrder({ id: snap.id, ...snap.data() });
+      if (snap.exists()) {
+        setOrder({ id: snap.id, ...snap.data() });
+      }
     });
     return () => unsub();
   }, [orderId]);
 
-  if (!order || !user) return <div className="p-6">Loading…</div>;
+  if (!order || !user) {
+    return <div className="p-6">Loading…</div>;
+  }
 
   const isBuyer = order.buyerUid === user.uid;
   const isSeller = order.sellerUid === user.uid;
 
+  /* ---------------- STRIPE PAY NOW ---------------- */
+
   async function payNow() {
     const fn = httpsCallable(getFunctions(), "createCheckoutSession");
-    const amountCents = Math.round(order.amount * 100);
+
+    const amountCents = Math.round(order.subtotal * 100);
 
     const res: any = await fn({
       orderId: order.id,
-      listingTitle: order.listingTitle,
+      listingTitle: order.items?.[0]?.title ?? "Order",
       amountCents,
     });
 
     window.location.href = res.data.url;
   }
 
+  /* ---------------- SELLER ACTIONS ---------------- */
+
   async function markShipped(trackingNumber: string, carrier: string) {
     await updateDoc(doc(db, "orders", orderId), {
+      state: "SHIPPED",
       trackingNumber,
       carrier,
-      status: "SHIPPED",
       shippedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     });
   }
 
+  /* ---------------- BUYER ACTIONS ---------------- */
+
   async function confirmDelivered() {
     await updateDoc(doc(db, "orders", orderId), {
-      status: "DELIVERED",
+      state: "DELIVERED",
       deliveredAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     });
   }
 
@@ -74,9 +85,11 @@ export default function OrderDetail({ params }: any) {
       <h1 className="text-2xl font-bold">Order Details</h1>
 
       <div className="p-4 border rounded bg-white shadow space-y-2">
-        <p className="font-semibold text-xl">{order.listingTitle}</p>
-        <p>${order.amount}</p>
-        <p>Status: {order.status}</p>
+        <p className="font-semibold text-xl">
+          {order.items?.[0]?.title ?? "Order"}
+        </p>
+        <p>${order.subtotal?.toFixed(2)}</p>
+        <p>Status: {order.state}</p>
 
         {order.trackingNumber && (
           <p className="mt-2">
@@ -85,8 +98,8 @@ export default function OrderDetail({ params }: any) {
         )}
       </div>
 
-      {/* BUYER ACTIONS */}
-      {isBuyer && order.status === "INVOICED" && (
+      {/* BUYER */}
+      {isBuyer && order.state === "PENDING_PAYMENT" && (
         <button
           onClick={payNow}
           className="px-4 py-2 bg-indigo-600 text-white rounded"
@@ -95,13 +108,7 @@ export default function OrderDetail({ params }: any) {
         </button>
       )}
 
-      {isBuyer && order.status === "DELIVERED" && (
-        <p className="text-green-600 font-semibold">
-          Order delivered. You may now leave feedback.
-        </p>
-      )}
-
-      {isBuyer && order.status === "SHIPPED" && (
+      {isBuyer && order.state === "SHIPPED" && (
         <button
           onClick={confirmDelivered}
           className="px-4 py-2 bg-green-600 text-white rounded"
@@ -110,15 +117,22 @@ export default function OrderDetail({ params }: any) {
         </button>
       )}
 
-      {/* SELLER ACTIONS */}
-      {isSeller && order.status === "PAID" && (
+      {isBuyer && order.state === "DELIVERED" && (
+        <p className="text-green-600 font-semibold">
+          Order delivered. You may now leave feedback.
+        </p>
+      )}
+
+      {/* SELLER */}
+      {isSeller && order.state === "PAID" && (
         <SellerFulfillForm onSubmit={markShipped} />
       )}
     </div>
   );
 }
 
-// Seller fulfillment form
+/* ---------------- SELLER FULFILLMENT ---------------- */
+
 function SellerFulfillForm({ onSubmit }: any) {
   const [tracking, setTracking] = useState("");
   const [carrier, setCarrier] = useState("");

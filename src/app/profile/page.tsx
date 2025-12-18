@@ -77,18 +77,18 @@ export default function ProfilePage() {
   async function uploadAvatarIfNeeded(): Promise<string | undefined> {
     if (!avatarFile) return userData.avatar;
 
+    if (!user) return userData.avatar;
+
     const storage = getStorage();
     const safeName = avatarFile.name.replace(/[^\w.-]/g, "_");
-    const avatarRef = ref(
-      storage,
-      `avatars/${user.uid}/${Date.now()}-${safeName}`
-    );
+    const avatarRef = ref(storage, `avatars/${user.uid}/${Date.now()}-${safeName}`);
 
     const snapshot = await uploadBytes(avatarRef, avatarFile);
     return getDownloadURL(snapshot.ref);
   }
 
   async function onSubmit(values: z.infer<typeof profileSchema>) {
+    if (!user) return;
     setIsSubmitting(true);
     try {
       const userRef = doc(db, "users", user.uid);

@@ -62,6 +62,11 @@ export default function CreateListingPage() {
       return;
     }
 
+    if (!user) {
+      toast({ title: "You must be signed in" });
+      return;
+    }
+
     if (images.length === 0) {
       toast({ title: "Upload at least one image" });
       return;
@@ -76,7 +81,7 @@ export default function CreateListingPage() {
         description: description.trim(),
         price: Number(price),
         ownerUid: user.uid,
-        storeId: userData.storeId,
+        storeId: userData?.storeId,
         state: "ACTIVE",
         quantityAvailable: 1,
         images: [],

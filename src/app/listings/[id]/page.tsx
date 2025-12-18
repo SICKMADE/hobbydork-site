@@ -43,13 +43,13 @@ import Spinner from '@/components/ui/spinner';
 import {
   Store as StoreIcon,
   MessageSquare,
-  Star,
   Package,
 } from 'lucide-react';
 import ListingCard from '@/components/ListingCard';
 
+/* ---------------- TYPES ---------------- */
+
 type Listing = {
-  id?: string;
   title: string;
   description?: string;
   price: number;
@@ -72,6 +72,10 @@ type Storefront = {
   itemsSold?: number;
 };
 
+/* =============================== */
+/* PAGE                            */
+/* =============================== */
+
 export default function ListingDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -85,7 +89,7 @@ export default function ListingDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  /* ---------------- LISTING ---------------- */
+  /* ---------- LISTING ---------- */
 
   const listingRef = useMemoFirebase(() => {
     if (!firestore || !listingId) return null;
@@ -95,7 +99,7 @@ export default function ListingDetailPage() {
   const { data: listing, isLoading } = useDoc<Listing>(listingRef);
   const activeListing = listing as any;
 
-  /* ---------------- STORE ---------------- */
+  /* ---------- STORE ---------- */
 
   const storeRef = useMemoFirebase(() => {
     if (!firestore || !activeListing?.storeId) return null;
@@ -104,23 +108,7 @@ export default function ListingDetailPage() {
 
   const { data: store } = useDoc<Storefront>(storeRef);
 
-  /* ---------------- SIMILAR ---------------- */
-
-  const similarQuery = useMemoFirebase(() => {
-    if (!firestore || !activeListing?.category) return null;
-    return query(
-      collection(firestore, 'listings'),
-      where('state', '==', 'ACTIVE'),
-      where('category', '==', activeListing.category),
-      orderBy('createdAt', 'desc'),
-      limit(8)
-    );
-  }, [firestore, activeListing?.category]);
-
-  const { data: similarListings } =
-    useCollection<Listing>(similarQuery as any);
-
-  /* ---------------- IMAGES (RESTORED) ---------------- */
+  /* ---------- IMAGES (RESTORED) ---------- */
 
   const imageUrls: string[] = (() => {
     if (!activeListing) return [];
@@ -141,7 +129,7 @@ export default function ListingDetailPage() {
   const mainImageUrl =
     imageUrls[selectedImageIndex] ?? imageUrls[0];
 
-  /* ---------------- DERIVED ---------------- */
+  /* ---------- DERIVED ---------- */
 
   const price = Number(activeListing?.price ?? 0);
   const quantityAvailable = Number(activeListing?.quantityAvailable ?? 1);
@@ -150,7 +138,23 @@ export default function ListingDetailPage() {
 
   const isOwner = user?.uid === activeListing?.ownerUid;
 
-  /* ---------------- BUY NOW (REGION FIXED) ---------------- */
+  /* ---------- SIMILAR ---------- */
+
+  const similarQuery = useMemoFirebase(() => {
+    if (!firestore || !activeListing?.category) return null;
+    return query(
+      collection(firestore, 'listings'),
+      where('state', '==', 'ACTIVE'),
+      where('category', '==', activeListing.category),
+      orderBy('createdAt', 'desc'),
+      limit(8)
+    );
+  }, [firestore, activeListing?.category]);
+
+  const { data: similarListings } =
+    useCollection<Listing>(similarQuery as any);
+
+  /* ---------- BUY NOW (STRIPE) ---------- */
 
   const handleBuyNow = async () => {
     if (!user) {
@@ -205,7 +209,7 @@ export default function ListingDetailPage() {
     }
   };
 
-  /* ---------------- LOADING / NOT FOUND ---------------- */
+  /* ---------- LOADING / ERROR ---------- */
 
   if (isLoading) {
     return (
@@ -220,12 +224,15 @@ export default function ListingDetailPage() {
   if (!activeListing) {
     return (
       <AppLayout>
-        <PlaceholderContent title="Listing not found" />
+        <PlaceholderContent
+          title="Listing not found"
+          description="This item may no longer exist."
+        />
       </AppLayout>
     );
   }
 
-  /* ---------------- RENDER ---------------- */
+  /* ---------- RENDER ---------- */
 
   return (
     <AppLayout>

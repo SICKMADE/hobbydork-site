@@ -59,8 +59,7 @@
         "paymentMethod": {
           "type": ["string", "null"],
           "enum": [
-            "PAYPAL",
-            "VENMO",
+            "STRIPE",
             null
           ]
         },
@@ -73,7 +72,7 @@
         "oneAccountAcknowledged": {
           "type": "boolean"
         },
-        "goodsAndServicesAgreed": {
+        "stripeTermsAgreed": {
           "type": "boolean"
         },
         "notifyMessages": {
@@ -106,7 +105,7 @@
         "isSeller",
         "emailVerified",
         "oneAccountAcknowledged",
-        "goodsAndServicesAgreed",
+        "stripeTermsAgreed",
         "notifyMessages",
         "notifyOrders",
         "notifyISO24",
@@ -368,8 +367,8 @@
             "required": ["name", "address1", "city", "state", "zip", "country"]
         },
         "paymentMethod": {
-            "type": "string",
-            "enum": ["PAYPAL", "VENMO"]
+          "type": "string",
+          "enum": ["STRIPE"]
         },
         "paymentIdentifier": {
             "type": "string"

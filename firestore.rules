@@ -59,7 +59,7 @@ service cloud.firestore {
              userIsActive() &&
              !userIsSeller() &&
              userData().storeId == "" &&
-             userData().goodsAndServicesAgreed == true &&
+             userData().stripeTermsAgreed == true &&
              userSellerStatus() == "APPROVED";
     }
 
