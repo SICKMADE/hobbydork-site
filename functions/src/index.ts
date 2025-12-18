@@ -15,6 +15,16 @@ const db = admin.firestore();
 const APP_BASE_URL =
   process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_URL || "http://localhost:9002";
 
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return "Unknown error";
+  }
+}
+
 function tryNormalizeOrigin(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
 
@@ -150,11 +160,11 @@ export const createCheckoutSession = functions
       });
 
       return { url: session.url };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("createCheckoutSession failed:", err);
       throw new functions.https.HttpsError(
         "internal",
-        err.message || "Stripe checkout failed"
+        errorMessage(err) || "Stripe checkout failed"
       );
     }
   });
@@ -199,7 +209,7 @@ export const stripeWebhook = functions
       }
 
       res.json({ received: true });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Webhook error:", err);
       res.status(400).send("Webhook failed");
     }
@@ -261,11 +271,11 @@ export const onboardStripe = functions
       });
 
       return { url: accountLink.url };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("onboardStripe failed:", err);
       throw new functions.https.HttpsError(
         "internal",
-        err.message || "Stripe onboarding failed"
+        errorMessage(err) || "Stripe onboarding failed"
       );
     }
   });
@@ -311,11 +321,11 @@ export const getStripePayouts = functions
       );
 
       return { payouts: payouts.data, balance };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("getStripePayouts failed:", err);
       throw new functions.https.HttpsError(
         "internal",
-        err.message || "Failed to fetch payouts"
+        errorMessage(err) || "Failed to fetch payouts"
       );
     }
   });

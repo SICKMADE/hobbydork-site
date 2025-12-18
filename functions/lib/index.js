@@ -50,6 +50,18 @@ const db = admin.firestore();
  *  - localhost (development)
  */
 const APP_BASE_URL = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_URL || "http://localhost:9002";
+function errorMessage(err) {
+    if (err instanceof Error)
+        return err.message;
+    if (typeof err === "string")
+        return err;
+    try {
+        return JSON.stringify(err);
+    }
+    catch {
+        return "Unknown error";
+    }
+}
 function tryNormalizeOrigin(raw) {
     if (typeof raw !== "string")
         return null;
@@ -156,7 +168,7 @@ exports.createCheckoutSession = functions
     }
     catch (err) {
         console.error("createCheckoutSession failed:", err);
-        throw new functions.https.HttpsError("internal", err.message || "Stripe checkout failed");
+        throw new functions.https.HttpsError("internal", errorMessage(err) || "Stripe checkout failed");
     }
 });
 /**
@@ -241,7 +253,7 @@ exports.onboardStripe = functions
     }
     catch (err) {
         console.error("onboardStripe failed:", err);
-        throw new functions.https.HttpsError("internal", err.message || "Stripe onboarding failed");
+        throw new functions.https.HttpsError("internal", errorMessage(err) || "Stripe onboarding failed");
     }
 });
 /**
@@ -270,7 +282,7 @@ exports.getStripePayouts = functions
     }
     catch (err) {
         console.error("getStripePayouts failed:", err);
-        throw new functions.https.HttpsError("internal", err.message || "Failed to fetch payouts");
+        throw new functions.https.HttpsError("internal", errorMessage(err) || "Failed to fetch payouts");
     }
 });
 /**
