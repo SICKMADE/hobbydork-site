@@ -19,7 +19,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   const role = profile?.role;
 
-  // Only ADMIN and MODERATOR can see anything under /admin/*
+  // Staff only (ADMIN + MODERATOR)
   if (role !== 'ADMIN' && role !== 'MODERATOR') {
     return (
       <div className="flex items-center justify-center h-full p-4">

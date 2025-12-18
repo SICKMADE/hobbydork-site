@@ -1,218 +1,145 @@
+"use client";
 
-'use client';
-
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-
-import AppLayout from '@/components/layout/AppLayout';
-import PlaceholderContent from '@/components/PlaceholderContent';
-import { useAuth } from '@/hooks/use-auth';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useEffect, useState } from "react";
+import type { Listing } from '@/lib/types';
+import { db } from "@/firebase/client-provider";
 import {
   collection,
   query,
   where,
   orderBy,
-  doc,
-  updateDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+  getDocs,
+} from "firebase/firestore";
 
-export default function MyListingsPage() {
-  const { user, profile, loading: authLoading } = useAuth();
-  const firestore = useFirestore();
-  const router = useRouter();
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import Spinner from "@/components/ui/spinner";
 
-  const isSeller = !!profile?.isSeller && !!profile?.storeId;
+export default function ListingsSearchPage() {
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // filters
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
+
+  async function loadListings() {
+    setLoading(true);
+
+    let q = query(collection(db, "listings"), where("status", "==", "ACTIVE"));
+
+    const allSnap = await getDocs(q);
+    let data = allSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as Listing[];
+
+    // search
+    if (search.trim() !== "") {
+      const s = search.toLowerCase();
+      data = data.filter((l) => l.title.toLowerCase().includes(s));
+    }
+
+    // category
+    if (category.trim() !== "") {
+      data = data.filter((l) => l.category === category);
+    }
+
+    // price min/max
+    const min = Number(minPrice) || 0;
+    const max = Number(maxPrice) || Infinity;
+
+    data = data.filter((l) => l.price >= min && l.price <= max);
+
+    // sort
+    if (sortBy === "newest") {
+      data = data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    } else if (sortBy === "low") {
+      data = data.sort((a, b) => a.price - b.price);
+    } else if (sortBy === "high") {
+      data = data.sort((a, b) => b.price - a.price);
+    }
+
+    setListings(data);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    if (authLoading) return;
-
-    if (!user) {
-      router.replace('/login?redirect=/listings');
-      return;
-    }
-
-    if (!isSeller) {
-      router.replace('/store/setup?redirect=/listings');
-      return;
-    }
-  }, [authLoading, user, isSeller, router]);
-
-  const listingsQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.uid) return null;
-
-    return query(
-      collection(firestore, 'listings'),
-      where('ownerUid', '==', profile.uid),
-      orderBy('createdAt', 'desc'),
-    );
-  }, [firestore, profile?.uid]);
-
-  const {
-    data: listings,
-    isLoading: listingsLoading,
-  } = useCollection<any>(listingsQuery);
-
-  const stats = useMemo(() => {
-    if (!listings || !listings.length) {
-      return { total: 0, active: 0, inventory: 0, sold: 0 };
-    }
-
-    let total = listings.length;
-    let active = 0;
-    let inventory = 0;
-    let sold = 0;
-
-    for (const listing of listings) {
-      const state = listing.state ?? 'ACTIVE';
-      const quantityAvailable = listing.quantityAvailable ?? 0;
-
-      if (quantityAvailable <= 0) {
-        sold++;
-      } else if (state === 'ACTIVE') {
-        active++;
-      } else {
-        inventory++;
-      }
-    }
-
-    return { total, active, inventory, sold };
-  }, [listings]);
-
-  const handleToggleVisibility = async (listing: any) => {
-    if (!firestore) return;
-    const id: string | undefined = listing.id || listing.listingId;
-    if (!id) return;
-
-    const currentState: string = listing.state ?? 'ACTIVE';
-    const nextState = currentState === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-
-    try {
-      setUpdatingId(id);
-      await updateDoc(doc(firestore, 'listings', id), {
-        state: nextState,
-        updatedAt: serverTimestamp(),
-      });
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  if (authLoading) {
-    return (
-      <AppLayout>
-        <div className="p-4">Loading...</div>
-      </AppLayout>
-    );
-  }
-
-  if (!user || !isSeller) {
-    return null;
-  }
+    loadListings();
+  }, []);
 
   return (
-    <AppLayout>
-      <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold">My Listings</h1>
-            <p className="text-sm text-muted-foreground">
-              Manage what is for sale vs private inventory.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3 text-xs">
-            <Badge variant="outline">Total: {stats.total}</Badge>
-            <Badge>Active for sale: {stats.active}</Badge>
-            <Badge variant="outline">Inventory: {stats.inventory}</Badge>
-            <Badge variant="outline">Sold: {stats.sold}</Badge>
-          </div>
-        </div>
+    <div className="max-w-6xl mx-auto p-6 space-y-8">
 
-        <div className="flex justify-between items-center">
-          <p className="text-xs text-muted-foreground">
-            Toggle a listing between <span className="font-semibold">For sale</span> and{' '}
-            <span className="font-semibold">Inventory</span>.
-          </p>
-          <Button size="sm" onClick={() => router.push('/listings/create')}>
-            Create a listing
-          </Button>
-        </div>
+      <h1 className="text-2xl font-bold">Marketplace</h1>
 
-        {listingsLoading && (
-          <div className="text-sm text-muted-foreground">Loading your listings...</div>
-        )}
+      {/* FILTERS */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
 
-        {!listingsLoading && listings && listings.length > 0 && (
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {listings.map((listing: any) => {
-              const id: string | undefined = listing.id || listing.listingId;
-              const state: string = listing.state ?? 'ACTIVE';
-              const quantityAvailable: number = listing.quantityAvailable ?? 0;
+        <Input
+          placeholder="Search title"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
 
-              const isActive = state === 'ACTIVE' && quantityAvailable > 0;
-              const isSoldOut = quantityAvailable <= 0;
+        <Input
+          placeholder="Category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        />
 
-              let stateLabel = '';
-              if (isSoldOut) stateLabel = 'Sold out';
-              else if (isActive) stateLabel = 'For sale';
-              else stateLabel = 'Inventory';
+        <Input
+          placeholder="Min Price"
+          value={minPrice}
+          onChange={(e) => setMinPrice(e.target.value)}
+          type="number"
+        />
 
-              return (
-                <div key={id} className="border rounded-lg p-3 flex flex-col gap-2">
-                  <div className="text-sm font-semibold line-clamp-2">
-                    {listing.title || 'Untitled listing'}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {typeof listing.price === 'number'
-                      ? `$${listing.price.toFixed(2)}`
-                      : listing.price ?? ''}
-                  </div>
-                  <div className="flex items-center justify-between text-[11px]">
-                    <Badge
-                      variant={
-                        isActive ? 'default' : isSoldOut ? 'secondary' : 'outline'
-                      }
-                    >
-                      {stateLabel}
-                    </Badge>
-                    {!isSoldOut && (
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        disabled={updatingId === id}
-                        onClick={() => handleToggleVisibility(listing)}
-                      >
-                        {updatingId === id
-                          ? 'Updating...'
-                          : isActive
-                          ? 'Move to inventory'
-                          : 'List for sale'}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <Input
+          placeholder="Max Price"
+          value={maxPrice}
+          onChange={(e) => setMaxPrice(e.target.value)}
+          type="number"
+        />
 
-        {!listingsLoading && (!listings || listings.length === 0) && (
-          <PlaceholderContent
-            title="No listings yet"
-            description="Click the button above to create your first listing and start selling."
-          >
-            <div className="mt-4 flex justify-center">
-              <Button onClick={() => router.push('/listings/create')}>
-                Create a listing
-              </Button>
-            </div>
-          </PlaceholderContent>
-        )}
+        <select
+          className="border rounded p-2"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+        >
+          <option value="newest">Newest</option>
+          <option value="low">Price: Low → High</option>
+          <option value="high">Price: High → Low</option>
+        </select>
       </div>
-    </AppLayout>
+
+      <Button onClick={loadListings}>Apply Filters</Button>
+
+      {/* LISTINGS */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center min-h-[300px]">
+          <Spinner size={64} />
+          <div className="mt-4 text-muted-foreground">Loading listings...</div>
+        </div>
+      ) : listings.length === 0 ? (
+        <div>No results.</div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {listings.map((l) => (
+            <Link key={l.id} href={`/listings/${l.id}`}>
+              <div className="border rounded bg-white p-2 shadow hover:shadow-md transition cursor-pointer">
+                <img
+                  src={l.primaryImageUrl ?? undefined}
+                  className="w-full h-40 object-cover rounded"
+                />
+                <p className="mt-2 font-semibold">{l.title}</p>
+                <p className="text-gray-700">${l.price}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

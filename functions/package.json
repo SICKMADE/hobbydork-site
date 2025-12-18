@@ -1,0 +1,23 @@
+{
+  "name": "functions",
+  "private": true,
+  "engines": {
+    "node": "20"
+  },
+  "main": "lib/index.js",
+  "scripts": {
+    "lint": "eslint --ext .js,.ts .",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.10.1",
+    "firebase-functions": "^5.1.0",
+    "stripe": "^14.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.1",
+    "eslint": "^8.57.0",
+    "eslint-config-google": "^0.14.0",
+    "typescript": "^5.9.3"
+  }
+}

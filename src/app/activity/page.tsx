@@ -53,6 +53,46 @@ export default function ActivityPage() {
   const { user } = useAuth();
   const firestore = useFirestore();
 
+  const listingsQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    const ref = collection(firestore, 'listings');
+    return query(
+      ref,
+      where('ownerUid', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(10),
+    );
+  }, [firestore, user?.uid]);
+
+  const isoQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    const ref = collection(firestore, 'iso24Posts');
+    return query(
+      ref,
+      where('ownerUid', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(10),
+    );
+  }, [firestore, user?.uid]);
+
+  const ordersQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    const ref = collection(firestore, 'orders');
+    return query(
+      ref,
+      where('buyerUid', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(10),
+    );
+  }, [firestore, user?.uid]);
+
+  const { data: listings, isLoading: loadingListings } =
+    useCollection<ListingDoc>(listingsQuery);
+  const { data: isoPosts, isLoading: loadingIso } =
+    useCollection<Iso24Doc>(isoQuery);
+  const { data: orders, isLoading: loadingOrders } =
+    useCollection<OrderDoc>(ordersQuery);
+
   if (!user) {
     return (
       <AppLayout>
@@ -65,46 +105,6 @@ export default function ActivityPage() {
       </AppLayout>
     );
   }
-
-  const listingsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    const ref = collection(firestore, 'listings');
-    return query(
-      ref,
-      where('ownerUid', '==', user.uid),
-      orderBy('createdAt', 'desc'),
-      limit(10),
-    );
-  }, [firestore, user.uid]);
-
-  const isoQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    const ref = collection(firestore, 'iso24Posts');
-    return query(
-      ref,
-      where('ownerUid', '==', user.uid),
-      orderBy('createdAt', 'desc'),
-      limit(10),
-    );
-  }, [firestore, user.uid]);
-
-  const ordersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    const ref = collection(firestore, 'orders');
-    return query(
-      ref,
-      where('buyerUid', '==', user.uid),
-      orderBy('createdAt', 'desc'),
-      limit(10),
-    );
-  }, [firestore, user.uid]);
-
-  const { data: listings, isLoading: loadingListings } =
-    useCollection<ListingDoc>(listingsQuery);
-  const { data: isoPosts, isLoading: loadingIso } =
-    useCollection<Iso24Doc>(isoQuery);
-  const { data: orders, isLoading: loadingOrders } =
-    useCollection<OrderDoc>(ordersQuery);
 
   return (
     <AppLayout>

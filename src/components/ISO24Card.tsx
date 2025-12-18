@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { ISO24 } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
-import { MessageSquare, ImageIcon } from "lucide-react";
+import { ImageIcon } from "lucide-react";
 import { useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import type { User } from "@/lib/types";
 import { doc } from "firebase/firestore";
@@ -18,10 +18,9 @@ import Image from "next/image";
 
 interface ISO24CardProps {
   post: ISO24;
-  onMessageSeller?: (uid: string) => void;
 }
 
-export default function ISO24Card({ post, onMessageSeller }: ISO24CardProps) {
+export default function ISO24Card({ post }: ISO24CardProps) {
   const firestore = useFirestore();
 
   // Support multiple possible field names: creatorUid, userUid, ownerUid
@@ -46,11 +45,6 @@ export default function ISO24Card({ post, onMessageSeller }: ISO24CardProps) {
   const expiresIn = expiresAt
     ? formatDistanceToNow(expiresAt, { addSuffix: true })
     : "soon";
-
-  const handleMessageClick = () => {
-    if (!creatorUid || !onMessageSeller) return;
-    onMessageSeller(creatorUid);
-  };
 
   return (
     <Card className="flex flex-col md:flex-row">
@@ -93,10 +87,6 @@ export default function ISO24Card({ post, onMessageSeller }: ISO24CardProps) {
           <div className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded-md">
             {post.category}
           </div>
-          <Button variant="outline" onClick={handleMessageClick} disabled={!onMessageSeller}>
-            <MessageSquare className="mr-2 h-4 w-4" />
-            Message Seller
-          </Button>
         </CardFooter>
       </div>
     </Card>

@@ -14,7 +14,6 @@ import { useFirestore, useMemoFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { Star } from 'lucide-react';
-import { placeholderImages } from '@/lib/placeholder-images';
 
 const reviewSchema = z.object({
     rating: z.number().min(1, 'Rating is required.').max(5),
@@ -76,7 +75,7 @@ export default function ReviewDialog({ order, open, onOpenChange }: ReviewDialog
                     sellerUid: order.sellerUid,
                     buyerUid: profile.uid,
                     buyerName: profile.displayName || 'Anonymous',
-                    buyerAvatar: profile.avatar || placeholderImages['user-avatar-1']?.imageUrl,
+                    buyerAvatar: profile.avatar || '/hobbydork-head.png',
                     rating: values.rating,
                     comment: values.comment,
                     createdAt: serverTimestamp(),

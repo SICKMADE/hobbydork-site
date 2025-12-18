@@ -99,8 +99,13 @@ export default function SidebarNav() {
   const personalMenuItems = [
     { href: '/profile', label: 'Profile', icon: User },
     { href: '/activity', label: 'My Activity', icon: History },
-    { href: '/orders', label: 'My Orders', icon: Package },
-    { href: '/sales', label: 'My Sales', icon: HeartHandshake },
+    // Only show orders/sales if seller
+    ...(profile?.isSeller
+      ? [
+          { href: '/orders', label: 'My Orders', icon: Package },
+          { href: '/sales', label: 'My Sales', icon: HeartHandshake },
+        ]
+      : []),
     { href: '/watchlist', label: 'Watchlist', icon: Heart },
     { href: '/favorites', label: 'Favorite Stores', icon: Store },
     { href: '/cart', label: 'Cart', icon: ShoppingCart },
@@ -188,7 +193,6 @@ export default function SidebarNav() {
                 const showBadge =
                   item.href === '/notifications' &&
                   unreadNotificationsCount > 0;
-
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
@@ -209,6 +213,18 @@ export default function SidebarNav() {
                   </SidebarMenuItem>
                 );
               })}
+              {/* If not a seller, show apply button */}
+              {!profile?.isSeller && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={pathname === '/store/setup'}
+                    onClick={() => router.push('/store/setup')}
+                    className="justify-start gap-4 text-base font-semibold tracking-wide text-green-600"
+                  >
+                    <span>Apply to Become a Seller</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </div>
 

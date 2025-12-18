@@ -18,8 +18,8 @@ import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 
 const settingsSchema = z.object({
-    paymentMethod: z.enum(["PAYPAL", "VENMO"]),
-    paymentIdentifier: z.string().min(3, "Please enter your payment username or email."),
+    paymentMethod: z.literal("STRIPE"),
+    paymentIdentifier: z.string().optional(),
     notifyMessages: z.boolean(),
     notifyOrders: z.boolean(),
     notifyISO24: z.boolean(),
@@ -35,8 +35,8 @@ export default function SettingsPage() {
     const form = useForm<z.infer<typeof settingsSchema>>({
         resolver: zodResolver(settingsSchema),
         values: {
-            paymentMethod: profile?.paymentMethod || 'PAYPAL',
-            paymentIdentifier: profile?.paymentIdentifier || '',
+            paymentMethod: 'STRIPE',
+            paymentIdentifier: '',
             notifyMessages: profile?.notifyMessages ?? true,
             notifyOrders: profile?.notifyOrders ?? true,
             notifyISO24: profile?.notifyISO24 ?? true,
@@ -77,38 +77,22 @@ export default function SettingsPage() {
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Payment Information</CardTitle>
-                                <CardDescription>This is how buyers will pay you. VaultVerse does not process payments.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <FormField
-                                    control={form.control}
-                                    name="paymentMethod"
-                                    render={({ field }) => (
-                                        <FormItem className="space-y-3">
-                                            <FormLabel>Payment Method</FormLabel>
-                                            <FormControl>
-                                                <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4">
-                                                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="PAYPAL" /></FormControl><FormLabel className="font-normal">PayPal</FormLabel></FormItem>
-                                                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="VENMO" /></FormControl><FormLabel className="font-normal">Venmo</FormLabel></FormItem>
-                                                </RadioGroup>
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="paymentIdentifier"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>PayPal Email or Venmo Handle</FormLabel>
-                                            <FormControl><Input placeholder="Your payment username" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </CardContent>
+                                    <CardTitle>Payment Information</CardTitle>
+                                    <CardDescription>All payments are processed securely through Stripe. You do not need to provide any other payment method.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <FormField
+                                        control={form.control}
+                                        name="paymentMethod"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-3">
+                                                <FormLabel>Payment Method</FormLabel>
+                                                <Input value="Stripe" disabled readOnly />
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </CardContent>
                         </Card>
                         <Card>
                             <CardHeader>

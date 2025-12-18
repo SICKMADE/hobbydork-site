@@ -5,6 +5,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { AuthProvider } from '@/hooks/use-auth';
 import { CartProvider } from '@/hooks/use-cart';
+import EmailVerificationGate from '@/components/auth/EmailVerificationGate';
+import SignedOutGate from '@/components/auth/SignedOutGate';
 
 export const metadata: Metadata = {
   title: 'HobbyDork',
@@ -26,6 +28,8 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <FirebaseClientProvider>
           <AuthProvider>
+            <SignedOutGate />
+            <EmailVerificationGate />
             <CartProvider>
               <VaultProvider>
                 {children}

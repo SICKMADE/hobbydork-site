@@ -1,10 +1,10 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -14,8 +14,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
-  Form,
-  FormControl,
   FormField,
   FormItem,
   FormLabel,
@@ -24,43 +22,41 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { AnimatePresence, motion } from 'framer-motion';
+
 import { useFirestore } from '@/firebase';
-import { doc, runTransaction, serverTimestamp, collection } from 'firebase/firestore';
+import { doc, runTransaction, serverTimestamp, collection, updateDoc } from 'firebase/firestore';
+
 import { useToast } from '@/hooks/use-toast';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+
 import AppLayout from '@/components/layout/AppLayout';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-// change this path/filename to match your actual PNG under components/dashboard
-import storeDefaultAvatar from '@/components/dashboard/store-default.png';
+// ✅ FIXED AVATAR
+import storeAvatar from '@/components/dashboard/hobbydork-head.png';
 
-const storeSchema = z.object({
+/* ---------------- SCHEMA ---------------- */
+
+const sellerSchema = z.object({
   about: z.string().min(10, 'About section must be at least 10 characters long.'),
-});
-
-const paymentSchema = z.object({
-  paymentMethod: z.enum(['PAYPAL', 'VENMO'], {
-    required_error: 'Please select a payment method.',
+  stripeOnboarded: z.boolean().refine((v) => v === true, {
+    message: 'You must complete Stripe onboarding to sell.',
   }),
-  paymentIdentifier: z
-    .string()
-    .min(3, 'Please enter your payment username or email.'),
-  goodsAndServicesAgreed: z
-    .boolean()
-    .refine((val) => val === true, {
-      message: 'You must agree to the Goods & Services policy.',
-    }),
+  agreeSellerTerms: z.boolean().refine((v) => v === true, {
+    message: 'You must accept the Seller Terms.',
+  }),
 });
-
-const sellerSchema = storeSchema.merge(paymentSchema);
 
 type SellerFormValues = z.infer<typeof sellerSchema>;
+
+/* ---------------- STEP 1 ---------------- */
 
 const Step1Store = () => {
   const { control } = useFormContext<SellerFormValues>();
@@ -88,6 +84,7 @@ const Step1Store = () => {
           Your store name is permanently linked to your display name.
         </FormDescription>
       </div>
+
       <div className="space-y-2">
         <Label>Store URL</Label>
         <div className="flex items-center">
@@ -97,23 +94,21 @@ const Step1Store = () => {
           <Input value={slug} disabled readOnly className="rounded-l-none" />
         </div>
         <FormDescription>
-          Your store&apos;s unique URL is generated from your display name and cannot be
-          changed.
+          This URL is permanent and cannot be changed.
         </FormDescription>
       </div>
+
       <FormField
         control={control}
         name="about"
         render={({ field }) => (
           <FormItem>
             <FormLabel>About Your Store</FormLabel>
-            <FormControl>
-              <Textarea
-                placeholder="Tell everyone what makes your store special..."
-                {...field}
-                rows={3}
-              />
-            </FormControl>
+            <Textarea
+              placeholder="Tell buyers what makes your store great..."
+              {...field}
+              rows={3}
+            />
             <FormMessage />
           </FormItem>
         )}
@@ -122,79 +117,63 @@ const Step1Store = () => {
   );
 };
 
-const Step2Payment = () => {
+/* ---------------- STEP 2 ---------------- */
+
+const Step2Stripe = () => {
   const { control } = useFormContext<SellerFormValues>();
+  const { profile } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  const startStripeOnboarding = async () => {
+    setLoading(true);
+    try {
+      const onboard = httpsCallable(getFunctions(undefined, 'us-central1'), 'onboardStripe');
+      const res: any = await onboard({
+        appBaseUrl: window.location.origin,
+      });
+      if (res.data?.url) window.location.href = res.data.url;
+      else throw new Error('Stripe onboarding failed.');
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Stripe Error', description: e.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
-      className="space-y-8"
+      className="space-y-6"
     >
+      <Card>
+        <CardContent className="pt-6 space-y-4">
+          <p className="font-semibold">Stripe Payments</p>
+          <p className="text-sm text-muted-foreground">
+            All payments on HobbyDork are processed securely through Stripe.
+          </p>
+
+          <Button
+            type="button"
+            onClick={startStripeOnboarding}
+            disabled={loading || !!profile?.stripeAccountId}
+            className="w-full"
+          >
+            {profile?.stripeAccountId ? 'Connected' : loading ? 'Connecting…' : 'Connect Stripe'}
+          </Button>
+        </CardContent>
+      </Card>
+
       <FormField
         control={control}
-        name="paymentMethod"
+        name="stripeOnboarded"
         render={({ field }) => (
-          <FormItem className="space-y-3">
-            <FormLabel>Preferred Payment Method</FormLabel>
-            <FormDescription>Required to receive payments from buyers.</FormDescription>
-            <FormControl>
-              <RadioGroup
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                className="flex flex-col space-y-1"
-              >
-                <FormItem className="flex items-center space-x-3 space-y-0">
-                  <FormControl>
-                    <RadioGroupItem value="PAYPAL" />
-                  </FormControl>
-                  <FormLabel className="font-normal">PayPal</FormLabel>
-                </FormItem>
-                <FormItem className="flex items-center space-x-3 space-y-0">
-                  <FormControl>
-                    <RadioGroupItem value="VENMO" />
-                  </FormControl>
-                  <FormLabel className="font-normal">Venmo</FormLabel>
-                </FormItem>
-              </RadioGroup>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={control}
-        name="paymentIdentifier"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>PayPal Email or Venmo Handle</FormLabel>
-            <FormControl>
-              <Input placeholder="Your payment username" {...field} />
-            </FormControl>
-            <FormDescription>
-              This will be shown to buyers at checkout. Make sure it&apos;s correct!
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={control}
-        name="goodsAndServicesAgreed"
-        render={({ field }) => (
-          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-            <FormControl>
-              <Checkbox
-                checked={field.value}
-                onCheckedChange={(checked) => field.onChange(!!checked)}
-              />
-            </FormControl>
-            <div className="space-y-1 leading-none">
-              <FormLabel>
-                I agree that all payments for sales on this platform will be sent using
-                Goods &amp; Services (no Friends &amp; Family or off-platform payments).
-                This is required to reduce scams and protect both buyer and seller.
-              </FormLabel>
+          <FormItem className="flex gap-3 items-start border p-4 rounded">
+            <Checkbox checked={field.value} disabled={!!profile?.stripeAccountId} onCheckedChange={field.onChange} />
+            <div>
+              <FormLabel>Stripe onboarding completed</FormLabel>
               <FormMessage />
             </div>
           </FormItem>
@@ -204,175 +183,196 @@ const Step2Payment = () => {
   );
 };
 
+/* ---------------- STEP 3 ---------------- */
+
+const Step3SellerTerms = () => {
+  const { control } = useFormContext<SellerFormValues>();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 50 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -50 }}
+      className="space-y-6"
+    >
+      <Card>
+        <CardContent className="pt-6 space-y-3">
+          <p className="font-semibold">Seller Terms</p>
+          <p className="text-sm text-muted-foreground">
+            You must accept the Seller Terms before you can sell.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            No offsite sales allowed. If suspected of selling or attempting to sell offsite,
+            sellers will be permanently banned without warning.
+          </p>
+          <p className="text-sm">
+            <a href="/seller-terms" className="text-primary underline">
+              Read Seller Terms
+            </a>
+          </p>
+        </CardContent>
+      </Card>
+
+      <FormField
+        control={control}
+        name="agreeSellerTerms"
+        render={({ field }) => (
+          <FormItem className="flex gap-3 items-start border p-4 rounded">
+            <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(!!v)} />
+            <div>
+              <FormLabel>I agree to the Seller Terms</FormLabel>
+              <FormMessage />
+            </div>
+          </FormItem>
+        )}
+      />
+    </motion.div>
+  );
+};
+
+/* ---------------- PAGE ---------------- */
+
 export default function CreateStorePage() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+
   const [step, setStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const methods = useForm<SellerFormValues>({
     resolver: zodResolver(sellerSchema),
     mode: 'onChange',
     defaultValues: {
       about: '',
-      paymentMethod: profile?.paymentMethod || 'PAYPAL',
-      paymentIdentifier: profile?.paymentIdentifier || '',
-      goodsAndServicesAgreed: profile?.goodsAndServicesAgreed || false,
+      stripeOnboarded: profile?.stripeOnboarded ?? false,
+      agreeSellerTerms: !!profile?.stripeTermsAgreed,
     },
   });
 
+  // If profile loads after render, update the form value to reflect completion state
   useEffect(() => {
-    if (profile?.paymentMethod) {
-      methods.setValue('paymentMethod', profile.paymentMethod);
+    if (profile && typeof methods.setValue === 'function') {
+      methods.setValue('stripeOnboarded', !!profile.stripeOnboarded || !!profile.stripeAccountId);
+      methods.setValue('agreeSellerTerms', !!profile.stripeTermsAgreed);
     }
-    if (profile?.paymentIdentifier) {
-      methods.setValue('paymentIdentifier', profile.paymentIdentifier);
-    }
-    if (profile?.goodsAndServicesAgreed !== undefined) {
-      methods.setValue('goodsAndServicesAgreed', profile.goodsAndServicesAgreed);
-    }
-  }, [profile, methods]);
-
-  const handleNext = async () => {
-    const fieldsToValidate: (keyof SellerFormValues)[] = ['about'];
-    const isValid = await methods.trigger(fieldsToValidate);
-    if (isValid) {
-      setStep((s) => s + 1);
-    }
-  };
-
-  const handleBack = () => {
-    setStep((s) => s - 1);
-  };
+  }, [profile]);
 
   async function onSubmit(values: SellerFormValues) {
-    if (!user || !firestore || !profile?.displayName) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'You are not properly signed in or missing a display name.',
-      });
-      return;
-    }
+    if (!user || !firestore || !profile?.displayName) return;
 
-    setIsSubmitting(true);
+    setSaving(true);
 
     try {
-      const storeName = profile.displayName;
-      const slug = storeName
+      const slug = profile.displayName
         .toLowerCase()
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '');
 
-      const newStoreRef = doc(collection(firestore, 'storefronts'));
-      const userProfileRef = doc(firestore, 'users', user.uid);
+      const userRef = doc(firestore, 'users', user.uid);
 
-      await runTransaction(firestore, async (transaction) => {
-        transaction.update(userProfileRef, {
+      // Persist seller-terms acceptance before creating the store so rules that
+      // read users/{uid} can validate it during storefront create.
+      await updateDoc(userRef, {
+        stripeTermsAgreed: true,
+        updatedAt: serverTimestamp(),
+      });
+
+      const storeRef = doc(collection(firestore, 'storefronts'));
+
+      await runTransaction(firestore, async (tx) => {
+        tx.update(userRef, {
           isSeller: true,
-          storeId: newStoreRef.id,
-          paymentMethod: values.paymentMethod,
-          paymentIdentifier: values.paymentIdentifier,
-          goodsAndServicesAgreed: values.goodsAndServicesAgreed,
+          storeId: storeRef.id,
+          stripeOnboarded: true,
           updatedAt: serverTimestamp(),
         });
 
-        transaction.set(newStoreRef, {
-          id: newStoreRef.id,
-          storeId: newStoreRef.id,
+        tx.set(storeRef, {
+          id: storeRef.id,
+          storeId: storeRef.id,
           ownerUid: user.uid,
-          storeName,
+          storeName: profile.displayName,
           slug,
           about: values.about,
-          avatarUrl: storeDefaultAvatar.src, // your PNG
+          avatarUrl: storeAvatar.src,
           ratingAverage: 0,
           ratingCount: 0,
           itemsSold: 0,
           status: 'ACTIVE',
-          isSpotlighted: false,
-          spotlightUntil: null,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
       });
 
-      toast({
-        title: 'Your Store is Live!',
-        description: 'Congratulations! You can now start listing items for sale.',
-      });
-      router.push(`/store/${newStoreRef.id}`);
-      router.refresh();
-    } catch (error) {
-      const contextualError = new FirestorePermissionError({
-        path: `Transaction failed for user/${user?.uid} and storefronts/`,
-        operation: 'write',
-        requestResourceData: {
-          description: 'Transaction to create a store and update user profile.',
-          formData: values,
-        },
-      });
-      errorEmitter.emit('permission-error', contextualError);
+      toast({ title: 'Store created' });
+      router.push(`/store/${storeRef.id}`);
+    } catch (e) {
+      errorEmitter.emit(
+        'permission-error',
+        new FirestorePermissionError({
+          path: 'store/create',
+          operation: 'write',
+        })
+      );
     } finally {
-      setIsSubmitting(false);
+      setSaving(false);
     }
   }
 
-  const stepDetails = [
-    {
-      title: 'Set Up Your Store',
-      description: 'This will be your public identity on HobbyDork.',
-    },
-    {
-      title: 'Set Up Payments',
-      description: 'Choose how you want to get paid by buyers.',
-    },
-  ];
+  if (authLoading) {
+    return (
+      <AppLayout>
+        <div className="max-w-2xl mx-auto p-6">Loading…</div>
+      </AppLayout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <AppLayout>
+        <div className="max-w-2xl mx-auto p-6">You must be signed in.</div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
-      <div className="w-full max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl">
-              {stepDetails[step - 1].title}
+            <CardTitle>
+              {step === 1 ? 'Create Store' : step === 2 ? 'Connect Stripe' : 'Accept Seller Terms'}
             </CardTitle>
-            <CardDescription>
-              Step {step} of 2: {stepDetails[step - 1].description}
-            </CardDescription>
+            <CardDescription>Step {step} of 3</CardDescription>
           </CardHeader>
+
           <CardContent>
             <FormProvider {...methods}>
               <form onSubmit={methods.handleSubmit(onSubmit)}>
                 <AnimatePresence mode="wait">
-                  {step === 1 && <Step1Store key="step1" />}
-                  {step === 2 && <Step2Payment key="step2" />}
+                  {step === 1 && <Step1Store key="s1" />}
+                  {step === 2 && <Step2Stripe key="s2" />}
+                  {step === 3 && <Step3SellerTerms key="s3" />}
                 </AnimatePresence>
-                <div className="flex justify-between mt-8">
+
+                <div className="flex justify-between mt-6">
                   {step > 1 ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleBack}
-                      disabled={isSubmitting}
-                    >
+                    <Button variant="outline" onClick={() => setStep(1)}>
                       Back
                     </Button>
                   ) : (
                     <div />
                   )}
 
-                  {step < 2 ? (
-                    <Button type="button" onClick={handleNext}>
+                  {step < 3 ? (
+                    <Button type="button" onClick={() => setStep((s) => Math.min(3, s + 1))}>
                       Next
                     </Button>
                   ) : (
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting || !methods.formState.isValid}
-                    >
-                      {isSubmitting ? 'Finishing...' : 'Create My Store'}
+                    <Button type="submit" disabled={saving || !methods.formState.isValid}>
+                      {saving ? 'Saving…' : 'Create Store'}
                     </Button>
                   )}
                 </div>

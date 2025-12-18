@@ -4,26 +4,26 @@ import { Timestamp } from "firebase/firestore";
 export type UserStatus = 'ACTIVE' | 'LIMITED' | 'SUSPENDED';
 
 export type User = {
-  uid: string;
-  email: string;
-  displayName: string | null;
-  avatar?: string;
-  status: UserStatus;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  role: string;
-  isSeller: boolean;
-  storeId?: string;
-  paymentMethod: "PAYPAL" | "VENMO" | null;
-  paymentIdentifier: string | null;
-  emailVerified: boolean;
-  oneAccountAcknowledged: boolean;
-  goodsAndServicesAgreed: boolean;
-  notifyMessages: boolean;
-  notifyOrders: boolean;
-  notifyISO24: boolean;
-  notifySpotlight: boolean;
-  blockedUsers: string[];
+    uid: string;
+    email: string;
+    displayName: string | null;
+    avatar?: string;
+    status: UserStatus;
+    createdAt: Timestamp;
+    updatedAt: Timestamp;
+    role: string;
+    isSeller: boolean;
+    storeId?: string;
+    paymentMethod: "STRIPE" | null;
+    paymentIdentifier: string | null;
+    emailVerified: boolean;
+    oneAccountAcknowledged: boolean;
+    stripeTermsAgreed: boolean;
+    notifyMessages: boolean;
+    notifyOrders: boolean;
+    notifyISO24: boolean;
+    notifySpotlight: boolean;
+    blockedUsers: string[];
 };
 
 export type Store = {
@@ -81,28 +81,28 @@ export type ShippingAddress = {
 }
 
 export type Order = {
-  id: string;
-  orderId: string;
-  buyerUid: string;
-  sellerUid: string;
-  storeId: string;
-  items: { 
-      listingId: string;
-      title: string;
-      quantity: number;
-      pricePerUnit: number;
-  }[];
-  totalPrice: number;
-  state: OrderState;
-  buyerShippingAddress: ShippingAddress | null;
-  paymentMethod: "PAYPAL" | "VENMO";
-  paymentIdentifier: string;
-  trackingNumber: string | null;
-  trackingCarrier: string | null;
-  cancelReason: string | null;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  reviewId?: string; // ID of the review associated with this order
+    id: string;
+    orderId: string;
+    buyerUid: string;
+    sellerUid: string;
+    storeId: string;
+    items: { 
+            listingId: string;
+            title: string;
+            quantity: number;
+            pricePerUnit: number;
+    }[];
+    totalPrice: number;
+    state: OrderState;
+    buyerShippingAddress: ShippingAddress | null;
+    paymentMethod: "STRIPE";
+    paymentIdentifier: string;
+    trackingNumber: string | null;
+    trackingCarrier: string | null;
+    cancelReason: string | null;
+    createdAt: Timestamp;
+    updatedAt: Timestamp;
+    reviewId?: string; // ID of the review associated with this order
 };
 
 export type CommunityMessage = {

@@ -33,7 +33,7 @@ export function UserNav() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full" aria-label="Account menu">
           <Avatar className="h-9 w-9">
             <AvatarImage src={profile.avatar ?? undefined} alt={profile.displayName ?? undefined} />
             <AvatarFallback>{getInitials(profile.displayName)}</AvatarFallback>

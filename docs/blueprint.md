@@ -3,7 +3,7 @@
 ## Core Features:
 
 - User Authentication and Status: Secure user authentication with ACTIVE, LIMITED, and SUSPENDED statuses, controlling access to app features. Each status determines which features a given user has access to. All features gated behind authentication.
-- Storefront Creation and Management: Allow users to create and customize their own storefronts with a unique URL, store name, logo, 'About Me' section and payment preferences (PayPal or Venmo). Store names/URLs must be unique. Payment is mandatory before any listing or sale is created
+- Storefront Creation and Management: Allow users to create and customize their own storefronts with a unique URL, store name, logo, 'About Me' section and Stripe payments. Store names/URLs must be unique. Payment is mandatory before any listing or sale is created
 - Listing Creation and Management: Enable users to create, edit, and manage collectible listings with detailed information, including title, category, description, price, condition, quantity, images, and optional tags. Only e-mail verified users can list Active items
 - Search and Filtering: Implement global search functionality with filters for category, price range, and condition. Also provide search functionality specific to individual storefronts with a toggle. Provide result ordering by newest, price low->high, price high->low.
 - Order Management and Tracking: Allow users to manage orders with various states (Pending Payment, Payment Sent, Shipped, Delivered, Completed, Cancelled) and enable tracking with tracking numbers and carrier info. User prompted to provide shipping address after hitting "I've sent payment"

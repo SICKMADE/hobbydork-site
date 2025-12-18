@@ -3,16 +3,21 @@
 import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeFirebase } from './client-init';
+import { getStorage } from 'firebase/storage';
+import { getFunctions } from 'firebase/functions';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
 }
 
+/**
+ * Client-side provider component used in the app root to supply
+ * Firebase services via React context.
+ */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
-    // Initialize Firebase on the client side, once per component mount.
     return initializeFirebase();
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []);
 
   return (
     <FirebaseProvider
@@ -24,3 +29,56 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
     </FirebaseProvider>
   );
 }
+
+// Convenience client-side exports to match older imports in the codebase.
+// These are safe to import in modules because they guard for server usage.
+let _clientSdks: ReturnType<typeof initializeFirebase> | null = null;
+function clientSdks() {
+  if (_clientSdks) return _clientSdks;
+  if (typeof window === 'undefined') {
+    // Accessing client SDKs on the server is invalid; return a noop placeholder.
+    return undefined as unknown as ReturnType<typeof initializeFirebase>;
+  }
+  _clientSdks = initializeFirebase();
+  return _clientSdks;
+}
+
+export const db = ((): any => {
+  try {
+    const s = clientSdks();
+    return s?.firestore;
+  } catch (e) {
+    return undefined;
+  }
+})();
+
+export const auth = ((): any => {
+  try {
+    const s = clientSdks();
+    return s?.auth;
+  } catch (e) {
+    return undefined;
+  }
+})();
+
+export const storage = ((): any => {
+  try {
+    const s = clientSdks();
+    if (!s) return undefined;
+    return getStorage(s.firebaseApp);
+  } catch (e) {
+    return undefined;
+  }
+})();
+
+export const functions = ((): any => {
+  try {
+    const s = clientSdks();
+    if (!s) return undefined;
+    return getFunctions(s.firebaseApp);
+  } catch (e) {
+    return undefined;
+  }
+})();
+
+export default FirebaseClientProvider;

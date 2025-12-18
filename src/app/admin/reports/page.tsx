@@ -1,248 +1,184 @@
+"use client";
 
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-
-import AppLayout from '@/components/layout/AppLayout';
-import { useAuth } from '@/hooks/use-auth';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-
+import { useEffect, useState } from "react";
+import { db } from "@/firebase/client-provider";
+import { useAuth } from "@/hooks/use-auth";
 import {
   collection,
   query,
+  where,
   orderBy,
-  limit,
-  doc,
+  onSnapshot,
   updateDoc,
-} from 'firebase/firestore';
+  doc,
+} from "firebase/firestore";
 
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 
-type ReportDoc = {
-  id?: string;
-  reporterUid?: string;
-  reporterDisplayName?: string;
-  targetType?: string; // 'USER' | 'LISTING' | 'ISO24' | 'MESSAGE' | etc
-  targetId?: string;
-  targetUserUid?: string;
-  targetListingId?: string;
-  targetIsoId?: string;
-  targetMessageId?: string;
-  reason?: string;
+type Report = {
+  id: string;
+  context: string;
+  reason: string;
   details?: string;
-  status?: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'DISMISSED' | string;
-  createdAt?: any;
-  handledAt?: any;
-  handledByUid?: string;
-  resolutionNotes?: string;
+  reporterUid: string;
+  targetUid: string;
+  messageId?: string;
+  listingId?: string;
+  isoId?: string;
+  createdAt?: { toDate: () => Date };
+  resolved?: boolean;
 };
 
 export default function AdminReportsPage() {
-  const router = useRouter();
-  const { user, profile, loading: authLoading } = useAuth();
-  const firestore = useFirestore();
+  const { userData } = useAuth();
+  const [reports, setReports] = useState<Report[]>([] as Report[]);
+  const [filter, setFilter] = useState("ALL");
 
-  const isAdmin = profile?.role === 'ADMIN';
+  const role = userData.role;
+  const isAdmin = role === "ADMIN";
+  const isModerator = role === "MODERATOR";
+  const isStaff = isAdmin || isModerator;
 
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-
-  // Only admins can see this page
   useEffect(() => {
-    if (authLoading) return;
-    if (!user || !isAdmin) {
-      router.replace('/');
-    }
-  }, [authLoading, user, isAdmin, router]);
+    if (!isStaff) return;
 
-  const reportsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, 'reports'),
-      orderBy('createdAt', 'desc'),
-      limit(50),
-    );
-  }, [firestore]);
+    let q = query(collection(db, "reports"), orderBy("createdAt", "desc"));
 
-  const {
-    data: reports,
-    isLoading: reportsLoading,
-  } = useCollection<ReportDoc>(reportsQuery);
+    const unsub = onSnapshot(q, (snap) => {
+      setReports(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Report));
+    });
 
-  const updateReportStatus = async (
-    reportId: string,
-    patch: Partial<ReportDoc>,
-  ) => {
-    if (!firestore || !isAdmin) return;
-    setUpdatingId(reportId);
-    try {
-      const ref = doc(firestore, 'reports', reportId);
-      await updateDoc(ref, patch as any);
-    } finally {
-      setUpdatingId(null);
-    }
-  };
+    return () => unsub();
+  }, [userData]);
 
-  const markOpen = (r: ReportDoc) =>
-    updateReportStatus(r.id as string, { status: 'OPEN' });
+  if (!isStaff)
+    return <div className="p-6">You do not have access.</div>;
 
-  const markInProgress = (r: ReportDoc) =>
-    updateReportStatus(r.id as string, { status: 'IN_PROGRESS' });
+  const filtered = reports.filter((r) => {
+    if (filter === "ALL") return true;
+    return r.context === filter;
+  });
 
-  const markResolved = (r: ReportDoc) =>
-    updateReportStatus(r.id as string, { status: 'RESOLVED' });
-
-  const markDismissed = (r: ReportDoc) =>
-    updateReportStatus(r.id as string, { status: 'DISMISSED' });
-
-  if (authLoading || !user || !isAdmin) {
-    return (
-      <AppLayout>
-        <div className="p-4 md:p-6 space-y-4 max-w-5xl mx-auto">
-          <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-24 w-full" />
-        </div>
-      </AppLayout>
-    );
+  async function resolveReport(id: string) {
+    await updateDoc(doc(db, "reports", id), {
+      resolved: true,
+      resolvedAt: new Date(),
+    });
   }
 
   return (
-    <AppLayout>
-      <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">User reports</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {reportsLoading && (
-              <div className="text-sm text-muted-foreground">
-                Loading reports…
-              </div>
-            )}
+    <div className="p-6 max-w-5xl mx-auto space-y-6">
 
-            {!reportsLoading && (!reports || reports.length === 0) && (
-              <div className="text-sm text-muted-foreground">
-                No reports found.
-              </div>
-            )}
+      <h1 className="text-3xl font-bold">Moderation Reports</h1>
 
-            {!reportsLoading && reports && reports.length > 0 && (
-              <div className="space-y-2">
-                {reports.map((r) => {
-                  const id = r.id as string;
-                  const status = (r.status || 'OPEN') as
-                    | 'OPEN'
-                    | 'IN_PROGRESS'
-                    | 'RESOLVED'
-                    | 'DISMISSED';
-
-                  const targetLabel =
-                    r.targetType && (r.targetId || r.targetUserUid
-                      || r.targetListingId || r.targetIsoId
-                      || r.targetMessageId)
-                      ? `${r.targetType} – ${
-                          r.targetId ||
-                          r.targetUserUid ||
-                          r.targetListingId ||
-                          r.targetIsoId ||
-                          r.targetMessageId
-                        }`
-                      : r.targetType || 'Unknown target';
-
-                  return (
-                    <div
-                      key={id}
-                      className="border rounded-md px-3 py-2 text-sm flex flex-col gap-2"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="font-semibold truncate">
-                            {r.reason || 'Reported activity'}
-                          </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            Reporter:{' '}
-                            {r.reporterDisplayName || r.reporterUid || 'Unknown'}
-                          </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            Target: {targetLabel}
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <Badge
-                            className="text-xs px-2 py-0.5"
-                            variant={
-                              status === 'OPEN'
-                                ? 'destructive'
-                                : status === 'IN_PROGRESS'
-                                ? 'default'
-                                : status === 'RESOLVED'
-                                ? 'outline'
-                                : 'outline'
-                            }
-                          >
-                            {status}
-                          </Badge>
-                          <div className="flex flex-wrap gap-1 justify-end">
-                            {status !== 'OPEN' && (
-                              <Button
-                                size="xs"
-                                variant="outline"
-                                disabled={updatingId === id}
-                                onClick={() => markOpen(r)}
-                              >
-                                Reopen
-                              </Button>
-                            )}
-                            {status !== 'IN_PROGRESS' && (
-                              <Button
-                                size="xs"
-                                variant="outline"
-                                disabled={updatingId === id}
-                                onClick={() => markInProgress(r)}
-                              >
-                                In progress
-                              </Button>
-                            )}
-                            {status !== 'RESOLVED' && (
-                              <Button
-                                size="xs"
-                                variant="outline"
-                                disabled={updatingId === id}
-                                onClick={() => markResolved(r)}
-                              >
-                                Resolve
-                              </Button>
-                            )}
-                            {status !== 'DISMISSED' && (
-                              <Button
-                                size="xs"
-                                variant="outline"
-                                disabled={updatingId === id}
-                                onClick={() => markDismissed(r)}
-                              >
-                                Dismiss
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {r.details && (
-                        <div className="text-xs text-muted-foreground whitespace-pre-wrap">
-                          {r.details}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* FILTERS */}
+      <div className="flex gap-3 text-sm">
+        {["ALL", "seller", "listing", "iso24", "livechat", "dm"].map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-3 py-2 rounded border ${
+              filter === f ? "bg-blue-600 text-white" : "bg-white"
+            }`}
+          >
+            {f === "ALL" ? "All Reports" : f.toUpperCase()}
+          </button>
+        ))}
       </div>
-    </AppLayout>
+
+      {/* REPORT LIST */}
+      <div className="space-y-4">
+        {filtered.map((r) => (
+          <div
+            key={r.id}
+            className={`border p-4 rounded shadow bg-white ${
+              r.resolved ? "opacity-50" : ""
+            }`}
+          >
+            <p className="font-semibold text-lg mb-1">
+              {r.context.toUpperCase()} Report
+            </p>
+
+            <p className="text-sm"><strong>Reason:</strong> {r.reason}</p>
+            {r.details && (
+              <p className="text-sm"><strong>Details:</strong> {r.details}</p>
+            )}
+
+            <p className="text-sm">
+              <strong>Reporter:</strong> {r.reporterUid}
+            </p>
+            <p className="text-sm">
+              <strong>Target:</strong> {r.targetUid}
+            </p>
+
+            {/* CONTEXT-SPECIFIC */}
+            {r.messageId && (
+              <p className="text-sm"><strong>Message ID:</strong> {r.messageId}</p>
+            )}
+
+            {r.listingId && (
+              <p className="text-sm">
+                <strong>Listing:</strong>{" "}
+                <a
+                  href={`/listings/${r.listingId}`}
+                  className="text-blue-600 underline"
+                >
+                  View Listing
+                </a>
+              </p>
+            )}
+
+            {r.isoId && (
+              <p className="text-sm">
+                <strong>ISO Post:</strong> {r.isoId}
+              </p>
+            )}
+
+            <p className="text-xs text-gray-500 mt-1">
+              {r.createdAt?.toDate().toLocaleString()}
+            </p>
+
+            {/* ACTION BUTTONS */}
+            <div className="flex gap-2 mt-3">
+
+              {/* VIEW STORE */}
+              <a
+                href={`/store/${r.targetUid}`}
+                className="px-3 py-2 border rounded bg-gray-100"
+              >
+                View Store
+              </a>
+
+              {/* DM USER */}
+              <a
+                href={`/messages/${r.targetUid}`}
+                className="px-3 py-2 border rounded bg-gray-100"
+              >
+                Message User
+              </a>
+
+              {/* ADMIN ACTIONS */}
+              {isAdmin && (
+                <a
+                  href={`/admin/users`}
+                  className="px-3 py-2 border rounded bg-red-200 text-red-800"
+                >
+                  Open User Manager
+                </a>
+              )}
+
+              {/* MARK RESOLVED */}
+              {!r.resolved && (
+                <button
+                  onClick={() => resolveReport(r.id)}
+                  className="px-3 py-2 bg-blue-600 text-white rounded"
+                >
+                  Mark Resolved
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

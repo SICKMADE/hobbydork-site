@@ -55,9 +55,7 @@ export default function PrivacyPage() {
             their functionality.
           </p>
           <p>
-            We do not store full payment details like credit card numbers. Payments
-            happen directly between users via third-party services (PayPal, Venmo,
-            etc.).
+            We do not store full payment details like credit card numbers. All payments are processed securely through Stripe. No other payment methods are supported.
           </p>
         </section>
 
