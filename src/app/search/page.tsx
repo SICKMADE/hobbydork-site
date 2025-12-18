@@ -3,6 +3,8 @@ import React, { Suspense } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import ClientSearch from './ClientSearch';
 
+export const dynamic = 'force-dynamic';
+
 export default function BrowsePage() {
   return (
     <AppLayout>
