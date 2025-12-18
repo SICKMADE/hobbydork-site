@@ -13,10 +13,6 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.email_verified == true;
     }
 
-    function isServer() {
-      return request.auth == null;
-    }
-
     function uid() {
       return request.auth.uid;
     }
@@ -269,12 +265,6 @@ service cloud.firestore {
             resource.data.buyerUid == uid() ||
             resource.data.sellerUid == uid()
           )
-        )
-        ||
-        (
-          isServer() &&
-          request.resource.data.state == "PAID" &&
-          resource.data.state != "PAID"
         );
 
       allow delete: if userIsAdmin();
