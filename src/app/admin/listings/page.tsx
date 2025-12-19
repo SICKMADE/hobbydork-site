@@ -31,6 +31,7 @@ export default function AdminListingsPage() {
     const reason = prompt("Reason for removal:");
     await updateDoc(doc(db, "listings", id), {
       status: "REMOVED",
+      state: "HIDDEN",
       removedBy: "ADMIN_PANEL",
       removedReason: reason || "Violation",
       updatedAt: serverTimestamp(),
@@ -40,6 +41,7 @@ export default function AdminListingsPage() {
   async function restore(id: string) {
     await updateDoc(doc(db, "listings", id), {
       status: "ACTIVE",
+      state: "ACTIVE",
       removedBy: null,
       removedReason: null,
       updatedAt: serverTimestamp(),
@@ -54,16 +56,21 @@ export default function AdminListingsPage() {
       <h1 className="text-2xl font-bold">Listing Moderation</h1>
 
       {items.map((l) => (
+        (() => {
+          const isRemoved = l.status === "REMOVED" || l.state === "HIDDEN";
+          const displayStatus = l.status ?? l.state;
+
+          return (
         <div key={l.id} className="border p-4 rounded bg-white shadow space-y-2">
           <p className="font-semibold">{l.title}</p>
-          <p>Status: {l.status}</p>
+          <p>Status: {displayStatus}</p>
 
           {l.removedReason && (
             <p className="text-sm text-red-600">Reason: {l.removedReason}</p>
           )}
 
           <div className="flex gap-2">
-            {l.status !== "REMOVED" && (
+            {!isRemoved && (
               <button
                 className="px-3 py-1 bg-red-600 text-white rounded"
                 onClick={() => remove(l.id)}
@@ -71,7 +78,7 @@ export default function AdminListingsPage() {
                 Remove
               </button>
             )}
-            {l.status === "REMOVED" && (
+            {isRemoved && (
               <button
                 className="px-3 py-1 bg-green-600 text-white rounded"
                 onClick={() => restore(l.id)}
@@ -81,6 +88,8 @@ export default function AdminListingsPage() {
             )}
           </div>
         </div>
+          );
+        })()
       ))}
     </div>
   );

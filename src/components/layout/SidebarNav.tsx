@@ -7,6 +7,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  useSidebar,
 } from '@/components/ui/sidebar';
 
 import {
@@ -61,6 +62,7 @@ const RedLineSeparator = () => (
 
 export default function SidebarNav() {
   const { user, profile, logout } = useAuth();
+  const { isMobile, setOpen } = useSidebar();
   const router = useRouter();
   const pathname = usePathname();
   const firestore = useFirestore();
@@ -68,9 +70,15 @@ export default function SidebarNav() {
   const displayName = profile?.displayName || user?.email || 'My account';
   const avatarUrl = profile?.avatar ?? '';
 
+  const navigate = (href: string) => {
+    if (isMobile) setOpen(false);
+    router.push(href);
+  };
+
   const handleLogout = async () => {
     await logout();
-    router.push('/login');
+    if (isMobile) setOpen(false);
+    router.push('/');
   };
 
   // Notifications for current user
@@ -94,6 +102,7 @@ export default function SidebarNav() {
     { href: '/stores', label: 'Stores', icon: Users },
     { href: '/iso24', label: 'ISO24', icon: Newspaper },
     { href: '/chat', label: 'Community', icon: MessageSquare },
+    { href: '/giveaway', label: 'Giveaway', icon: Star },
   ];
 
   const personalMenuItems = [
@@ -167,7 +176,7 @@ export default function SidebarNav() {
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      onClick={() => router.push(item.href)}
+                      onClick={() => navigate(item.href)}
                       className="justify-start gap-4 text-base font-semibold tracking-wide"
                     >
                       <Icon className="h-5 w-5" />
@@ -197,7 +206,7 @@ export default function SidebarNav() {
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      onClick={() => router.push(item.href)}
+                      onClick={() => navigate(item.href)}
                       className="justify-start gap-4 text-base font-semibold tracking-wide"
                     >
                       <Icon className="h-5 w-5" />
@@ -218,7 +227,7 @@ export default function SidebarNav() {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={pathname === '/store/setup'}
-                    onClick={() => router.push('/store/setup')}
+                    onClick={() => navigate('/store/setup')}
                     className="justify-start gap-4 text-base font-semibold tracking-wide text-green-600"
                   >
                     <span>Apply to Become a Seller</span>
@@ -246,7 +255,7 @@ export default function SidebarNav() {
                         `/store/${profile.storeId}`,
                       )}
                       onClick={() =>
-                        router.push(`/store/${profile.storeId}`)
+                        navigate(`/store/${profile.storeId}`)
                       }
                       className="justify-start gap-4 text-base font-semibold tracking-wide"
                     >
@@ -263,7 +272,7 @@ export default function SidebarNav() {
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         isActive={isActive}
-                        onClick={() => router.push(item.href)}
+                        onClick={() => navigate(item.href)}
                         className="justify-start gap-4 text-base font-semibold tracking-wide"
                       >
                         <Icon className="h-5 w-5" />
@@ -292,7 +301,7 @@ export default function SidebarNav() {
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         isActive={isActive}
-                        onClick={() => router.push(item.href)}
+                        onClick={() => navigate(item.href)}
                         className="justify-start gap-4 text-base font-semibold tracking-wide"
                       >
                         <Icon className="h-5 w-5" />
@@ -321,7 +330,7 @@ export default function SidebarNav() {
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      onClick={() => router.push(item.href)}
+                      onClick={() => navigate(item.href)}
                       className="justify-start gap-4 text-base font-semibold tracking-wide"
                     >
                       <Icon className="h-5 w-5" />

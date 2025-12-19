@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   onAuthStateChanged,
+  onIdTokenChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -133,7 +134,10 @@ function useProvideAuth(): AuthContextType {
       return;
     }
 
-    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
+    // NOTE: email verification changes do NOT trigger onAuthStateChanged.
+    // onIdTokenChanged fires when tokens refresh (e.g. after getIdToken(true)),
+    // so it keeps Firestore's users/{uid}.emailVerified in sync.
+    const unsub = onIdTokenChanged(auth, (firebaseUser) => {
       (async () => {
         try {
           if (!isMounted) return;
@@ -157,6 +161,8 @@ function useProvideAuth(): AuthContextType {
               try {
                 await updateDoc(ref, {
                   emailVerified: firebaseUser.emailVerified,
+                  // Back-compat: older docs/inspectors may use lowercase.
+                  emailverified: firebaseUser.emailVerified,
                   updatedAt: serverTimestamp(),
                 });
               } catch (_e) {
@@ -175,6 +181,7 @@ function useProvideAuth(): AuthContextType {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               emailVerified: firebaseUser.emailVerified,
+              emailverified: firebaseUser.emailVerified,
               displayName: firebaseUser.displayName ?? "",
               role: "USER",
               status: "ACTIVE",

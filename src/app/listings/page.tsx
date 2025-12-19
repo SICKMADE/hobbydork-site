@@ -7,7 +7,6 @@ import {
   collection,
   query,
   where,
-  orderBy,
   getDocs,
 } from "firebase/firestore";
 
@@ -30,7 +29,7 @@ export default function ListingsSearchPage() {
   async function loadListings() {
     setLoading(true);
 
-    let q = query(collection(db, "listings"), where("status", "==", "ACTIVE"));
+    let q = query(collection(db, "listings"), where("state", "==", "ACTIVE"));
 
     const allSnap = await getDocs(q);
     let data = allSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as Listing[];

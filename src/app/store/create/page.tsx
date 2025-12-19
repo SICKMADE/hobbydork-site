@@ -31,6 +31,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 import { useFirestore } from '@/firebase';
 import { doc, runTransaction, serverTimestamp, collection, updateDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/firebase/client-provider';
 
 import { useToast } from '@/hooks/use-toast';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -61,6 +63,8 @@ type SellerFormValues = z.infer<typeof sellerSchema>;
 const Step1Store = () => {
   const { control } = useFormContext<SellerFormValues>();
   const { profile } = useAuth();
+  const { toast } = useToast();
+  const [file, setFile] = useState<File | null>(null);
 
   if (!profile) return null;
 
@@ -89,12 +93,30 @@ const Step1Store = () => {
         <Label>Store URL</Label>
         <div className="flex items-center">
           <span className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-l-md border border-r-0 h-10 flex items-center">
-            hobbydork.app/store/
+            hobbydork.com/store/
           </span>
-          <Input value={slug} disabled readOnly className="rounded-l-none" />
+          <Input value={'<store-id>'} disabled readOnly className="rounded-l-none" />
         </div>
         <FormDescription>
-          This URL is permanent and cannot be changed.
+          Your shareable store URL will be created when you finish setup.
+        </FormDescription>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Store Image</Label>
+        <Input
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const f = e.target.files?.[0] ?? null;
+            setFile(f);
+            // Stash it on window so the parent submit can pick it up without changing the form schema.
+            (window as any).__pendingStoreImageFile = f;
+            if (f) toast({ title: 'Store image selected' });
+          }}
+        />
+        <FormDescription>
+          Upload a large banner-style image for your store page.
         </FormDescription>
       </div>
 
@@ -281,6 +303,22 @@ export default function CreateStorePage() {
 
       const storeRef = doc(collection(firestore, 'storefronts'));
 
+      // Optional: upload store image before the Firestore transaction so we can store the URL.
+      let storeImageUrl: string | null = null;
+      const pendingFile: File | null =
+        typeof window !== 'undefined'
+          ? ((window as any).__pendingStoreImageFile as File | null)
+          : null;
+
+      if (pendingFile && storage) {
+        const storageRef = ref(
+          storage,
+          `storeImages/${user.uid}/${storeRef.id}/${pendingFile.name}`
+        );
+        await uploadBytes(storageRef, pendingFile);
+        storeImageUrl = await getDownloadURL(storageRef);
+      }
+
       await runTransaction(firestore, async (tx) => {
         tx.update(userRef, {
           isSeller: true,
@@ -297,6 +335,7 @@ export default function CreateStorePage() {
           slug,
           about: values.about,
           avatarUrl: storeAvatar.src,
+          storeImageUrl,
           ratingAverage: 0,
           ratingCount: 0,
           itemsSold: 0,

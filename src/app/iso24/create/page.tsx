@@ -4,7 +4,7 @@ import { useState } from "react";
 import { db } from "@/firebase/client-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -22,12 +22,15 @@ export default function CreateISO() {
     if (!user) return;
     if (!title.trim()) return;
 
+    const expiresAt = Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
+
     await addDoc(collection(db, "iso24Posts"), {
       ownerUid: user.uid,
       title,
       description: desc,
       status: "OPEN",
       createdAt: serverTimestamp(),
+      expiresAt,
     });
 
     toast({ title: "ISO Created" });

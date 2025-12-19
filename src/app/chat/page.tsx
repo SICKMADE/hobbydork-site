@@ -21,9 +21,20 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { getDefaultAvatarUrl } from "@/lib/default-avatar";
+import { useToast } from "@/hooks/use-toast";
+import AppLayout from "@/components/layout/AppLayout";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default function GroupChatPage() {
   const { user, userData } = useAuth(); // userData contains role
+  const { toast } = useToast();
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
 
@@ -47,16 +58,24 @@ export default function GroupChatPage() {
   async function send() {
     if (!user || !text.trim()) return;
 
-    await addDoc(collection(db, "groupChat"), {
-      uid: user.uid,
-      displayName: userData.displayName,
-      avatar: userData.avatar || null,
-      role: userData.role || "USER",
-      text,
-      createdAt: serverTimestamp(),
-    });
+    try {
+      await addDoc(collection(db, "groupChat"), {
+        uid: user.uid,
+        displayName: userData.displayName,
+        avatar: userData.avatar || null,
+        role: userData.role || "USER",
+        text,
+        createdAt: serverTimestamp(),
+      });
 
-    setText("");
+      setText("");
+    } catch (e: any) {
+      toast({
+        title: "Could not send",
+        description: e?.message ?? "Message send failed.",
+        variant: "destructive",
+      });
+    }
   }
 
   // DELETE SINGLE MESSAGE (admin/mod)
@@ -104,61 +123,120 @@ export default function GroupChatPage() {
   }
 
   // VIEW STORE
-  async function viewStore(targetUid: string) {
-    const q = query(collection(db, "users"), where("uid", "==", targetUid));
-    const snap = await getDocs(q);
+  async function viewStoreFromMessage(targetUid: string, storeIdFromMessage?: string | null) {
+    try {
+      if (storeIdFromMessage) {
+        window.location.href = `/store/${storeIdFromMessage}`;
+        return;
+      }
 
-    if (!snap.empty) {
-      const storeId = snap.docs[0].data().storeId;
-      window.location.href = `/store/${storeId}`;
+      // Avoid reading users/{uid} (often blocked). Prefer storefronts lookup by ownerUid.
+      const qStores = query(
+        collection(db, "storefronts"),
+        where("ownerUid", "==", targetUid)
+      );
+      const snapStores = await getDocs(qStores);
+      if (!snapStores.empty) {
+        window.location.href = `/store/${snapStores.docs[0].id}`;
+        return;
+      }
+
+      toast({
+        title: "No store found",
+        description: "This user does not have a store set up.",
+      });
+    } catch (e: any) {
+      toast({
+        title: "Could not open store",
+        description: e?.message ?? "Please try again.",
+        variant: "destructive",
+      });
     }
   }
 
-  if (!user) return <div className="p-6">Sign in required.</div>;
-
-  // ROLE BADGE STYLE
-  function roleNameStyle(role: string) {
-    if (role === "ADMIN") return "text-yellow-400 font-bold";
-    if (role === "MODERATOR") return "text-lime-400 font-semibold";
-    return "text-neutral-900";
+  if (!user) {
+    return (
+      <AppLayout>
+        <div className="max-w-3xl mx-auto p-4 md:p-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sign in required</CardTitle>
+              <CardDescription>You must be signed in to use community chat.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild>
+                <Link href="/login?redirect=/chat">Sign in</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
   }
 
-  function roleIcon(role: string) {
-    if (role === "ADMIN") return "👑 ";
-    if (role === "MODERATOR") return "🛡️ ";
-    return "";
-  }
+  const isAdmin = userData?.role === "ADMIN";
+  const isMod = userData?.role === "MODERATOR";
+  const isStaff = isAdmin || isMod;
+
+  const roleLabel = (role?: string) => {
+    if (role === "ADMIN") return "Admin";
+    if (role === "MODERATOR") return "Mod";
+    if (role === "SELLER") return "Seller";
+    return null;
+  };
 
   return (
-    <div className="max-w-3xl mx-auto p-4 flex flex-col h-[85vh] bg-white text-black rounded-2xl shadow-xl border border-black/10">
+    <AppLayout>
+      <div className="max-w-6xl mx-auto space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Community Chat</h1>
+            <p className="text-sm text-muted-foreground">
+              Keep it respectful. Read the <Link href="/community-rules" className="underline">community rules</Link>.
+            </p>
+          </div>
+          <Badge variant="outline" className="text-xs">Live</Badge>
+        </div>
+
+        <div className="rounded-2xl border border-destructive/30 bg-muted/40 p-3 md:p-4">
+          <div className="flex flex-col h-[75vh]">
 
       {/* ACTION MENU */}
       {actionUser && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded p-6 space-y-4 w-72 shadow-xl">
-            <p className="font-semibold text-lg">
-              {roleIcon(actionUser.role)}
-              {actionUser.displayName}
-            </p>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-sm border-destructive/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">{actionUser.displayName || "User"}</CardTitle>
+              <CardDescription className="text-xs">
+                {roleLabel(actionUser.role) ? `${roleLabel(actionUser.role)} • ` : ""}{actionUser.uid}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
 
             {/* VIEW STORE */}
             <Button
-              className="w-full"
-              onClick={() => viewStore(actionUser.uid)}
+              className="w-full justify-start"
+              variant="outline"
+              onClick={() => viewStoreFromMessage(actionUser.uid, actionUser.storeId)}
             >
               View Store
             </Button>
 
             {/* SEND DM */}
-            <Link
-              href={`/messages/${[user.uid, actionUser.uid].sort().join("_")}`}
+            <Button
+              className="w-full justify-start"
+              variant="outline"
+              onClick={() => {
+                window.location.href = `/messages/new?recipientUid=${encodeURIComponent(actionUser.uid)}`;
+              }}
             >
-              <Button className="w-full">Send Message</Button>
-            </Link>
+              Send Message
+            </Button>
 
             {/* REPORT */}
             <Button
-              className="w-full bg-orange-500 text-white"
+              className="w-full justify-start"
+              variant="destructive"
               onClick={() => {
                 addDoc(collection(db, "reports"), {
                   reporterUid: user.uid,
@@ -173,11 +251,12 @@ export default function GroupChatPage() {
             </Button>
 
             {/* MODERATOR & ADMIN ACTIONS */}
-            {(userData.role === "ADMIN" || userData.role === "MODERATOR") && (
+            {isStaff && (
               <>
                 {/* Delete message */}
                 <Button
-                  className="w-full bg-red-500 text-white"
+                  className="w-full justify-start"
+                  variant="destructive"
                   onClick={() => deleteMessage(actionUser.messageId)}
                 >
                   Delete Message
@@ -185,13 +264,15 @@ export default function GroupChatPage() {
 
                 {/* Suspend (mod/admin) */}
                 <Button
-                  className="w-full bg-blue-600 text-white"
+                  className="w-full justify-start"
+                  variant="secondary"
                   onClick={() => suspendUser(actionUser.uid, 24)}
                 >
                   Suspend 24h
                 </Button>
                 <Button
-                  className="w-full bg-blue-600 text-white"
+                  className="w-full justify-start"
+                  variant="secondary"
                   onClick={() => suspendUser(actionUser.uid, 72)}
                 >
                   Suspend 3d
@@ -200,31 +281,35 @@ export default function GroupChatPage() {
             )}
 
             {/* ADMIN ONLY */}
-            {userData.role === "ADMIN" && (
+            {isAdmin && (
               <>
                 <Button
-                  className="w-full bg-blue-600 text-white"
+                  className="w-full justify-start"
+                  variant="secondary"
                   onClick={() => suspendUser(actionUser.uid, 168)}
                 >
                   Suspend 7d
                 </Button>
 
                 <Button
-                  className="w-full bg-blue-600 text-white"
+                  className="w-full justify-start"
+                  variant="secondary"
                   onClick={() => suspendUser(actionUser.uid, 720)}
                 >
                   Suspend 30d
                 </Button>
 
                 <Button
-                  className="w-full bg-red-700 text-white"
+                  className="w-full justify-start"
+                  variant="destructive"
                   onClick={() => banUser(actionUser.uid)}
                 >
                   Ban User
                 </Button>
 
                 <Button
-                  className="w-full bg-red-700 text-white"
+                  className="w-full justify-start"
+                  variant="destructive"
                   onClick={() => deleteAllMessages(actionUser.uid)}
                 >
                   Delete ALL Messages
@@ -233,65 +318,101 @@ export default function GroupChatPage() {
             )}
 
             <Button
-              variant="secondary"
+              variant="outline"
               className="w-full"
               onClick={() => setActionUser(null)}
             >
               Close
             </Button>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
       {/* CHAT FEED */}
-      <div className="flex-1 overflow-y-auto space-y-4 pb-4 rounded-xl border border-black/10 bg-white p-4">
-        {messages.map((m) => (
-          <div key={m.id} className="flex gap-3 items-start">
+      <div className="flex-1 overflow-y-auto space-y-3 pb-4 rounded-xl border bg-background/70 p-4">
+        {messages.map((m) => {
+          const isSelf = m.uid === user.uid;
+          const label = roleLabel(m.role);
+          return (
+            <div key={m.id} className={`flex gap-3 items-start ${isSelf ? "justify-end" : ""}`}>
+              {!isSelf && (
+                <button
+                  type="button"
+                  onClick={() => setActionUser({ ...m, messageId: m.id })}
+                  className="shrink-0"
+                >
+                  <img
+                    src={m.avatar || getDefaultAvatarUrl(m.uid)}
+                    className="w-9 h-9 rounded-full object-cover border"
+                    alt="avatar"
+                  />
+                </button>
+              )}
 
-            {/* AVATAR */}
-            <div
-              onClick={() => setActionUser({ ...m, messageId: m.id })}
-              className="cursor-pointer"
-            >
-              {m.avatar ? (
-                <img
-                  src={m.avatar}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              ) : (
-                <img
-                  src={getDefaultAvatarUrl(m.uid)}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
+              <div className={`max-w-[85%] ${isSelf ? "text-right" : ""}`}>
+                <div className={`flex items-center gap-2 mb-1 ${isSelf ? "justify-end" : ""}`}>
+                  <button
+                    type="button"
+                    onClick={() => setActionUser({ ...m, messageId: m.id })}
+                    className="text-xs font-semibold hover:underline"
+                  >
+                    {m.displayName || "User"}
+                  </button>
+                  {label && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{label}</Badge>}
+                </div>
+                <div
+                  className={`rounded-xl border px-3 py-2 text-sm whitespace-pre-wrap ${
+                    isSelf
+                      ? "bg-muted/30 border-border"
+                      : "bg-muted border-border"
+                  }`}
+                >
+                  {m.text}
+                </div>
+              </div>
+
+              {isSelf && (
+                <button
+                  type="button"
+                  onClick={() => setActionUser({ ...m, messageId: m.id })}
+                  className="shrink-0"
+                >
+                  <img
+                    src={m.avatar || userData.avatar || getDefaultAvatarUrl(user.uid)}
+                    className="w-9 h-9 rounded-full object-cover border"
+                    alt="avatar"
+                  />
+                </button>
               )}
             </div>
-
-            {/* MESSAGE */}
-            <div>
-              <p className={`text-xs ${roleNameStyle(m.role)}`}>
-                {roleIcon(m.role)}
-                {m.displayName}
-              </p>
-              <div className="bg-gray-200 text-black rounded p-2 max-w-xs">
-                {m.text}
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         <div ref={bottomRef} />
       </div>
 
       {/* INPUT */}
-      <div className="flex gap-2 mt-4 pt-3 border-t border-black/10">
+      <div className="flex gap-2 mt-4 pt-3 border-t">
         <Input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Say something…"
-          className="bg-white text-black placeholder:text-neutral-500 border-black/20"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void send();
+            }
+          }}
+          placeholder="Type a message…"
+          className="bg-background"
         />
-        <Button onClick={send}>Send</Button>
+        <Button onClick={send} disabled={!text.trim()}>
+          Send
+        </Button>
       </div>
-    </div>
+          </div>
+        </div>
+      </div>
+    </AppLayout>
   );
 }

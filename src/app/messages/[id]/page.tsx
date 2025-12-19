@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
 import AppLayout from '@/components/layout/AppLayout';
@@ -22,7 +22,7 @@ import {
   orderBy,
   setDoc,
   serverTimestamp,
-  arrayUnion
+  arrayUnion,
 } from 'firebase/firestore';
 
 import MessageList from '@/components/messaging/MessageList';
@@ -54,26 +54,28 @@ export default function ConversationPage() {
 
   const { data: messages } = useCollection<any>(messagesQuery);
 
-  const [profiles, setProfiles] = useState<Record<string, any>>({});
+  const profiles = useMemo(() => {
+    const participantArray: string[] =
+      conversation?.participantUids || conversation?.participants || [];
 
-  useEffect(() => {
-    async function loadProfiles() {
-      if (!conversation?.participantUids) return;
+    const names = conversation?.participantDisplayNames || {};
+    const avatars = conversation?.participantAvatarUrls || {};
 
-      const map: Record<string, any> = {};
-      for (const uid of conversation.participantUids) {
-        const uref = doc(firestore, "users", uid);
-        const snap = await (await import("firebase/firestore")).getDoc(uref);
-        if (snap.exists()) map[uid] = snap.data();
-      }
-      setProfiles(map);
+    const map: Record<string, any> = {};
+    for (const uid of participantArray) {
+      map[uid] = {
+        displayName: names?.[uid] || uid,
+        avatarUrl: avatars?.[uid] || '',
+      };
     }
-    if (firestore && conversation) loadProfiles();
-  }, [conversation, firestore]);
+    return map;
+  }, [conversation]);
 
   const otherUid = useMemo(() => {
-    if (!conversation?.participantUids || !user) return null;
-    return conversation.participantUids.find((x: string) => x !== user.uid);
+    const participantArray: string[] =
+      conversation?.participantUids || conversation?.participants || [];
+    if (!participantArray?.length || !user) return null;
+    return participantArray.find((x: string) => x !== user.uid);
   }, [conversation, user]);
 
   // mark conversation as read

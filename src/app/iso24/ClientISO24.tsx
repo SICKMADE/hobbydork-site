@@ -39,11 +39,13 @@ export default function ClientISO24() {
     async function load() {
       try {
         const ref = collection(db, 'iso24Posts');
-        const q = query(ref, where('status', '==', 'OPEN'), orderBy('createdAt', 'desc'));
+        const q = query(ref, where('status', '==', 'OPEN'), orderBy('expiresAt', 'desc'));
         const snap = await getDocs(q);
         if (cancelled) return;
         setPosts(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
-      } catch {
+      } catch (e) {
+        // If permissions or indexes are misconfigured, don't silently fail.
+        console.error('ISO24 load failed', e);
         if (!cancelled) setPosts([]);
       } finally {
         if (!cancelled) setLoading(false);

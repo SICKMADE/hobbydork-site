@@ -302,9 +302,9 @@ service cloud.firestore {
       }
     }
 
-    // ------------- communityMessages -------------
+    // ------------- community chat (groupChat) -------------
 
-    match /communityMessages/{messageId} {
+    match /groupChat/{messageId} {
       allow get, list: if userIsActive();
       allow create: if isSignedIn() &&
                     (userIsActive() || userIsAdmin());
@@ -335,6 +335,17 @@ service cloud.firestore {
                               (isConversationParticipant(conversationId) ||
                                userIsAdmin());
       }
+
+      // Typing indicators are stored as docs under /typing/{uid}.
+      // Allow participants to read typing state, and only write their own.
+      match /typing/{typingId} {
+        allow get, list: if userIsActive() &&
+                         (isConversationParticipant(conversationId) || userIsAdmin());
+
+        allow create, update, delete: if userIsActive() &&
+                                      typingId == uid() &&
+                                      (isConversationParticipant(conversationId) || userIsAdmin());
+      }
     }
 
     // ------------- reports -------------
@@ -351,6 +362,47 @@ service cloud.firestore {
 
       allow update: if userIsActive() && userIsStaff();
 
+      allow delete: if userIsAdmin();
+    }
+
+    // ------------- giveawayEntries -------------
+
+    match /giveaways/{giveawayId} {
+      // Readable by active users so the public giveaway page can display it.
+      allow get, list: if userIsActive();
+
+      // Only admins can create/update/delete giveaways.
+      allow create, update, delete: if userIsActive() && userIsAdmin();
+    }
+
+    match /giveawayEntries/{entryId} {
+      function giveawayDoc() {
+        return get(/databases/$(database)/documents/giveaways/$(request.resource.data.giveawayId));
+      }
+
+      function giveawayIsOpen() {
+        return giveawayDoc().data != null &&
+               giveawayDoc().data.isActive == true &&
+               giveawayDoc().data.startAt is timestamp &&
+               giveawayDoc().data.endAt is timestamp &&
+               request.time >= giveawayDoc().data.startAt &&
+               request.time <= giveawayDoc().data.endAt;
+      }
+
+      // Users submit entries; staff reviews them.
+      allow create: if userIsActive() &&
+                    request.resource.data.uid == uid() &&
+                    request.resource.data.giveawayId is string &&
+                    request.resource.data.platform in ["x", "facebook", "instagram", "tiktok"] &&
+                    request.resource.data.postUrl is string &&
+                    request.resource.data.status == "PENDING" &&
+                    giveawayIsOpen();
+
+      // Staff can browse; users can fetch their own entry by id.
+      allow get: if userIsActive() && (userIsStaff() || resource.data.uid == uid());
+      allow list: if userIsActive() && userIsStaff();
+
+      allow update: if userIsActive() && userIsStaff();
       allow delete: if userIsAdmin();
     }
 
