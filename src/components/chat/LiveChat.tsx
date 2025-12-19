@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import AvatarMenu from "./AvatarMenu"; // your menu component
 import ReportMessageModal from "./ReportMessageModal";
+import { getDefaultAvatarUrl } from "@/lib/default-avatar";
 
 type Message = {
   id: string;
@@ -132,7 +133,7 @@ export default function LiveChat() {
 
                 {/* Avatar */}
                 <img
-                  src="/avatar.png"
+                  src={getDefaultAvatarUrl(m.senderUid)}
                   className="w-10 h-10 rounded-full cursor-pointer"
                   onClick={() =>
                     setMenuOpen({ uid: m.senderUid, messageId: m.id })

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 
-const ALLOWED_WHEN_SIGNED_OUT = new Set<string>(['/login']);
+const ALLOWED_WHEN_SIGNED_OUT = new Set<string>(['/', '/login']);
 
 export default function SignedOutGate() {
   const { user, loading } = useAuth();

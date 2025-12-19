@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, KeyboardEvent } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -23,8 +22,7 @@ import {
   where,
 } from 'firebase/firestore';
 
-// HobbyDork header logo
-import headLogo from './hobbydork-head.png';
+import Logo from '@/components/Logo';
 
 type NotificationDoc = {
   id?: string;
@@ -87,12 +85,12 @@ export default function Header() {
 
             {/* Logo */}
             <Link href="/" className="flex items-center">
-              <Image
-                src={headLogo}
-                alt="HobbyDork"
-                className="h-12 w-auto object-contain mr-1"
-                priority
-              />
+              <span className="mr-1 md:hidden">
+                <Logo iconOnly />
+              </span>
+              <span className="mr-1 hidden md:block">
+                <Logo />
+              </span>
             </Link>
           </div>
 

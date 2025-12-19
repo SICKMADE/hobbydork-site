@@ -329,13 +329,13 @@ function VaultAndGenieSection() {
       : null;
 
   return (
-    <section className="rounded-2xl border bg-gradient-to-br from-zinc-900 via-black to-zinc-950 p-6 sm:p-8 shadow-xl">
+    <section className="rounded-2xl border bg-gradient-to-br from-zinc-900 via-black to-zinc-950 p-4 sm:p-8 shadow-xl">
       <div className="grid items-center gap-8 lg:grid-cols-2">
         {/* Left: Vault / Easter egg */}
         <div className="space-y-5">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <div className="relative flex justify-center sm:justify-start">
-              <div className="rounded-2xl border border-zinc-700/70 bg-black/50 p-3">
+              <div className="rounded-2xl border border-zinc-700/70 bg-black/50 p-2 sm:p-3">
                 <StandaloneVaultDoor />
               </div>
             </div>
@@ -343,7 +343,7 @@ function VaultAndGenieSection() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-yellow-300/80">
                 Hidden Vault
               </p>
-              <h2 className="text-2xl font-semibold">
+              <h2 className="text-xl sm:text-2xl font-semibold">
                 Unlock the HobbyDork vault?
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -361,7 +361,7 @@ function VaultAndGenieSection() {
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
                 HobbyDork Genie
               </p>
-              <h3 className="text-5xl font-bold uppercase tracking-wider">
+              <h3 className="text-3xl sm:text-5xl font-bold uppercase tracking-wider">
                 Ask HobbyDork
               </h3>
               <p className="text-xs text-muted-foreground pt-1">
@@ -371,7 +371,7 @@ function VaultAndGenieSection() {
             <Image
               src={genieImg}
               alt="HobbyDork genie"
-              className="w-24 sm:w-28 drop-shadow-[0_0_22px_rgba(0,0,0,0.9)]"
+              className="w-20 sm:w-28 drop-shadow-[0_0_22px_rgba(0,0,0,0.9)]"
               priority
             />
           </div>

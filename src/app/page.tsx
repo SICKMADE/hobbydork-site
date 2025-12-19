@@ -1,11 +1,11 @@
 'use client';
 
-import AuthComponent from '@/components/auth/AuthComponent';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import AppLayout from '@/components/layout/AppLayout';
 import Dashboard from '@/components/dashboard/Dashboard';
+import LandingPage from '@/components/landing/LandingPage';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -16,7 +16,7 @@ export default function Home() {
   }
 
   if (!user) {
-    return <AuthComponent />;
+    return <LandingPage />;
   }
 
   if (profile && profile.status === 'SUSPENDED') {

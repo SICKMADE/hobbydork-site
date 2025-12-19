@@ -25,6 +25,7 @@ import {
 } from "firebase/firestore";
 
 import { auth, db } from "@/firebase/client-provider";
+import { getDefaultAvatarUrl } from "@/lib/default-avatar";
 
 type UserDoc = {
   uid: string;
@@ -180,7 +181,7 @@ function useProvideAuth(): AuthContextType {
               isSeller: false,
               sellerStatus: "NONE",
               storeId: "",
-              avatar: undefined,
+              avatar: getDefaultAvatarUrl(firebaseUser.uid),
               about: "",
               notifyMessages: true,
               notifyOrders: true,
@@ -264,8 +265,55 @@ function useProvideAuth(): AuthContextType {
   };
 
   const resendVerification = async () => {
-    if (!auth.currentUser) return;
-    await sendEmailVerification(auth.currentUser);
+    const current = auth.currentUser;
+    if (!current) {
+      throw new Error('Not signed in.');
+    }
+
+    // Ensure we have the latest emailVerified state.
+    try {
+      await (current.reload?.() ?? Promise.resolve());
+    } catch {
+      // ignore reload errors; still attempt send below
+    }
+
+    if (current.emailVerified) {
+      return;
+    }
+
+    const actionCodeSettings =
+      typeof window !== 'undefined'
+        ? {
+            url: `${(process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/+$/g, '')}/verify-email`,
+            handleCodeInApp: false,
+          }
+        : undefined;
+
+    try {
+      await sendEmailVerification(current, actionCodeSettings);
+    } catch (e: any) {
+      const code = String(e?.code ?? '');
+
+      // If the domain/continue URL isn't whitelisted in Firebase, retry without settings.
+      if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri') {
+        try {
+          await sendEmailVerification(current);
+          return;
+        } catch (e2: any) {
+          const code2 = String(e2?.code ?? '');
+          if (code2 === 'auth/too-many-requests') {
+            throw new Error('Too many attempts. Please wait a bit and try again.');
+          }
+          throw new Error(e2?.message ?? 'Could not resend verification email.');
+        }
+      }
+
+      if (code === 'auth/too-many-requests') {
+        throw new Error('Too many attempts. Please wait a bit and try again.');
+      }
+
+      throw new Error(e?.message ?? 'Could not resend verification email.');
+    }
   };
 
   return {

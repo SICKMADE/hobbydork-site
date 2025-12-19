@@ -30,8 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db } from "@/firebase/client-provider";
-
-const DEFAULT_AVATAR = "/hobbydork-head.png";
+import { getDefaultAvatarUrl } from "@/lib/default-avatar";
 
 const profileSchema = z.object({
   about: z
@@ -44,6 +43,8 @@ const profileSchema = z.object({
 export default function ProfilePage() {
   const { user, userData, loading } = useAuth();
   const { toast } = useToast();
+
+  const DEFAULT_AVATAR = getDefaultAvatarUrl(user?.uid);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);

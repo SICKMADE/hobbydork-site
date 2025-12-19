@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -41,10 +42,20 @@ const signupSchema = z
     path: ['confirmPassword'],
   });
 
-export default function AuthComponent() {
+export default function AuthComponent({
+  initialTab = 'login',
+}: {
+  initialTab?: 'login' | 'signup';
+}) {
   const { login, signup } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+
+  const [tab, setTab] = React.useState<'login' | 'signup'>(initialTab);
+
+  React.useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -137,7 +148,7 @@ export default function AuthComponent() {
           </div>
         </div>
 
-        <Tabs defaultValue="login" className="w-full">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'login' | 'signup')} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Log In</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -281,11 +292,11 @@ export default function AuthComponent() {
               <div className="p-6 pt-0 text-center text-sm text-muted-foreground">
                 Must be 18+. One account per person. By creating an account you
                 agree to the{' '}
-                <Link href="#" className="underline">
+                <Link href="/terms" className="underline">
                   Terms
                 </Link>{' '}
                 and{' '}
-                <Link href="#" className="underline">
+                <Link href="/privacy" className="underline">
                   Privacy Policy
                 </Link>
                 .

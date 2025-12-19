@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { getDefaultAvatarUrl } from "@/lib/default-avatar";
 
 export default function GroupChatPage() {
   const { user, userData } = useAuth(); // userData contains role
@@ -119,7 +120,7 @@ export default function GroupChatPage() {
   function roleNameStyle(role: string) {
     if (role === "ADMIN") return "text-yellow-400 font-bold";
     if (role === "MODERATOR") return "text-lime-400 font-semibold";
-    return "text-white";
+    return "text-neutral-900";
   }
 
   function roleIcon(role: string) {
@@ -129,7 +130,7 @@ export default function GroupChatPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-4 flex flex-col h-[85vh]">
+    <div className="max-w-3xl mx-auto p-4 flex flex-col h-[85vh] bg-white text-black rounded-2xl shadow-xl border border-black/10">
 
       {/* ACTION MENU */}
       {actionUser && (
@@ -243,7 +244,7 @@ export default function GroupChatPage() {
       )}
 
       {/* CHAT FEED */}
-      <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+      <div className="flex-1 overflow-y-auto space-y-4 pb-4 rounded-xl border border-black/10 bg-white p-4">
         {messages.map((m) => (
           <div key={m.id} className="flex gap-3 items-start">
 
@@ -258,7 +259,10 @@ export default function GroupChatPage() {
                   className="w-8 h-8 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-8 h-8 bg-gray-500 rounded-full" />
+                <img
+                  src={getDefaultAvatarUrl(m.uid)}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
               )}
             </div>
 
@@ -268,7 +272,7 @@ export default function GroupChatPage() {
                 {roleIcon(m.role)}
                 {m.displayName}
               </p>
-              <div className="bg-gray-200 rounded p-2 max-w-xs">
+              <div className="bg-gray-200 text-black rounded p-2 max-w-xs">
                 {m.text}
               </div>
             </div>
@@ -279,11 +283,12 @@ export default function GroupChatPage() {
       </div>
 
       {/* INPUT */}
-      <div className="flex gap-2 mt-4">
+      <div className="flex gap-2 mt-4 pt-3 border-t border-black/10">
         <Input
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Say something…"
+          className="bg-white text-black placeholder:text-neutral-500 border-black/20"
         />
         <Button onClick={send}>Send</Button>
       </div>
