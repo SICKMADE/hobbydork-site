@@ -244,7 +244,7 @@ export const onboardStripe = functions
         context.rawRequest?.headers?.referer
       );
 
-      const uid = context.auth.uid;
+      const uid = context.auth!.uid;
       const userRef = db.collection("users").doc(uid);
       const userSnap = await userRef.get();
       const userData = userSnap.data();
@@ -298,7 +298,7 @@ export const getStripePayouts = functions
     try {
       requireVerified(context);
 
-      const uid = context.auth.uid;
+      const uid = context.auth!.uid;
       const userSnap = await db.collection("users").doc(uid).get();
       const userData = userSnap.data();
       const accountId = userData?.stripeAccountId;
@@ -357,7 +357,7 @@ export const awardIsoTrophy = functions.https.onCall(
       );
     }
 
-    const callerUid = context.auth.uid;
+    const callerUid = context.auth!.uid;
     const isoRef = db.collection("iso24Posts").doc(isoId);
     const commentRef = isoRef.collection("comments").doc(commentId);
 
