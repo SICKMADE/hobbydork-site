@@ -294,6 +294,19 @@ function useProvideAuth(): AuthContextType {
     } catch (e: any) {
       const code = String(e?.code ?? '');
 
+      const configuredSiteUrl =
+        typeof window !== 'undefined'
+          ? (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/+$/g, '')
+          : (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/+$/g, '');
+
+      const continueUrl = configuredSiteUrl ? `${configuredSiteUrl}/verify-email` : '';
+
+      const domainHelpMessage =
+        `Resend blocked by Firebase domain settings. ` +
+        `In Firebase Console → Authentication → Settings → Authorized domains, add your site domain (e.g. hobbydork.com and www.hobbydork.com). ` +
+        `Then set Vercel env NEXT_PUBLIC_SITE_URL=https://hobbydork.com and redeploy.` +
+        (continueUrl ? ` (Continue URL: ${continueUrl})` : '');
+
       // If the domain/continue URL isn't whitelisted in Firebase, retry without settings.
       if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri') {
         try {
@@ -304,12 +317,21 @@ function useProvideAuth(): AuthContextType {
           if (code2 === 'auth/too-many-requests') {
             throw new Error('Too many attempts. Please wait a bit and try again.');
           }
+
+          if (code2 === 'auth/unauthorized-continue-uri' || code2 === 'auth/invalid-continue-uri') {
+            throw new Error(`${domainHelpMessage} (Firebase: ${code2})`);
+          }
+
           throw new Error(e2?.message ?? 'Could not resend verification email.');
         }
       }
 
       if (code === 'auth/too-many-requests') {
         throw new Error('Too many attempts. Please wait a bit and try again.');
+      }
+
+      if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri') {
+        throw new Error(`${domainHelpMessage} (Firebase: ${code})`);
       }
 
       throw new Error(e?.message ?? 'Could not resend verification email.');
