@@ -69,9 +69,9 @@ export default function VerifyEmailPage() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-b from-neutral-800 via-neutral-900 to-neutral-950 p-4">
-      <div className="absolute inset-0 z-0 opacity-15 bg-[url('/grid.svg')] [background-position:0_0.5px]" />
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-white/5 via-transparent to-black/20" />
-      <div className="w-full max-w-md">
+      <div className="pointer-events-none absolute inset-0 z-0 opacity-15 bg-[url('/grid.svg')] [background-position:0_0.5px]" />
+      <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-white/5 via-transparent to-black/20" />
+      <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 flex justify-center">
           <div className="w-24 h-24 relative">
             <Image src="/hobbydork-head.png" alt="HobbyDork" fill className="object-contain" />

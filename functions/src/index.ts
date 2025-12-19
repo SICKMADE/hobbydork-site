@@ -74,6 +74,23 @@ function resolveAppBaseUrl(
   return APP_BASE_URL;
 }
 
+function requireVerified(context: functions.https.CallableContext) {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "Authentication required"
+    );
+  }
+
+  // Server-side enforcement. Client redirects can be bypassed.
+  if (context.auth.token.email_verified !== true) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "Email verification required"
+    );
+  }
+}
+
 /**
  * Stripe lazy init (Firebase Secrets)
  */
@@ -104,12 +121,7 @@ export const createCheckoutSession = functions
   .runWith({ secrets: ["STRIPE_SECRET", "APP_BASE_URL"] })
   .https.onCall(async (data, context) => {
     try {
-      if (!context.auth) {
-        throw new functions.https.HttpsError(
-          "unauthenticated",
-          "Authentication required"
-        );
-      }
+      requireVerified(context);
 
       const { orderId, listingTitle, amountCents, appBaseUrl } = data;
 
@@ -224,12 +236,7 @@ export const onboardStripe = functions
   .runWith({ secrets: ["STRIPE_SECRET", "APP_BASE_URL"] })
   .https.onCall(async (data, context) => {
     try {
-      if (!context.auth) {
-        throw new functions.https.HttpsError(
-          "unauthenticated",
-          "Authentication required"
-        );
-      }
+      requireVerified(context);
 
       const baseUrl = resolveAppBaseUrl(
         data?.appBaseUrl,
@@ -289,12 +296,7 @@ export const getStripePayouts = functions
   .runWith({ secrets: ["STRIPE_SECRET"] })
   .https.onCall(async (_data, context) => {
     try {
-      if (!context.auth) {
-        throw new functions.https.HttpsError(
-          "unauthenticated",
-          "Authentication required"
-        );
-      }
+      requireVerified(context);
 
       const uid = context.auth.uid;
       const userSnap = await db.collection("users").doc(uid).get();
@@ -343,20 +345,7 @@ export const getStripePayouts = functions
  */
 export const awardIsoTrophy = functions.https.onCall(
   async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "Authentication required"
-      );
-    }
-
-    // Keep consistent with rules that require verified email for active access.
-    if (context.auth.token.email_verified !== true) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Email verification required"
-      );
-    }
+    requireVerified(context);
 
     const isoId = typeof data?.isoId === "string" ? data.isoId.trim() : "";
     const commentId = typeof data?.commentId === "string" ? data.commentId.trim() : "";
