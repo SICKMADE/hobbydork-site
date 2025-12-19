@@ -30,20 +30,33 @@ export default function VerifyEmailPage() {
   const handleCheck = async () => {
     try {
       setChecking(true);
-      if (!user) {
+      if (!auth.currentUser) {
         toast({ title: "Not signed in", description: "Please sign in first.", variant: 'destructive' });
         return;
       }
 
       // Refresh the *actual* Firebase Auth currentUser so emailVerified updates.
       // Verifying in another tab/device does not automatically refresh this session.
-      await (auth.currentUser?.reload?.() ?? Promise.resolve());
+      await (auth.currentUser.reload?.() ?? Promise.resolve());
+      // Force-refresh token so any server-side checks also see new state.
+      try {
+        await auth.currentUser.getIdToken(true);
+      } catch {
+        // ignore token refresh errors; reload above is the main signal
+      }
+
       const current = auth.currentUser;
 
       if (current?.emailVerified) {
         toast({ title: "Verified", description: "Thanks — continuing setup." });
-        // Hard navigation ensures the app reloads auth state as verified.
-        window.location.href = '/';
+        router.replace('/');
+        router.refresh();
+        // Fallback: if router navigation is blocked by an extension, still proceed.
+        setTimeout(() => {
+          if (window.location.pathname === '/verify-email') {
+            window.location.assign('/');
+          }
+        }, 400);
       } else {
         toast({ title: "Not verified yet", description: "Please click the link in your email and then try again." });
       }
@@ -73,7 +86,7 @@ export default function VerifyEmailPage() {
 
           <div className="mt-6 flex gap-3 justify-center">
             <Button onClick={handleResend} disabled={sending}>{sending ? 'Sending…' : 'Resend email'}</Button>
-            <Button variant="secondary" onClick={handleCheck} disabled={checking}>{checking ? 'Checking…' : "I've verified"}</Button>
+            <Button variant="outline" onClick={handleCheck} disabled={checking}>{checking ? 'Checking…' : "I've verified"}</Button>
           </div>
 
           <div className="mt-4 text-sm text-muted-foreground">
