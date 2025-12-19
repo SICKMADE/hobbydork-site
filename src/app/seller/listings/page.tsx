@@ -14,7 +14,9 @@ import {
 } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
+import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SellerListings() {
@@ -55,39 +57,100 @@ export default function SellerListings() {
     }
   };
 
+  const togglePublish = async (listing: Partial<Listing> & { id?: string }) => {
+    const listingId = String(listing.id || "");
+    if (!listingId) return;
+
+    const state = String((listing as any).state || (listing as any).status || "");
+    const upper = state.toUpperCase();
+
+    if (upper === "SOLD" || upper === "SOLD_OUT") {
+      toast({ title: "This listing is sold", description: "Sold listings can't be unpublished." });
+      return;
+    }
+
+    const isPublic = upper === "ACTIVE";
+    await setVisibility(listingId, !isPublic);
+  };
+
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Your Listings</h1>
-
-      {listings.map((l) => (
-        <div key={l.id} className="border p-4 bg-white rounded shadow space-y-2">
-          <p className="font-semibold">{l.title}</p>
-          <p>Status: {l.state}</p>
-
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link href={`/listings/${l.id}`}>
-                View
-              </Link>
-            </Button>
-
-            {l.id && (
-              l.state === "ACTIVE" ? (
-                <Button
-                  variant="outline"
-                  onClick={() => setVisibility(String(l.id), false)}
-                >
-                  Make Private
-                </Button>
-              ) : (
-                <Button onClick={() => setVisibility(String(l.id), true)}>
-                  Publish
-                </Button>
-              )
-            )}
-          </div>
+    <AppLayout>
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-extrabold tracking-tight">Your Listings</h1>
+          <Button asChild size="sm" className="comic-button">
+            <Link href="/listings/create">Create Listing</Link>
+          </Button>
         </div>
-      ))}
-    </div>
+
+        <div className="text-sm text-muted-foreground">
+          Click a listing card to toggle Publish / Private.
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {listings.map((l) => {
+            const state = String((l as any).state || (l as any).status || "");
+            const upper = state.toUpperCase();
+            const isPublic = upper === "ACTIVE";
+
+            return (
+              <button
+                key={String(l.id)}
+                type="button"
+                onClick={() => togglePublish(l)}
+                className="text-left rounded-xl border-2 border-black bg-card/80 hover:bg-card transition-colors shadow-[3px_3px_0_rgba(0,0,0,0.25)]"
+              >
+                <div className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-extrabold leading-snug line-clamp-2">
+                        {l.title || "Untitled listing"}
+                      </div>
+                      <div className="mt-1 text-sm font-bold text-primary">
+                        ${Number((l as any).price || 0).toFixed(2)}
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={
+                        isPublic
+                          ? "border-green-500/40 bg-muted/40"
+                          : "border-red-500/40 bg-muted/40"
+                      }
+                    >
+                      {isPublic ? "Published" : "Private"}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="border-2 border-black bg-muted/40 hover:bg-muted/60"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Link href={`/listings/${l.id}`}>View</Link>
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-2 border-black bg-muted/40 hover:bg-muted/60"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePublish(l);
+                      }}
+                    >
+                      {isPublic ? "Make Private" : "Publish"}
+                    </Button>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </AppLayout>
   );
 }

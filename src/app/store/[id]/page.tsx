@@ -302,7 +302,7 @@ export default function StorePage() {
               <img
                 src={coverUrl}
                 alt={`${storeName} store banner`}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain bg-muted"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
@@ -434,7 +434,7 @@ export default function StorePage() {
                               <img
                                 src={img}
                                 alt={listing.title}
-                                className="h-full w-full object-cover"
+                                className="h-full w-full object-contain"
                               />
                             ) : (
                               <div className="h-full w-full grid place-items-center text-[11px] text-muted-foreground">

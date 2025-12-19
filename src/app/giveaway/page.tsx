@@ -265,7 +265,7 @@ export default function GiveawayPage() {
               <img
                 src={config.imageUrl}
                 alt={config?.title || "Giveaway"}
-                className="w-full max-h-[360px] object-cover"
+                className="w-full max-h-[360px] object-contain bg-muted"
               />
             </div>
           </Card>

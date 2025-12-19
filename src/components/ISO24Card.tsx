@@ -15,6 +15,7 @@ import type { User } from "@/lib/types";
 import { doc } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Image from "next/image";
+import { resolveAvatarUrl } from "@/lib/default-avatar";
 
 interface ISO24CardProps {
   post: ISO24;
@@ -54,7 +55,7 @@ export default function ISO24Card({ post }: ISO24CardProps) {
             src={post.imageUrl}
             alt={post.title}
             fill
-            className="object-cover rounded-t-lg md:rounded-l-lg md:rounded-tr-none"
+            className="object-contain bg-muted rounded-t-lg md:rounded-l-lg md:rounded-tr-none"
           />
         </div>
       ) : (
@@ -66,7 +67,7 @@ export default function ISO24Card({ post }: ISO24CardProps) {
         <CardHeader className="flex flex-row items-start gap-4 space-y-0">
           {user && (
             <Avatar className="h-12 w-12 border">
-              <AvatarImage src={user.avatar} alt={user.displayName || ""} />
+              <AvatarImage src={resolveAvatarUrl(user.avatar, user.uid)} alt={user.displayName || ""} />
               <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
             </Avatar>
           )}

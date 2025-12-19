@@ -52,7 +52,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
 
   return (
     <Link href={`/listings/${listingId}`} className="block">
-      <Card className="h-full flex flex-col overflow-hidden hover:shadow-lg transition-shadow border-0">
+      <Card className="h-full flex flex-col overflow-hidden transition-colors border-2 border-black bg-card/80 hover:bg-card shadow-sm">
         {/* Image section – NOW it will fill the container */}
         <div className="relative w-full aspect-[3/4] bg-muted flex items-center justify-center">
           {primaryImageUrl ? (
@@ -61,7 +61,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
               alt={title}
               fill
               sizes="(min-width: 1024px) 250px, 50vw"
-              className="object-cover"
+              className="object-contain"
             />
           ) : (
             <div className="text-xs text-muted-foreground px-4 text-center">

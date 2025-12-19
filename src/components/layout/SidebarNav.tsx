@@ -49,6 +49,7 @@ import {
   AvatarImage,
   AvatarFallback,
 } from '@/components/ui/avatar';
+import { resolveAvatarUrl } from '@/lib/default-avatar';
 
 type NotificationDoc = {
   id?: string;
@@ -68,7 +69,7 @@ export default function SidebarNav() {
   const firestore = useFirestore();
 
   const displayName = profile?.displayName || user?.email || 'My account';
-  const avatarUrl = profile?.avatar ?? '';
+  const avatarUrl = resolveAvatarUrl(profile?.avatar, user?.uid || user?.email || displayName);
 
   const navigate = (href: string) => {
     if (isMobile) setOpen(false);

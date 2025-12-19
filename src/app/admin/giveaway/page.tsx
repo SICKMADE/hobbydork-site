@@ -11,8 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
 import { db } from "@/firebase/client-provider";
+import { storage } from "@/firebase/client-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import {
   collection,
@@ -81,10 +83,23 @@ export default function AdminGiveawayPage() {
   const [title, setTitle] = React.useState("");
   const [prize, setPrize] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState("");
+  const [bannerFile, setBannerFile] = React.useState<File | null>(null);
+  const [bannerPreviewUrl, setBannerPreviewUrl] = React.useState<string | null>(null);
   const [isActive, setIsActive] = React.useState(false);
   const [startAt, setStartAt] = React.useState("");
   const [endAt, setEndAt] = React.useState("");
   const [savingConfig, setSavingConfig] = React.useState(false);
+
+  const onPickBanner = (file: File | null) => {
+    setBannerFile(file);
+    if (bannerPreviewUrl) {
+      URL.revokeObjectURL(bannerPreviewUrl);
+      setBannerPreviewUrl(null);
+    }
+    if (file) {
+      setBannerPreviewUrl(URL.createObjectURL(file));
+    }
+  };
 
   React.useEffect(() => {
     if (!isStaff) return;
@@ -116,6 +131,7 @@ export default function AdminGiveawayPage() {
       setTitle(data.title || "");
       setPrize(data.prize || "");
       setImageUrl(data.imageUrl || "");
+      onPickBanner(null);
       setIsActive(Boolean(data.isActive));
       setStartAt(toDateTimeLocalValue(data.startAt?.toDate?.() || null));
       setEndAt(toDateTimeLocalValue(data.endAt?.toDate?.() || null));
@@ -143,14 +159,32 @@ export default function AdminGiveawayPage() {
       return;
     }
 
+    if (bannerFile && !storage) {
+      toast({
+        title: "Uploads unavailable",
+        description: "Storage is not ready yet. Refresh and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSavingConfig(true);
     try {
+      let nextImageUrl = imageUrl.trim();
+      if (bannerFile && userData?.uid) {
+        const safeName = bannerFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `giveawayImages/${userData.uid}/${GIVEAWAY_ID}/${Date.now()}-${safeName}`;
+        const storageRef = ref(storage, path);
+        await uploadBytes(storageRef, bannerFile);
+        nextImageUrl = await getDownloadURL(storageRef);
+      }
+
       await setDoc(
         doc(db, "giveaways", GIVEAWAY_ID),
         {
           title: title.trim(),
           prize: prize.trim(),
-          imageUrl: imageUrl.trim(),
+          imageUrl: nextImageUrl,
           isActive,
           startAt: start,
           endAt: end,
@@ -161,6 +195,7 @@ export default function AdminGiveawayPage() {
       );
 
       toast({ title: "Giveaway saved" });
+      onPickBanner(null);
     } catch (e: any) {
       toast({ title: "Save failed", description: e?.message || "" });
     } finally {
@@ -227,12 +262,32 @@ export default function AdminGiveawayPage() {
                 <Input value={prize} onChange={(e) => setPrize(e.target.value)} placeholder="Optional" />
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label>Banner image URL</Label>
-                <Input
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://..."
-                />
+                <Label>Banner image</Label>
+                <Input type="file" accept="image/*" onChange={(e) => onPickBanner(e.target.files?.[0] ?? null)} />
+                {(bannerPreviewUrl || imageUrl) && (
+                  <div className="rounded-md border bg-muted p-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={bannerPreviewUrl || imageUrl}
+                      alt="Giveaway banner preview"
+                      className="w-full max-h-[260px] object-contain"
+                    />
+                    <div className="mt-2 flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-2 border-black bg-muted/40 hover:bg-muted/60"
+                        onClick={() => {
+                          setImageUrl("");
+                          onPickBanner(null);
+                        }}
+                      >
+                        Remove banner
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Start time</Label>

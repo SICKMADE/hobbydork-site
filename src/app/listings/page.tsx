@@ -10,10 +10,11 @@ import {
   getDocs,
 } from "firebase/firestore";
 
-import Link from "next/link";
+import AppLayout from "@/components/layout/AppLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Spinner from "@/components/ui/spinner";
+import ListingCard from "@/components/ListingCard";
 
 export default function ListingsSearchPage() {
   const [listings, setListings] = useState<Listing[]>([]);
@@ -69,76 +70,74 @@ export default function ListingsSearchPage() {
   }, []);
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-8">
+    <AppLayout>
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-extrabold tracking-tight">Marketplace</h1>
+          <Button onClick={loadListings} size="sm" className="comic-button">
+            Apply Filters
+          </Button>
+        </div>
 
-      <h1 className="text-2xl font-bold">Marketplace</h1>
+        {/* FILTERS */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <Input
+            placeholder="Search title"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="comic-input-field"
+          />
 
-      {/* FILTERS */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Input
+            placeholder="Category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="comic-input-field"
+          />
 
-        <Input
-          placeholder="Search title"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+          <Input
+            placeholder="Min Price"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            type="number"
+            className="comic-input-field"
+          />
 
-        <Input
-          placeholder="Category"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        />
+          <Input
+            placeholder="Max Price"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            type="number"
+            className="comic-input-field"
+          />
 
-        <Input
-          placeholder="Min Price"
-          value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value)}
-          type="number"
-        />
+          <select
+            className="h-10 w-full rounded-md border-2 border-black bg-background px-3 text-sm"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            <option value="newest">Newest</option>
+            <option value="low">Price: Low → High</option>
+            <option value="high">Price: High → Low</option>
+          </select>
+        </div>
 
-        <Input
-          placeholder="Max Price"
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
-          type="number"
-        />
-
-        <select
-          className="border rounded p-2"
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-        >
-          <option value="newest">Newest</option>
-          <option value="low">Price: Low → High</option>
-          <option value="high">Price: High → Low</option>
-        </select>
+        {/* LISTINGS */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center min-h-[300px]">
+            <Spinner size={64} />
+            <div className="mt-4 text-muted-foreground">Loading listings...</div>
+          </div>
+        ) : listings.length === 0 ? (
+          <div className="text-muted-foreground">No results.</div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {listings.map((l) => (
+              <ListingCard key={l.id} listing={l} />
+            ))}
+          </div>
+        )}
       </div>
-
-      <Button onClick={loadListings}>Apply Filters</Button>
-
-      {/* LISTINGS */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center min-h-[300px]">
-          <Spinner size={64} />
-          <div className="mt-4 text-muted-foreground">Loading listings...</div>
-        </div>
-      ) : listings.length === 0 ? (
-        <div>No results.</div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {listings.map((l) => (
-            <Link key={l.id} href={`/listings/${l.id}`}>
-              <div className="border rounded bg-white p-2 shadow hover:shadow-md transition cursor-pointer">
-                <img
-                  src={l.primaryImageUrl ?? undefined}
-                  className="w-full h-40 object-cover rounded"
-                />
-                <p className="mt-2 font-semibold">{l.title}</p>
-                <p className="text-gray-700">${l.price}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
+    </AppLayout>
   );
 }
