@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/firebase/client-provider";
 
 export default function VerifyEmailPage() {
   const { user, resendVerification } = useAuth();
@@ -33,8 +34,12 @@ export default function VerifyEmailPage() {
         toast({ title: "Not signed in", description: "Please sign in first.", variant: 'destructive' });
         return;
       }
-      await (user.reload?.() ?? Promise.resolve());
-      const current = (await import('firebase/auth')).getAuth().currentUser;
+
+      // Refresh the *actual* Firebase Auth currentUser so emailVerified updates.
+      // Verifying in another tab/device does not automatically refresh this session.
+      await (auth.currentUser?.reload?.() ?? Promise.resolve());
+      const current = auth.currentUser;
+
       if (current?.emailVerified) {
         toast({ title: "Verified", description: "Thanks — continuing setup." });
         // Hard navigation ensures the app reloads auth state as verified.
