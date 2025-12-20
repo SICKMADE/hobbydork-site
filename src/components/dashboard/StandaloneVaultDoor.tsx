@@ -15,6 +15,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { handleVaultPinCheck } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, X } from 'lucide-react';
+import Image from 'next/image';
 import React from 'react';
 
 
@@ -185,19 +186,17 @@ export function StandaloneVaultDoor() {
     <Dialog open={isOpen} onOpenChange={(open) => !open ? resetVault() : setIsOpen(true)}>
       <DialogTrigger asChild>
         <button className="bg-card p-4 sm:p-6 rounded-lg flex flex-col items-center gap-4 text-center">
-          <h3 className="text-2xl font-bold"></h3>
-          <p className="max-w-md text-muted-foreground"></p>
+          <div className="relative w-40 h-12 sm:w-56 sm:h-16">
+            <Image src={require('../../../public/vault.png')} alt="Vault" fill className="object-contain" priority />
+          </div>
           <SafeDoorIcon />
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
-        <div className="sr-only">
-            <DialogTitle>{isCorrect ? "Vault Unlocked" : "Unlock the Vault"}</DialogTitle>
-            <DialogDescription>
-            {isCorrect
-                ? "You have successfully unlocked the vault. Claim your prize."
-                : "Enter the 4-digit PIN to unlock the vault and win a prize."}
-            </DialogDescription>
+        <div className="flex justify-center mb-4">
+          <div className="relative w-40 h-12 sm:w-56 sm:h-16">
+            <Image src={require('../../../public/vault.png')} alt="Vault" fill className="object-contain" priority />
+          </div>
         </div>
 
         {isCorrect ? (

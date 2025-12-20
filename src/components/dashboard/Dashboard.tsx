@@ -38,7 +38,8 @@ import ListingCard from '../ListingCard';
 import { resolveAvatarUrl } from '@/lib/default-avatar';
 
 import askImg from '../../../public/ask.png';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import vaultImg from '../../../public/vault.png';
+import { Card, CardContent } from '../ui/card';
 
 function ISO24PromoSection() {
   return (
@@ -388,13 +389,7 @@ function VaultAndGenieSection() {
       <div className="grid gap-6 lg:grid-cols-2 lg:gap-8 items-start">
         <div className="space-y-4">
           <div className="relative mx-auto h-20 w-full max-w-[520px] overflow-hidden sm:h-24 md:h-28">
-            <Image
-              src="/vault.png"
-              alt="Vault"
-              fill
-              className="object-contain"
-              priority
-            />
+            <Image src={vaultImg} alt="Vault" fill className="object-contain" priority />
           </div>
           <div className="flex justify-center">
             <StandaloneVaultDoor />

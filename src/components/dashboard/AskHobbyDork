@@ -1,9 +1,11 @@
 'use client';
 
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+// no header image by request
 
 const BUY_ANSWERS = [
   'Yeah, you should buy it.',
@@ -40,27 +42,28 @@ function getRandomAnswer(kind) {
 function AskHobbyDork() {
   const [answer, setAnswer] = useState(null);
   const [isShaking, setIsShaking] = useState(false);
+  const [reveal, setReveal] = useState(false);
 
   const handleAsk = (kind) => {
     setIsShaking(true);
-
+    setReveal(false);
     setTimeout(() => {
       setAnswer(getRandomAnswer(kind));
       setIsShaking(false);
+      setReveal(true);
     }, 400);
   };
 
   return (
     <Card className="border-none bg-gradient-to-br from-slate-900 to-slate-800 text-white">
       <CardContent className="pt-4 space-y-4">
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-400">
-          Ask HobbyDork
-        </p>
-        <p className="text-sm text-slate-300">
-          Think about your item, then tap one of the buttons. HobbyDork will
-          give you an answer—no takesies backsies.
-        </p>
-
+        <div className="text-center">
+          {!answer && (
+            <p className="text-xs uppercase tracking-[0.25em] text-slate-400">
+              The Dork Awaits Your Question
+            </p>
+          )}
+        </div>
         <div className="flex gap-3">
           <Button
             type="button"
@@ -80,7 +83,6 @@ function AskHobbyDork() {
             Should I sell it?
           </Button>
         </div>
-
         <div
           className={cn(
             'mt-2 flex h-28 items-center justify-center rounded-xl border border-slate-700 bg-slate-950/70 px-4 text-center text-sm',
@@ -88,11 +90,24 @@ function AskHobbyDork() {
           )}
         >
           {answer ? (
-            <div className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                HobbyDork says:
-              </p>
-              <p className="text-base font-semibold">{answer}</p>
+            <div className="w-full flex flex-col items-center justify-center">
+              <span
+                className={cn(
+                  'transition-all duration-700 ease-out text-base font-semibold',
+                  reveal
+                    ? 'blur-0 opacity-100 scale-100'
+                    : 'blur-2xl opacity-40 scale-110',
+                  'select-none',
+                )}
+                style={{
+                  filter: reveal
+                    ? 'none'
+                    : 'blur(12px) contrast(0.5) grayscale(0.8)',
+                  transition: 'all 0.7s cubic-bezier(.4,2,.6,1)',
+                }}
+              >
+                {answer}
+              </span>
             </div>
           ) : (
             <p className="text-slate-500 text-sm">
