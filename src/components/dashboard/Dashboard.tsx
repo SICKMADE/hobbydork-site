@@ -393,7 +393,7 @@ function VaultAndGenieSection() {
             <Image src={vaultImg} alt="Vault" fill className="object-contain" priority />
           </div>
           <div className="flex justify-center">
-            <div className="max-w-[420px] w-full">
+            <div className="w-56 sm:w-72 lg:w-80">
               <StandaloneVaultDoor />
             </div>
           </div>
@@ -401,7 +401,7 @@ function VaultAndGenieSection() {
 
         <div className="space-y-4">
             <div className="w-full flex justify-center">
-              <div className="max-w-[420px] w-full">
+              <div className="w-56 sm:w-72 lg:w-80">
                 <AskHobbyDork />
               </div>
             </div>
