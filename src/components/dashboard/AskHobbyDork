@@ -85,7 +85,7 @@ function AskHobbyDork() {
         </div>
         <div
           className={cn(
-            'mt-2 flex h-28 items-center justify-center rounded-xl border border-transparent bg-gradient-to-r from-purple-700/40 via-indigo-700/30 to-blue-600/40 px-4 text-center text-sm shadow-inner',
+            'mt-2 flex items-center justify-center rounded-xl border border-transparent bg-gradient-to-r from-purple-700/40 via-indigo-700/30 to-blue-600/40 px-4 text-center text-sm shadow-inner aspect-square w-full sm:w-64 md:w-72',
             isShaking && 'animate-pulse',
           )}
         >
