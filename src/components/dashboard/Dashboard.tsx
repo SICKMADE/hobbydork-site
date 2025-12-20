@@ -36,7 +36,7 @@ import { Store } from 'lucide-react';
 import ListingCard from '../ListingCard';
 import { resolveAvatarUrl } from '@/lib/default-avatar';
 
-import genieImg from './genie.png';
+import askImg from '../../../public/ask.png';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 
 function ISO24PromoSection() {
@@ -191,7 +191,7 @@ function SpotlightStoresSection() {
               >
                 <StoreCard
                   store={storeWithId}
-                  cardImage={storeWithId.storeImageUrl || storeWithId.avatarUrl || '/SPOTLIGHT.png'}
+                  cardImage={storeWithId.storeImageUrl || '/store.png'}
                   layout="spotlight"
                 />
               </div>
@@ -396,6 +396,9 @@ function VaultAndGenieSection() {
         {/* Left: Vault / Easter egg */}
         <div className="space-y-5">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div className="relative mx-auto sm:mx-0 h-14 w-40 sm:h-16 sm:w-44 md:h-20 md:w-56 rounded-xl border-2 border-black bg-muted overflow-hidden shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+              <Image src="/vault.png" alt="Unlock the Vault" fill className="object-contain" priority />
+            </div>
             <div className="relative flex justify-center sm:justify-start">
               <div className="rounded-2xl border border-zinc-700/70 bg-black/50 p-2 sm:p-3">
                 <StandaloneVaultDoor />
@@ -431,8 +434,8 @@ function VaultAndGenieSection() {
               </p>
             </div>
             <Image
-              src={genieImg}
-              alt="HobbyDork genie"
+              src={askImg}
+              alt="Ask HobbyDork"
               className="w-20 sm:w-28 drop-shadow-[0_0_22px_rgba(0,0,0,0.9)]"
               priority
             />
