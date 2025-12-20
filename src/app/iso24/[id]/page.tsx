@@ -20,6 +20,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/firebase/client-provider";
+import AppLayout from "@/components/layout/AppLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
+import { labelIso24Category, normalizeIso24Category } from "@/lib/iso24";
 
 export default function ISODetailPage() {
   const params = useParams();
@@ -127,65 +132,139 @@ export default function ISODetailPage() {
     }
   }
 
-  if (!isoId) return <div className="p-6">Not found.</div>;
-  if (loading) return <div className="p-6">Loading…</div>;
-  if (!iso) return <div className="p-6">Not found.</div>;
+  if (!isoId)
+    return (
+      <AppLayout>
+        <div className="p-6">Not found.</div>
+      </AppLayout>
+    );
+  if (loading)
+    return (
+      <AppLayout>
+        <div className="p-6">Loading…</div>
+      </AppLayout>
+    );
+  if (!iso)
+    return (
+      <AppLayout>
+        <div className="p-6">Not found.</div>
+      </AppLayout>
+    );
+
+  const categoryLabel = labelIso24Category(normalizeIso24Category(iso.category));
+  const isOpen = String(iso.status || '').toUpperCase() === 'OPEN';
+  const isOwner = Boolean(user?.uid && iso.ownerUid === user.uid);
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-bold">{iso.title}</h1>
-      <p>{iso.description}</p>
-      <p>Status: {iso.status}</p>
-
-      {user?.uid && iso.status === "OPEN" && user.uid !== iso.ownerUid && (
-        <div className="space-y-2">
-          <div className="text-sm font-medium">
-            Have this item? Post your listing link.
-          </div>
-          <div className="flex gap-2">
-            <Input
-              value={offerUrl}
-              onChange={(e) => setOfferUrl(e.target.value)}
-              placeholder="Paste listing URL (example: /listings/abc123)"
-            />
-            <Button onClick={submitOffer} disabled={submittingOffer}>
-              Submit
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <div className="text-sm font-medium">Listing links</div>
-        {offers.length === 0 && (
-          <div className="text-sm text-muted-foreground">No links yet.</div>
-        )}
-        {offers.map((o) => (
-          <div
-            key={o.id}
-            className="flex items-center justify-between gap-2 rounded border p-2"
-          >
-            <a
-              href={o.listingUrl}
-              className="text-sm underline truncate"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {o.listingUrl}
-            </a>
-
-            {user?.uid === iso.ownerUid && iso.status === "OPEN" && (
-              <Button
+    <AppLayout>
+      <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-extrabold tracking-tight">{iso.title}</h1>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="border-2 border-black bg-muted/40">
+                {categoryLabel}
+              </Badge>
+              <Badge
                 variant="outline"
-                disabled={awarding}
-                onClick={() => approveOffer(o.id)}
+                className={
+                  isOpen
+                    ? 'border-green-500/40 bg-muted/40'
+                    : 'border-red-500/40 bg-muted/40'
+                }
               >
-                Approve + Award Trophy
-              </Button>
-            )}
+                {isOpen ? 'OPEN' : String(iso.status || 'CLOSED')}
+              </Badge>
+            </div>
           </div>
-        ))}
+          {iso.expiresAt?.toDate && (
+            <div className="text-sm text-muted-foreground">
+              Expires {iso.expiresAt.toDate().toLocaleString()}
+            </div>
+          )}
+        </div>
+
+        <Card className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+          <CardContent className="p-0">
+            {iso.imageUrl ? (
+              <div className="relative h-[260px] md:h-[340px] bg-muted rounded-t-lg overflow-hidden">
+                <Image
+                  src={String(iso.imageUrl)}
+                  alt={String(iso.title || 'ISO image')}
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            ) : null}
+            <div className="p-4">
+              <div className="text-sm whitespace-pre-line">
+                {iso.description || 'No description.'}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+          <CardHeader>
+            <CardTitle>Fulfill this ISO</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {user?.uid && isOpen && !isOwner && (
+              <div className="space-y-2">
+                <div className="text-sm font-medium">
+                  Have this item? Post your listing link.
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input
+                    value={offerUrl}
+                    onChange={(e) => setOfferUrl(e.target.value)}
+                    placeholder="Paste listing URL (example: /listings/abc123)"
+                  />
+                  <Button onClick={submitOffer} disabled={submittingOffer} className="comic-button">
+                    {submittingOffer ? 'Submitting…' : 'Submit'}
+                  </Button>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Tip: Use your own listing URL for best results.
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Listing links</div>
+              {offers.length === 0 && (
+                <div className="text-sm text-muted-foreground">No links yet.</div>
+              )}
+              {offers.map((o) => (
+                <div
+                  key={o.id}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border-2 border-black bg-muted/30 p-3"
+                >
+                  <a
+                    href={o.listingUrl}
+                    className="text-sm underline break-all"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {o.listingUrl}
+                  </a>
+
+                  {isOwner && isOpen && (
+                    <Button
+                      variant="outline"
+                      className="border-2 border-black bg-muted/40 hover:bg-muted/60"
+                      disabled={awarding}
+                      onClick={() => approveOffer(o.id)}
+                    >
+                      {awarding ? 'Awarding…' : 'Approve + Award Trophy'}
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </AppLayout>
   );
 }

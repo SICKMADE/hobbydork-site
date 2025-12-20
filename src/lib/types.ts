@@ -115,14 +115,18 @@ export type CommunityMessage = {
 
 export type ISO24 = {
     id: string;
-    creatorUid: string;
+    // Back-compat: older code may use creatorUid/userUid; current docs use ownerUid.
+    ownerUid?: string;
+    creatorUid?: string;
+    userUid?: string;
     title: string;
-    category: string;
+    category?: string;
     description: string;
     imageUrl?: string | null;
-    createdAt: Timestamp;
-    expiresAt: Timestamp;
-    status: 'ACTIVE' | 'EXPIRED';
+    createdAt?: Timestamp;
+    expiresAt?: Timestamp;
+    // Current ISO24 uses OPEN/CLOSED; keep flexible for older values.
+    status?: 'OPEN' | 'CLOSED' | 'ACTIVE' | 'EXPIRED' | string;
 }
 
 export type NotificationType = "MESSAGE" | "ORDER" | "ORDER_STATUS" | "ISO24" | "SPOTLIGHT" | "GENERIC";

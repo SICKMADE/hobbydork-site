@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -16,6 +15,7 @@ import { doc } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Image from "next/image";
 import { resolveAvatarUrl } from "@/lib/default-avatar";
+import { labelIso24Category, normalizeIso24Category } from "@/lib/iso24";
 
 interface ISO24CardProps {
   post: ISO24;
@@ -47,47 +47,54 @@ export default function ISO24Card({ post }: ISO24CardProps) {
     ? formatDistanceToNow(expiresAt, { addSuffix: true })
     : "soon";
 
+  const categoryValue = normalizeIso24Category((post as any)?.category);
+  const categoryLabel = labelIso24Category(categoryValue);
+
   return (
-    <Card className="flex flex-col md:flex-row">
+    <Card className="flex flex-col md:flex-row overflow-hidden border-2 border-black bg-card/80 hover:bg-card transition-colors shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
       {post.imageUrl ? (
-        <div className="relative md:w-1/3 aspect-video md:aspect-square">
+        <div className="relative md:w-1/3 aspect-video md:aspect-square bg-muted">
           <Image
             src={post.imageUrl}
             alt={post.title}
             fill
-            className="object-contain bg-muted rounded-t-lg md:rounded-l-lg md:rounded-tr-none"
+            className="object-contain"
           />
         </div>
       ) : (
-        <div className="md:w-1/3 aspect-video md:aspect-square bg-muted flex items-center justify-center rounded-t-lg md:rounded-l-lg md:rounded-tr-none">
+        <div className="md:w-1/3 aspect-video md:aspect-square bg-muted flex items-center justify-center">
           <ImageIcon className="h-12 w-12 text-muted-foreground" />
         </div>
       )}
       <div className="flex flex-col flex-1">
-        <CardHeader className="flex flex-row items-start gap-4 space-y-0">
+        <CardHeader className="flex flex-row items-start gap-3 space-y-0 p-4">
           {user && (
-            <Avatar className="h-12 w-12 border">
+            <Avatar className="h-11 w-11 border-2 border-black">
               <AvatarImage src={resolveAvatarUrl(user.avatar, user.uid)} alt={user.displayName || ""} />
               <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
             </Avatar>
           )}
           <div className="flex-1">
-            <CardTitle>{post.title}</CardTitle>
+            <CardTitle className="leading-snug">{post.title}</CardTitle>
             <CardDescription>
               Posted by {user?.displayName || "..."}
-              {expiresAt && <> &bull; Expires {expiresIn}</>}
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="flex-grow">
+        <CardContent className="flex-grow px-4 pb-3">
           <p className="text-sm text-muted-foreground line-clamp-2">
             {post.description}
           </p>
         </CardContent>
-        <CardFooter className="flex justify-between items-center">
-          <div className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded-md">
-            {post.category}
+        <CardFooter className="flex items-center justify-between gap-2 px-4 pb-4">
+          <div className="text-xs font-extrabold tracking-tight border-2 border-black bg-muted/40 px-2 py-1 rounded-md">
+            {categoryLabel}
           </div>
+          {expiresAt ? (
+            <div className="text-xs font-semibold border-2 border-black bg-muted/30 px-2 py-1 rounded-md text-muted-foreground">
+              Expires {expiresIn}
+            </div>
+          ) : null}
         </CardFooter>
       </div>
     </Card>
