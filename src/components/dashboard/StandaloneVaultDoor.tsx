@@ -119,14 +119,14 @@ Button.displayName = 'Button';
 function SafeDoorIcon() {
   return (
     <div className="relative w-56 h-56 sm:w-72 sm:h-72 lg:w-80 lg:h-80 flex items-center justify-center cursor-pointer group">
-      <div className="absolute w-full h-full rounded-full bg-gradient-to-br from-neutral-600 to-neutral-800 shadow-lg" />
-      <div className="absolute w-[95%] h-[95%] rounded-full bg-gradient-to-br from-neutral-700 to-neutral-800 shadow-inner" />
-      <div className="absolute w-[85%] h-[85%] rounded-full bg-gradient-to-b from-neutral-600 to-neutral-700 border-4 border-neutral-800" />
-      <div className="absolute w-28 h-28 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-full bg-gradient-to-br from-neutral-700 via-neutral-800 to-neutral-900 border-4 border-neutral-900 shadow-2xl transition-transform duration-300 group-hover:rotate-45">
+      <div className="absolute w-full h-full rounded-full bg-gradient-to-br from-neutral-500 to-neutral-700 shadow-lg" />
+        <div className="absolute w-[95%] h-[95%] rounded-full bg-gradient-to-br from-neutral-600 to-neutral-700 shadow-inner" />
+        <div className="absolute w-[85%] h-[85%] rounded-full bg-gradient-to-b from-neutral-500 to-neutral-600 border-4 border-neutral-700" />
+          <div className="absolute w-28 h-28 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-full bg-gradient-to-br from-neutral-600 via-neutral-700 to-neutral-800 border-4 border-neutral-800 shadow-2xl transition-transform duration-300 group-hover:rotate-45">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 sm:w-44 lg:w-48 h-2 sm:h-2.5 bg-neutral-600 rounded-full" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 sm:w-44 lg:w-48 h-2 sm:h-2.5 bg-neutral-600 rounded-full rotate-90" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-36 lg:h-36 rounded-full border-2 border-neutral-700" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-neutral-500 to-neutral-700 shadow-inner" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-neutral-400 to-neutral-600 shadow-inner" />
       </div>
       <div className="absolute -bottom-2 -right-2 w-16 h-12 sm:w-20 sm:h-16 bg-neutral-900 rounded-lg p-2 grid grid-cols-2 gap-1 border-2 border-neutral-950 shadow-lg">
           <div className="w-full h-full bg-neutral-700/50 rounded-sm" />
