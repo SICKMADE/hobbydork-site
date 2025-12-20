@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -217,6 +218,26 @@ export default function SellerDashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="overflow-hidden border-2 border-black bg-card/70 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+          <div className="relative h-24 sm:h-28 md:h-32 bg-muted">
+            <Image src="/ISO.png" alt="ISO24" fill className="object-contain" />
+          </div>
+          <CardHeader>
+            <CardTitle>ISO24</CardTitle>
+            <CardDescription>
+              A 24-hour “I’m searching for…” board. Great for collectors and a strong growth feature.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col sm:flex-row gap-2">
+            <Button asChild className="comic-button">
+              <Link href="/iso24">Browse ISO24</Link>
+            </Button>
+            <Button asChild variant="outline" className="border-2 border-black bg-muted/40 hover:bg-muted/60">
+              <Link href="/iso24/create">Create ISO</Link>
+            </Button>
+          </CardContent>
+        </Card>
 
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Recent Orders</h2>
