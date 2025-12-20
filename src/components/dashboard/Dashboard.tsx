@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import { useState } from 'react';
@@ -370,12 +371,14 @@ function NewListingsSection() {
 function VaultAndGenieSection() {
   const [answer, setAnswer] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
+  const [revealNonce, setRevealNonce] = useState(0);
 
   const handleAsk = (type: 'BUY' | 'SELL') => {
     setIsThinking(true);
 
     setTimeout(() => {
       setAnswer(getRandomAnswer(type));
+      setRevealNonce((n) => n + 1);
       setIsThinking(false);
     }, 500);
   };
@@ -426,7 +429,9 @@ function VaultAndGenieSection() {
 
           {!isThinking && answer && (
             <div className="w-full rounded-xl border-2 border-black bg-transparent p-4 text-center">
-              <p className="text-xl font-bold text-primary">{answer}</p>
+              <p key={revealNonce} className="ask-answer-reveal text-xl font-bold text-primary">
+                {answer}
+              </p>
             </div>
           )}
         </div>

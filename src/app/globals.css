@@ -17,6 +17,34 @@
   animation: fade-in-slow 900ms ease-out both;
 }
 
+@keyframes ask-answer-reveal {
+  0% {
+    opacity: 0;
+    filter: blur(18px);
+    transform: translateY(10px) scale(0.98) rotate(-1deg);
+  }
+  25% {
+    opacity: 0.55;
+    filter: blur(12px);
+    transform: translateY(6px) scale(0.99) rotate(1deg);
+  }
+  55% {
+    opacity: 0.9;
+    filter: blur(5px);
+    transform: translateY(2px) scale(1) rotate(-0.4deg);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1) rotate(0);
+  }
+}
+
+.ask-answer-reveal {
+  animation: ask-answer-reveal 420ms ease-out both;
+  will-change: transform, filter, opacity;
+}
+
 /* CSS theme variables used by Tailwind (hsl(var(--...))) */
 :root {
   --background: 220 11% 12%; /* dark background */
