@@ -62,58 +62,54 @@ function AskHobbyDork() {
             <img src="/ask.png" alt="Ask HobbyDork" className="w-40 sm:w-56 object-contain" />
           </div>
 
-          <div className="w-full flex flex-col gap-3">
+          <div className="w-full flex flex-col gap-3 items-center">
             <Button
               type="button"
               size="sm"
-              className="w-full bg-emerald-500 hover:bg-emerald-600"
+              className="w-full bg-red-700 hover:bg-red-800 text-white text-lg font-bold uppercase py-3"
               onClick={() => handleAsk('BUY')}
             >
-              Should I buy?
+              SHOULD I BUY?
             </Button>
+
+            <div className="text-sm uppercase font-bold text-slate-300">or</div>
 
             <Button
               type="button"
               size="sm"
-              variant="outline"
-              className="w-full border-red-500 text-red-400 hover:bg-red-500/10"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-lg font-bold uppercase py-3"
               onClick={() => handleAsk('SELL')}
             >
-              Should I sell?
+              SHOULD I SELL?
             </Button>
           </div>
         </div>
-        <div
-          className={cn(
-            'mt-2 flex items-center justify-center rounded-xl border border-transparent bg-gradient-to-r from-purple-700/40 via-indigo-700/30 to-blue-600/40 px-4 text-center text-sm shadow-inner aspect-square w-full sm:w-64 md:w-72',
-            isShaking && 'animate-pulse',
-          )}
-        >
-          {answer ? (
-            <div className="w-full flex flex-col items-center justify-center">
+        <div className="mt-4 w-full text-center">
+          <div className="text-sm font-bold uppercase text-slate-300 mb-2">Answer:</div>
+          <div
+            className={cn(
+              'w-full rounded-lg border-2 border-purple-900 bg-gradient-to-r from-purple-700 to-indigo-600 px-4 py-4 text-center text-white shadow-inner',
+              isShaking && 'animate-pulse',
+            )}
+          >
+            {answer ? (
               <span
                 className={cn(
-                  'transition-all duration-700 ease-out text-base font-semibold',
-                  reveal
-                    ? 'blur-0 opacity-100 scale-100'
-                    : 'blur-2xl opacity-40 scale-110',
+                  'transition-all duration-700 ease-out text-base font-extrabold uppercase',
+                  reveal ? 'blur-0 opacity-100 scale-100' : 'blur-2xl opacity-60 scale-105',
                   'select-none',
                 )}
                 style={{
-                  filter: reveal
-                    ? 'none'
-                    : 'blur(12px) contrast(0.5) grayscale(0.8)',
+                  filter: reveal ? 'none' : 'blur(14px) contrast(0.4) grayscale(0.6)',
                   transition: 'all 0.7s cubic-bezier(.4,2,.6,1)',
                 }}
               >
                 {answer}
               </span>
-            </div>
-          ) : (
-            <p className="text-slate-500 text-sm">
-              Ask the Dork to reveal the answer you seek.
-            </p>
-          )}
+            ) : (
+              <span className="text-white/80 font-semibold uppercase">LET THE DORK DECIDE YOUR FATE...</span>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
