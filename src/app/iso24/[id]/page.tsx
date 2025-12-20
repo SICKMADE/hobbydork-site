@@ -152,7 +152,9 @@ export default function ISODetailPage() {
     );
 
   const categoryLabel = labelIso24Category(normalizeIso24Category(iso.category));
-  const isOpen = String(iso.status || '').toUpperCase() === 'OPEN';
+  const expiresAtDate = iso.expiresAt?.toDate ? iso.expiresAt.toDate() : null;
+  const isExpired = Boolean(expiresAtDate && expiresAtDate.getTime() <= Date.now());
+  const isOpen = String(iso.status || '').toUpperCase() === 'OPEN' && !isExpired;
   const isOwner = Boolean(user?.uid && iso.ownerUid === user.uid);
 
   return (
@@ -173,13 +175,13 @@ export default function ISODetailPage() {
                     : 'border-red-500/40 bg-muted/40'
                 }
               >
-                {isOpen ? 'OPEN' : String(iso.status || 'CLOSED')}
+                {isOpen ? 'OPEN' : isExpired ? 'EXPIRED' : String(iso.status || 'CLOSED')}
               </Badge>
             </div>
           </div>
-          {iso.expiresAt?.toDate && (
+          {expiresAtDate && (
             <div className="text-sm text-muted-foreground">
-              Expires {iso.expiresAt.toDate().toLocaleString()}
+              Expires {expiresAtDate.toLocaleString()}
             </div>
           )}
         </div>

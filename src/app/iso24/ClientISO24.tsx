@@ -47,6 +47,7 @@ export default function ClientISO24() {
   const [posts, setPosts] = useState<Iso24Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   useEffect(() => {
     let cancelled = false;
@@ -54,7 +55,14 @@ export default function ClientISO24() {
     async function load() {
       try {
         const ref = collection(db, 'iso24Posts');
-        const q = query(ref, where('status', '==', 'OPEN'), orderBy('expiresAt', 'desc'));
+        const now = Timestamp.now();
+        const q = query(
+          ref,
+          where('status', '==', 'OPEN'),
+          where('expiresAt', '>', now),
+          // Lowest to highest remaining time (soonest expiring first)
+          orderBy('expiresAt', 'asc'),
+        );
         const snap = await getDocs(q);
         if (cancelled) return;
         setPosts(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
@@ -74,7 +82,19 @@ export default function ClientISO24() {
     };
   }, []);
 
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const isNotExpired = (p: Iso24Post) => {
+    const expiresAt = (p as any)?.expiresAt;
+    if (!expiresAt || typeof expiresAt.toMillis !== 'function') return true;
+    return expiresAt.toMillis() > nowMs;
+  };
+
   const visiblePosts = posts.filter((p) => {
+    if (!isNotExpired(p)) return false;
     if (categoryFilter === 'ALL') return true;
     return normalizeIso24Category(p.category) === categoryFilter;
   });
