@@ -35,6 +35,7 @@ import {
   AvatarFallback,
 } from '@/components/ui/avatar';
 import { MessageCircle } from 'lucide-react';
+import { resolveAvatarUrl } from '@/lib/default-avatar';
 
 type ConversationDoc = {
   id?: string;
@@ -128,7 +129,7 @@ export default function MessagesPage() {
           id: conv.id!,
           otherUid,
           otherName,
-          otherAvatar,
+          otherAvatar: resolveAvatarUrl(otherAvatar, otherUid),
           lastMessageText:
             conv.lastMessageText || 'Tap to view conversation',
           lastAtText,

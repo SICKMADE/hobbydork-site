@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Bell, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
+import { resolveAvatarUrl } from '@/lib/default-avatar';
 
 
 export function UserNav() {
@@ -22,21 +23,15 @@ export function UserNav() {
   const router = useRouter();
   if (!user || !profile) return null;
 
-  const getInitials = (name: string | undefined | null) => {
-    if (!name) return '';
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('');
-  };
+  const avatarUrl = resolveAvatarUrl(profile.avatar, user.uid);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full" aria-label="Account menu">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={profile.avatar ?? undefined} alt={profile.displayName ?? undefined} />
-            <AvatarFallback>{getInitials(profile.displayName)}</AvatarFallback>
+            <AvatarImage src={avatarUrl} alt={profile.displayName ?? undefined} />
+            <AvatarFallback />
           </Avatar>
         </Button>
       </DropdownMenuTrigger>

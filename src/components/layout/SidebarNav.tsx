@@ -144,9 +144,7 @@ export default function SidebarNav() {
           <div className="flex items-center gap-3 rounded-lg border bg-[#2c2c2c] px-3 py-2">
             <Avatar className="h-9 w-9">
               <AvatarImage src={avatarUrl} />
-              <AvatarFallback>
-                {displayName.charAt(0).toUpperCase()}
-              </AvatarFallback>
+              <AvatarFallback />
             </Avatar>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold truncate">

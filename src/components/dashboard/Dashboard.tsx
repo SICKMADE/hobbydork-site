@@ -34,6 +34,7 @@ import { StandaloneVaultDoor } from './StandaloneVaultDoor';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Store } from 'lucide-react';
 import ListingCard from '../ListingCard';
+import { resolveAvatarUrl } from '@/lib/default-avatar';
 
 import genieImg from './genie.png';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -195,14 +196,14 @@ function NewStoreCard({ store }: { store: StoreType }) {
     }, [firestore, store.ownerUid]);
     
     const { data: owner } = useDoc<User>(ownerRef);
-    const cardImage = owner?.avatar;
+    const cardImage = resolveAvatarUrl(owner?.avatar, store.ownerUid);
 
     return (
        <div className="relative flex flex-col items-center gap-2 text-center">
             <Link href={`/store/${store.storeId}`} className="block">
                 <Avatar className="h-24 w-24 border-2 border-primary/50 transition-transform hover:scale-105">
                     <AvatarImage src={cardImage} alt={store.storeName} />
-                    <AvatarFallback>{store.storeName.charAt(0)}</AvatarFallback>
+                  <AvatarFallback />
                 </Avatar>
             </Link>
             <div className="text-xs mt-2">

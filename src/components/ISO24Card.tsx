@@ -71,7 +71,7 @@ export default function ISO24Card({ post }: ISO24CardProps) {
           {user && (
             <Avatar className="h-11 w-11 border-2 border-black">
               <AvatarImage src={resolveAvatarUrl(user.avatar, user.uid)} alt={user.displayName || ""} />
-              <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
+              <AvatarFallback />
             </Avatar>
           )}
           <div className="flex-1">

@@ -35,6 +35,7 @@ import {
   AvatarImage,
   AvatarFallback,
 } from '@/components/ui/avatar';
+import { resolveAvatarUrl } from '@/lib/default-avatar';
 
 import { MessageCircle, ArrowLeft } from 'lucide-react';
 
@@ -160,10 +161,10 @@ export default function ClientNewMessage() {
   }, [firestore, targetUid]);
 
   const myDisplayName = profile?.displayName || user?.email || 'You';
-  const myAvatar = (profile as any)?.avatarUrl || '';
+  const myAvatar = resolveAvatarUrl((profile as any)?.avatar, user?.uid || null);
 
   const targetDisplayName = targetProfile?.displayName || 'User';
-  const targetAvatar = targetProfile?.avatarUrl || '';
+  const targetAvatar = resolveAvatarUrl((targetProfile as any)?.avatar, targetUid);
 
   const handleSend = async () => {
     if (!firestore || !user || !targetUid) return;
@@ -264,7 +265,7 @@ export default function ClientNewMessage() {
             <div className="flex items-start gap-3">
               <Avatar>
                 <AvatarImage src={targetAvatar} alt={targetDisplayName} />
-                <AvatarFallback>{targetDisplayName?.charAt(0)}</AvatarFallback>
+                <AvatarFallback />
               </Avatar>
               <div className="flex-1">
                 <Textarea value={text} onChange={(e) => setText(e.target.value)} />
