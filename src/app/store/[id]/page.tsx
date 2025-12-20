@@ -12,7 +12,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
-import { doc, collection, query, where, getDocs, limit } from "firebase/firestore";
+import { doc, collection, query, where, getDocs, limit, updateDoc, serverTimestamp } from "firebase/firestore";
+import { storage } from "@/firebase/client-provider";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import {
   Card,
@@ -25,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 
 import { Star, StarHalf, MessageCircle, ShoppingBag } from "lucide-react";
 
@@ -156,6 +159,16 @@ export default function StorePage() {
 
   const { data: store, isLoading: storeLoading } = useDoc<StoreDoc>(storeRef as any);
 
+  const [newStoreImageFile, setNewStoreImageFile] = React.useState<File | null>(null);
+  const [newStoreImagePreviewUrl, setNewStoreImagePreviewUrl] = React.useState<string | null>(null);
+  const [uploadingStoreImage, setUploadingStoreImage] = React.useState(false);
+
+  React.useEffect(() => {
+    return () => {
+      if (newStoreImagePreviewUrl) URL.revokeObjectURL(newStoreImagePreviewUrl);
+    };
+  }, [newStoreImagePreviewUrl]);
+
   React.useEffect(() => {
     if (!firestore) return;
     if (!storeIdParam) return;
@@ -227,6 +240,54 @@ export default function StorePage() {
     }
   };
 
+  const onPickStoreImage = (file: File | null) => {
+    setNewStoreImageFile(file);
+
+    if (newStoreImagePreviewUrl) {
+      URL.revokeObjectURL(newStoreImagePreviewUrl);
+      setNewStoreImagePreviewUrl(null);
+    }
+
+    if (file) {
+      setNewStoreImagePreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const uploadStoreImage = async () => {
+    if (!user) return;
+    if (!storeRef) return;
+    if (!effectiveStoreId) return;
+    if (!newStoreImageFile) return;
+    if (!storage) {
+      toast({
+        title: "Uploads unavailable",
+        description: "Storage is not ready yet. Refresh and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingStoreImage(true);
+    try {
+      const safeName = newStoreImageFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `storeImages/${user.uid}/${effectiveStoreId}/${Date.now()}-${safeName}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, newStoreImageFile);
+      const url = await getDownloadURL(storageRef);
+      await updateDoc(storeRef as any, { storeImageUrl: url, updatedAt: serverTimestamp() });
+      toast({ title: "Store image updated" });
+      onPickStoreImage(null);
+    } catch (e: any) {
+      toast({
+        title: "Upload failed",
+        description: e?.message ?? "Failed to upload store image.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingStoreImage(false);
+    }
+  };
+
   if (authLoading || storeLoading) {
     return (
       <AppLayout>
@@ -294,6 +355,44 @@ export default function StorePage() {
   return (
     <AppLayout>
       <div className="max-w-5xl mx-auto space-y-6">
+        {isOwner && (
+          <Card className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+            <CardHeader>
+              <CardTitle>Update Store Image</CardTitle>
+              <CardDescription>
+                Upload a new banner image. This updates your store page and store cards.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => onPickStoreImage(e.target.files?.[0] ?? null)}
+              />
+
+              {newStoreImagePreviewUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={newStoreImagePreviewUrl}
+                  alt="New store image preview"
+                  className="w-full max-h-[260px] object-contain rounded-md border-2 border-black bg-muted"
+                />
+              )}
+
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  className="comic-button"
+                  disabled={uploadingStoreImage || !newStoreImageFile}
+                  onClick={uploadStoreImage}
+                >
+                  {uploadingStoreImage ? "Uploading…" : "Upload"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Hero / header */}
         <Panel>
           <div className="relative overflow-hidden rounded-2xl">

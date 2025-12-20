@@ -72,7 +72,7 @@ function DynamicImageShowcase() {
   const CurrentIcon = currentSlide?.icon;
 
   return (
-    <div className="relative aspect-[4/3] min-h-[260px] sm:min-h-[340px] lg:min-h-[420px] xl:min-h-[480px] w-full max-w-md sm:max-w-lg lg:max-w-none lg:w-full mx-auto rounded-xl overflow-hidden border-2 border-neutral-700/70 shadow-2xl shadow-primary/10">
+    <div className="relative aspect-[4/3] min-h-[260px] sm:min-h-[340px] lg:min-h-[420px] xl:min-h-[480px] w-full max-w-md sm:max-w-lg lg:max-w-none lg:w-full mx-auto rounded-xl overflow-hidden border-2 border-black bg-card/70 shadow-[3px_3px_0_rgba(0,0,0,0.35)]">
       <AnimatePresence>
         <motion.div
           key={currentSlide?.label || index}
@@ -97,7 +97,7 @@ function DynamicImageShowcase() {
 
           {currentSlide && (
             <div className="absolute left-4 bottom-4 right-4 flex items-center justify-between gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full bg-black/50 backdrop-blur px-3 py-1.5 border border-white/10">
+              <div className="inline-flex items-center gap-2 rounded-full bg-black/50 backdrop-blur px-3 py-1.5 border-2 border-black shadow-[2px_2px_0_rgba(0,0,0,0.35)]">
                 {CurrentIcon && <CurrentIcon className="h-4 w-4 text-white" />}
                 <span className="text-sm font-semibold tracking-wide text-white">
                   {currentSlide.label}
@@ -126,16 +126,16 @@ function FeatureCard({
   return (
     <div
       className={cn(
-        'relative p-6 rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-700/70 shadow-lg',
-        'transition-all duration-300 ease-in-out hover:border-primary/50 hover:scale-[1.02] hover:shadow-[0_0_40px_-10px_hsl(var(--primary))]'
+        'relative p-6 rounded-2xl overflow-hidden bg-card/80 border-2 border-black shadow-[3px_3px_0_rgba(0,0,0,0.25)]',
+        'transition-colors hover:bg-card'
       )}
     >
       <div className="relative z-10 space-y-4">
-        <div className="p-3 rounded-full w-fit bg-neutral-800 border border-neutral-700">
-          <Icon className="w-7 h-7 text-white" />
+        <div className="p-3 rounded-full w-fit bg-muted/40 border-2 border-black">
+          <Icon className="w-7 h-7" />
         </div>
-        <h3 className="text-xl font-bold text-neutral-100">{title}</h3>
-        <p className="text-neutral-400">{description}</p>
+        <h3 className="text-xl font-bold">{title}</h3>
+        <p className="text-muted-foreground">{description}</p>
       </div>
     </div>
   );
@@ -188,21 +188,22 @@ function SellingStep({
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-neutral-800 via-neutral-900 to-neutral-950 text-neutral-200 overflow-x-hidden landing-page-bg font-body">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden landing-page-bg font-body">
       <div className="absolute inset-0 z-0 opacity-15 bg-[url('/grid.svg')] [background-position:0_0.5px]" />
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-white/5 via-transparent to-black/20" />
+      <div className="absolute inset-0 z-0 bg-gradient-to-b from-white/5 via-transparent to-black/40" />
 
       <header className="relative z-20 p-4 flex justify-end items-center container mx-auto">
         <div className="flex items-center gap-4">
           <Button
             asChild
-            className="px-6 py-2 group bg-blue-600 text-white font-bold tracking-wide rounded-full shadow-md border-b-4 border-blue-800 hover:bg-blue-500 active:border-b-2 active:translate-y-1 transition-all duration-150 transform relative overflow-hidden"
+            variant="outline"
+            className="px-6 py-2 font-bold tracking-wide rounded-full border-2 border-black bg-muted/40 hover:bg-muted/60 shadow-[2px_2px_0_rgba(0,0,0,0.35)]"
           >
             <Link href="/login">Log In</Link>
           </Button>
           <Button
             asChild
-            className="px-6 py-2 group bg-primary text-primary-foreground font-bold tracking-wide rounded-full shadow-md border-b-4 border-gray-400 hover:bg-gray-200 active:border-b-2 active:translate-y-1 transition-all duration-150 transform relative overflow-hidden"
+            className="px-6 py-2 rounded-full comic-button"
           >
             <Link href="/login#signup">Sign Up</Link>
           </Button>
@@ -222,16 +223,16 @@ export default function LandingPage() {
                 className="h-14 sm:h-16 md:h-20 lg:h-24 w-auto mb-5"
               />
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter mb-4 text-transparent bg-clip-text bg-gradient-to-r from-white via-neutral-300 to-white uppercase">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter mb-4 uppercase">
               MARKETPLACE & COMMUNITY FOR COLLECTORS
             </h1>
-            <p className="max-w-md mx-auto text-base sm:text-lg lg:text-xl leading-relaxed text-neutral-400 mb-7">
+            <p className="max-w-md mx-auto text-base sm:text-lg lg:text-xl leading-relaxed text-muted-foreground mb-7">
               SELL YOUR COMICS, SPORTS CARDS, POKEMON CARDS, VIDEO GAMES, TOYS, AND ALL OTHER COLLECTIBLES
             </p>
             <Button
               asChild
               size="lg"
-              className="text-base sm:text-lg px-8 sm:px-10 py-5 sm:py-7 group bg-red-600 text-white font-bold tracking-wide rounded-full shadow-lg border-b-4 border-red-800 hover:bg-red-500 active:border-b-0 active:translate-y-1 transition-all duration-150 transform relative overflow-hidden"
+              className="text-base sm:text-lg px-8 sm:px-10 py-5 sm:py-7 rounded-full comic-button"
             >
               <Link href="/login#signup">
                 Start Your Collection
@@ -245,7 +246,7 @@ export default function LandingPage() {
         </section>
 
         <section className="py-24">
-          <div className="relative py-12 px-8 rounded-2xl bg-neutral-900 border border-neutral-700/70 shadow-2xl">
+          <div className="relative py-12 px-8 rounded-2xl bg-card/80 border-2 border-black shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
             <div className="grid md:grid-cols-3 gap-8 md:gap-12 items-start">
               <SellingStep
                 icon={UserPlus}

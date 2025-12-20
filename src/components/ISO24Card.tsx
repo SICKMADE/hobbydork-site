@@ -13,7 +13,6 @@ import { useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import type { User } from "@/lib/types";
 import { doc } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import Image from "next/image";
 import { resolveAvatarUrl } from "@/lib/default-avatar";
 import { labelIso24Category, normalizeIso24Category } from "@/lib/iso24";
 
@@ -54,11 +53,12 @@ export default function ISO24Card({ post }: ISO24CardProps) {
     <Card className="flex flex-col md:flex-row overflow-hidden border-2 border-black bg-card/80 hover:bg-card transition-colors shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
       {post.imageUrl ? (
         <div className="relative md:w-1/3 aspect-video md:aspect-square bg-muted">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={post.imageUrl}
             alt={post.title}
-            fill
-            className="object-contain"
+            className="h-full w-full object-contain"
+            loading="lazy"
           />
         </div>
       ) : (
