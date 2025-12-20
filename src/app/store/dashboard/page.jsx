@@ -10,9 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
-import { db, functions } from "@/firebase/client-provider";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { db, functions, storage } from "@/firebase/client-provider";
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { Input } from "@/components/ui/input";
 
 function getListingImage(listing) {
   if (!listing) return null;
@@ -39,6 +41,9 @@ export default function SellerDashboardPage() {
   const [orders, setOrders] = useState([]);
   const [seller, setSeller] = useState(null);
   const [stripeStatus, setStripeStatus] = useState("NONE");
+  const [storefront, setStorefront] = useState(null);
+  const [newStoreImageFile, setNewStoreImageFile] = useState(null);
+  const [uploadingStoreImage, setUploadingStoreImage] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -57,6 +62,18 @@ export default function SellerDashboardPage() {
             setStripeStatus("NONE");
           } else {
             setStripeStatus("CONNECTED");
+          }
+
+          if (sellerData.storeId) {
+            const storeRef = doc(db, "storefronts", sellerData.storeId);
+            const storeSnap = await getDoc(storeRef);
+            if (storeSnap.exists()) {
+              setStorefront({ id: storeSnap.id, ...storeSnap.data() });
+            } else {
+              setStorefront(null);
+            }
+          } else {
+            setStorefront(null);
           }
         }
 
@@ -120,6 +137,35 @@ export default function SellerDashboardPage() {
     load();
   }, [user]);
 
+  async function uploadStoreImage() {
+    if (!user || !seller?.storeId) return;
+    if (!newStoreImageFile) return;
+    if (!storage) {
+      toast({ title: "Uploads unavailable", description: "Storage is not ready yet.", variant: "destructive" });
+      return;
+    }
+
+    setUploadingStoreImage(true);
+    try {
+      const safeName = String(newStoreImageFile.name || "store-image").replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `storeImages/${user.uid}/${seller.storeId}/${Date.now()}-${safeName}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, newStoreImageFile);
+      const url = await getDownloadURL(storageRef);
+
+      const storeRef = doc(db, "storefronts", seller.storeId);
+      await updateDoc(storeRef, { storeImageUrl: url, updatedAt: serverTimestamp() });
+
+      setStorefront((prev) => (prev ? { ...prev, storeImageUrl: url } : prev));
+      setNewStoreImageFile(null);
+      toast({ title: "Store image updated" });
+    } catch (err) {
+      toast({ title: "Upload failed", description: err?.message ?? "Failed to upload store image.", variant: "destructive" });
+    } finally {
+      setUploadingStoreImage(false);
+    }
+  }
+
   async function startStripeOnboarding() {
     if (!user) return;
 
@@ -166,7 +212,7 @@ export default function SellerDashboardPage() {
           <p className="text-sm text-muted-foreground">Overview of your store performance.</p>
         </div>
 
-        <Card className="border border-red-500/30 bg-muted/40">
+        <Card className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
           <CardHeader>
             <CardTitle>Stripe Account</CardTitle>
             <CardDescription>Connect Stripe to receive payouts.</CardDescription>
@@ -175,7 +221,7 @@ export default function SellerDashboardPage() {
             {stripeStatus === "NONE" ? (
               <div className="space-y-2">
                 <div className="text-sm text-destructive">You must connect Stripe to receive payments.</div>
-                <Button onClick={startStripeOnboarding}>Connect Stripe</Button>
+                <Button onClick={startStripeOnboarding} className="comic-button">Connect Stripe</Button>
               </div>
             ) : (
               <div className="text-sm">Stripe account connected.</div>
@@ -183,8 +229,49 @@ export default function SellerDashboardPage() {
           </CardContent>
         </Card>
 
+        {seller?.storeId && (
+          <Card className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+            <CardHeader>
+              <CardTitle>Store Image</CardTitle>
+              <CardDescription>
+                This is the big banner-style image shown on your store page and store cards.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {storefront?.storeImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={storefront.storeImageUrl}
+                  alt="Current store image"
+                  className="w-full max-h-[260px] object-contain rounded-md border-2 border-black bg-muted"
+                />
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  No store image uploaded yet.
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setNewStoreImageFile(e.target.files?.[0] ?? null)}
+                />
+                <Button
+                  type="button"
+                  className="comic-button"
+                  disabled={uploadingStoreImage || !newStoreImageFile}
+                  onClick={uploadStoreImage}
+                >
+                  {uploadingStoreImage ? "Uploading…" : "Upload"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
+          <Card className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Total Revenue</CardTitle>
             </CardHeader>
@@ -192,7 +279,7 @@ export default function SellerDashboardPage() {
               <div className="text-2xl font-bold">${Number(stats.totalRevenue || 0).toFixed(2)}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Total Sales</CardTitle>
             </CardHeader>
@@ -200,7 +287,7 @@ export default function SellerDashboardPage() {
               <div className="text-2xl font-bold">{stats.totalSales}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Active Listings</CardTitle>
             </CardHeader>
@@ -208,7 +295,7 @@ export default function SellerDashboardPage() {
               <div className="text-2xl font-bold">{stats.activeListings}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Sold Listings</CardTitle>
             </CardHeader>
@@ -243,7 +330,7 @@ export default function SellerDashboardPage() {
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Active Listings</h2>
-            <Button asChild variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm" className="border-2 border-black bg-muted/40 hover:bg-muted/60">
               <Link href="/listings/create">Create Listing</Link>
             </Button>
           </div>
@@ -256,7 +343,7 @@ export default function SellerDashboardPage() {
                 const imageUrl = getListingImage(l);
                 return (
                   <Link key={l.id} href={`/listings/${l.id}`} className="block">
-                    <Card className="h-full hover:bg-muted/60 transition-colors">
+                    <Card className="h-full border-2 border-black bg-card/80 hover:bg-card transition-colors shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
                       <CardContent className="p-3 space-y-2">
                         {imageUrl && (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -283,7 +370,7 @@ export default function SellerDashboardPage() {
                 const imageUrl = getListingImage(l);
                 return (
                   <Link key={l.id} href={`/listings/${l.id}`} className="block">
-                    <Card className="h-full hover:bg-muted/60 transition-colors">
+                    <Card className="h-full border-2 border-black bg-card/80 hover:bg-card transition-colors shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
                       <CardContent className="p-3 space-y-2">
                         {imageUrl && (
                           // eslint-disable-next-line @next/next/no-img-element

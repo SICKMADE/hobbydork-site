@@ -41,7 +41,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui
 
 function ISO24PromoSection() {
   return (
-    <section className="rounded-2xl border bg-card/90 p-4 sm:p-6 shadow-md">
+    <section className="rounded-2xl border-2 border-black bg-card/80 p-4 sm:p-6 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
           <div className="relative h-16 w-40 sm:h-20 sm:w-52 flex-shrink-0 rounded-xl border-2 border-black bg-muted overflow-hidden">
@@ -59,7 +59,12 @@ function ISO24PromoSection() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button asChild variant="outline" size="sm">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="border-2 border-black bg-muted/40 hover:bg-muted/60"
+          >
             <Link href="/iso24">Browse ISO24</Link>
           </Button>
           <Button asChild size="sm" className="comic-button">
@@ -152,7 +157,12 @@ function SpotlightStoresSection() {
               see who bought their way to the front of the vault.
             </p>
           </div>
-          <Button asChild variant="outline" size="sm">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="border-2 border-black bg-muted/40 hover:bg-muted/60"
+          >
             <Link href="/search">Browse all stores</Link>
           </Button>
         </div>
@@ -174,7 +184,7 @@ function SpotlightStoresSection() {
                 key={storeWithId.storeId}
                 className="flex-[0_0_280px] max-w-[320px]"
               >
-                <StoreCard store={storeWithId} cardImage={storeWithId.avatarUrl} layout="spotlight" />
+                <StoreCard store={storeWithId} cardImage={storeWithId.storeImageUrl || storeWithId.avatarUrl} layout="spotlight" />
               </div>
             );
           })}
@@ -240,7 +250,7 @@ function NewStoresSection() {
   if (!stores || stores.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border bg-card/90 p-4 sm:p-6 shadow-md">
+    <section className="rounded-2xl border-2 border-black bg-card/80 p-4 sm:p-6 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
@@ -251,7 +261,12 @@ function NewStoresSection() {
             Stores that just opened up shop on HobbyDork.
           </p>
         </div>
-        <Button asChild variant="outline" size="sm">
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="border-2 border-black bg-muted/40 hover:bg-muted/60"
+        >
           <Link href="/stores">Browse stores</Link>
         </Button>
       </div>
@@ -306,7 +321,7 @@ function NewListingsSection() {
   if (!listings || listings.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border bg-card/90 p-4 sm:p-6 shadow-md">
+    <section className="rounded-2xl border-2 border-black bg-card/80 p-4 sm:p-6 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-sky-400/80">
@@ -314,7 +329,12 @@ function NewListingsSection() {
           </p>
           <h2 className="text-xl font-semibold">Fresh in the Vault</h2>
         </div>
-        <Button asChild variant="outline" size="sm">
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="border-2 border-black bg-muted/40 hover:bg-muted/60"
+        >
           <Link href="/search">Browse all listings</Link>
         </Button>
       </div>
@@ -489,7 +509,7 @@ export default function Dashboard() {
               <Button
                 asChild
                 variant="outline"
-                className="hidden sm:inline-flex text-green-600 border-green-600"
+                className="hidden sm:inline-flex border-2 border-black bg-muted/40 hover:bg-muted/60 text-green-600"
               >
                 <Link href="/store/setup">Apply to Become a Seller</Link>
               </Button>
@@ -497,12 +517,12 @@ export default function Dashboard() {
               <Button
                 asChild
                 variant="outline"
-                className="hidden sm:inline-flex"
+                className="hidden sm:inline-flex border-2 border-black bg-muted/40 hover:bg-muted/60"
               >
                 <Link href="/search">Browse listings</Link>
               </Button>
             )}
-            <Button asChild>
+            <Button asChild className="comic-button">
               <Link href="/listings/create">Create listing</Link>
             </Button>
           </div>

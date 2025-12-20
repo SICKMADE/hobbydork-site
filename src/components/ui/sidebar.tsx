@@ -127,8 +127,8 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
         if (isMobile) {
             return (
               <Sheet open={open} onOpenChange={setOpen}>
-                  <SheetContent side="left" className="p-0 w-64 border-r-0">
-                      <div className="flex flex-col h-full bg-[#1c1c1c] text-sidebar-foreground">
+              <SheetContent side="left" className="p-0 w-64 border-r-2 border-black">
+                <div className="flex flex-col h-full bg-background text-sidebar-foreground">
                           {children}
                       </div>
                   </SheetContent>
@@ -141,7 +141,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
             <aside
                 ref={ref}
                 className={cn(
-                    "fixed top-0 left-0 h-full w-64 z-20 bg-[#1c1c1c] text-sidebar-foreground border-r border-sidebar-border",
+              "fixed top-0 left-0 h-full w-64 z-20 bg-background text-sidebar-foreground border-r-2 border-black shadow-[4px_0_0_rgba(0,0,0,0.35)]",
                     className
                 )}
                 {...props}
@@ -309,13 +309,13 @@ const SidebarMenuItem = React.forwardRef<
 SidebarMenuItem.displayName = "SidebarMenuItem"
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-[rgba(255,255,255,0.8)] data-[active=true]:text-primary-foreground data-[active=true]:font-semibold data-[active=true]:shadow-[0_1px_0_hsl(0_0%_100%_/_0.2),_inset_0_1px_1px_hsl(0_0%_0%_/_0.1)] data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
+  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-xl p-2 text-left text-sm outline-none ring-sidebar-ring transition-colors border-2 border-black bg-card/70 hover:bg-card focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 shadow-[3px_3px_0_rgba(0,0,0,0.25)] data-[active=true]:bg-card data-[active=true]:font-semibold data-[active=true]:shadow-[3px_3px_0_rgba(0,0,0,0.35)] [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        default: "",
         outline:
-          "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
+          "bg-card/70",
       },
       size: {
         default: "h-12 text-sm",

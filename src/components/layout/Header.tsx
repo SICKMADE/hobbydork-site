@@ -121,7 +121,7 @@ export default function Header() {
             <Input
               type="search"
               placeholder="Search listings, ISO posts, or stores..."
-              className="h-10 w-full rounded-full bg-input text-foreground border-2 border-red-500 pl-9 pr-4 text-sm"
+              className="h-10 w-full rounded-full bg-white text-black placeholder:text-zinc-500 border-2 border-red-500 pl-9 pr-4 text-sm shadow-[2px_2px_0_rgba(0,0,0,0.35)] focus-visible:ring-0 focus-visible:ring-offset-0"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={onKeyDown}

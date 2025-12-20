@@ -141,7 +141,7 @@ export default function SidebarNav() {
       {/* Profile block at top */}
       <SidebarHeader className="p-4 pt-6">
         {user && (
-          <div className="flex items-center gap-3 rounded-lg border bg-[#2c2c2c] px-3 py-2">
+          <div className="flex items-center gap-3 rounded-xl border-2 border-black bg-card/70 px-3 py-2 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
             <Avatar className="h-9 w-9">
               <AvatarImage src={avatarUrl} />
               <AvatarFallback />

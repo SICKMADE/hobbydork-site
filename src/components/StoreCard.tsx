@@ -13,21 +13,24 @@ interface StoreCardProps {
 }
 
 export default function StoreCard({ store, cardImage, layout = 'default' }: StoreCardProps) {
-  const displayImage = cardImage || store.avatarUrl;
+  const displayImage =
+    cardImage ||
+    store.storeImageUrl ||
+    store.avatarUrl;
 
   if (layout === 'spotlight') {
     return (
        <Link href={`/store/${store.storeId}`} passHref>
         <Card className={cn(
-          "relative overflow-hidden group transition-all duration-300 hover:shadow-2xl bg-card aspect-square",
-          store.isSpotlighted ? "border-primary/50" : ""
+          "relative overflow-hidden group transition-colors bg-card/80 hover:bg-card border-2 border-black aspect-square shadow-[3px_3px_0_rgba(0,0,0,0.25)]",
+          store.isSpotlighted ? "" : ""
         )}>
             {displayImage && (
                 <Image
                     src={displayImage}
                     alt={`${store.storeName} banner`}
                     fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    className="object-contain"
                     data-ai-hint="store banner"
                 />
             )}
@@ -43,7 +46,7 @@ export default function StoreCard({ store, cardImage, layout = 'default' }: Stor
                  )}
                 <h3 className="text-lg font-bold drop-shadow-md">{store.storeName}</h3>
                 <p className="text-xs text-white/80 drop-shadow-sm line-clamp-2">{store.about}</p>
-                 <Button variant="secondary" className="w-full mt-3">
+                 <Button className="w-full mt-3 comic-button">
                     <Store className="mr-2 h-4 w-4" />
                     Visit Store
                 </Button>
@@ -56,8 +59,7 @@ export default function StoreCard({ store, cardImage, layout = 'default' }: Stor
   // Default layout
   return (
     <Card className={cn(
-        "relative overflow-hidden group transition-all duration-300 hover:shadow-2xl bg-card",
-        store.isSpotlighted ? "border-primary/50 hover:shadow-primary/20" : "hover:border-primary/50 hover:shadow-primary/20"
+        "relative overflow-hidden group transition-colors bg-card/80 hover:bg-card border-2 border-black shadow-[3px_3px_0_rgba(0,0,0,0.25)]"
     )}>
       <div className="relative">
         {store.isSpotlighted && (
@@ -73,7 +75,7 @@ export default function StoreCard({ store, cardImage, layout = 'default' }: Stor
                 alt={`${store.storeName} logo`}
                 width={64}
                 height={64}
-                className="rounded-lg border-2 border-primary/50 object-cover"
+                className="rounded-lg border-2 border-black bg-muted object-contain"
                 data-ai-hint="store logo"
             />
           )}
@@ -85,7 +87,7 @@ export default function StoreCard({ store, cardImage, layout = 'default' }: Stor
         <CardContent className="space-y-4">
           <p className="text-sm text-card-foreground/80 min-h-[40px] line-clamp-2">{store.about}</p>
           <Link href={`/store/${store.storeId}`} passHref>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full border-2 border-black bg-muted/40 hover:bg-muted/60">
               <Store className="mr-2 h-4 w-4" />
               Visit Store
             </Button>

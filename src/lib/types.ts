@@ -34,6 +34,7 @@ export type Store = {
   slug: string;
   about: string;
   avatarUrl: string;
+    storeImageUrl?: string | null;
   ratingAverage: number;
   ratingCount: number;
   itemsSold: number;
