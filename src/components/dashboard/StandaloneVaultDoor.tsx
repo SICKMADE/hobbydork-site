@@ -15,7 +15,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { handleVaultPinCheck } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, X } from 'lucide-react';
-import Image from 'next/image';
+// image removed per UX request (use icon + heading instead)
 import React from 'react';
 
 
@@ -186,16 +186,16 @@ export function StandaloneVaultDoor() {
     <Dialog open={isOpen} onOpenChange={(open) => !open ? resetVault() : setIsOpen(true)}>
       <DialogTrigger asChild>
         <button className="bg-card p-4 sm:p-6 rounded-lg flex flex-col items-center gap-4 text-center">
-          <div className="relative w-40 h-12 sm:w-56 sm:h-16">
-            <Image src={require('../../../public/vault.png')} alt="Vault" fill className="object-contain" priority />
+          <div className="text-center">
+            <div className="text-sm font-semibold uppercase tracking-wide text-slate-300">Unlock the Vault</div>
           </div>
           <SafeDoorIcon />
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <div className="flex justify-center mb-4">
-          <div className="relative w-40 h-12 sm:w-56 sm:h-16">
-            <Image src={require('../../../public/vault.png')} alt="Vault" fill className="object-contain" priority />
+          <div className="text-center">
+            <div className="text-lg font-semibold tracking-tight">Unlock the Vault</div>
           </div>
         </div>
 
