@@ -38,6 +38,38 @@ import ListingCard from '../ListingCard';
 import genieImg from './genie.png';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 
+function ISO24PromoSection() {
+  return (
+    <section className="rounded-2xl border bg-card/90 p-4 sm:p-6 shadow-md">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-4">
+          <div className="relative h-16 w-40 sm:h-20 sm:w-52 flex-shrink-0 rounded-xl border-2 border-black bg-muted overflow-hidden">
+            <Image src="/ISO.png" alt="ISO24" fill className="object-contain" priority />
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary/80">
+              ISO24
+            </p>
+            <h2 className="mt-1 text-xl font-semibold">Post what you’re hunting</h2>
+            <p className="mt-1 text-[11px] text-muted-foreground max-w-xl">
+              Categories + a 24-hour timer keep it fresh. See what’s expiring soon and help someone complete their chase.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/iso24">Browse ISO24</Link>
+          </Button>
+          <Button asChild size="sm" className="comic-button">
+            <Link href="/iso24/create">Create ISO</Link>
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* =======================
    Ask HobbyDork (8-ball) helpers
    ======================= */
@@ -477,6 +509,7 @@ export default function Dashboard() {
       </header>
 
       {/* Rows */}
+      <ISO24PromoSection />
       <SpotlightStoresSection />
       <NewStoresSection />
       <NewListingsSection />
