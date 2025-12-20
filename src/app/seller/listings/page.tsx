@@ -134,6 +134,16 @@ export default function SellerListings() {
                     </Button>
 
                     <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="border-2 border-black bg-muted/40 hover:bg-muted/60"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Link href={`/listings/${l.id}/edit`}>Edit</Link>
+                    </Button>
+
+                    <Button
                       size="sm"
                       variant="outline"
                       className="border-2 border-black bg-muted/40 hover:bg-muted/60"
