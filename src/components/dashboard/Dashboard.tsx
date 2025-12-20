@@ -335,7 +335,7 @@ function NewListingsSection() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-sky-400/80">
             Newly Listed
           </p>
-          <h2 className="text-xl font-semibold">Fresh in the Vault</h2>
+          <h2 className="text-xl font-semibold">Fresh in the Market</h2>
         </div>
         <Button
           asChild
@@ -368,12 +368,10 @@ function NewListingsSection() {
    ======================= */
 
 function VaultAndGenieSection() {
-  const [question, setQuestion] = useState<'BUY' | 'SELL' | null>(null);
   const [answer, setAnswer] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
 
   const handleAsk = (type: 'BUY' | 'SELL') => {
-    setQuestion(type);
     setIsThinking(true);
 
     setTimeout(() => {
@@ -382,105 +380,55 @@ function VaultAndGenieSection() {
     }, 500);
   };
 
-  const label =
-    question === 'BUY'
-      ? 'Should I buy this item?'
-      : question === 'SELL'
-      ? 'Should I sell this item?'
-      : null;
-
   return (
-    <section className="rounded-2xl border bg-gradient-to-br from-zinc-900 via-black to-zinc-950 p-4 sm:p-8 shadow-xl">
-      <div className="grid items-center gap-8 lg:grid-cols-2">
-        {/* Left: Vault / Easter egg */}
-        <div className="space-y-5">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-            <div className="relative flex justify-center sm:justify-start">
-              <div className="rounded-2xl border border-zinc-700/70 bg-black/50 p-2 sm:p-3">
-                <StandaloneVaultDoor />
-              </div>
-            </div>
-
-            <div className="flex-1 space-y-3 text-center sm:text-left">
-              <div className="relative mx-auto sm:mx-0 h-20 w-64 sm:h-24 sm:w-80 md:h-28 md:w-[420px] rounded-xl border-2 border-black bg-muted overflow-hidden shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
-                <Image src="/vault.png" alt="Unlock the Vault" fill className="object-contain" priority />
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-yellow-300/80">
-                  Hidden Vault
-                </p>
-                <h2 className="text-xl sm:text-2xl font-semibold">
-                  Unlock the HobbyDork vault?
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Somewhere on this app is a 4 digit pin number. Find it, tap the safe door, enter the number in the keypad and if it is the right pin
-
-                </p>
-              </div>
-            </div>
+    <section className="rounded-2xl border-2 border-black bg-card/80 p-4 sm:p-6 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+      <div className="grid gap-6 lg:grid-cols-2 lg:gap-8 items-start">
+        <div className="space-y-4">
+          <div className="relative mx-auto h-20 w-full max-w-[520px] overflow-hidden sm:h-24 md:h-28">
+            <Image
+              src="/vault.png"
+              alt="Vault"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+          <div className="flex justify-center">
+            <StandaloneVaultDoor />
           </div>
         </div>
 
-        {/* Right: Ask HobbyDork (BUY / SELL) */}
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-zinc-800 bg-black/50 p-4 sm:p-5">
-          <div className="flex w-full items-start gap-3">
-            <div className="flex-1 space-y-2">
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
-                HobbyDork Genie
-              </p>
-              <div className="relative h-12 w-full max-w-[320px] sm:h-16 sm:max-w-[420px] rounded-xl border-2 border-black bg-muted overflow-hidden shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
-                <Image src={askImg} alt="Ask" fill className="object-contain" priority />
-              </div>
-              <p className="text-xs text-muted-foreground pt-1">
-                Can't decide? Let HobbyDork determine your fate.
-              </p>
-            </div>
+        <div className="space-y-4">
+          <div className="relative mx-auto h-16 w-full max-w-[520px] overflow-hidden sm:h-20 md:h-24">
+            <Image src={askImg} alt="Ask" fill className="object-contain" priority />
           </div>
 
-          <div className="flex w-full flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <Button
-              type="button"
               variant="outline"
               size="lg"
               onClick={() => handleAsk('BUY')}
               disabled={isThinking}
-              className="flex-1 border-emerald-500/60 bg-emerald-500/5 text-base hover:bg-emerald-500/15"
+              className="flex-1 border-2 border-black bg-transparent text-base hover:bg-muted/30"
             >
               Should I BUY?
             </Button>
             <Button
-              type="button"
               variant="outline"
               size="lg"
               onClick={() => handleAsk('SELL')}
               disabled={isThinking}
-              className="flex-1 border-rose-500/60 bg-rose-500/5 text-base hover:bg-rose-500/15"
+              className="flex-1 border-2 border-black bg-transparent text-base hover:bg-muted/30"
             >
               Should I SELL?
             </Button>
           </div>
 
-          <div className="mt-2 w-full rounded-xl border border-zinc-800 bg-black/60 p-4 text-center">
-            {isThinking && (
-              <p className="text-lg text-muted-foreground">
-                The dork is thinking...
-              </p>
-            )}
-            {!isThinking && answer && label && (
-              <div className="space-y-1">
-                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  {label}
-                </p>
-                <p className="text-xl font-bold text-primary">{answer}</p>
-              </div>
-            )}
-            {!isThinking && !answer && (
-              <p className="text-lg text-muted-foreground">
-                The Vault awaits your question.
-              </p>
-            )}
-          </div>
+          {!isThinking && answer && (
+            <div className="w-full rounded-xl border-2 border-black bg-transparent p-4 text-center">
+              <p className="text-xl font-bold text-primary">{answer}</p>
+            </div>
+          )}
         </div>
       </div>
     </section>
