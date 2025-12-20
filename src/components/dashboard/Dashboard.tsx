@@ -141,7 +141,7 @@ function SpotlightStoresSection() {
       <div className="relative rounded-2xl bg-zinc-950/95 p-4 sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="relative h-10 w-32 sm:h-12 sm:w-40 md:h-14 md:w-48 flex-shrink-0 rounded-xl border-2 border-black bg-muted overflow-hidden">
+            <div className="relative h-16 w-40 sm:h-20 sm:w-52 flex-shrink-0 rounded-xl border-2 border-black bg-muted overflow-hidden">
               <Image src="/SPOTLIGHT.png" alt="Store Spotlight" fill className="object-contain" priority />
             </div>
 
@@ -396,12 +396,15 @@ function VaultAndGenieSection() {
         {/* Left: Vault / Easter egg */}
         <div className="space-y-5">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-            <div className="relative mx-auto sm:mx-0 h-14 w-40 sm:h-16 sm:w-44 md:h-20 md:w-56 rounded-xl border-2 border-black bg-muted overflow-hidden shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
-              <Image src="/vault.png" alt="Unlock the Vault" fill className="object-contain" priority />
-            </div>
-            <div className="relative flex justify-center sm:justify-start">
-              <div className="rounded-2xl border border-zinc-700/70 bg-black/50 p-2 sm:p-3">
-                <StandaloneVaultDoor />
+            <div className="flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row sm:items-center">
+              <div className="relative flex justify-center sm:justify-start">
+                <div className="rounded-2xl border border-zinc-700/70 bg-black/50 p-2 sm:p-3">
+                  <StandaloneVaultDoor />
+                </div>
+              </div>
+
+              <div className="relative h-14 w-40 sm:h-16 sm:w-44 md:h-20 md:w-56 rounded-xl border-2 border-black bg-muted overflow-hidden shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+                <Image src="/vault.png" alt="Unlock the Vault" fill className="object-contain" priority />
               </div>
             </div>
             <div className="space-y-1 text-center sm:text-left">
