@@ -34,8 +34,10 @@ service cloud.firestore {
     }
 
     function userIsActive() {
-      // Email verification required for any "active" capabilities.
-      return isEmailVerified() && userStatus() == "ACTIVE";
+      // "ACTIVE" means not suspended/banned.
+      // NOTE: We do NOT require email verification here so core app features
+      // like messaging, ISO24, and profile updates work immediately.
+      return isSignedIn() && userStatus() == "ACTIVE";
     }
 
     function userIsAdmin() {

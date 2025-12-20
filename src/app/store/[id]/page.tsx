@@ -338,7 +338,7 @@ export default function StorePage() {
 
   const storeName = store.storeName || "Store";
   const avatarUrl = store.avatarUrl || "/hobbydork-head.png";
-  const coverUrl = store.storeImageUrl || store.avatarUrl || "/hobbydork-head.png";
+  const coverUrl = store.storeImageUrl || "/store.png";
   const about = store.about;
   const storeIdForLinks = effectiveStoreId || storeIdParam || "";
 
@@ -402,6 +402,12 @@ export default function StorePage() {
                 src={coverUrl}
                 alt={`${storeName} store banner`}
                 className="h-full w-full object-contain bg-muted"
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (img.dataset.fallbackApplied === '1') return;
+                  img.dataset.fallbackApplied = '1';
+                  img.src = '/SPOTLIGHT.png';
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 

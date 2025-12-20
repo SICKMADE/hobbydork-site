@@ -23,7 +23,6 @@ import { functions } from "@/firebase/client-provider";
 import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Image from "next/image";
 import { labelIso24Category, normalizeIso24Category } from "@/lib/iso24";
 
 export default function ISODetailPage() {
@@ -190,11 +189,11 @@ export default function ISODetailPage() {
           <CardContent className="p-0">
             {iso.imageUrl ? (
               <div className="relative h-[260px] md:h-[340px] bg-muted rounded-t-lg overflow-hidden">
-                <Image
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={String(iso.imageUrl)}
                   alt={String(iso.title || 'ISO image')}
-                  fill
-                  className="object-contain"
+                  className="h-full w-full object-contain"
                 />
               </div>
             ) : null}

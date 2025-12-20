@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 
-// ✅ DEFAULT STORE AVATAR
-import hobbydorkHead from '@/components/dashboard/hobbydork-head.png';
+const DEFAULT_STORE_IMAGE = '/store.png';
+const FALLBACK_STORE_IMAGE = '/SPOTLIGHT.png';
 
 type StorefrontDoc = {
   id?: string;
@@ -67,20 +67,23 @@ export default function StoresPage() {
             const id = store.storeId || store.id;
             if (!id) return null;
 
-            const img =
-              store.storeImageUrl ||
-              store.avatarUrl ||
-              hobbydorkHead;
+            const img = store.storeImageUrl || DEFAULT_STORE_IMAGE;
 
             return (
               <Link key={id} href={`/store/${id}`}>
                 <Card className="flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
                   <div className="relative h-40 w-full overflow-hidden rounded-t-lg bg-muted">
-                    <Image
-                      src={img}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={String(img)}
                       alt={store.storeName || 'Store image'}
-                      fill
-                      className="object-contain"
+                      className="h-full w-full object-contain"
+                      onError={(e) => {
+                        const el = e.currentTarget;
+                        if (el.dataset.fallbackApplied === '1') return;
+                        el.dataset.fallbackApplied = '1';
+                        el.src = FALLBACK_STORE_IMAGE;
+                      }}
                     />
                   </div>
 

@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Store, Star } from 'lucide-react';
@@ -13,10 +12,12 @@ interface StoreCardProps {
 }
 
 export default function StoreCard({ store, cardImage, layout = 'default' }: StoreCardProps) {
-  const displayImage =
-    cardImage ||
-    store.storeImageUrl ||
-    store.avatarUrl;
+  const defaultStoreCover = '/store.png';
+  const fallbackStoreCover = '/SPOTLIGHT.png';
+
+  // Store cover (banner) is separate from store avatar/logo.
+  // For spotlight + store browsing, prefer storeImageUrl.
+  const displayImage = cardImage || store.storeImageUrl || defaultStoreCover;
 
   if (layout === 'spotlight') {
     return (
@@ -25,15 +26,19 @@ export default function StoreCard({ store, cardImage, layout = 'default' }: Stor
           "relative overflow-hidden group transition-colors bg-card/80 hover:bg-card border-2 border-black aspect-square shadow-[3px_3px_0_rgba(0,0,0,0.25)]",
           store.isSpotlighted ? "" : ""
         )}>
-            {displayImage && (
-                <Image
-                    src={displayImage}
-                    alt={`${store.storeName} banner`}
-                    fill
-                    className="object-contain"
-                    data-ai-hint="store banner"
-                />
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={String(displayImage)}
+              alt={`${store.storeName} banner`}
+              className="absolute inset-0 h-full w-full object-contain bg-muted"
+              data-ai-hint="store banner"
+              onError={(e) => {
+                const el = e.currentTarget;
+                if (el.dataset.fallbackApplied === '1') return;
+                el.dataset.fallbackApplied = '1';
+                el.src = fallbackStoreCover;
+              }}
+            />
             {/* Gradient overlay for text readability */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
@@ -69,16 +74,16 @@ export default function StoreCard({ store, cardImage, layout = 'default' }: Stor
             </div>
         )}
         <CardHeader className="flex flex-row items-center gap-4">
-          {displayImage && (
-            <Image
-                src={displayImage}
-                alt={`${store.storeName} logo`}
-                width={64}
-                height={64}
-                className="rounded-lg border-2 border-black bg-muted object-contain"
-                data-ai-hint="store logo"
-            />
-          )}
+          {/* Store avatar/logo: use avatarUrl; storeImageUrl is the cover. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={String(store.avatarUrl || '/hobbydork-head.png')}
+            alt={`${store.storeName} logo`}
+            width={64}
+            height={64}
+            className="h-16 w-16 rounded-lg border-2 border-black bg-muted object-contain"
+            data-ai-hint="store logo"
+          />
           <div>
             <CardTitle className="text-2xl font-bold text-card-foreground">{store.storeName}</CardTitle>
             <CardDescription className="text-muted-foreground">/{store.slug}</CardDescription>

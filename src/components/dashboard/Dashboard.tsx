@@ -140,10 +140,15 @@ function SpotlightStoresSection() {
       {/* Content */}
       <div className="relative rounded-2xl bg-zinc-950/95 p-4 sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-4">
-          <div>
+          <div className="flex items-start gap-3">
+            <div className="relative h-10 w-32 sm:h-12 sm:w-40 md:h-14 md:w-48 flex-shrink-0 rounded-xl border-2 border-black bg-muted overflow-hidden">
+              <Image src="/SPOTLIGHT.png" alt="Store Spotlight" fill className="object-contain" priority />
+            </div>
+
+            <div>
             <div className="flex items-center gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-300/90">
-                Store Spotlight
+                
               </p>
               <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-black">
                 Paid
@@ -153,9 +158,9 @@ function SpotlightStoresSection() {
               Featured HobbyDork Stores
             </h2>
             <p className="mt-1 max-w-xl text-[11px] text-muted-foreground">
-              Weekly paid spots from the HobbyDork Market. Scroll sideways to
-              see who bought their way to the front of the vault.
+              Put your store front and center. Spots available in HobbyDork store.
             </p>
+            </div>
           </div>
           <Button
             asChild
@@ -182,9 +187,13 @@ function SpotlightStoresSection() {
             return (
               <div
                 key={storeWithId.storeId}
-                className="flex-[0_0_280px] max-w-[320px]"
+                className="flex-[0_0_240px] sm:flex-[0_0_280px] md:flex-[0_0_320px] max-w-[360px]"
               >
-                <StoreCard store={storeWithId} cardImage={storeWithId.storeImageUrl || storeWithId.avatarUrl} layout="spotlight" />
+                <StoreCard
+                  store={storeWithId}
+                  cardImage={storeWithId.storeImageUrl || storeWithId.avatarUrl || '/SPOTLIGHT.png'}
+                  layout="spotlight"
+                />
               </div>
             );
           })}
@@ -400,8 +409,8 @@ function VaultAndGenieSection() {
                 Unlock the HobbyDork vault?
               </h2>
               <p className="text-sm text-muted-foreground">
-                Tap the door, punch in the secret 4-digit PIN, and hit the winner
-                screen if you guess it.
+                Somewhere on this app is a 4 digit pin number. Find it, tap the safe door, enter the number in the keypad and if it is the right pin
+
               </p>
             </div>
           </div>
@@ -418,7 +427,7 @@ function VaultAndGenieSection() {
                 Ask HobbyDork
               </h3>
               <p className="text-xs text-muted-foreground pt-1">
-                Can't decide? Let the HobbyDork genie determine your fate.
+                Can't decide? Let HobbyDork determine your fate.
               </p>
             </div>
             <Image
@@ -455,7 +464,7 @@ function VaultAndGenieSection() {
           <div className="mt-2 w-full rounded-xl border border-zinc-800 bg-black/60 p-4 text-center">
             {isThinking && (
               <p className="text-lg text-muted-foreground">
-                The genie is thinking...
+                The dork is thinking...
               </p>
             )}
             {!isThinking && answer && label && (
@@ -500,8 +509,9 @@ export default function Dashboard() {
               Welcome, {loading ? '...' : displayName}
             </h1>
             <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-              See what's hot, what just hit the vault, and crack open the secret
-              HobbyDork Vault to win something crazy.
+              See what's hot, who's new, maybe list a item or two! Can't decide? Let HobbyDork help you.
+              Along the way don't forget keep your eyes peeled for HobbyDork's hidden 4 digit pin. 
+              
             </p>
           </div>
           <div className="flex gap-3">
