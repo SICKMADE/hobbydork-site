@@ -32,6 +32,7 @@ import {
   spotlightConverter,
 } from '@/firebase/firestore/converters';
 import { StandaloneVaultDoor } from './StandaloneVaultDoor';
+import AskHobbyDork from './AskHobbyDork';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Store } from 'lucide-react';
 import ListingCard from '../ListingCard';
@@ -397,38 +398,9 @@ function VaultAndGenieSection() {
         </div>
 
         <div className="space-y-4">
-          <div className="relative mx-auto h-16 w-full max-w-[520px] overflow-hidden sm:h-20 md:h-24">
-            <Image src={askImg} alt="Ask" fill className="object-contain" priority />
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => handleAsk('BUY')}
-              disabled={isThinking}
-              className="flex-1 border-2 border-black bg-transparent text-base hover:bg-muted/30"
-            >
-              Should I BUY?
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => handleAsk('SELL')}
-              disabled={isThinking}
-              className="flex-1 border-2 border-black bg-transparent text-base hover:bg-muted/30"
-            >
-              Should I SELL?
-            </Button>
-          </div>
-
-          {!isThinking && answer && (
-            <div className="w-full rounded-xl border-2 border-black bg-transparent p-4 text-center">
-              <p key={revealNonce} className="ask-answer-reveal text-xl font-bold text-primary">
-                {answer}
-              </p>
+            <div className="w-full">
+              <AskHobbyDork />
             </div>
-          )}
         </div>
       </div>
     </section>
