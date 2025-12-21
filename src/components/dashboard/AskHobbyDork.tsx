@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -53,6 +53,19 @@ export default function AskHobbyDork() {
     setReveal(false);
   };
 
+  // Auto-return to intro after answer
+  useEffect(() => {
+    if (screen === 'answer' && reveal) {
+      const timeout = setTimeout(() => {
+        setScreen('intro');
+        setAnswer(null);
+        setChoice(null);
+        setReveal(false);
+      }, 3500);
+      return () => clearTimeout(timeout);
+    }
+  }, [screen, reveal]);
+
   // Handle a choice
   const handleChoose = (kind: 'BUY' | 'SELL') => {
     setChoice(kind);
@@ -76,83 +89,75 @@ export default function AskHobbyDork() {
     <Card className="border-none bg-card p-4 sm:p-6 rounded-lg text-white">
       <CardContent className="p-0">
         <div className="flex items-center justify-center">
-          <div className="relative rounded-lg bg-[#0b1220] border-4 border-[#111827] shadow-2xl w-56 h-auto sm:w-72">
+          <div className="relative rounded-lg bg-[#0b1220] border-4 border-[#111827] shadow-2xl w-full h-full min-h-[28rem] min-w-[28rem] sm:min-h-[36rem] sm:min-w-[36rem] lg:min-h-[44rem] lg:min-w-[44rem] flex flex-col justify-center items-center">
             {/* Top label / speaker area */}
-            <div className="flex items-center justify-between px-3 py-2">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full shadow-inner" />
-                <div className="w-3 h-3 bg-yellow-400 rounded-full shadow-inner" />
-                <div className="w-3 h-3 bg-green-400 rounded-full shadow-inner" />
+            <div className="flex items-center justify-center px-3 py-2">
+              <div className="text-3xl sm:text-4xl font-extrabold uppercase text-yellow-300 drop-shadow-[0_2px_0_rgba(0,0,0,0.9)] font-mono tracking-widest select-none w-full text-center" style={{letterSpacing:'0.15em',textShadow:'0 0 8px #ffe066,0 2px 0 #000'}}>
+                ASK HOBBYDORK
               </div>
-              <div className="text-xs font-mono text-yellow-300 uppercase tracking-wide drop-shadow-[0_2px_0_rgba(0,0,0,0.9)]">ASK HOBBYDORK</div>
-              <div className="w-8 h-4 bg-neutral-900 rounded-sm" />
             </div>
 
             {/* Screen area */}
-            <div className="mx-3 mb-3 rounded-sm bg-[#071428] border-2 border-[#0f1a2a] overflow-hidden">
-              <div className="relative w-full h-56 sm:h-72 lg:h-80 flex flex-col items-center justify-center px-4 py-3">
-                {/* CRT scanlines */}
+            <div className="flex-1 w-full flex flex-col justify-center items-center">
+              <div className="relative w-[90%] h-[80%] min-h-[20rem] min-w-[20rem] bg-[#071428] border-2 border-[#0f1a2a] rounded-sm overflow-hidden flex flex-col items-center justify-center px-10 py-8">
+                {/* CRT scanlines and glow */}
                 <div className="absolute inset-0 pointer-events-none" style={{
-                  backgroundImage: 'linear-gradient(transparent 50%, rgba(255,255,255,0.02) 51%)',
+                  backgroundImage: 'repeating-linear-gradient(0deg,rgba(255,255,255,0.04),rgba(255,255,255,0.04) 1px,transparent 1px,transparent 4px)',
                   backgroundSize: '100% 4px',
-                  mixBlendMode: 'overlay'
+                  boxShadow: '0 0 32px 8px #00f2ff44 inset, 0 0 0 4px #00f2ff22 inset',
+                  mixBlendMode: 'screen',
+                  zIndex: 2
                 }} />
 
                 {/* INTRO SCREEN */}
                 {screen === 'intro' && (
-                  <div className="flex flex-col items-center justify-center w-full h-full gap-6 animate-fade-in">
-                    <div className="text-2xl sm:text-3xl font-extrabold uppercase text-yellow-300 drop-shadow-[0_2px_0_rgba(0,0,0,0.9)] font-mono tracking-widest mb-2">Ask HobbyDork</div>
+                  <div className="flex flex-col items-center justify-center w-full h-full gap-8 animate-fade-in">
+                    <div className="text-5xl sm:text-6xl font-extrabold uppercase text-pink-400 drop-shadow-[0_2px_0_rgba(0,0,0,0.9)] font-mono tracking-widest mb-2 select-none" style={{textShadow:'0 0 16px #ff5ecb,0 2px 0 #000'}}>PRESS START</div>
                     <button
-                      className="mt-4 px-6 py-3 bg-pink-600 hover:bg-pink-700 text-white text-lg font-bold rounded shadow-lg border-2 border-pink-900 font-mono tracking-wider animate-pulse"
+                      className="mt-4 px-10 py-5 bg-gradient-to-br from-yellow-400 via-pink-500 to-blue-500 hover:from-pink-500 hover:to-yellow-400 text-white text-2xl font-extrabold rounded shadow-2xl border-4 border-pink-900 font-mono tracking-widest animate-pulse select-none"
                       onClick={handleStart}
                     >
-                      Touch to Start
+                      ▶
                     </button>
                   </div>
                 )}
 
                 {/* CHOOSE SCREEN */}
                 {screen === 'choose' && (
-                  <div className="flex flex-col items-center justify-center w-full h-full gap-6 animate-fade-in">
-                    <div className="text-xl sm:text-2xl font-extrabold uppercase text-cyan-300 drop-shadow-[0_2px_0_rgba(0,0,0,0.9)] font-mono tracking-widest mb-2">Choose Your Question</div>
+                  <div className="flex flex-col items-center justify-center w-full h-full gap-8 animate-fade-in">
+                    <div className="text-3xl sm:text-4xl font-extrabold uppercase text-cyan-300 drop-shadow-[0_2px_0_rgba(0,0,0,0.9)] font-mono tracking-widest mb-2 select-none" style={{textShadow:'0 0 12px #00f2ff,0 2px 0 #000'}}>SELECT YOUR FATE</div>
                     <button
-                      className="w-full mb-2 px-6 py-3 bg-red-700 hover:bg-red-800 text-white text-lg font-extrabold rounded shadow-lg border-2 border-black font-mono tracking-wider"
+                      className="w-full mb-2 px-10 py-5 bg-red-700 hover:bg-red-800 text-white text-2xl font-extrabold rounded shadow-2xl border-4 border-black font-mono tracking-widest select-none"
                       onClick={() => handleChoose('BUY')}
                     >
-                      Should I buy this?
+                      SHOULD I BUY THIS?
                     </button>
                     <button
-                      className="w-full mb-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-lg font-extrabold rounded shadow-lg border-2 border-black font-mono tracking-wider"
+                      className="w-full mb-2 px-10 py-5 bg-green-600 hover:bg-green-700 text-white text-2xl font-extrabold rounded shadow-2xl border-4 border-black font-mono tracking-widest select-none"
                       onClick={() => handleChoose('SELL')}
                     >
-                      Should I sell this?
+                      SHOULD I SELL THIS?
                     </button>
-                    <div className="text-base font-bold text-slate-200 mt-2 font-mono">choose 1</div>
+                    <div className="text-xl font-bold text-slate-200 mt-2 font-mono select-none" style={{textShadow:'0 0 8px #00f2ff'}}>CHOOSE 1</div>
                   </div>
                 )}
 
                 {/* ANSWER SCREEN */}
                 {screen === 'answer' && (
-                  <div className="flex flex-col items-center justify-center w-full h-full gap-6 animate-fade-in">
-                    <div className="text-xl sm:text-2xl font-extrabold uppercase text-purple-300 drop-shadow-[0_2px_0_rgba(0,0,0,0.9)] font-mono tracking-widest mb-2">The Dork Says…</div>
-                    <div className={cn('w-full rounded-md border-2 border-purple-900 bg-gradient-to-r from-purple-700 to-purple-600 px-4 py-6 text-center text-white shadow-lg font-mono text-lg sm:text-xl font-extrabold tracking-wider', !reveal && 'blur-md opacity-60 scale-105 animate-pulse')}> 
+                  <div className="flex flex-col items-center justify-center w-full h-full gap-8 animate-fade-in">
+                    <div className="text-4xl sm:text-5xl font-extrabold uppercase text-purple-300 drop-shadow-[0_2px_0_rgba(0,0,0,0.9)] font-mono tracking-widest mb-2 select-none" style={{textShadow:'0 0 16px #a78bfa,0 2px 0 #000'}}>THE DORK SAYS…</div>
+                    <div className={cn('w-full rounded-md border-4 border-purple-900 bg-gradient-to-r from-purple-700 to-purple-600 px-8 py-10 text-center text-white shadow-2xl font-mono text-2xl sm:text-3xl font-extrabold tracking-widest select-none', !reveal && 'blur-md opacity-60 scale-105 animate-pulse')} style={{textShadow:'0 0 12px #a78bfa'}}>
                       {reveal ? answer : '…'}
                     </div>
-                    <button
-                      className="mt-4 px-6 py-2 bg-slate-700 hover:bg-slate-800 text-white text-base font-bold rounded shadow border-2 border-slate-900 font-mono tracking-wider"
-                      onClick={handleReset}
-                    >
-                      Play Again
-                    </button>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Feet / knobs */}
-            <div className="flex items-center justify-between px-4 pb-3">
-              <div className="w-8 h-3 bg-neutral-800 rounded-sm" />
-              <div className="w-8 h-3 bg-neutral-800 rounded-sm" />
+            <div className="flex items-center justify-between px-8 pb-5">
+              <div className="w-16 h-5 bg-neutral-800 rounded-sm" />
+              <div className="w-16 h-5 bg-neutral-800 rounded-sm" />
             </div>
           </div>
         </div>

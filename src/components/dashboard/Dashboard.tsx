@@ -389,7 +389,7 @@ function VaultAndGenieSection() {
     <section className="rounded-2xl border-2 border-black bg-card/80 p-4 sm:p-6 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
       <div className="grid gap-6 lg:grid-cols-2 lg:gap-8 items-start">
         <div className="space-y-4">
-          <div className="relative mx-auto h-20 w-full max-w-[420px] overflow-hidden sm:h-24 md:h-28">
+          <div className="relative mx-auto w-full max-w-[420px] overflow-hidden">
             <Image src={vaultImg} alt="Vault" fill className="object-contain" priority />
           </div>
           <div className="flex justify-center">
