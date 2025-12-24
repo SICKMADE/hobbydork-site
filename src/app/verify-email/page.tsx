@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/firebase/client-provider";
 
-// ...existing code...
+export default function VerifyEmailPage() {
   const { user, resendVerification } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
