@@ -52,15 +52,20 @@ export default function SettingsPage() {
             notifyOrders: profile?.notifyOrders ?? true,
             notifyISO24: profile?.notifyISO24 ?? true,
             notifySpotlight: profile?.notifySpotlight ?? true,
-            shippingAddress: profile?.shippingAddress ?? {
-                name: profile?.displayName || "",
-                address1: "",
-                address2: "",
-                city: "",
-                state: "",
-                zip: "",
-                country: "USA",
-            },
+            shippingAddress: profile?.shippingAddress
+                ? {
+                    ...profile.shippingAddress,
+                    address2: profile.shippingAddress.address2 ?? ""
+                }
+                : {
+                    name: profile?.displayName || "",
+                    address1: "",
+                    address2: "",
+                    city: "",
+                    state: "",
+                    zip: "",
+                    country: "USA",
+                },
         },
     });
 
