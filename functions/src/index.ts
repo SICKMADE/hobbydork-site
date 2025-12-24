@@ -1,3 +1,165 @@
+/**
+ * ===============================
+ * ADMIN: PRODUCT CRUD
+ * ===============================
+ */
+export const adminCreateProduct = functions.https.onCall(async (data, context) => {
+  requireAdmin(context);
+  // TODO: Validate data
+  const ref = await db.collection('products').add({ ...data, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+  return { id: ref.id };
+});
+
+export const adminUpdateProduct = functions.https.onCall(async (data, context) => {
+  requireAdmin(context);
+  const { id, ...updates } = data;
+  if (!id) throw new functions.https.HttpsError('invalid-argument', 'Product ID required');
+  await db.collection('products').doc(id).update({ ...updates, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+  return { success: true };
+});
+
+export const adminDeleteProduct = functions.https.onCall(async (data, context) => {
+  requireAdmin(context);
+  const { id } = data;
+  if (!id) throw new functions.https.HttpsError('invalid-argument', 'Product ID required');
+  await db.collection('products').doc(id).delete();
+  return { success: true };
+});
+
+export const adminListProducts = functions.https.onCall(async (_data, context) => {
+  requireAdmin(context);
+  const snap = await db.collection('products').get();
+  return { products: snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
+});
+
+/**
+ * ===============================
+ * ADMIN: ORDER MANAGEMENT
+ * ===============================
+ */
+export const adminListOrders = functions.https.onCall(async (_data, context) => {
+  requireAdmin(context);
+  const snap = await db.collection('orders').get();
+  return { orders: snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
+});
+
+export const adminUpdateOrder = functions.https.onCall(async (data, context) => {
+  requireAdmin(context);
+  const { id, ...updates } = data;
+  if (!id) throw new functions.https.HttpsError('invalid-argument', 'Order ID required');
+  await db.collection('orders').doc(id).update({ ...updates, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+  return { success: true };
+});
+
+export const adminDeleteOrder = functions.https.onCall(async (data, context) => {
+  requireAdmin(context);
+  const { id } = data;
+  if (!id) throw new functions.https.HttpsError('invalid-argument', 'Order ID required');
+  await db.collection('orders').doc(id).delete();
+  return { success: true };
+});
+
+/**
+ * ===============================
+ * ADMIN: USER PURCHASE QUERIES
+ * ===============================
+ */
+export const adminListUserPurchases = functions.https.onCall(async (data, context) => {
+  requireAdmin(context);
+  const { userId } = data;
+  if (!userId) throw new functions.https.HttpsError('invalid-argument', 'User ID required');
+  const snap = await db.collection('orders').where('buyerUid', '==', userId).get();
+  return { purchases: snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
+});
+
+// Helper: Require admin
+function requireAdmin(context: functions.https.CallableContext) {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+  if (context.auth.token.role !== 'ADMIN') {
+    throw new functions.https.HttpsError('permission-denied', 'Admin privileges required');
+  }
+}
+// Send review request notification after order is fulfilled
+export const requestReviewOnFulfillment = functions.firestore
+  .document('orders/{orderId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    if (!before || !after) return;
+    // Only trigger when order transitions to fulfilled and hasn't been asked for review yet
+    if (before.fulfilled !== true && after.fulfilled === true && !after.reviewRequested && after.buyerUid) {
+      await sendNotification(after.buyerUid, {
+        title: 'How was your order?',
+        body: 'Please leave a review for your recent purchase! Your feedback helps our community.',
+        type: 'review-request',
+        orderId: context.params.orderId,
+      });
+      await change.after.ref.update({ reviewRequested: true });
+    }
+  });
+// Helper to send notification
+async function sendNotification(uid: string, data: any) {
+  await db.collection('notifications').add({
+    uid,
+    seen: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    ...data,
+  });
+}
+/**
+ * ===============================
+ * SPOTLIGHT FULFILLMENT & EXPIRATION
+ * ===============================
+ */
+// Fulfill spotlight slot when order is paid
+export const fulfillSpotlightOnPaid = functions.firestore
+  .document('orders/{orderId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    if (!before || !after) return;
+    if (before.state !== 'PAID' && after.state === 'PAID' && after.listingTitle === 'Store Spotlight Slot') {
+      const storeId = after.storeId;
+      if (!storeId) return;
+      const now = admin.firestore.Timestamp.now();
+      const expiresAt = admin.firestore.Timestamp.fromMillis(now.toMillis() + 7 * 24 * 60 * 60 * 1000);
+      await db.collection('spotlights').doc(storeId).set({
+        storeId,
+        orderId: context.params.orderId,
+        startsAt: now,
+        expiresAt,
+        active: true,
+        createdAt: now,
+      });
+      await change.after.ref.update({ fulfilled: true });
+      // Send notification to user
+      if (after.buyerUid) {
+        await sendNotification(after.buyerUid, {
+          title: 'Spotlight Activated!',
+          body: 'Your store is now featured in the Spotlight for 7 days.',
+          type: 'spotlight',
+          storeId,
+          expiresAt,
+        });
+      }
+    }
+  });
+
+// Scheduled function to expire spotlights after 1 week
+export const expireSpotlights = functions.pubsub
+  .schedule('every 1 hours')
+  .onRun(async () => {
+    const now = admin.firestore.Timestamp.now();
+    const snap = await db.collection('spotlights').where('active', '==', true).where('expiresAt', '<=', now).get();
+    const batch = db.batch();
+    snap.forEach(doc => {
+      batch.update(doc.ref, { active: false });
+    });
+    await batch.commit();
+    return null;
+  });
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import Stripe from "stripe";

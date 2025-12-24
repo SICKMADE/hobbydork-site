@@ -1,40 +1,21 @@
+import { useAuth } from '@/hooks/use-auth';
 
-
-
-'use client';
-
+import 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  where,
-  doc,
-} from 'firebase/firestore';
-
-import { useAuth } from '@/hooks/use-auth';
-import {
-  useFirestore,
-  useCollection,
-  useMemoFirebase,
-  useDoc,
-} from '@/firebase';
-
-import { Button } from '@/components/ui/button';
+import { Bell, Store } from 'lucide-react';
+import { collection, query, orderBy, limit, where, doc } from 'firebase/firestore';
+import { useMemoFirebase, useFirestore } from '@/firebase/provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useDoc } from '@/firebase/firestore/use-doc';
 import StoreCard from '@/components/StoreCard';
 import type { Store as StoreType, User, Listing } from '@/lib/types';
-import {
-  listingConverter,
-  storeConverter,
-  spotlightConverter,
-} from '@/firebase/firestore/converters';
+import { listingConverter, storeConverter, spotlightConverter } from '@/firebase/firestore/converters';
 import { StandaloneVaultDoor } from './StandaloneVaultDoor';
 import AskHobbyDork from './AskHobbyDork';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Store } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import ListingCard from '../ListingCard';
 import { resolveAvatarUrl } from '@/lib/default-avatar';
 
@@ -203,6 +184,8 @@ function SpotlightStoresSection() {
       </div>
     </section>
   );
+          // NotificationBell component removed as requested
+
 }
 
 // =====================

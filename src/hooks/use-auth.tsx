@@ -300,12 +300,9 @@ function useProvideAuth(): AuthContextType {
     } catch (e: any) {
       const code = String(e?.code ?? '');
 
-      const configuredSiteUrl =
-        typeof window !== 'undefined'
-          ? (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/+$/g, '')
-          : (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/+$/g, '');
 
-      const continueUrl = configuredSiteUrl ? `${configuredSiteUrl}/verify-email` : '';
+      // Always use production URL for continueUrl
+      const continueUrl = 'https://hobbydork.com/verify-email';
 
       const domainHelpMessage =
         `Resend blocked by Firebase domain settings. ` +

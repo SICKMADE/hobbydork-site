@@ -1,5 +1,6 @@
-
-'use client';
+"use client";
+import { Button } from '@/components/ui/button';
+// ...existing code...
 
 import {
   SidebarHeader,
@@ -17,6 +18,9 @@ import {
   Store,
   MessageSquare,
   Newspaper,
+// ...existing code...
+
+  // Notification Bell Button (styled like search, but smaller)
   Heart,
   Settings,
   User,
@@ -62,6 +66,30 @@ const RedLineSeparator = () => (
 );
 
 export default function SidebarNav() {
+    function NotificationBellIcon() {
+      const unread = unreadNotificationsCount;
+      const baseClass =
+        'relative flex items-center justify-center h-8 w-8 rounded-full border-4 border-black transition-all duration-150 hover:scale-105 active:scale-95 shadow-[3px_3px_0_#d90429]';
+      const colorClass =
+        unread > 0
+          ? 'bg-red-500 text-white border-red-600'
+          : 'bg-gray-100 text-gray-400 border-gray-400';
+      return (
+        <Button
+          type="button"
+          aria-label="Notifications"
+          className={`${baseClass} ${colorClass} comic-button`}
+          onClick={() => router.push('/notifications')}
+        >
+          <Bell className="h-4 w-4" />
+          {unread > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-yellow-400 px-1 text-[10px] font-bold text-black border-2 border-white shadow-md">
+              {unread > 9 ? '9+' : unread}
+            </span>
+          )}
+        </Button>
+      );
+    }
   const { user, profile, logout } = useAuth();
   const { isMobile, setOpen } = useSidebar();
   const router = useRouter();
@@ -95,7 +123,7 @@ export default function SidebarNav() {
     useCollection<NotificationDoc>(notificationsQuery);
 
   const unreadNotificationsCount =
-    (notifications || []).filter((n) => !n.isRead && !n.readAt).length;
+    (notifications || []).filter((n: NotificationDoc) => !n.isRead && !n.readAt).length;
 
   const mainMenuItems = [
     { href: '/', label: 'Home', icon: Home },
@@ -121,7 +149,8 @@ export default function SidebarNav() {
     { href: '/favorites', label: 'Favorite Stores', icon: Store },
     { href: '/cart', label: 'Cart', icon: ShoppingCart },
     { href: '/messages', label: 'Messages', icon: MessageSquare },
-    { href: '/notifications', label: 'Notifications', icon: Bell },
+    // Notifications menu item removed, only popout button remains
+    { href: '/seller-analytics', label: 'Sales Analytics', icon: Star },
   ];
 
   const sellerMenuItems = [
@@ -140,21 +169,24 @@ export default function SidebarNav() {
   return (
     <>
       {/* Profile block at top */}
-      <SidebarHeader className="p-4 pt-6">
+      <SidebarHeader className="p-4 pt-6 flex items-center gap-4">
         {user && (
-          <div className="flex items-center gap-3 rounded-xl border-2 border-black bg-card/70 px-3 py-2 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
-            <Avatar className="h-9 w-9">
-              <AvatarImage src={avatarUrl} />
-              <AvatarFallback />
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold truncate">
-                {displayName}
-              </div>
-              <div className="text-[11px] text-muted-foreground truncate">
-                {profile?.isSeller ? 'Seller' : 'Collector'}
+          <div className="flex items-center gap-4 w-full">
+            <div className="flex items-center gap-3 flex-1 rounded-xl border-2 border-black bg-card/70 px-3 py-2 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={avatarUrl} />
+                <AvatarFallback />
+              </Avatar>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold truncate">
+                  {displayName}
+                </div>
+                <div className="text-[11px] text-muted-foreground truncate">
+                  {profile?.isSeller ? 'Seller' : 'Collector'}
+                </div>
               </div>
             </div>
+            <NotificationBellIcon />
           </div>
         )}
       </SidebarHeader>
@@ -177,7 +209,7 @@ export default function SidebarNav() {
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => navigate(item.href)}
-                      className="justify-start gap-3 text-base font-semibold tracking-wide max-w-[180px] px-2 py-2 rounded-md"
+                      className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
                     >
                       <Icon className="h-5 w-5" />
                       <span className="truncate">{item.label}</span>
@@ -207,7 +239,7 @@ export default function SidebarNav() {
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => navigate(item.href)}
-                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                      className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
                     >
                       <Icon className="h-5 w-5" />
                       <span>{item.label}</span>
@@ -228,7 +260,7 @@ export default function SidebarNav() {
                   <SidebarMenuButton
                     isActive={pathname === '/store/setup'}
                     onClick={() => navigate('/store/setup')}
-                    className="justify-start gap-4 text-base font-semibold tracking-wide text-green-600"
+                    className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md text-green-600"
                   >
                     <span>Apply to Become a Seller</span>
                   </SidebarMenuButton>
@@ -257,7 +289,7 @@ export default function SidebarNav() {
                       onClick={() =>
                         navigate(`/store/${profile.storeId}`)
                       }
-                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                      className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
                     >
                       <Store className="h-5 w-5" />
                       <span>My Store</span>
@@ -273,7 +305,7 @@ export default function SidebarNav() {
                       <SidebarMenuButton
                         isActive={isActive}
                         onClick={() => navigate(item.href)}
-                        className="justify-start gap-4 text-base font-semibold tracking-wide"
+                        className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
                       >
                         <Icon className="h-5 w-5" />
                         <span>{item.label}</span>
@@ -302,7 +334,7 @@ export default function SidebarNav() {
                       <SidebarMenuButton
                         isActive={isActive}
                         onClick={() => navigate(item.href)}
-                        className="justify-start gap-4 text-base font-semibold tracking-wide"
+                        className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
                       >
                         <Icon className="h-5 w-5" />
                         <span>{item.label}</span>
@@ -331,7 +363,7 @@ export default function SidebarNav() {
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => navigate(item.href)}
-                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                      className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
                     >
                       <Icon className="h-5 w-5" />
                       <span>{item.label}</span>
@@ -343,7 +375,7 @@ export default function SidebarNav() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={handleLogout}
-                  className="justify-start gap-4 text-base font-semibold tracking-wide"
+                  className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
                 >
                   <LogOut className="h-5 w-5" />
                   <span>Logout</span>
