@@ -46,13 +46,13 @@ export default function CartPage() {
   const form = useForm<z.infer<typeof shippingSchema>>({
     resolver: zodResolver(shippingSchema),
     defaultValues: {
-      name: profile?.displayName || "",
-      address1: "",
-      address2: "",
-      city: "",
-      state: "",
-      zip: "",
-      country: "USA",
+      name: profile?.shippingAddress?.name || profile?.displayName || "",
+      address1: profile?.shippingAddress?.address1 || "",
+      address2: profile?.shippingAddress?.address2 || "",
+      city: profile?.shippingAddress?.city || "",
+      state: profile?.shippingAddress?.state || "",
+      zip: profile?.shippingAddress?.zip || "",
+      country: profile?.shippingAddress?.country || "USA",
     },
   });
 

@@ -370,47 +370,41 @@ function NewListingsSection() {
    Vault + Genie combined section
    ======================= */
 
+/* =======================
+   VAULT + ASK (FIXED)
+======================= */
+
 function VaultAndGenieSection() {
-  const [answer, setAnswer] = useState<string | null>(null);
-  const [isThinking, setIsThinking] = useState(false);
-  const [revealNonce, setRevealNonce] = useState(0);
-
-  const handleAsk = (type: 'BUY' | 'SELL') => {
-    setIsThinking(true);
-
-    setTimeout(() => {
-      setAnswer(getRandomAnswer(type));
-      setRevealNonce((n) => n + 1);
-      setIsThinking(false);
-    }, 500);
-  };
-
   return (
-    <section className="rounded-2xl border-2 border-black bg-card/80 p-4 sm:p-6 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
-      <div className="grid gap-6 lg:grid-cols-2 lg:gap-8 items-start">
-        <div className="space-y-4">
-          <div className="relative mx-auto w-full max-w-[420px] overflow-hidden">
-            <Image src={vaultImg} alt="Vault" fill className="object-contain" priority />
+    <section className="rounded-2xl border-2 border-black bg-card/80 p-6 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+      <div className="grid gap-8 lg:grid-cols-2 items-start">
+        {/* VAULT */}
+        <div className="flex flex-col items-center gap-4 p-4 rounded-lg border bg-muted">
+          <div className="relative w-64 h-32">
+            <Image src="/vault.png" alt="Vault" fill className="object-contain" />
           </div>
-          <div className="flex justify-center">
-            <div className="w-56 sm:w-72 lg:w-80">
-              <StandaloneVaultDoor />
-            </div>
+          <div className="flex items-center justify-center">
+            <StandaloneVaultDoor />
           </div>
+          <p className="text-center text-sm text-muted-foreground max-w-md">
+            Somewhere on this site is a <b>4-digit pin</b>.  
+            Find it. Enter it. Win something nice.  
+            Clues drop—pay attention.
+          </p>
         </div>
 
-        <div className="space-y-4">
-            <div className="w-full flex justify-center">
-              <div className="w-56 sm:w-72 lg:w-80">
-                <AskHobbyDork />
-              </div>
-            </div>
+        {/* ASK HOBBYDORK */}
+        <div className="flex flex-col items-center gap-4 p-4 rounded-lg border bg-muted">
+          <div className="relative w-64 h-32">
+            <Image src="/ask.png" alt="ask" fill className="object-contain" />
+          </div>
+          <AskHobbyDork />
+          <p className="text-center text-sm text-muted-foreground max-w-md ">Can't Make Up Your Mind? Let HobbbyDork Decide.</p>
         </div>
       </div>
     </section>
   );
 }
-
 /* =======================
    Main Dashboard
    ======================= */

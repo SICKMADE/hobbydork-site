@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,35 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/firebase/client-provider";
 
-export default function VerifyEmailPage() {
+// ...existing code...
   const { user, resendVerification } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [sending, setSending] = useState(false);
   const [checking, setChecking] = useState(false);
+
+  // Auto-check verification status on page load
+  useEffect(() => {
+    async function autoCheck() {
+      if (!auth.currentUser) return;
+      await (auth.currentUser.reload?.() ?? Promise.resolve());
+      try {
+        await auth.currentUser.getIdToken(true);
+      } catch {}
+      const current = auth.currentUser;
+      if (current?.emailVerified) {
+        toast({ title: "Verified", description: "Thanks — continuing setup." });
+        router.replace('/');
+        router.refresh();
+        setTimeout(() => {
+          if (window.location.pathname === '/verify-email') {
+            window.location.assign('/');
+          }
+        }, 400);
+      }
+    }
+    autoCheck();
+  }, [router, toast]);
 
   const handleResend = async () => {
     try {

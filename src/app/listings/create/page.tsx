@@ -81,6 +81,27 @@ export default function CreateListingPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number[]>([]);
   const [publishNow, setPublishNow] = useState(true);
+  // Shipping fields
+  const [shippingType, setShippingType] = useState<"FREE" | "PAID" | "">("");
+  const [weight, setWeight] = useState("");
+  const [dimensions, setDimensions] = useState({ length: "", width: "", height: "" });
+  // Shipping cost estimate
+  const [shippingEstimate, setShippingEstimate] = useState<string | null>(null);
+
+  // Estimate shipping cost when weight changes (simple formula: $4 base + $0.25/oz)
+  useEffect(() => {
+    if (shippingType === "PAID" && weight) {
+      const w = parseFloat(weight);
+      if (!isNaN(w) && w > 0) {
+        const estimate = 4 + 0.25 * w;
+        setShippingEstimate(`$${estimate.toFixed(2)}`);
+      } else {
+        setShippingEstimate(null);
+      }
+    } else {
+      setShippingEstimate(null);
+    }
+  }, [shippingType, weight]);
 
   const storeId = userData?.storeId || "";
   const isSeller = Boolean(userData?.isSeller);
@@ -97,45 +118,56 @@ export default function CreateListingPage() {
   }
 
   async function handleSubmit() {
-    if (!title.trim() || !price) {
-      toast({ title: "Missing fields" });
+    // Validate required fields
+    if (!title.trim()) {
+      toast({ title: "Title required" });
       return;
     }
-
+    if (!description.trim()) {
+      toast({ title: "Description required" });
+      return;
+    }
+    if (!price) {
+      toast({ title: "Price required" });
+      return;
+    }
     if (!user) {
       toast({ title: "You must be signed in" });
       return;
     }
-
     if (images.length === 0) {
       toast({ title: "Upload at least one image" });
       return;
     }
-
     if (!storeId) {
       toast({ title: "Store not ready", description: "Please finish store setup first." });
       return;
     }
-
+    if (!shippingType) {
+      toast({ title: "Select shipping type" });
+      return;
+    }
+    if (shippingType === "PAID") {
+      if (!weight || !dimensions.length || !dimensions.width || !dimensions.height) {
+        toast({ title: "Enter weight and all dimensions for paid shipping" });
+        return;
+      }
+    }
     const numericPrice = Number(price);
     if (Number.isNaN(numericPrice) || numericPrice <= 0) {
       toast({ title: "Price required", description: "Enter a valid price greater than 0.", variant: "destructive" });
       return;
     }
-
     const numericQty = Number(quantity || "1");
     if (Number.isNaN(numericQty) || numericQty <= 0) {
       toast({ title: "Quantity required", description: "Enter a valid quantity (1 or more).", variant: "destructive" });
       return;
     }
-
     const tagArray = tags
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean);
-
     setUploading(true);
-
     try {
       // 1️⃣ Create listing
       const state = publishNow ? "ACTIVE" : "DRAFT";
@@ -149,26 +181,24 @@ export default function CreateListingPage() {
         ownerUid: user.uid,
         storeId,
         state,
-        // Back-compat: some pages still look at `status`
         status: publishNow ? "ACTIVE" : "DRAFT",
         quantityAvailable: numericQty,
         imageUrls: [],
         primaryImageUrl: "",
+        shippingType,
+        weight: shippingType === "PAID" ? weight : null,
+        dimensions: shippingType === "PAID" ? dimensions : null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-
       const listingId = listingRef.id;
       const urls: string[] = [];
-
       // 2️⃣ Upload images
       for (let i = 0; i < images.length; i++) {
         const file = images[i];
-        // Must match `storage.rules` (listingImages/{ownerUid}/{listingId}/{imageFilename})
         const path = `listingImages/${user.uid}/${listingId}/${file.name}`;
         const storageRef = ref(storage, path);
         const uploadTask = uploadBytesResumable(storageRef, file);
-
         await new Promise<void>((resolve, reject) => {
           uploadTask.on(
             "state_changed",
@@ -188,14 +218,12 @@ export default function CreateListingPage() {
           );
         });
       }
-
       // 3️⃣ Update listing with images
       await updateDoc(doc(db, "listings", listingId), {
         imageUrls: urls,
         primaryImageUrl: urls[0],
         updatedAt: serverTimestamp(),
       });
-
       toast({ title: "Listing created" });
       router.push(`/listings/${listingId}`);
     } catch (e) {
@@ -352,6 +380,76 @@ export default function CreateListingPage() {
                   onChange={(e) => setTags(e.target.value)}
                 />
               </div>
+
+
+              {/* Shipping choice */}
+              <div className="space-y-2">
+                <Label>Shipping</Label>
+                <Select value={shippingType} onValueChange={(val) => setShippingType(val as "FREE" | "PAID")}> 
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select shipping type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FREE">Free Shipping</SelectItem>
+                    <SelectItem value="PAID">Buyer Pays Shipping</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* If paid shipping, require weight and dimensions */}
+              {shippingType === "PAID" && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="weight">Package Weight (oz)</Label>
+                      <Input
+                        id="weight"
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        value={weight}
+                        onChange={(e) => setWeight(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Dimensions (inches)</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="L"
+                          type="number"
+                          min="1"
+                          value={dimensions.length}
+                          onChange={(e) => setDimensions((d) => ({ ...d, length: e.target.value }))}
+                          className="w-16"
+                        />
+                        <span>x</span>
+                        <Input
+                          placeholder="W"
+                          type="number"
+                          min="1"
+                          value={dimensions.width}
+                          onChange={(e) => setDimensions((d) => ({ ...d, width: e.target.value }))}
+                          className="w-16"
+                        />
+                        <span>x</span>
+                        <Input
+                          placeholder="H"
+                          type="number"
+                          min="1"
+                          value={dimensions.height}
+                          onChange={(e) => setDimensions((d) => ({ ...d, height: e.target.value }))}
+                          className="w-16"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  {shippingEstimate && (
+                    <div className="text-sm text-muted-foreground mt-2">
+                      Estimated shipping cost: <span className="font-semibold">{shippingEstimate}</span>
+                    </div>
+                  )}
+                </>
+              )}
 
               <div className="flex items-center gap-3">
                 <Checkbox

@@ -1,6 +1,9 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import Stripe from "stripe";
+import { checkStripeSellerStatus } from "./checkStripeSellerStatus";
+// Export the new function
+export { checkStripeSellerStatus };
 
 admin.initializeApp();
 const db = admin.firestore();

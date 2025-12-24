@@ -1,4 +1,3 @@
-
 'use client';
 
 // --- Inlined `cn` utility to remove external dependency ---
@@ -15,7 +14,6 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { handleVaultPinCheck } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, X } from 'lucide-react';
-// image removed per UX request (use icon + heading instead)
 import React from 'react';
 
 
@@ -29,7 +27,7 @@ const AwardIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 const MailIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect width="20" height="16" x="2" y="4" rx="2" />
+        <rect width="20" height="16" x="2" y="4" rx="2" ry="2" />
         <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
     </svg>
 );
@@ -118,24 +116,24 @@ Button.displayName = 'Button';
 // --- Self-Contained Vault Door ---
 function SafeDoorIcon() {
   return (
-    <div className="relative w-56 h-56 sm:w-72 sm:h-72 lg:w-80 lg:h-80 flex items-center justify-center cursor-pointer group">
-      <div className="absolute w-full h-full rounded-full bg-gradient-to-br from-neutral-500 to-neutral-700 shadow-lg" />
-        <div className="absolute w-[95%] h-[95%] rounded-full bg-gradient-to-br from-neutral-600 to-neutral-700 shadow-inner" />
-        <div className="absolute w-[85%] h-[85%] rounded-full bg-gradient-to-b from-neutral-500 to-neutral-600 border-4 border-neutral-700" />
-          <div className="absolute w-28 h-28 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-full bg-gradient-to-br from-neutral-600 via-neutral-700 to-neutral-800 border-4 border-neutral-800 shadow-2xl transition-transform duration-300 group-hover:rotate-45">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 sm:w-44 lg:w-48 h-2 sm:h-2.5 bg-neutral-600 rounded-full" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 sm:w-44 lg:w-48 h-2 sm:h-2.5 bg-neutral-600 rounded-full rotate-90" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-36 lg:h-36 rounded-full border-2 border-neutral-700" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-neutral-400 to-neutral-600 shadow-inner" />
+    <div className="relative w-64 h-48 flex items-center justify-center cursor-pointer group">
+      <div className="absolute w-full h-full rounded-lg bg-gradient-to-br from-neutral-600 to-neutral-800 shadow-lg" />
+      <div className="absolute w-[95%] h-[90%] rounded-lg bg-gradient-to-br from-neutral-700 to-neutral-800 shadow-inner" />
+      <div className="absolute w-[85%] h-[80%] rounded-lg bg-gradient-to-b from-neutral-600 to-neutral-700 border-4 border-neutral-800" />
+      <div className="absolute w-32 h-32 rounded-full bg-gradient-to-br from-neutral-700 via-neutral-800 to-neutral-900 border-4 border-neutral-900 shadow-2xl transition-transform duration-300 group-hover:rotate-45">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-2.5 bg-neutral-600 rounded-full" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-2.5 bg-neutral-600 rounded-full rotate-90" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 rounded-full border-2 border-neutral-700" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-gradient-to-br from-neutral-500 to-neutral-700 shadow-inner" />
       </div>
-      <div className="absolute -bottom-2 -right-2 w-16 h-12 sm:w-20 sm:h-16 bg-neutral-900 rounded-lg p-2 grid grid-cols-2 gap-1 border-2 border-neutral-950 shadow-lg">
+      <div className="absolute -bottom-2 -right-2 w-16 h-12 bg-neutral-900 rounded-lg p-2 grid grid-cols-2 gap-1 border-2 border-neutral-950 shadow-lg">
           <div className="w-full h-full bg-neutral-700/50 rounded-sm" />
           <div className="w-full h-full bg-neutral-700/50 rounded-sm" />
           <div className="w-full h-full bg-neutral-700/50 rounded-sm" />
           <div className="w-full h-full bg-red-500/70 rounded-sm animate-pulse" />
       </div>
-      <div className="absolute left-[-16px] sm:left-[-20px] top-[36px] sm:top-[50px] w-7 sm:w-8 h-16 sm:h-20 bg-neutral-800 rounded-md border-t-2 border-b-2 border-neutral-900 shadow-md" />
-      <div className="absolute left-[-16px] sm:left-[-20px] bottom-[36px] sm:bottom-[50px] w-7 sm:w-8 h-16 sm:h-20 bg-neutral-800 rounded-md border-t-2 border-b-2 border-neutral-900 shadow-md" />
+      <div className="absolute left-[-16px] top-[40px] w-6 h-16 bg-neutral-800 rounded-md border-t-2 border-b-2 border-neutral-900 shadow-md" />
+      <div className="absolute left-[-16px] bottom-[40px] w-6 h-16 bg-neutral-800 rounded-md border-t-2 border-b-2 border-neutral-900 shadow-md" />
     </div>
   );
 }
@@ -185,18 +183,21 @@ export function StandaloneVaultDoor() {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open ? resetVault() : setIsOpen(true)}>
       <DialogTrigger asChild>
-        <button className="bg-card p-4 sm:p-6 rounded-lg flex flex-col items-center gap-4 text-center">
-          <div className="text-center">
-            <div className="text-sm font-semibold uppercase tracking-wide text-slate-300">Unlock the Vault</div>
-          </div>
+        <button className="bg-card p-8 rounded-lg flex flex-col items-center gap-4 text-center" aria-label="Open Vault" title="Open Vault">
+          <span className="sr-only">Open Vault</span>
+          <h3 className="text-2xl font-bold"></h3>
+          <p className="max-w-md text-muted-foreground"></p>
           <SafeDoorIcon />
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
-        <div className="flex justify-center mb-4">
-          <div className="text-center">
-            <div className="text-lg font-semibold tracking-tight">Unlock the Vault</div>
-          </div>
+        <div className="sr-only">
+            <DialogTitle>{isCorrect ? "Vault Unlocked" : "Unlock the Vault"}</DialogTitle>
+            <DialogDescription>
+            {isCorrect
+                ? "You have successfully unlocked the vault. Claim your prize."
+                : "Enter the 4-digit PIN to unlock the vault and win a prize."}
+            </DialogDescription>
         </div>
 
         {isCorrect ? (

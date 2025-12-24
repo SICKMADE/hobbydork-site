@@ -158,16 +158,35 @@ export default function OrderDetail({ params }: any) {
 function SellerFulfillForm({ onSubmit }: any) {
   const [tracking, setTracking] = useState("");
   const [carrier, setCarrier] = useState("");
+  const [labelPurchased, setLabelPurchased] = useState(false);
+
+  // Placeholder for label purchase logic
+  function handlePurchaseLabel() {
+    // In a real integration, this would open a shipping label purchase flow
+    setLabelPurchased(true);
+  }
+
+  const canMarkShipped = labelPurchased && carrier.trim() && tracking.trim();
 
   return (
     <div className="p-4 border rounded bg-white shadow space-y-3">
       <p className="font-semibold text-lg">Fulfill Order</p>
 
+      <button
+        className={`px-4 py-2 rounded ${labelPurchased ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+        onClick={handlePurchaseLabel}
+        disabled={labelPurchased}
+        type="button"
+      >
+        {labelPurchased ? 'Shipping Label Purchased' : 'Purchase Shipping Label'}
+      </button>
+
       <input
-        className="border p-2 rounded w-full"
+        className="border p-2 rounded w-full mt-2"
         placeholder="Carrier (USPS, UPS, FedEx)"
         value={carrier}
         onChange={(e) => setCarrier(e.target.value)}
+        disabled={!labelPurchased}
       />
 
       <input
@@ -175,14 +194,20 @@ function SellerFulfillForm({ onSubmit }: any) {
         placeholder="Tracking Number"
         value={tracking}
         onChange={(e) => setTracking(e.target.value)}
+        disabled={!labelPurchased}
       />
 
       <button
         onClick={() => onSubmit(tracking, carrier)}
-        className="px-4 py-2 bg-blue-600 text-white rounded"
+        className={`px-4 py-2 rounded ${canMarkShipped ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-500'}`}
+        disabled={!canMarkShipped}
+        type="button"
       >
         Mark as Shipped
       </button>
+      {!labelPurchased && (
+        <p className="text-xs text-muted-foreground mt-1">You must purchase a shipping label before entering tracking info.</p>
+      )}
     </div>
   );
 }

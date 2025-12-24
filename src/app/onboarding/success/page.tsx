@@ -2,53 +2,43 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useFirestore } from "@/firebase";
-import { doc, updateDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 export default function OnboardingSuccessPage() {
   const { user } = useAuth();
-  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function finish() {
-      if (!user || !firestore) return;
-
+      if (!user) return;
       try {
-        const userRef = doc(firestore, "users", user.uid);
-        const snap = await getDoc(userRef);
-
-        // If stripeAccountId exists, mark onboarding complete
-        const data = snap.exists() ? snap.data() : null;
-        if (data?.stripeAccountId) {
-          await updateDoc(userRef, {
-            stripeOnboarded: true,
-            updatedAt: serverTimestamp(),
-          });
-
+        const fn = httpsCallable(getFunctions(undefined, "us-central1"), "checkStripeSellerStatus");
+        const res: any = await fn({});
+        if (res?.data?.isSeller) {
           toast({ title: "Stripe connected", description: "You can finish setting up your store." });
-          router.push("/store/create");
-          return;
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Stripe not connected",
+            description: res?.data?.reason || "We couldn't verify your Stripe account. Please try connecting again.",
+          });
         }
-
-        // If no account id found, inform the user
-        toast({ variant: "destructive", title: "Stripe not connected", description: "We couldn't find your Stripe account. Please try connecting again." });
         router.push("/store/create");
       } catch (err: any) {
         toast({ variant: "destructive", title: "Error", description: err?.message || "Unexpected error" });
+        router.push("/store/create");
       } finally {
         setLoading(false);
       }
     }
-
     finish();
-  }, [user, firestore, router, toast]);
+  }, [user, router, toast]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">

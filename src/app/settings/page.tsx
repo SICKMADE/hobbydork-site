@@ -17,6 +17,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 
+const shippingAddressSchema = z.object({
+    name: z.string().min(1, "Name required"),
+    address1: z.string().min(1, "Address required"),
+    address2: z.string().optional(),
+    city: z.string().min(1, "City required"),
+    state: z.string().min(1, "State required"),
+    zip: z.string().min(1, "ZIP required"),
+    country: z.string().min(1, "Country required"),
+});
+
 const settingsSchema = z.object({
     paymentMethod: z.literal("STRIPE"),
     paymentIdentifier: z.string().optional(),
@@ -24,6 +34,7 @@ const settingsSchema = z.object({
     notifyOrders: z.boolean(),
     notifyISO24: z.boolean(),
     notifySpotlight: z.boolean(),
+    shippingAddress: shippingAddressSchema.optional(),
 });
 
 export default function SettingsPage() {
@@ -41,6 +52,15 @@ export default function SettingsPage() {
             notifyOrders: profile?.notifyOrders ?? true,
             notifyISO24: profile?.notifyISO24 ?? true,
             notifySpotlight: profile?.notifySpotlight ?? true,
+            shippingAddress: profile?.shippingAddress ?? {
+                name: profile?.displayName || "",
+                address1: "",
+                address2: "",
+                city: "",
+                state: "",
+                zip: "",
+                country: "USA",
+            },
         },
     });
 
@@ -104,6 +124,67 @@ export default function SettingsPage() {
                                 <FormField control={form.control} name="notifyOrders" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4"><div className="space-y-0.5"><FormLabel className="text-base">Order Updates</FormLabel><FormMessage /></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
                                 <FormField control={form.control} name="notifyISO24" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4"><div className="space-y-0.5"><FormLabel className="text-base">ISO24 Activity</FormLabel><FormMessage /></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
                                 <FormField control={form.control} name="notifySpotlight" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4"><div className="space-y-0.5"><FormLabel className="text-base">Store Spotlight</FormLabel><FormMessage /></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Shipping Address</CardTitle>
+                                <CardDescription>Your default shipping address will be used for purchases and order fulfillment. You can update it anytime.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <FormField control={form.control} name="shippingAddress.name" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Name</FormLabel>
+                                        <FormControl><Input {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={form.control} name="shippingAddress.address1" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Address</FormLabel>
+                                        <FormControl><Input {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={form.control} name="shippingAddress.address2" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Address 2</FormLabel>
+                                        <FormControl><Input {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormField control={form.control} name="shippingAddress.city" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>City</FormLabel>
+                                            <FormControl><Input {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="shippingAddress.state" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>State</FormLabel>
+                                            <FormControl><Input {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormField control={form.control} name="shippingAddress.zip" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>ZIP</FormLabel>
+                                            <FormControl><Input {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="shippingAddress.country" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Country</FormLabel>
+                                            <FormControl><Input {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </div>
                             </CardContent>
                         </Card>
                         <Button type="submit" disabled={isSubmitting}>
