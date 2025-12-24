@@ -51,6 +51,7 @@ type UserDoc = {
   paymentIdentifier: string | null;
   createdAt?: unknown;
   updatedAt?: unknown;
+  shippingAddress?: import("@/lib/types").ShippingAddress;
   [key: string]: unknown;
 };
 
@@ -75,6 +76,7 @@ const EMPTY_USERDOC: UserDoc = {
   stripeTermsAgreed: false,
   paymentMethod: null,
   paymentIdentifier: null,
+  shippingAddress: undefined,
 };
 
 type AuthContextType = {
