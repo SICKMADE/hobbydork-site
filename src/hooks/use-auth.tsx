@@ -290,13 +290,10 @@ function useProvideAuth(): AuthContextType {
       return;
     }
 
-    const actionCodeSettings =
-      typeof window !== 'undefined'
-        ? {
-            url: `${(process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/+$/g, '')}/verify-email`,
-            handleCodeInApp: false,
-          }
-        : undefined;
+    const actionCodeSettings = {
+      url: 'https://hobbydork.com/verify-email',
+      handleCodeInApp: false,
+    };
 
     try {
       await sendEmailVerification(current, actionCodeSettings);

@@ -101,6 +101,7 @@ export default function SidebarNav() {
     { href: '/', label: 'Home', icon: Home },
     { href: '/search', label: 'Browse', icon: Search },
     { href: '/stores', label: 'Stores', icon: Users },
+    { href: '/hobbydork-store', label: 'HobbyDork Store', icon: Store },
     { href: '/iso24', label: 'ISO24', icon: Newspaper },
     { href: '/chat', label: 'Community', icon: MessageSquare },
     { href: '/giveaway', label: 'Giveaway', icon: Star },
@@ -176,10 +177,10 @@ export default function SidebarNav() {
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => navigate(item.href)}
-                      className="justify-start gap-4 text-base font-semibold tracking-wide"
+                      className="justify-start gap-3 text-base font-semibold tracking-wide max-w-[180px] px-2 py-2 rounded-md"
                     >
                       <Icon className="h-5 w-5" />
-                      <span>{item.label}</span>
+                      <span className="truncate">{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
