@@ -1,12 +1,12 @@
 "use client";
 
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthComponent from "@/components/auth/AuthComponent";
 import { useUser } from "@/firebase";
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isUserLoading } = useUser();
@@ -59,5 +59,13 @@ export default function LoginPage() {
       )}
       <AuthComponent initialTab={initialTab} />
     </>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <LoginPageInner />
+    </Suspense>
   );
 }
