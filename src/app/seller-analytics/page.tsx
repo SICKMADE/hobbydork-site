@@ -1,6 +1,7 @@
+
+"use client";
 import { useFirestore } from '@/firebase/provider';
 import { query, collection, orderBy } from 'firebase/firestore';
-"use client";
 
 import { useAuth } from "@/hooks/use-auth";
 import { useCollection } from "@/firebase";

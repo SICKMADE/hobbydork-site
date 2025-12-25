@@ -34,10 +34,8 @@ service cloud.firestore {
     }
 
     function userIsActive() {
-      // "ACTIVE" means not suspended/banned.
-      // NOTE: We do NOT require email verification here so core app features
-      // like messaging, ISO24, and profile updates work immediately.
-      return isSignedIn() && userStatus() == "ACTIVE";
+      // "ACTIVE" means not suspended/banned and email is verified.
+      return isEmailVerified() && userStatus() == "ACTIVE";
     }
 
     function userIsAdmin() {
@@ -107,10 +105,10 @@ service cloud.firestore {
                 );
       allow list: if userIsActive() && userIsStaff();
 
-      allow create: if isSignedIn() &&
-                    uid() == userId &&
-                    request.resource.data.role == "USER" &&
-                    request.resource.data.status == "ACTIVE";
+      allow create: if isEmailVerified() &&
+            uid() == userId &&
+            request.resource.data.role == "USER" &&
+            request.resource.data.status == "ACTIVE";
 
       allow update: if isSignedIn() &&
                     (
@@ -256,17 +254,20 @@ service cloud.firestore {
                        );
 
       allow create: if userIsActive() &&
-                    request.resource.data.buyerUid == uid();
+            request.resource.data.buyerUid == uid() &&
+            request.resource.data.shippingAddress != null &&
+            request.resource.data.shippingAddress.street != null &&
+            request.resource.data.shippingAddress.city != null &&
+            request.resource.data.shippingAddress.state != null &&
+            request.resource.data.shippingAddress.zip != null;
 
       allow update: if
         userIsAdmin()
         ||
         (
           isSignedIn() &&
-          (
-            resource.data.buyerUid == uid() ||
-            resource.data.sellerUid == uid()
-          )
+          resource.data.sellerUid == uid() &&
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(["trackingNumber"])
         );
 
       allow delete: if userIsAdmin();

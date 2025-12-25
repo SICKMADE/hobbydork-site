@@ -37,9 +37,8 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import Spinner from '@/components/ui/spinner';
-
+import { Separator } from '@/components/ui/separator';
 import {
   Store as StoreIcon,
   MessageSquare,
@@ -329,7 +328,7 @@ export default function ListingDetailPage() {
             {imageUrls.length > 1 && (
               <div className="flex gap-2 mt-3 overflow-x-auto">
                 {imageUrls.map((url, idx) => (
-                  <button
+                  <Button
                     key={idx}
                     onClick={() => setSelectedImageIndex(idx)}
                     className={`relative h-20 w-20 border rounded ${
@@ -344,7 +343,7 @@ export default function ListingDetailPage() {
                       fill
                       className="object-contain"
                     />
-                  </button>
+                  </Button>
                 ))}
               </div>
             )}
@@ -390,6 +389,7 @@ export default function ListingDetailPage() {
                       )
                     }
                     className="w-20 border rounded px-2 py-1"
+                    placeholder="Qty"
                   />
                 </div>
 
@@ -415,11 +415,11 @@ export default function ListingDetailPage() {
           </div>
         </div>
 
-        {Array.isArray(similarListings) && similarListings.length > 0 && (
+        {Array.isArray(similarListings) && similarListings?.length > 0 && (
           <section>
             <h2 className="text-lg font-semibold mb-3">Similar items</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {similarListings.map((l: any) => (
+              {(similarListings ?? []).map((l: any) => (
                 <ListingCard key={l.id} listing={l} />
               ))}
             </div>
