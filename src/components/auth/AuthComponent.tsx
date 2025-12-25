@@ -7,40 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import {
   Form,
   FormControl,
   FormField,
-    try {
-      const cred = await login(values.email, values.password);
-      // Force reload to get latest emailVerified status
-      if (cred.user?.reload) {
-        await cred.user.reload();
-      }
-      if (cred.user?.emailVerified) {
-        router.replace('/');
-      } else {
-        router.replace('/verify-email');
-      }
-    } catch (error: unknown) {
-      const code =
-        typeof error === 'object' && error && 'code' in error
-          ? String((error as { code: unknown }).code)
-          : '';
-      let message = 'Login failed.';
-      if (code === 'auth/user-not-found') {
-        message = 'No account found with that email.';
-      } else if (code === 'auth/wrong-password') {
-        message = 'Incorrect password.';
-      } else if (code === 'auth/invalid-email') {
-        message = 'Invalid email address.';
-      }
-      toast({
-        title: 'Login Error',
-        description: message,
-        /*...*/
-    }
-  })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ['confirmPassword'],
