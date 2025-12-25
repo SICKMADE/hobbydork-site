@@ -1,4 +1,11 @@
 "use client";
+import { useAuth } from "@/hooks/use-auth";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { httpsCallable } from "firebase/functions";
+
 // Admin Order Management Modal
 function ManageOrdersModal({ open, onClose, functions }: { open: boolean; onClose: () => void; functions: any }) {
   const [orders, setOrders] = useState<any[]>([]);
@@ -42,7 +49,7 @@ function ManageOrdersModal({ open, onClose, functions }: { open: boolean; onClos
           <div>Loading...</div>
         ) : (
           <ul className="space-y-2 max-h-[400px] overflow-y-auto">
-            {orders.map((o) => (
+            {orders.map((o: any) => (
               <li key={o.id} className="flex justify-between items-center border-b py-1 text-xs">
                 {editingId === o.id ? (
                   <form
@@ -66,7 +73,7 @@ function ManageOrdersModal({ open, onClose, functions }: { open: boolean; onClos
                     <input
                       className="border rounded px-2 py-1 text-xs w-24"
                       value={editOrder.state}
-                      onChange={e => setEditOrder(eo => ({ ...eo, state: e.target.value }))}
+                      onChange={e => setEditOrder((eo: any) => ({ ...eo, state: e.target.value }))}
                       required
                       placeholder="Order State"
                       title="Order State"
@@ -97,14 +104,7 @@ function ManageOrdersModal({ open, onClose, functions }: { open: boolean; onClos
     </Dialog>
   );
 }
-"use client";
 
-import { useAuth } from "@/hooks/use-auth";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { httpsCallable } from "firebase/functions";
 // Admin Product Management Modal
 function ManageProductsModal({ open, onClose, functions }: { open: boolean; onClose: () => void; functions: any }) {
   const [products, setProducts] = useState<any[]>([]);
@@ -166,7 +166,7 @@ function ManageProductsModal({ open, onClose, functions }: { open: boolean; onCl
           <div>Loading...</div>
         ) : (
           <ul className="space-y-2">
-            {products.map((p) => (
+            {products.map((p: any) => (
               <li key={p.id} className="flex justify-between items-center border-b py-1">
                 {editingId === p.id ? (
                   <form
@@ -190,7 +190,7 @@ function ManageProductsModal({ open, onClose, functions }: { open: boolean; onCl
                     <input
                       className="border rounded px-2 py-1 text-sm w-28"
                       value={editProduct.name}
-                      onChange={e => setEditProduct(ep => ({ ...ep, name: e.target.value }))}
+                      onChange={e => setEditProduct((ep: any) => ({ ...ep, name: e.target.value }))}
                       required
                       placeholder="Product Name"
                       title="Product Name"
@@ -201,7 +201,7 @@ function ManageProductsModal({ open, onClose, functions }: { open: boolean; onCl
                       min="0"
                       step="0.01"
                       value={editProduct.price}
-                      onChange={e => setEditProduct(ep => ({ ...ep, price: e.target.value }))}
+                      onChange={e => setEditProduct((ep: any) => ({ ...ep, price: e.target.value }))}
                       required
                       placeholder="Price"
                       title="Price"
@@ -229,7 +229,7 @@ function ManageProductsModal({ open, onClose, functions }: { open: boolean; onCl
             <input
               className="border rounded px-2 py-1 text-sm"
               value={newProduct.name}
-              onChange={e => setNewProduct(p => ({ ...p, name: e.target.value }))}
+              onChange={e => setNewProduct((p: any) => ({ ...p, name: e.target.value }))}
               required
               placeholder="Product Name"
               title="Product Name"
@@ -243,7 +243,7 @@ function ManageProductsModal({ open, onClose, functions }: { open: boolean; onCl
               min="0"
               step="0.01"
               value={newProduct.price}
-              onChange={e => setNewProduct(p => ({ ...p, price: e.target.value }))}
+              onChange={e => setNewProduct((p: any) => ({ ...p, price: e.target.value }))}
               required
               placeholder="Price"
               title="Price"
