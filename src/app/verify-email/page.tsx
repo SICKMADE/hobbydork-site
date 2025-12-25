@@ -161,6 +161,7 @@ import { auth } from "@/firebase/client-provider";
           </div>
         </div>
       </div>
+
     </div>
   );
 }
