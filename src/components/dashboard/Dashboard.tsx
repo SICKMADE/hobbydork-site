@@ -1,6 +1,6 @@
-import { useAuth } from '@/hooks/use-auth';
-
 "use client";
+
+import { useAuth } from '@/hooks/use-auth';
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
