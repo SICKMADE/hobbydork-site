@@ -1,7 +1,8 @@
 
 "use client";
+export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { applyActionCode } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -10,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/firebase/client-provider";
-export default function VerifyEmailPage() {
+
+function VerifyEmailContent() {
   const { user, resendVerification, logout } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
@@ -164,5 +166,13 @@ export default function VerifyEmailPage() {
       </div>
 
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

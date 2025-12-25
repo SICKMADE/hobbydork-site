@@ -25,6 +25,7 @@ export default function SellerPayouts() {
         href="https://dashboard.stripe.com/"
         className="text-blue-600 underline"
         target="_blank"
+        rel="noopener"
       >
         Open Stripe Dashboard
       </a>

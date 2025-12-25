@@ -84,6 +84,7 @@ export default function PayoutsPage() {
       <a
         href="https://dashboard.stripe.com/"
         target="_blank"
+        rel="noopener"
         className="text-blue-600 underline text-sm"
       >
         Open Stripe Dashboard

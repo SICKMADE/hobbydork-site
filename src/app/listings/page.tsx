@@ -111,10 +111,13 @@ export default function ListingsSearchPage() {
             className="comic-input-field"
           />
 
+          <label htmlFor="sortBy" className="sr-only">Sort by</label>
           <select
+            id="sortBy"
             className="h-10 w-full rounded-md border-2 border-black bg-background px-3 text-sm"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
+            aria-label="Sort by"
           >
             <option value="newest">Newest</option>
             <option value="low">Price: Low → High</option>
