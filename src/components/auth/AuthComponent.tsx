@@ -7,6 +7,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Form, FormControl, FormField } from '@/components/ui/form';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 // Zod schemas for form validation
 const loginSchema = z.object({
@@ -125,10 +132,31 @@ export default function AuthComponent({
               alt="HobbyDork"
               fill
               className="object-contain"
-              import {
-                Form,
-                FormControl,
-                FormField,
+            />
+          </div>
+        </div>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'login' | 'signup')} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Log In</TabsTrigger>
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          </TabsList>
+          <TabsContent value="login">
+            <div className="rounded-lg border bg-card shadow-sm">
+              <div className="p-6">
+                <h3 className="text-2xl font-semibold">Log In</h3>
+              </div>
+              <div className="p-6 pt-0">
+                <Form {...loginForm}>
+                  <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
+                    <FormField
+                      control={loginForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
