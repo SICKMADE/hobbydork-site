@@ -320,8 +320,9 @@ export default function CreateStorePage() {
       }
 
       await runTransaction(firestore, async (tx) => {
+        // Only set isSeller if user is emailVerified
         tx.update(userRef, {
-          isSeller: true,
+          isSeller: user.emailVerified === true,
           storeId: storeRef.id,
           stripeOnboarded: true,
           updatedAt: serverTimestamp(),

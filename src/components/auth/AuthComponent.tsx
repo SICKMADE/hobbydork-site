@@ -11,31 +11,35 @@ import {
   Form,
   FormControl,
   FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-
-const loginSchema = z.object({
-  email: z.string().email({ message: 'Invalid email address.' }),
-  password: z.string().min(1, { message: 'Password is required.' }),
-});
-
-const signupSchema = z
-  .object({
-    displayName: z.string().min(3, {
-      message: 'Display name must be at least 3 characters.',
-    }),
-    email: z.string().email({ message: 'Invalid email address.' }),
-    password: z.string().min(6, {
-      message: 'Password must be at least 6 characters.',
-    }),
-    confirmPassword: z.string(),
+    try {
+      const cred = await login(values.email, values.password);
+      // Force reload to get latest emailVerified status
+      if (cred.user?.reload) {
+        await cred.user.reload();
+      }
+      if (cred.user?.emailVerified) {
+        router.replace('/');
+      } else {
+        router.replace('/verify-email');
+      }
+    } catch (error: unknown) {
+      const code =
+        typeof error === 'object' && error && 'code' in error
+          ? String((error as { code: unknown }).code)
+          : '';
+      let message = 'Login failed.';
+      if (code === 'auth/user-not-found') {
+        message = 'No account found with that email.';
+      } else if (code === 'auth/wrong-password') {
+        message = 'Incorrect password.';
+      } else if (code === 'auth/invalid-email') {
+        message = 'Invalid email address.';
+      }
+      toast({
+        title: 'Login Error',
+        description: message,
+        /*...*/
+    }
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",

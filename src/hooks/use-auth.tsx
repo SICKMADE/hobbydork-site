@@ -290,8 +290,11 @@ function useProvideAuth(): AuthContextType {
       return;
     }
 
+
+    // Use environment variable for site URL if available
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hobbydork.com';
     const actionCodeSettings = {
-      url: 'https://hobbydork.com/verify-email',
+      url: `${siteUrl}/verify-email`,
       handleCodeInApp: false,
     };
 

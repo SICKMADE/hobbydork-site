@@ -38,11 +38,16 @@ function VerifyEmailContent() {
   useEffect(() => {
     const oobCode = searchParams?.get("oobCode");
     const mode = searchParams?.get("mode");
-    // If not signed in, redirect to login
+    // If not signed in, store code and redirect to login
     if (!auth.currentUser) {
+      if (mode === "verifyEmail" && oobCode) {
+        // Store code in localStorage for after login
+        localStorage.setItem("pendingEmailVerification", JSON.stringify({ oobCode, mode }));
+      }
       router.replace('/login?redirect=/verify-email');
       return;
     }
+    // If code is present in URL, apply it
     if (mode === "verifyEmail" && oobCode) {
       setVerifying(true);
       applyActionCode(auth, oobCode)
@@ -56,27 +61,53 @@ function VerifyEmailContent() {
           toast({ title: "Verification failed", description: e?.message ?? "Could not verify email.", variant: "destructive" });
         })
         .finally(() => setVerifying(false));
-    } else {
-      // Auto-check verification status on page load
-      async function autoCheck() {
-        await (auth.currentUser.reload?.() ?? Promise.resolve());
-        try {
-          await auth.currentUser.getIdToken(true);
-        } catch {}
-        const current = auth.currentUser;
-        if (current?.emailVerified) {
-          toast({ title: "Verified", description: "Thanks — continuing setup." });
-          router.replace('/');
-          router.refresh();
-          setTimeout(() => {
-            if (window.location.pathname === '/verify-email') {
-              window.location.assign('/');
-            }
-          }, 400);
-        }
-      }
-      autoCheck();
+      return;
     }
+    // If code is stored in localStorage, apply it after login
+    const pending = localStorage.getItem("pendingEmailVerification");
+    if (pending) {
+      try {
+        const { oobCode: storedCode, mode: storedMode } = JSON.parse(pending);
+        if (storedMode === "verifyEmail" && storedCode) {
+          setVerifying(true);
+          applyActionCode(auth, storedCode)
+            .then(async () => {
+              await (auth.currentUser?.reload?.() ?? Promise.resolve());
+              toast({ title: "Email verified!", description: "Your email has been verified. You can now use your account." });
+              router.replace("/");
+              router.refresh();
+              localStorage.removeItem("pendingEmailVerification");
+            })
+            .catch((e) => {
+              toast({ title: "Verification failed", description: e?.message ?? "Could not verify email.", variant: "destructive" });
+              localStorage.removeItem("pendingEmailVerification");
+            })
+            .finally(() => setVerifying(false));
+          return;
+        }
+      } catch {
+        localStorage.removeItem("pendingEmailVerification");
+      }
+    }
+    // Auto-check verification status on page load
+    async function autoCheck() {
+      await (auth.currentUser.reload?.() ?? Promise.resolve());
+      try {
+        await auth.currentUser.getIdToken(true);
+      } catch {}
+      const current = auth.currentUser;
+      if (current?.emailVerified) {
+        toast({ title: "Verified", description: "Thanks — continuing setup." });
+        router.replace('/');
+        router.refresh();
+        setTimeout(() => {
+          if (window.location.pathname === '/verify-email') {
+            window.location.assign('/');
+          }
+        }, 400);
+      }
+    }
+    autoCheck();
   }, [router, toast, searchParams]);
 
   const handleResend = async () => {
@@ -99,8 +130,7 @@ function VerifyEmailContent() {
         return;
       }
 
-      // Refresh the *actual* Firebase Auth currentUser so emailVerified updates.
-      // Verifying in another tab/device does not automatically refresh this session.
+      // Force reload to get latest emailVerified status
       await (auth.currentUser.reload?.() ?? Promise.resolve());
       // Force-refresh token so any server-side checks also see new state.
       try {
@@ -115,7 +145,6 @@ function VerifyEmailContent() {
         toast({ title: "Verified", description: "Thanks — continuing setup." });
         router.replace('/');
         router.refresh();
-        // Fallback: if router navigation is blocked by an extension, still proceed.
         setTimeout(() => {
           if (window.location.pathname === '/verify-email') {
             window.location.assign('/');
@@ -162,9 +191,15 @@ function VerifyEmailContent() {
           <div className="mt-4 text-sm text-muted-foreground">
             If you don't see the email, check your spam folder or try resending.
           </div>
+
+          {/* DEBUG INFO */}
+          <div className="mt-6 p-3 rounded bg-neutral-900 text-left text-xs text-yellow-300">
+            <div><strong>Debug Info:</strong></div>
+            <div>User: {user ? JSON.stringify({ email: user.email, emailVerified: user.emailVerified, uid: user.uid }, null, 2) : 'No user'}</div>
+            <div>auth.currentUser: {auth.currentUser ? JSON.stringify({ email: auth.currentUser.email, emailVerified: auth.currentUser.emailVerified, uid: auth.currentUser.uid }, null, 2) : 'No currentUser'}</div>
+          </div>
         </div>
       </div>
-
     </div>
   );
 }
