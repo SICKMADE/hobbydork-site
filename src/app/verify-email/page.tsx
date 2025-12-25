@@ -10,26 +10,27 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/firebase/client-provider";
-
+export default function VerifyEmailPage() {
   const { user, resendVerification, logout } = useAuth();
-    const [signingOut, setSigningOut] = useState(false);
-    const handleSignOut = async () => {
-      setSigningOut(true);
-      try {
-        await logout();
-        router.replace('/login');
-      } catch (e) {
-        toast({ title: 'Error', description: 'Could not sign out. Please refresh and try again.', variant: 'destructive' });
-      } finally {
-        setSigningOut(false);
-      }
-    };
   const { toast } = useToast();
   const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
   const [sending, setSending] = useState(false);
   const [checking, setChecking] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const searchParams = useSearchParams();
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await logout();
+      router.replace('/login');
+    } catch (e) {
+      toast({ title: 'Error', description: 'Could not sign out. Please refresh and try again.', variant: 'destructive' });
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   // Handle email verification via oobCode in URL and session state
   useEffect(() => {

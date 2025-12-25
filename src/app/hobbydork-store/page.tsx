@@ -1,3 +1,4 @@
+"use client";
 // Admin Order Management Modal
 function ManageOrdersModal({ open, onClose, functions }: { open: boolean; onClose: () => void; functions: any }) {
   const [orders, setOrders] = useState<any[]>([]);
