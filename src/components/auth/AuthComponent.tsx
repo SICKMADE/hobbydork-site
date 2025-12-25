@@ -147,41 +147,10 @@ export default function AuthComponent({
               alt="HobbyDork"
               fill
               className="object-contain"
-              priority
-            />
-          </div>
-        </div>
-
-        <Tabs value={tab} onValueChange={(v) => setTab(v as 'login' | 'signup')} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Log In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-          </TabsList>
-
-          {/* LOGIN */}
-          <TabsContent value="login">
-            <div className="rounded-lg border bg-card shadow-sm">
-              <div className="p-6">
-                <h3 className="text-2xl font-semibold">Welcome Back</h3>
-                <p className="text-sm text-muted-foreground">
-                  Email verification is required.
-                </p>
-              </div>
-              <div className="p-6 pt-0">
-                <Form {...loginForm}>
-                  <form
-                    onSubmit={loginForm.handleSubmit(onLogin)}
-                    className="space-y-4"
-                  >
-                    <FormField
-                      control={loginForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
+              import {
+                Form,
+                FormControl,
+                FormField,
                           <FormMessage />
                         </FormItem>
                       )}

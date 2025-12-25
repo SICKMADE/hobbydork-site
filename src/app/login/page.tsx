@@ -1,14 +1,17 @@
 "use client";
 
+
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AuthComponent from "@/components/auth/AuthComponent";
 import { useUser } from "@/firebase";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isUserLoading } = useUser();
   const [initialTab, setInitialTab] = useState<"login" | "signup">("login");
+  const [showVerifiedMsg, setShowVerifiedMsg] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -23,6 +26,13 @@ export default function LoginPage() {
     window.addEventListener("hashchange", syncFromHash);
     return () => window.removeEventListener("hashchange", syncFromHash);
   }, []);
+
+  useEffect(() => {
+    // Show verified message if redirected from email verification
+    if (searchParams?.get("verified") === "1") {
+      setShowVerifiedMsg(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!isUserLoading && user) {
@@ -40,5 +50,14 @@ export default function LoginPage() {
 
   if (user) return null;
 
-  return <AuthComponent initialTab={initialTab} />;
+  return (
+    <>
+      {showVerifiedMsg && (
+        <div className="mb-4 max-w-md mx-auto bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded text-center">
+          Your email has been verified. Please log in to continue.
+        </div>
+      )}
+      <AuthComponent initialTab={initialTab} />
+    </>
+  );
 }

@@ -53,8 +53,8 @@ function VerifyEmailContent() {
       applyActionCode(auth, oobCode)
         .then(async () => {
           await (auth.currentUser?.reload?.() ?? Promise.resolve());
-          toast({ title: "Email verified!", description: "Your email has been verified. You can now use your account." });
-          router.replace("/");
+          toast({ title: "Email verified!", description: "Your email has been verified. Please log in to continue." });
+          router.replace("/login?verified=1");
           router.refresh();
         })
         .catch((e) => {
@@ -73,8 +73,8 @@ function VerifyEmailContent() {
           applyActionCode(auth, storedCode)
             .then(async () => {
               await (auth.currentUser?.reload?.() ?? Promise.resolve());
-              toast({ title: "Email verified!", description: "Your email has been verified. You can now use your account." });
-              router.replace("/");
+              toast({ title: "Email verified!", description: "Your email has been verified. Please log in to continue." });
+              router.replace("/login?verified=1");
               router.refresh();
               localStorage.removeItem("pendingEmailVerification");
             })
@@ -97,12 +97,12 @@ function VerifyEmailContent() {
       } catch {}
       const current = auth.currentUser;
       if (current?.emailVerified) {
-        toast({ title: "Verified", description: "Thanks — continuing setup." });
-        router.replace('/');
+        toast({ title: "Verified", description: "Thanks — please log in again to continue." });
+        router.replace('/login?verified=1');
         router.refresh();
         setTimeout(() => {
           if (window.location.pathname === '/verify-email') {
-            window.location.assign('/');
+            window.location.assign('/login?verified=1');
           }
         }, 400);
       }
@@ -142,12 +142,12 @@ function VerifyEmailContent() {
       const current = auth.currentUser;
 
       if (current?.emailVerified) {
-        toast({ title: "Verified", description: "Thanks — continuing setup." });
-        router.replace('/');
+        toast({ title: "Verified", description: "Thanks — please log in again to continue." });
+        router.replace('/login?verified=1');
         router.refresh();
         setTimeout(() => {
           if (window.location.pathname === '/verify-email') {
-            window.location.assign('/');
+            window.location.assign('/login?verified=1');
           }
         }, 400);
       } else {
