@@ -10,7 +10,8 @@ import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { auth } from "@/firebase/client-provider";
+import { auth, db } from "@/firebase/client-provider";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 
 function VerifyEmailContent() {
   const { user, resendVerification, logout } = useAuth();
@@ -53,7 +54,19 @@ function VerifyEmailContent() {
       applyActionCode(auth, oobCode)
         .then(async () => {
           await (auth.currentUser?.reload?.() ?? Promise.resolve());
+          // Firestore sync: update user doc if verified
+          if (auth.currentUser?.emailVerified && auth.currentUser?.uid) {
+            try {
+              await updateDoc(doc(db, "users", auth.currentUser.uid), {
+                emailVerified: true,
+                emailverified: true,
+                updatedAt: serverTimestamp(),
+              });
+            } catch (e) {/* ignore */}
+          }
           toast({ title: "Email verified!", description: "Your email has been verified. Please log in to continue." });
+          // Log out user after verification
+          await logout();
           router.replace("/login?verified=1");
           router.refresh();
         })
@@ -73,7 +86,17 @@ function VerifyEmailContent() {
           applyActionCode(auth, storedCode)
             .then(async () => {
               await (auth.currentUser?.reload?.() ?? Promise.resolve());
+              if (auth.currentUser?.emailVerified && auth.currentUser?.uid) {
+                try {
+                  await updateDoc(doc(db, "users", auth.currentUser.uid), {
+                    emailVerified: true,
+                    emailverified: true,
+                    updatedAt: serverTimestamp(),
+                  });
+                } catch (e) {/* ignore */}
+              }
               toast({ title: "Email verified!", description: "Your email has been verified. Please log in to continue." });
+              await logout();
               router.replace("/login?verified=1");
               router.refresh();
               localStorage.removeItem("pendingEmailVerification");
@@ -97,7 +120,18 @@ function VerifyEmailContent() {
       } catch {}
       const current = auth.currentUser;
       if (current?.emailVerified) {
+        // Firestore sync: update user doc if verified
+        if (current?.uid) {
+          try {
+            await updateDoc(doc(db, "users", current.uid), {
+              emailVerified: true,
+              emailverified: true,
+              updatedAt: serverTimestamp(),
+            });
+          } catch (e) {/* ignore */}
+        }
         toast({ title: "Verified", description: "Thanks — please log in again to continue." });
+        await logout();
         router.replace('/login?verified=1');
         router.refresh();
         setTimeout(() => {
