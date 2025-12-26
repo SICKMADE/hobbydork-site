@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -6,6 +7,7 @@ import { useAuth } from '@/hooks/use-auth';
 
 const ALLOWED_WHEN_UNVERIFIED = new Set<string>(['/login', '/verify-email']);
 
+export default function EmailVerificationGate() {
   const { profile, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
