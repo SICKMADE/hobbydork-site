@@ -1,605 +1,155 @@
-
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import Stripe from "stripe";
-import { checkStripeSellerStatus } from "./checkStripeSellerStatus";
-export { checkStripeSellerStatus };
+import cors from "cors";
 
-admin.initializeApp();
+
+// ✅ SINGLE ADMIN INIT (DO NOT DUPLICATE ANYWHERE)
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
 const db = admin.firestore();
+const corsHandler = cors({ origin: true });
 
-/**
- * ===============================
- * ADMIN: PRODUCT CRUD
- * ===============================
- */
-export const adminCreateProduct = functions.https.onCall(async (data: any, context: any) => {
-  requireAdmin(context);
-  // TODO: Validate data
-  const ref = await db.collection('products').add({ ...data, createdAt: admin.firestore.FieldValue.serverTimestamp() });
-  return { id: ref.id };
-});
+/* =========================
+   HELPERS
+========================= */
 
-export const adminUpdateProduct = functions.https.onCall(async (data: any, context: any) => {
-  requireAdmin(context);
-  const { id, ...updates } = data;
-  if (!id) throw new functions.https.HttpsError('invalid-argument', 'Product ID required');
-  await db.collection('products').doc(id).update({ ...updates, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
-  return { success: true };
-});
-
-export const adminDeleteProduct = functions.https.onCall(async (data: any, context: any) => {
-  requireAdmin(context);
-  const { id } = data;
-  if (!id) throw new functions.https.HttpsError('invalid-argument', 'Product ID required');
-  await db.collection('products').doc(id).delete();
-  return { success: true };
-});
-
-export const adminListProducts = functions.https.onCall(async (_data: any, context: any) => {
-  requireAdmin(context);
-  const snap = await db.collection('products').get();
-  return { products: snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
-});
-
-/**
- * ===============================
- * ADMIN: ORDER MANAGEMENT
- * ===============================
- */
-export const adminListOrders = functions.https.onCall(async (_data: any, context: any) => {
-  requireAdmin(context);
-  const snap = await db.collection('orders').get();
-  return { orders: snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
-});
-
-export const adminUpdateOrder = functions.https.onCall(async (data: any, context: any) => {
-  requireAdmin(context);
-  const { id, ...updates } = data;
-  if (!id) throw new functions.https.HttpsError('invalid-argument', 'Order ID required');
-  await db.collection('orders').doc(id).update({ ...updates, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
-  return { success: true };
-});
-
-export const adminDeleteOrder = functions.https.onCall(async (data: any, context: any) => {
-  requireAdmin(context);
-  const { id } = data;
-  if (!id) throw new functions.https.HttpsError('invalid-argument', 'Order ID required');
-  await db.collection('orders').doc(id).delete();
-  return { success: true };
-});
-
-/**
- * ===============================
- * ADMIN: USER PURCHASE QUERIES
- * ===============================
- */
-export const adminListUserPurchases = functions.https.onCall(async (data: any, context: any) => {
-  requireAdmin(context);
-  const { userId } = data;
-  if (!userId) throw new functions.https.HttpsError('invalid-argument', 'User ID required');
-  const snap = await db.collection('orders').where('buyerUid', '==', userId).get();
-  return { purchases: snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
-});
-
-// Helper: Require admin
-function requireAdmin(context: functions.https.CallableContext) {
+function requireAuth(context: functions.https.CallableContext) {
   if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    throw new functions.https.HttpsError("unauthenticated", "Auth required");
   }
-  if (context.auth.token.role !== 'ADMIN') {
-    throw new functions.https.HttpsError('permission-denied', 'Admin privileges required');
-  }
-}
-// Send review request notification after order is fulfilled
-export const requestReviewOnFulfillment = functions.firestore
-  .document('orders/{orderId}')
-  .onUpdate(async (change: any, context: any) => {
-    const before = change.before.data();
-    const after = change.after.data();
-    if (!before || !after) return;
-    // Only trigger when order transitions to fulfilled and hasn't been asked for review yet
-    if (before.fulfilled !== true && after.fulfilled === true && !after.reviewRequested && after.buyerUid) {
-      await sendNotification(after.buyerUid, {
-        title: 'How was your order?',
-        body: 'Please leave a review for your recent purchase! Your feedback helps our community.',
-        type: 'review-request',
-        orderId: context.params.orderId,
-      });
-      await change.after.ref.update({ reviewRequested: true });
-    }
-  });
-// Helper to send notification
-async function sendNotification(uid: string, data: any) {
-  await db.collection('notifications').add({
-    uid,
-    seen: false,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    ...data,
-  });
-}
-/**
- * ===============================
- * SPOTLIGHT FULFILLMENT & EXPIRATION
- * ===============================
- */
-// Fulfill spotlight slot when order is paid
-export const fulfillSpotlightOnPaid = functions.firestore
-  .document('orders/{orderId}')
-  .onUpdate(async (change: any, context: any) => {
-    const before = change.before.data();
-    const after = change.after.data();
-    if (!before || !after) return;
-    if (before.state !== 'PAID' && after.state === 'PAID' && after.listingTitle === 'Store Spotlight Slot') {
-      const storeId = after.storeId;
-      if (!storeId) return;
-      const now = admin.firestore.Timestamp.now();
-      const expiresAt = admin.firestore.Timestamp.fromMillis(now.toMillis() + 7 * 24 * 60 * 60 * 1000);
-      await db.collection('spotlights').doc(storeId).set({
-        storeId,
-        orderId: context.params.orderId,
-        startsAt: now,
-        expiresAt,
-        active: true,
-        createdAt: now,
-      });
-      await change.after.ref.update({ fulfilled: true });
-      // Send notification to user
-      if (after.buyerUid) {
-        await sendNotification(after.buyerUid, {
-          title: 'Spotlight Activated!',
-          body: 'Your store is now featured in the Spotlight for 7 days.',
-          type: 'spotlight',
-          storeId,
-          expiresAt,
-        });
-      }
-    }
-  });
-
-// Scheduled function to expire spotlights after 1 week
-export const expireSpotlights = functions.pubsub
-  .schedule('every 1 hours')
-  .onRun(async () => {
-    const now = admin.firestore.Timestamp.now();
-    const snap = await db.collection('spotlights').where('active', '==', true).where('expiresAt', '<=', now).get();
-    const batch = db.batch();
-    snap.forEach(doc => {
-      batch.update(doc.ref, { active: false });
-    });
-    await batch.commit();
-    return null;
-  });
-
-/**
- * APP_BASE_URL should be provided via environment in production.
- * Fallback order:
- *  - process.env.APP_BASE_URL
- *  - process.env.NEXT_PUBLIC_URL
- *  - localhost (development)
- */
-const APP_BASE_URL =
-  process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_URL || "http://localhost:9002";
-
-function errorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "string") return err;
-  try {
-    return JSON.stringify(err);
-  } catch {
-    return "Unknown error";
-  }
-}
-
-function tryNormalizeOrigin(raw: unknown): string | null {
-  if (typeof raw !== "string") return null;
-
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-
-  // Support accidental values like "localhost:9002" (no protocol)
-  const candidate =
-    /^localhost(?::\d+)?(\/|$)/i.test(trimmed) || /^[\w.-]+:\d+(\/|$)/.test(trimmed)
-      ? `http://${trimmed}`
-      : trimmed;
-
-  try {
-    const url = new URL(candidate);
-    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-    return url.origin;
-  } catch {
-    return null;
-  }
-}
-
-function resolveAppBaseUrl(
-  maybeBaseUrl: unknown,
-  requestOriginHeader?: unknown,
-  requestRefererHeader?: unknown
-): string {
-  // If client explicitly sent appBaseUrl, validate it strictly.
-  if (typeof maybeBaseUrl === "string" && maybeBaseUrl.trim().length > 0) {
-    const normalized = tryNormalizeOrigin(maybeBaseUrl);
-    if (!normalized) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Invalid appBaseUrl. Expected an absolute URL like https://example.com or http://localhost:9002"
-      );
-    }
-    return normalized;
-  }
-
-  // Fallback to callable request headers (usually correct for local dev ports).
-  const fromOrigin = tryNormalizeOrigin(requestOriginHeader);
-  if (fromOrigin) return fromOrigin;
-
-  const fromReferer = tryNormalizeOrigin(requestRefererHeader);
-  if (fromReferer) return fromReferer;
-
-  // Env fallback (production should set APP_BASE_URL).
-  return APP_BASE_URL;
 }
 
 function requireVerified(context: functions.https.CallableContext) {
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      "unauthenticated",
-      "Authentication required"
-    );
-  }
-
-  // Server-side enforcement. Client redirects can be bypassed.
-  if (context.auth.token.email_verified !== true) {
+  requireAuth(context);
+  if (context.auth!.token.email_verified !== true) {
     throw new functions.https.HttpsError(
       "failed-precondition",
-      "Email verification required"
+      "Email must be verified"
     );
   }
 }
 
-/**
- * Stripe lazy init (Firebase Secrets)
- */
-let stripeInstance: Stripe | null = null;
+/* =========================
+   STRIPE
+========================= */
 
-function getStripe(): Stripe {
-  if (stripeInstance) return stripeInstance;
+let stripe: Stripe | null = null;
 
-  // Prefer STRIPE_SECRET (set via Functions Secret Manager). Allow fallback to STRIPE_SECRET_KEY.
-  const secret = process.env.STRIPE_SECRET || process.env.STRIPE_SECRET_KEY;
-  if (!secret) {
-    throw new Error("Missing Stripe secret (STRIPE_SECRET or STRIPE_SECRET_KEY)");
-  }
+function getStripe() {
+  if (stripe) return stripe;
 
-  stripeInstance = new Stripe(secret, {
-    apiVersion: "2023-10-16",
-  });
+  const secret = process.env.STRIPE_SECRET;
+  if (!secret) throw new Error("Missing STRIPE_SECRET");
 
-  return stripeInstance;
+  stripe = new Stripe(secret, { apiVersion: "2023-10-16" });
+  return stripe;
 }
 
-/**
- * ===============================
- * CREATE STRIPE CHECKOUT SESSION
- * ===============================
- */
-export const createCheckoutSession = functions
-  .runWith({ secrets: ["STRIPE_SECRET", "APP_BASE_URL"] })
-  .https.onCall(async (data: any, context: any) => {
-    try {
-      requireVerified(context);
+/* =========================
+   STRIPE CONNECT ONBOARDING
+========================= */
 
-      const { orderId, listingTitle, amountCents, appBaseUrl } = data;
-
-      if (!orderId || !listingTitle || !amountCents) {
-        throw new functions.https.HttpsError(
-          "invalid-argument",
-          "Missing required fields"
-        );
-      }
-
-      const stripe = getStripe();
-
-      const baseUrl = resolveAppBaseUrl(
-        appBaseUrl,
-        context.rawRequest?.headers?.origin,
-        context.rawRequest?.headers?.referer
-      );
-
-      console.info("createCheckoutSession baseUrl", {
-        baseUrl,
-        appBaseUrl,
-        origin: context.rawRequest?.headers?.origin,
-        referer: context.rawRequest?.headers?.referer,
-      });
-
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        payment_method_types: ["card"],
-        line_items: [
-          {
-            price_data: {
-              currency: "usd",
-              unit_amount: amountCents,
-              product_data: { name: listingTitle },
-            },
-            quantity: 1,
-          },
-        ],
-        metadata: { orderId },
-        success_url: `${baseUrl}/orders/success?orderId=${orderId}`,
-        cancel_url: `${baseUrl}/orders/cancelled?orderId=${orderId}`,
-      });
-
-      await db.collection("orders").doc(orderId).update({
-        stripeSessionId: session.id,
-        state: "PENDING_PAYMENT",
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      return { url: session.url };
-    } catch (err: unknown) {
-      console.error("createCheckoutSession failed:", err);
-      throw new functions.https.HttpsError(
-        "internal",
-        errorMessage(err) || "Stripe checkout failed"
-      );
-    }
-  });
-
-/**
- * ===============================
- * STRIPE WEBHOOK
- * ===============================
- */
-export const stripeWebhook = functions
-  .runWith({
-    secrets: ["STRIPE_SECRET", "STRIPE_WEBHOOK_SECRET"],
-  })
-  .https.onRequest(async (req: any, res: any) => {
-    const sig = req.headers["stripe-signature"] as string;
-    if (!sig) {
-      res.status(400).send("Missing Stripe signature");
-      return;
-    }
-
-    try {
-      const stripe = getStripe();
-      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-      const event = stripe.webhooks.constructEvent(
-        req.rawBody,
-        sig,
-        webhookSecret
-      );
-
-      if (event.type === "checkout.session.completed") {
-        const session = event.data.object as Stripe.Checkout.Session;
-        const orderId = session.metadata?.orderId;
-
-        if (orderId) {
-          await db.collection("orders").doc(orderId).update({
-            state: "PAID",
-            paidAt: admin.firestore.FieldValue.serverTimestamp(),
-            stripePaymentIntentId: session.payment_intent,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-        }
-      }
-
-      res.json({ received: true });
-    } catch (err: unknown) {
-      console.error("Webhook error:", err);
-      res.status(400).send("Webhook failed");
-    }
-  });
-
-/**
- * ===============================
- * STRIPE CONNECT ONBOARDING
- * ===============================
- */
 export const onboardStripe = functions
-  .runWith({ secrets: ["STRIPE_SECRET", "APP_BASE_URL"] })
-  .https.onCall(async (data: any, context: any) => {
-    try {
-      requireVerified(context);
-
-      const baseUrl = resolveAppBaseUrl(
-        data?.appBaseUrl,
-        context.rawRequest?.headers?.origin,
-        context.rawRequest?.headers?.referer
-      );
-
-      const uid = context.auth!.uid;
-      const userRef = db.collection("users").doc(uid);
-      const userSnap = await userRef.get();
-      const userData = userSnap.data();
-
-      const stripe = getStripe();
-      let accountId = userData?.stripeAccountId;
-
-      if (!accountId) {
-        const account = await stripe.accounts.create({
-          type: "express",
-          country: "US",
-          capabilities: {
-            card_payments: { requested: true },
-            transfers: { requested: true },
-          },
-        });
-
-        accountId = account.id;
-
-        await userRef.update({
-          stripeAccountId: accountId,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-      }
-
-      const accountLink = await stripe.accountLinks.create({
-        account: accountId,
-        refresh_url: `${baseUrl}/onboarding/failed`,
-        return_url: `${baseUrl}/onboarding/success`,
-        type: "account_onboarding",
-      });
-
-      return { url: accountLink.url };
-    } catch (err: unknown) {
-      console.error("onboardStripe failed:", err);
-      throw new functions.https.HttpsError(
-        "internal",
-        errorMessage(err) || "Stripe onboarding failed"
-      );
-    }
-  });
-
-/**
- * ===============================
- * SELLER PAYOUTS
- * ===============================
- */
-export const getStripePayouts = functions
   .runWith({ secrets: ["STRIPE_SECRET"] })
-  .https.onCall(async (_data: any, context: any) => {
-    try {
-      requireVerified(context);
-
-      const uid = context.auth!.uid;
-      const userSnap = await db.collection("users").doc(uid).get();
-      const userData = userSnap.data();
-      const accountId = userData?.stripeAccountId;
-
-      if (!accountId) {
-        throw new functions.https.HttpsError(
-          "failed-precondition",
-          "No Stripe account connected"
-        );
-      }
-
-      const stripe = getStripe();
-
-      const payouts = await stripe.payouts.list(
-        { limit: 10 },
-        { stripeAccount: accountId }
-      );
-
-      const balance = await stripe.balance.retrieve(
-        {},
-        { stripeAccount: accountId }
-      );
-
-      return { payouts: payouts.data, balance };
-    } catch (err: unknown) {
-      console.error("getStripePayouts failed:", err);
-      throw new functions.https.HttpsError(
-        "internal",
-        errorMessage(err) || "Failed to fetch payouts"
-      );
-    }
-  });
-
-/**
- * ===============================
- * ISO24 TROPHIES
- * ===============================
- * Seller submits a fulfillment link under:
- *   /iso24Posts/{isoId}/comments/{commentId}
- * ISO owner approves a fulfillment, and we:
- *  - close the ISO
- *  - record fulfillment metadata
- *  - increment seller's trophies
- */
-export const awardIsoTrophy = functions.https.onCall(
-  async (data: any, context: any) => {
+  .https.onCall(async (_data, context) => {
     requireVerified(context);
 
-    const isoId = typeof data?.isoId === "string" ? data.isoId.trim() : "";
-    const commentId = typeof data?.commentId === "string" ? data.commentId.trim() : "";
+    const uid = context.auth!.uid;
+    const userRef = db.collection("users").doc(uid);
+    const snap = await userRef.get();
+    const user = snap.data();
 
-    if (!isoId || !commentId) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Missing isoId or commentId"
-      );
+    const stripe = getStripe();
+    let accountId = user?.stripeAccountId;
+
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: "express",
+        country: "US",
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+      });
+
+      accountId = account.id;
+
+      await userRef.update({
+        stripeAccountId: accountId,
+        sellerStatus: "PENDING",
+        isSeller: false,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
     }
 
-    const callerUid = context.auth!.uid;
-    const isoRef = db.collection("iso24Posts").doc(isoId);
-    const commentRef = isoRef.collection("comments").doc(commentId);
+    const baseUrl =
+      process.env.APP_BASE_URL || "http://localhost:9002";
 
-    await db.runTransaction(async (tx) => {
-      const isoSnap = await tx.get(isoRef);
-      if (!isoSnap.exists) {
-        throw new functions.https.HttpsError("not-found", "ISO not found");
-      }
-
-      const iso = isoSnap.data() || {};
-      const ownerUid = iso.ownerUid;
-
-      if (ownerUid !== callerUid) {
-        throw new functions.https.HttpsError(
-          "permission-denied",
-          "Only the ISO owner can award a trophy"
-        );
-      }
-
-      if (iso.status !== "OPEN") {
-        throw new functions.https.HttpsError(
-          "failed-precondition",
-          "ISO is not open"
-        );
-      }
-
-      if (iso.trophyAwardedAt) {
-        throw new functions.https.HttpsError(
-          "already-exists",
-          "Trophy already awarded for this ISO"
-        );
-      }
-
-      const commentSnap = await tx.get(commentRef);
-      if (!commentSnap.exists) {
-        throw new functions.https.HttpsError(
-          "not-found",
-          "Fulfillment link not found"
-        );
-      }
-
-      const comment = commentSnap.data() || {};
-      if (comment.type !== "FULFILLMENT") {
-        throw new functions.https.HttpsError(
-          "failed-precondition",
-          "Selected comment is not a fulfillment"
-        );
-      }
-
-      const sellerUid = comment.authorUid;
-      const listingUrl = comment.listingUrl;
-
-      if (typeof sellerUid !== "string" || sellerUid.trim() === "") {
-        throw new functions.https.HttpsError(
-          "failed-precondition",
-          "Fulfillment is missing sellerUid"
-        );
-      }
-
-      const sellerRef = db.collection("users").doc(sellerUid);
-
-      tx.update(isoRef, {
-        status: "CLOSED",
-        fulfilledByUid: sellerUid,
-        fulfilledCommentId: commentId,
-        fulfilledListingUrl: typeof listingUrl === "string" ? listingUrl : null,
-        trophyAwardedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      tx.update(sellerRef, {
-        trophies: admin.firestore.FieldValue.increment(1),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    const link = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${baseUrl}/onboarding/failed`,
+      return_url: `${baseUrl}/onboarding/success`,
+      type: "account_onboarding",
     });
 
-    return { ok: true };
-  }
-);
+    return { url: link.url };
+  });
+
+/* =========================
+   CHECK STRIPE SELLER STATUS
+   (CALLED AFTER REDIRECT)
+========================= */
+
+export const checkStripeSellerStatus = functions
+  .runWith({ secrets: ["STRIPE_SECRET"] })
+  .https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+      try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader?.startsWith("Bearer ")) {
+          return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        const idToken = authHeader.split("Bearer ")[1];
+        const decoded = await admin.auth().verifyIdToken(idToken);
+        const uid = decoded.uid;
+
+        const userRef = db.collection("users").doc(uid);
+        const snap = await userRef.get();
+        const user = snap.data();
+
+        if (!user?.stripeAccountId) {
+          return res.json({ isSeller: false });
+        }
+
+        const stripe = getStripe();
+        const account = await stripe.accounts.retrieve(
+          user.stripeAccountId
+        );
+
+        if (account.details_submitted && account.charges_enabled) {
+          await userRef.update({
+            isSeller: true,
+            sellerStatus: "APPROVED",
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          return res.json({ isSeller: true });
+        }
+
+        await userRef.update({
+          isSeller: false,
+          sellerStatus: "PENDING",
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        return res.json({ isSeller: false });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "internal error" });
+      }
+    });
+  });
