@@ -1,16 +1,26 @@
+
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
+import Stripe from "stripe";
+import { checkStripeSellerStatus } from "./checkStripeSellerStatus";
+export { checkStripeSellerStatus };
+
+admin.initializeApp();
+const db = admin.firestore();
+
 /**
  * ===============================
  * ADMIN: PRODUCT CRUD
  * ===============================
  */
-export const adminCreateProduct = functions.https.onCall(async (data, context) => {
+export const adminCreateProduct = functions.https.onCall(async (data: any, context: any) => {
   requireAdmin(context);
   // TODO: Validate data
   const ref = await db.collection('products').add({ ...data, createdAt: admin.firestore.FieldValue.serverTimestamp() });
   return { id: ref.id };
 });
 
-export const adminUpdateProduct = functions.https.onCall(async (data, context) => {
+export const adminUpdateProduct = functions.https.onCall(async (data: any, context: any) => {
   requireAdmin(context);
   const { id, ...updates } = data;
   if (!id) throw new functions.https.HttpsError('invalid-argument', 'Product ID required');
@@ -18,7 +28,7 @@ export const adminUpdateProduct = functions.https.onCall(async (data, context) =
   return { success: true };
 });
 
-export const adminDeleteProduct = functions.https.onCall(async (data, context) => {
+export const adminDeleteProduct = functions.https.onCall(async (data: any, context: any) => {
   requireAdmin(context);
   const { id } = data;
   if (!id) throw new functions.https.HttpsError('invalid-argument', 'Product ID required');
@@ -26,7 +36,7 @@ export const adminDeleteProduct = functions.https.onCall(async (data, context) =
   return { success: true };
 });
 
-export const adminListProducts = functions.https.onCall(async (_data, context) => {
+export const adminListProducts = functions.https.onCall(async (_data: any, context: any) => {
   requireAdmin(context);
   const snap = await db.collection('products').get();
   return { products: snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
@@ -37,13 +47,13 @@ export const adminListProducts = functions.https.onCall(async (_data, context) =
  * ADMIN: ORDER MANAGEMENT
  * ===============================
  */
-export const adminListOrders = functions.https.onCall(async (_data, context) => {
+export const adminListOrders = functions.https.onCall(async (_data: any, context: any) => {
   requireAdmin(context);
   const snap = await db.collection('orders').get();
   return { orders: snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
 });
 
-export const adminUpdateOrder = functions.https.onCall(async (data, context) => {
+export const adminUpdateOrder = functions.https.onCall(async (data: any, context: any) => {
   requireAdmin(context);
   const { id, ...updates } = data;
   if (!id) throw new functions.https.HttpsError('invalid-argument', 'Order ID required');
@@ -51,7 +61,7 @@ export const adminUpdateOrder = functions.https.onCall(async (data, context) => 
   return { success: true };
 });
 
-export const adminDeleteOrder = functions.https.onCall(async (data, context) => {
+export const adminDeleteOrder = functions.https.onCall(async (data: any, context: any) => {
   requireAdmin(context);
   const { id } = data;
   if (!id) throw new functions.https.HttpsError('invalid-argument', 'Order ID required');
@@ -64,7 +74,7 @@ export const adminDeleteOrder = functions.https.onCall(async (data, context) => 
  * ADMIN: USER PURCHASE QUERIES
  * ===============================
  */
-export const adminListUserPurchases = functions.https.onCall(async (data, context) => {
+export const adminListUserPurchases = functions.https.onCall(async (data: any, context: any) => {
   requireAdmin(context);
   const { userId } = data;
   if (!userId) throw new functions.https.HttpsError('invalid-argument', 'User ID required');
@@ -84,7 +94,7 @@ function requireAdmin(context: functions.https.CallableContext) {
 // Send review request notification after order is fulfilled
 export const requestReviewOnFulfillment = functions.firestore
   .document('orders/{orderId}')
-  .onUpdate(async (change, context) => {
+  .onUpdate(async (change: any, context: any) => {
     const before = change.before.data();
     const after = change.after.data();
     if (!before || !after) return;
@@ -116,7 +126,7 @@ async function sendNotification(uid: string, data: any) {
 // Fulfill spotlight slot when order is paid
 export const fulfillSpotlightOnPaid = functions.firestore
   .document('orders/{orderId}')
-  .onUpdate(async (change, context) => {
+  .onUpdate(async (change: any, context: any) => {
     const before = change.before.data();
     const after = change.after.data();
     if (!before || !after) return;
@@ -160,15 +170,6 @@ export const expireSpotlights = functions.pubsub
     await batch.commit();
     return null;
   });
-import * as functions from "firebase-functions";
-import * as admin from "firebase-admin";
-import Stripe from "stripe";
-import { checkStripeSellerStatus } from "./checkStripeSellerStatus";
-// Export the new function
-export { checkStripeSellerStatus };
-
-admin.initializeApp();
-const db = admin.firestore();
 
 /**
  * APP_BASE_URL should be provided via environment in production.
@@ -271,7 +272,7 @@ function getStripe(): Stripe {
   }
 
   stripeInstance = new Stripe(secret, {
-    apiVersion: "2023-10-16",
+    apiVersion: "2025-11-17.clover",
   });
 
   return stripeInstance;
@@ -284,7 +285,7 @@ function getStripe(): Stripe {
  */
 export const createCheckoutSession = functions
   .runWith({ secrets: ["STRIPE_SECRET", "APP_BASE_URL"] })
-  .https.onCall(async (data, context) => {
+  .https.onCall(async (data: any, context: any) => {
     try {
       requireVerified(context);
 
@@ -355,7 +356,7 @@ export const stripeWebhook = functions
   .runWith({
     secrets: ["STRIPE_SECRET", "STRIPE_WEBHOOK_SECRET"],
   })
-  .https.onRequest(async (req, res) => {
+  .https.onRequest(async (req: any, res: any) => {
     const sig = req.headers["stripe-signature"] as string;
     if (!sig) {
       res.status(400).send("Missing Stripe signature");
@@ -399,7 +400,7 @@ export const stripeWebhook = functions
  */
 export const onboardStripe = functions
   .runWith({ secrets: ["STRIPE_SECRET", "APP_BASE_URL"] })
-  .https.onCall(async (data, context) => {
+  .https.onCall(async (data: any, context: any) => {
     try {
       requireVerified(context);
 
@@ -459,7 +460,7 @@ export const onboardStripe = functions
  */
 export const getStripePayouts = functions
   .runWith({ secrets: ["STRIPE_SECRET"] })
-  .https.onCall(async (_data, context) => {
+  .https.onCall(async (_data: any, context: any) => {
     try {
       requireVerified(context);
 
@@ -509,7 +510,7 @@ export const getStripePayouts = functions
  *  - increment seller's trophies
  */
 export const awardIsoTrophy = functions.https.onCall(
-  async (data, context) => {
+  async (data: any, context: any) => {
     requireVerified(context);
 
     const isoId = typeof data?.isoId === "string" ? data.isoId.trim() : "";

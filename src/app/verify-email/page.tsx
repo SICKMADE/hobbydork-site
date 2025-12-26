@@ -51,29 +51,19 @@ function VerifyEmailContent() {
     // If code is present in URL, apply it
     if (mode === "verifyEmail" && oobCode) {
       setVerifying(true);
-      applyActionCode(auth, oobCode)
-        .then(async () => {
-          await (auth.currentUser?.reload?.() ?? Promise.resolve());
-          // Firestore sync: update user doc if verified
-          if (auth.currentUser?.emailVerified && auth.currentUser?.uid) {
-            try {
-              await updateDoc(doc(db, "users", auth.currentUser.uid), {
-                emailVerified: true,
-                emailverified: true,
-                updatedAt: serverTimestamp(),
-              });
-            } catch (e) {/* ignore */}
-          }
-          toast({ title: "Email verified!", description: "Your email has been verified. Please log in to continue." });
-          // Log out user after verification
-          await logout();
-          router.replace("/login?verified=1");
-          router.refresh();
-        })
-        .catch((e) => {
-          toast({ title: "Verification failed", description: e?.message ?? "Could not verify email.", variant: "destructive" });
-        })
-        .finally(() => setVerifying(false));
+      (async () => {
+        try {
+          await applyActionCode(auth, oobCode);
+          await auth.currentUser?.reload();
+          router.replace('/login?verified=1');
+        } catch (e) {
+          const errorMsg = (typeof e === 'object' && e && 'message' in e) ? (e as any).message : 'Could not verify email.';
+          toast({ title: "Verification failed", description: errorMsg, variant: "destructive" });
+          console.error('Verification failed:', e);
+        } finally {
+          setVerifying(false);
+        }
+      })();
       return;
     }
     // If code is stored in localStorage, apply it after login
@@ -83,29 +73,20 @@ function VerifyEmailContent() {
         const { oobCode: storedCode, mode: storedMode } = JSON.parse(pending);
         if (storedMode === "verifyEmail" && storedCode) {
           setVerifying(true);
-          applyActionCode(auth, storedCode)
-            .then(async () => {
-              await (auth.currentUser?.reload?.() ?? Promise.resolve());
-              if (auth.currentUser?.emailVerified && auth.currentUser?.uid) {
-                try {
-                  await updateDoc(doc(db, "users", auth.currentUser.uid), {
-                    emailVerified: true,
-                    emailverified: true,
-                    updatedAt: serverTimestamp(),
-                  });
-                } catch (e) {/* ignore */}
-              }
-              toast({ title: "Email verified!", description: "Your email has been verified. Please log in to continue." });
-              await logout();
-              router.replace("/login?verified=1");
-              router.refresh();
+          (async () => {
+            try {
+              await applyActionCode(auth, storedCode);
+              await auth.currentUser?.reload();
+              router.replace('/login?verified=1');
+            } catch (e) {
+              const errorMsg = (typeof e === 'object' && e && 'message' in e) ? (e as any).message : 'Could not verify email.';
+              toast({ title: "Verification failed", description: errorMsg, variant: "destructive" });
+              console.error('Verification failed:', e);
+            } finally {
+              setVerifying(false);
               localStorage.removeItem("pendingEmailVerification");
-            })
-            .catch((e) => {
-              toast({ title: "Verification failed", description: e?.message ?? "Could not verify email.", variant: "destructive" });
-              localStorage.removeItem("pendingEmailVerification");
-            })
-            .finally(() => setVerifying(false));
+            }
+          })();
           return;
         }
       } catch {
@@ -120,18 +101,6 @@ function VerifyEmailContent() {
       } catch {}
       const current = auth.currentUser;
       if (current?.emailVerified) {
-        // Firestore sync: update user doc if verified
-        if (current?.uid) {
-          try {
-            await updateDoc(doc(db, "users", current.uid), {
-              emailVerified: true,
-              emailverified: true,
-              updatedAt: serverTimestamp(),
-            });
-          } catch (e) {/* ignore */}
-        }
-        toast({ title: "Verified", description: "Thanks — please log in again to continue." });
-        await logout();
         router.replace('/login?verified=1');
         router.refresh();
         setTimeout(() => {
@@ -150,7 +119,8 @@ function VerifyEmailContent() {
       await resendVerification();
       toast({ title: "Verification sent", description: "Check your inbox." });
     } catch (e: any) {
-      toast({ title: "Error", description: e?.message ?? "Could not resend.", variant: 'destructive' });
+      const errorMsg = (typeof e === 'object' && e && 'message' in e) ? (e as any).message : 'Could not resend.';
+      toast({ title: "Error", description: errorMsg, variant: 'destructive' });
     } finally {
       setSending(false);
     }
@@ -188,7 +158,8 @@ function VerifyEmailContent() {
         toast({ title: "Not verified yet", description: "Please click the link in your email and then try again." });
       }
     } catch (e: any) {
-      toast({ title: "Error", description: e?.message ?? "Could not check verification.", variant: 'destructive' });
+      const errorMsg = (typeof e === 'object' && e && 'message' in e) ? (e as any).message : 'Could not check verification.';
+      toast({ title: "Error", description: errorMsg, variant: 'destructive' });
     } finally {
       setChecking(false);
     }
@@ -230,7 +201,7 @@ function VerifyEmailContent() {
           <div className="mt-6 p-3 rounded bg-neutral-900 text-left text-xs text-yellow-300">
             <div><strong>Debug Info:</strong></div>
             <div>User: {user ? JSON.stringify({ email: user.email, emailVerified: user.emailVerified, uid: user.uid }, null, 2) : 'No user'}</div>
-            <div>auth.currentUser: {auth.currentUser ? JSON.stringify({ email: auth.currentUser.email, emailVerified: auth.currentUser.emailVerified, uid: auth.currentUser.uid }, null, 2) : 'No currentUser'}</div>
+            <div>auth.currentUser: {(typeof window !== 'undefined' && auth && auth.currentUser) ? JSON.stringify({ email: auth.currentUser.email, emailVerified: auth.currentUser.emailVerified, uid: auth.currentUser.uid }, null, 2) : 'No currentUser'}</div>
           </div>
         </div>
       </div>

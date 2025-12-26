@@ -125,6 +125,26 @@ function useProvideAuth(): AuthContextType {
   const [userData, setUserData] = useState<UserDoc>(EMPTY_USERDOC);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown | null>(null);
+  useEffect(() => {
+    if (!user) return;
+
+    if (user.emailVerified && userData?.emailVerified !== true) {
+      updateDoc(doc(db, 'users', user.uid), {
+        emailVerified: true,
+        updatedAt: serverTimestamp(),
+      }).catch(console.error);
+    }
+  }, [user, userData]);
+  // Sync Firestore emailVerified after login
+  useEffect(() => {
+    if (!user) return;
+    if (user.emailVerified) {
+      updateDoc(doc(db, 'users', user.uid), {
+        emailVerified: true,
+        updatedAt: serverTimestamp(),
+      }).catch(() => {});
+    }
+  }, [user?.uid, user?.emailVerified]);
 
   useEffect(() => {
     let isMounted = true;
@@ -163,8 +183,6 @@ function useProvideAuth(): AuthContextType {
               try {
                 await updateDoc(ref, {
                   emailVerified: firebaseUser.emailVerified,
-                  // Back-compat: older docs/inspectors may use lowercase.
-                  emailverified: firebaseUser.emailVerified,
                   updatedAt: serverTimestamp(),
                 });
               } catch (_e) {
@@ -179,11 +197,10 @@ function useProvideAuth(): AuthContextType {
             });
           } else {
             // Create user doc if missing (first signup)
-            const newUserData = {
+            const newUserData: UserDoc = {
               uid: firebaseUser.uid,
-              email: firebaseUser.email,
+              email: firebaseUser.email ?? "",
               emailVerified: firebaseUser.emailVerified,
-              emailverified: firebaseUser.emailVerified,
               displayName: firebaseUser.displayName ?? "",
               role: "USER",
               status: "ACTIVE",
@@ -203,7 +220,7 @@ function useProvideAuth(): AuthContextType {
               paymentIdentifier: null,
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
-            } satisfies UserDoc;
+            };
             await setDoc(ref, newUserData);
             setUserData({
               ...EMPTY_USERDOC,
