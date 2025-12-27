@@ -1,7 +1,19 @@
+// Sync emailVerified on Auth user creation
+export const syncEmailVerified = functions.auth.user().onCreate(
+  async (user) => {
+    if (user.emailVerified) {
+      await admin.firestore().collection("users").doc(user.uid).set({
+        emailVerified: true,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+  }
+);
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import Stripe from "stripe";
 import cors from "cors";
+
 
 if (!admin.apps.length) {
   admin.initializeApp();

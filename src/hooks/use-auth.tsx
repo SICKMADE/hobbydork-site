@@ -132,7 +132,7 @@ function useProvideAuth(): AuthContextType {
       updateDoc(doc(db, 'users', user.uid), {
         emailVerified: true,
         updatedAt: serverTimestamp(),
-      }).catch(console.error);
+      });
     }
   }, [user, userData]);
   // Sync Firestore emailVerified after login
@@ -285,7 +285,7 @@ function useProvideAuth(): AuthContextType {
       setError(e);
       // log for easier local debugging
       // eslint-disable-next-line no-console
-      console.error('logoutUser error', e);
+      // ...existing code...
       throw e;
     }
   };

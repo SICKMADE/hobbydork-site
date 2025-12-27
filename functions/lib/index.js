@@ -36,7 +36,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkStripeSellerStatus = exports.onboardStripe = void 0;
+exports.checkStripeSellerStatus = exports.onboardStripe = exports.syncEmailVerified = void 0;
+// Sync emailVerified on Auth user update
+exports.syncEmailVerified = functions.auth.user().onUpdate(async (change) => {
+    const before = change.before;
+    const after = change.after;
+    if (!before.emailVerified && after.emailVerified) {
+        await admin.firestore().collection("users").doc(after.uid).update({
+            emailVerified: true,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    }
+});
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const stripe_1 = __importDefault(require("stripe"));

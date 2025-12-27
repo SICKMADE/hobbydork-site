@@ -197,12 +197,7 @@ function VerifyEmailContent() {
             If you don't see the email, check your spam folder or try resending.
           </div>
 
-          {/* DEBUG INFO */}
-          <div className="mt-6 p-3 rounded bg-neutral-900 text-left text-xs text-yellow-300">
-            <div><strong>Debug Info:</strong></div>
-            <div>User: {user ? JSON.stringify({ email: user.email, emailVerified: user.emailVerified, uid: user.uid }, null, 2) : 'No user'}</div>
-            <div>auth.currentUser: {(typeof window !== 'undefined' && auth && auth.currentUser) ? JSON.stringify({ email: auth.currentUser.email, emailVerified: auth.currentUser.emailVerified, uid: auth.currentUser.uid }, null, 2) : 'No currentUser'}</div>
-          </div>
+          {/* ...existing code... */}
         </div>
       </div>
     </div>
