@@ -1,28 +1,25 @@
 "use client";
 
-import { ReactNode } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function EmailVerificationGate({
   children,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
 }) {
-  const { user, profile, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
+  useEffect(() => {
+    if (!loading && user && !user.emailVerified) {
+      router.replace("/verify-email");
+    }
+  }, [user, loading, router]);
+
   if (loading) return null;
-
-  if (!user) {
-    router.replace("/login");
-    return null;
-  }
-
-  if (!profile?.emailVerified) {
-    router.replace("/login?verify=1");
-    return null;
-  }
+  if (user && !user.emailVerified) return null;
 
   return <>{children}</>;
 }

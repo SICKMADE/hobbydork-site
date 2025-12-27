@@ -1,19 +1,7 @@
-// Sync emailVerified on Auth user creation
-export const syncEmailVerified = functions.auth.user().onCreate(
-  async (user) => {
-    if (user.emailVerified) {
-      await admin.firestore().collection("users").doc(user.uid).set({
-        emailVerified: true,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      }, { merge: true });
-    }
-  }
-);
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import Stripe from "stripe";
 import cors from "cors";
-
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -22,26 +10,27 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const corsHandler = cors({ origin: true });
 
-/* =====================
-   HELPERS
-===================== */
-function requireVerified(context: functions.https.CallableContext) {
+/* ---------------- HELPERS ---------------- */
+
+function requireAuth(context: functions.https.CallableContext) {
   if (!context.auth) {
     throw new functions.https.HttpsError("unauthenticated", "Auth required");
   }
-  if (context.auth.token.email_verified !== true) {
+}
+
+function requireVerified(context: functions.https.CallableContext) {
+  requireAuth(context);
+  if (context.auth!.token.email_verified !== true) {
     throw new functions.https.HttpsError(
       "failed-precondition",
-      "Email must be verified"
+      "Email verification required"
     );
   }
 }
 
-/* =====================
-   STRIPE
-===================== */
-let stripe: Stripe | null = null;
+/* ---------------- STRIPE ---------------- */
 
+let stripe: Stripe | null = null;
 function getStripe() {
   if (stripe) return stripe;
   const secret = process.env.STRIPE_SECRET;
@@ -50,9 +39,8 @@ function getStripe() {
   return stripe;
 }
 
-/* =====================
-   STRIPE ONBOARDING
-===================== */
+/* ---------------- ONBOARD STRIPE ---------------- */
+
 export const onboardStripe = functions
   .runWith({ secrets: ["STRIPE_SECRET"] })
   .https.onCall(async (_data, context) => {
@@ -87,7 +75,7 @@ export const onboardStripe = functions
     }
 
     const baseUrl =
-      process.env.APP_BASE_URL || "http://localhost:9002";
+      process.env.APP_BASE_URL || "https://www.hobbydork.com";
 
     const link = await stripe.accountLinks.create({
       account: accountId,
@@ -99,9 +87,8 @@ export const onboardStripe = functions
     return { url: link.url };
   });
 
-/* =====================
-   CHECK SELLER STATUS
-===================== */
+/* ---------------- CHECK SELLER STATUS ---------------- */
+
 export const checkStripeSellerStatus = functions
   .runWith({ secrets: ["STRIPE_SECRET"] })
   .https.onRequest((req, res) => {
@@ -112,8 +99,8 @@ export const checkStripeSellerStatus = functions
           return res.status(401).json({ error: "Unauthorized" });
         }
 
-        const token = authHeader.split("Bearer ")[1];
-        const decoded = await admin.auth().verifyIdToken(token);
+        const idToken = authHeader.split("Bearer ")[1];
+        const decoded = await admin.auth().verifyIdToken(idToken);
         const uid = decoded.uid;
 
         const userRef = db.collection("users").doc(uid);
@@ -125,9 +112,7 @@ export const checkStripeSellerStatus = functions
         }
 
         const stripe = getStripe();
-        const account = await stripe.accounts.retrieve(
-          user.stripeAccountId
-        );
+        const account = await stripe.accounts.retrieve(user.stripeAccountId);
 
         if (account.details_submitted && account.charges_enabled) {
           await userRef.update({

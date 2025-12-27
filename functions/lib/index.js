@@ -36,18 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkStripeSellerStatus = exports.onboardStripe = exports.syncEmailVerified = void 0;
-// Sync emailVerified on Auth user update
-exports.syncEmailVerified = functions.auth.user().onUpdate(async (change) => {
-    const before = change.before;
-    const after = change.after;
-    if (!before.emailVerified && after.emailVerified) {
-        await admin.firestore().collection("users").doc(after.uid).update({
-            emailVerified: true,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-    }
-});
+exports.checkStripeSellerStatus = exports.onboardStripe = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const stripe_1 = __importDefault(require("stripe"));
@@ -57,20 +46,19 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 const corsHandler = (0, cors_1.default)({ origin: true });
-/* =====================
-   HELPERS
-===================== */
-function requireVerified(context) {
+/* ---------------- HELPERS ---------------- */
+function requireAuth(context) {
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "Auth required");
     }
+}
+function requireVerified(context) {
+    requireAuth(context);
     if (context.auth.token.email_verified !== true) {
-        throw new functions.https.HttpsError("failed-precondition", "Email must be verified");
+        throw new functions.https.HttpsError("failed-precondition", "Email verification required");
     }
 }
-/* =====================
-   STRIPE
-===================== */
+/* ---------------- STRIPE ---------------- */
 let stripe = null;
 function getStripe() {
     if (stripe)
@@ -81,9 +69,7 @@ function getStripe() {
     stripe = new stripe_1.default(secret, { apiVersion: "2023-10-16" });
     return stripe;
 }
-/* =====================
-   STRIPE ONBOARDING
-===================== */
+/* ---------------- ONBOARD STRIPE ---------------- */
 exports.onboardStripe = functions
     .runWith({ secrets: ["STRIPE_SECRET"] })
     .https.onCall(async (_data, context) => {
@@ -111,7 +97,7 @@ exports.onboardStripe = functions
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
     }
-    const baseUrl = process.env.APP_BASE_URL || "http://localhost:9002";
+    const baseUrl = process.env.APP_BASE_URL || "https://www.hobbydork.com";
     const link = await stripe.accountLinks.create({
         account: accountId,
         refresh_url: `${baseUrl}/onboarding/failed`,
@@ -120,9 +106,7 @@ exports.onboardStripe = functions
     });
     return { url: link.url };
 });
-/* =====================
-   CHECK SELLER STATUS
-===================== */
+/* ---------------- CHECK SELLER STATUS ---------------- */
 exports.checkStripeSellerStatus = functions
     .runWith({ secrets: ["STRIPE_SECRET"] })
     .https.onRequest((req, res) => {
@@ -132,8 +116,8 @@ exports.checkStripeSellerStatus = functions
             if (!authHeader?.startsWith("Bearer ")) {
                 return res.status(401).json({ error: "Unauthorized" });
             }
-            const token = authHeader.split("Bearer ")[1];
-            const decoded = await admin.auth().verifyIdToken(token);
+            const idToken = authHeader.split("Bearer ")[1];
+            const decoded = await admin.auth().verifyIdToken(idToken);
             const uid = decoded.uid;
             const userRef = db.collection("users").doc(uid);
             const snap = await userRef.get();
