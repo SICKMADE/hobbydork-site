@@ -3,9 +3,6 @@ import * as admin from "firebase-admin";
 import Stripe from "stripe";
 import cors from "cors";
 
-/* =========================
-   INIT (ONCE. PERIOD.)
-========================= */
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -13,19 +10,14 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const corsHandler = cors({ origin: true });
 
-/* =========================
-   AUTH HELPERS
-========================= */
-function requireAuth(context: functions.https.CallableContext) {
+/* =====================
+   HELPERS
+===================== */
+function requireVerified(context: functions.https.CallableContext) {
   if (!context.auth) {
     throw new functions.https.HttpsError("unauthenticated", "Auth required");
   }
-}
-
-function requireVerified(context: functions.https.CallableContext) {
-  requireAuth(context);
-  // context.auth is guaranteed to be defined after requireAuth
-  if (context.auth && context.auth.token.email_verified !== true) {
+  if (context.auth.token.email_verified !== true) {
     throw new functions.https.HttpsError(
       "failed-precondition",
       "Email must be verified"
@@ -33,9 +25,9 @@ function requireVerified(context: functions.https.CallableContext) {
   }
 }
 
-/* =========================
+/* =====================
    STRIPE
-========================= */
+===================== */
 let stripe: Stripe | null = null;
 
 function getStripe() {
@@ -46,9 +38,9 @@ function getStripe() {
   return stripe;
 }
 
-/* =========================
-   STRIPE CONNECT ONBOARDING
-========================= */
+/* =====================
+   STRIPE ONBOARDING
+===================== */
 export const onboardStripe = functions
   .runWith({ secrets: ["STRIPE_SECRET"] })
   .https.onCall(async (_data, context) => {
@@ -82,7 +74,8 @@ export const onboardStripe = functions
       });
     }
 
-    const baseUrl = process.env.APP_BASE_URL || "http://localhost:9002";
+    const baseUrl =
+      process.env.APP_BASE_URL || "http://localhost:9002";
 
     const link = await stripe.accountLinks.create({
       account: accountId,
@@ -94,10 +87,9 @@ export const onboardStripe = functions
     return { url: link.url };
   });
 
-/* =========================
-   CHECK STRIPE SELLER STATUS
-   (CALLED AFTER REDIRECT)
-========================= */
+/* =====================
+   CHECK SELLER STATUS
+===================== */
 export const checkStripeSellerStatus = functions
   .runWith({ secrets: ["STRIPE_SECRET"] })
   .https.onRequest((req, res) => {
@@ -121,7 +113,9 @@ export const checkStripeSellerStatus = functions
         }
 
         const stripe = getStripe();
-        const account = await stripe.accounts.retrieve(user.stripeAccountId);
+        const account = await stripe.accounts.retrieve(
+          user.stripeAccountId
+        );
 
         if (account.details_submitted && account.charges_enabled) {
           await userRef.update({
@@ -135,7 +129,7 @@ export const checkStripeSellerStatus = functions
         return res.json({ isSeller: false });
       } catch (err) {
         console.error(err);
-        return res.status(500).json({ error: "internal error" });
+        res.status(500).json({ error: "internal error" });
       }
     });
   });

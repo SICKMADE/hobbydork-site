@@ -41,32 +41,25 @@ const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const stripe_1 = __importDefault(require("stripe"));
 const cors_1 = __importDefault(require("cors"));
-/* =========================
-   INIT (ONCE. PERIOD.)
-========================= */
 if (!admin.apps.length) {
     admin.initializeApp();
 }
 const db = admin.firestore();
 const corsHandler = (0, cors_1.default)({ origin: true });
-/* =========================
-   AUTH HELPERS
-========================= */
-function requireAuth(context) {
+/* =====================
+   HELPERS
+===================== */
+function requireVerified(context) {
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "Auth required");
     }
-}
-function requireVerified(context) {
-    requireAuth(context);
-    // context.auth is guaranteed to be defined after requireAuth
-    if (context.auth && context.auth.token.email_verified !== true) {
+    if (context.auth.token.email_verified !== true) {
         throw new functions.https.HttpsError("failed-precondition", "Email must be verified");
     }
 }
-/* =========================
+/* =====================
    STRIPE
-========================= */
+===================== */
 let stripe = null;
 function getStripe() {
     if (stripe)
@@ -77,9 +70,9 @@ function getStripe() {
     stripe = new stripe_1.default(secret, { apiVersion: "2023-10-16" });
     return stripe;
 }
-/* =========================
-   STRIPE CONNECT ONBOARDING
-========================= */
+/* =====================
+   STRIPE ONBOARDING
+===================== */
 exports.onboardStripe = functions
     .runWith({ secrets: ["STRIPE_SECRET"] })
     .https.onCall(async (_data, context) => {
@@ -116,10 +109,9 @@ exports.onboardStripe = functions
     });
     return { url: link.url };
 });
-/* =========================
-   CHECK STRIPE SELLER STATUS
-   (CALLED AFTER REDIRECT)
-========================= */
+/* =====================
+   CHECK SELLER STATUS
+===================== */
 exports.checkStripeSellerStatus = functions
     .runWith({ secrets: ["STRIPE_SECRET"] })
     .https.onRequest((req, res) => {
@@ -152,7 +144,7 @@ exports.checkStripeSellerStatus = functions
         }
         catch (err) {
             console.error(err);
-            return res.status(500).json({ error: "internal error" });
+            res.status(500).json({ error: "internal error" });
         }
     });
 });
