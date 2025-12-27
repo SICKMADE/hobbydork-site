@@ -29,13 +29,14 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <AuthProvider>
             <SignedOutGate />
-            <EmailVerificationGate />
-            <CartProvider>
-              <VaultProvider>
-                {children}
-                <Toaster />
-              </VaultProvider>
-            </CartProvider>
+            <EmailVerificationGate>
+              <CartProvider>
+                <VaultProvider>
+                  {children}
+                  <Toaster />
+                </VaultProvider>
+              </CartProvider>
+            </EmailVerificationGate>
           </AuthProvider>
         </FirebaseClientProvider>
       </body>
