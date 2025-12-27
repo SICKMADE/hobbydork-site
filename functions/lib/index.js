@@ -41,14 +41,16 @@ const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const stripe_1 = __importDefault(require("stripe"));
 const cors_1 = __importDefault(require("cors"));
-// ✅ SINGLE ADMIN INIT (DO NOT DUPLICATE ANYWHERE)
+/* =========================
+   INIT (ONCE. PERIOD.)
+========================= */
 if (!admin.apps.length) {
     admin.initializeApp();
 }
 const db = admin.firestore();
 const corsHandler = (0, cors_1.default)({ origin: true });
 /* =========================
-   HELPERS
+   AUTH HELPERS
 ========================= */
 function requireAuth(context) {
     if (!context.auth) {
@@ -57,7 +59,8 @@ function requireAuth(context) {
 }
 function requireVerified(context) {
     requireAuth(context);
-    if (context.auth.token.email_verified !== true) {
+    // context.auth is guaranteed to be defined after requireAuth
+    if (context.auth && context.auth.token.email_verified !== true) {
         throw new functions.https.HttpsError("failed-precondition", "Email must be verified");
     }
 }
@@ -126,8 +129,8 @@ exports.checkStripeSellerStatus = functions
             if (!authHeader?.startsWith("Bearer ")) {
                 return res.status(401).json({ error: "Unauthorized" });
             }
-            const idToken = authHeader.split("Bearer ")[1];
-            const decoded = await admin.auth().verifyIdToken(idToken);
+            const token = authHeader.split("Bearer ")[1];
+            const decoded = await admin.auth().verifyIdToken(token);
             const uid = decoded.uid;
             const userRef = db.collection("users").doc(uid);
             const snap = await userRef.get();
@@ -145,16 +148,11 @@ exports.checkStripeSellerStatus = functions
                 });
                 return res.json({ isSeller: true });
             }
-            await userRef.update({
-                isSeller: false,
-                sellerStatus: "PENDING",
-                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            });
             return res.json({ isSeller: false });
         }
         catch (err) {
             console.error(err);
-            res.status(500).json({ error: "internal error" });
+            return res.status(500).json({ error: "internal error" });
         }
     });
 });

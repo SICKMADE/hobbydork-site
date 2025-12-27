@@ -3,8 +3,9 @@ import * as admin from "firebase-admin";
 import Stripe from "stripe";
 import cors from "cors";
 
-
-// ✅ SINGLE ADMIN INIT (DO NOT DUPLICATE ANYWHERE)
+/* =========================
+   INIT (ONCE. PERIOD.)
+========================= */
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -13,9 +14,8 @@ const db = admin.firestore();
 const corsHandler = cors({ origin: true });
 
 /* =========================
-   HELPERS
+   AUTH HELPERS
 ========================= */
-
 function requireAuth(context: functions.https.CallableContext) {
   if (!context.auth) {
     throw new functions.https.HttpsError("unauthenticated", "Auth required");
@@ -24,7 +24,8 @@ function requireAuth(context: functions.https.CallableContext) {
 
 function requireVerified(context: functions.https.CallableContext) {
   requireAuth(context);
-  if (context.auth!.token.email_verified !== true) {
+  // context.auth is guaranteed to be defined after requireAuth
+  if (context.auth && context.auth.token.email_verified !== true) {
     throw new functions.https.HttpsError(
       "failed-precondition",
       "Email must be verified"
@@ -35,15 +36,12 @@ function requireVerified(context: functions.https.CallableContext) {
 /* =========================
    STRIPE
 ========================= */
-
 let stripe: Stripe | null = null;
 
 function getStripe() {
   if (stripe) return stripe;
-
   const secret = process.env.STRIPE_SECRET;
   if (!secret) throw new Error("Missing STRIPE_SECRET");
-
   stripe = new Stripe(secret, { apiVersion: "2023-10-16" });
   return stripe;
 }
@@ -51,7 +49,6 @@ function getStripe() {
 /* =========================
    STRIPE CONNECT ONBOARDING
 ========================= */
-
 export const onboardStripe = functions
   .runWith({ secrets: ["STRIPE_SECRET"] })
   .https.onCall(async (_data, context) => {
@@ -85,8 +82,7 @@ export const onboardStripe = functions
       });
     }
 
-    const baseUrl =
-      process.env.APP_BASE_URL || "http://localhost:9002";
+    const baseUrl = process.env.APP_BASE_URL || "http://localhost:9002";
 
     const link = await stripe.accountLinks.create({
       account: accountId,
@@ -102,7 +98,6 @@ export const onboardStripe = functions
    CHECK STRIPE SELLER STATUS
    (CALLED AFTER REDIRECT)
 ========================= */
-
 export const checkStripeSellerStatus = functions
   .runWith({ secrets: ["STRIPE_SECRET"] })
   .https.onRequest((req, res) => {
@@ -113,8 +108,8 @@ export const checkStripeSellerStatus = functions
           return res.status(401).json({ error: "Unauthorized" });
         }
 
-        const idToken = authHeader.split("Bearer ")[1];
-        const decoded = await admin.auth().verifyIdToken(idToken);
+        const token = authHeader.split("Bearer ")[1];
+        const decoded = await admin.auth().verifyIdToken(token);
         const uid = decoded.uid;
 
         const userRef = db.collection("users").doc(uid);
@@ -126,9 +121,7 @@ export const checkStripeSellerStatus = functions
         }
 
         const stripe = getStripe();
-        const account = await stripe.accounts.retrieve(
-          user.stripeAccountId
-        );
+        const account = await stripe.accounts.retrieve(user.stripeAccountId);
 
         if (account.details_submitted && account.charges_enabled) {
           await userRef.update({
@@ -136,20 +129,13 @@ export const checkStripeSellerStatus = functions
             sellerStatus: "APPROVED",
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
-
           return res.json({ isSeller: true });
         }
-
-        await userRef.update({
-          isSeller: false,
-          sellerStatus: "PENDING",
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
 
         return res.json({ isSeller: false });
       } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "internal error" });
+        return res.status(500).json({ error: "internal error" });
       }
     });
   });
