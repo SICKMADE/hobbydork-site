@@ -329,20 +329,19 @@ export default function CreateStorePage() {
       }
 
       if (!storeRef) throw new Error('StoreRef not initialized');
+      const safeStoreRef = storeRef;
 
-      // storeRef is guaranteed to be defined below
       await runTransaction(firestore, async (tx) => {
-        // Only set isSeller if user is emailVerified
         tx.update(userRef, {
           isSeller: user.emailVerified === true,
-          storeId: storeRef.id,
+          storeId: safeStoreRef.id,
           stripeOnboarded: true,
           updatedAt: serverTimestamp(),
         });
 
-        tx.set(storeRef, {
-          id: storeRef.id,
-          storeId: storeRef.id,
+        tx.set(safeStoreRef, {
+          id: safeStoreRef.id,
+          storeId: safeStoreRef.id,
           ownerUid: user.uid,
           storeName: profile.displayName,
           slug,
