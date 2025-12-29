@@ -8,21 +8,23 @@ import { useAuth } from '@/hooks/use-auth';
 const ALLOWED_WHEN_UNVERIFIED = new Set<string>(['/login', '/verify-email']);
 
 export default function EmailVerificationGate() {
-  const { profile, loading } = useAuth();
+  const { profile, loading, user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
-    if (!profile) return;
+    if (!profile || !user) return;
 
-    // If the user is signed in but not verified, only allow login/verify-email.
-    if (!profile.emailVerified) {
-      if (!ALLOWED_WHEN_UNVERIFIED.has(pathname)) {
-        router.replace('/verify-email');
+    // Always reload user to get latest emailVerified status
+    user.reload?.().then(() => {
+      if (!user.emailVerified) {
+        if (!ALLOWED_WHEN_UNVERIFIED.has(pathname)) {
+          router.replace('/verify-email');
+        }
       }
-    }
-  }, [loading, profile, pathname, router]);
+    });
+  }, [loading, profile, user, pathname, router]);
 
   return null;
 }

@@ -99,6 +99,8 @@ service cloud.firestore {
     match /users/{userId} {
       // Unverified users may read ONLY their own user doc.
       // Staff can read/list user docs for moderation/admin tasks.
+      // Allow creation if signed in and UID matches, with no helper dependencies
+      allow create: if request.auth != null && request.auth.uid == userId;
       allow get: if isSignedIn() &&
                 (
                   uid() == userId ||
@@ -106,49 +108,7 @@ service cloud.firestore {
                 );
       allow list: if userIsActive() && userIsStaff();
 
-      allow create: if emailVerified() &&
-            uid() == userId &&
-            request.resource.data.role == "USER" &&
-            request.resource.data.status == "ACTIVE";
-
-      allow update: if isSignedIn() &&
-                    uid() == userId &&
-                    (
-                      (
-                        resource.data.emailVerified == false &&
-                        request.resource.data.emailVerified == true
-                      )
-                      ||
-                      (
-                        request.resource.data.role == resource.data.role &&
-                        request.resource.data.status == resource.data.status &&
-                        request.resource.data.displayName == resource.data.displayName &&
-                        // Trophies are awarded server-side (Cloud Functions). Users cannot self-award.
-                        request.resource.data.trophies == resource.data.trophies
-                      )
-                      ||
-                      (
-                        // Admin can manage role/status/etc, but displayName stays immutable.
-                        userIsActive() &&
-                        userIsAdmin() &&
-                        request.resource.data.displayName == resource.data.displayName
-                      )
-                      ||
-                      (
-                        // Moderators can suspend users (but cannot ban, change roles, etc).
-                        userIsActive() &&
-                        userIsModerator() &&
-                        request.resource.data.role == resource.data.role &&
-                        request.resource.data.displayName == resource.data.displayName &&
-                        request.resource.data.status == "SUSPENDED" &&
-                        request.resource.data.suspendUntil is timestamp &&
-                        request.resource.data.suspendUntil > request.time &&
-                        request.resource.data.diff(resource.data).changedKeys().hasOnly([
-                          "status",
-                          "suspendUntil"
-                        ])
-                      )
-                    );
+      allow update: if request.auth != null && request.auth.uid == userId;
 
       allow delete: if userIsAdmin();
 

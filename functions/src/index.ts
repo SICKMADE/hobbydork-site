@@ -91,7 +91,7 @@ export const onboardStripe = functions
     const link = await stripe.accountLinks.create({
       account: accountId,
       refresh_url: `${baseUrl}/onboarding/failed`,
-      return_url: `${baseUrl}/onboarding/success`,
+      return_url: `${baseUrl}/store/create`,
       type: "account_onboarding",
     });
 

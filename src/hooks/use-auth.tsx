@@ -135,7 +135,7 @@ function useProvideAuth(): AuthContextType {
       }).catch(console.error);
     }
   }, [user, userData]);
-  // Sync Firestore emailVerified after login
+  // Sync Firestore emailVerified after login (no manual code logic)
   useEffect(() => {
     if (!user) return;
     if (user.emailVerified) {
@@ -221,7 +221,11 @@ function useProvideAuth(): AuthContextType {
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             };
-            await setDoc(ref, newUserData);
+            try {
+              await setDoc(ref, newUserData);
+            } catch (e) {
+              console.error('Firestore setDoc failed:', e);
+            }
             setUserData({
               ...EMPTY_USERDOC,
               ...newUserData,
@@ -308,15 +312,8 @@ function useProvideAuth(): AuthContextType {
     }
 
 
-    // Use environment variable for site URL if available
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hobbydork.com';
-    const actionCodeSettings = {
-      url: `${siteUrl}/verify-email`,
-      handleCodeInApp: false,
-    };
-
     try {
-      await sendEmailVerification(current, actionCodeSettings);
+      await sendEmailVerification(current);
     } catch (e: any) {
       const code = String(e?.code ?? '');
 

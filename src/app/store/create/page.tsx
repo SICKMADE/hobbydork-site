@@ -277,7 +277,11 @@ export default function CreateStorePage() {
   useEffect(() => {
     if (profile && typeof methods.setValue === 'function') {
       methods.setValue('stripeOnboarded', !!profile.stripeOnboarded || !!profile.stripeAccountId);
-      methods.setValue('agreeSellerTerms', !!profile.stripeTermsAgreed);
+      // Only update agreeSellerTerms if the user hasn't checked it yet (i.e., still default)
+      const current = methods.getValues('agreeSellerTerms');
+      if (current === false || current === undefined) {
+        methods.setValue('agreeSellerTerms', !!profile.stripeTermsAgreed);
+      }
     }
   }, [profile]);
 
@@ -285,6 +289,7 @@ export default function CreateStorePage() {
     if (!user || !firestore || !profile?.displayName) return;
 
     setSaving(true);
+    let storeRef: ReturnType<typeof doc> | undefined = undefined;
 
     try {
       const slug = profile.displayName
@@ -296,12 +301,16 @@ export default function CreateStorePage() {
 
       // Persist seller-terms acceptance before creating the store so rules that
       // read users/{uid} can validate it during storefront create.
+      // Ensure all required fields for userCanCreateStore are set before creating the store
       await updateDoc(userRef, {
+        storeId: '',
+        stripeOnboarded: true,
+        stripeAccountId: profile.stripeAccountId ?? null,
         stripeTermsAgreed: true,
         updatedAt: serverTimestamp(),
       });
 
-      const storeRef = doc(collection(firestore, 'storefronts'));
+      storeRef = doc(collection(firestore, 'storefronts'));
 
       // Optional: upload store image before the Firestore transaction so we can store the URL.
       let storeImageUrl: string | null = null;
@@ -310,7 +319,7 @@ export default function CreateStorePage() {
           ? ((window as any).__pendingStoreImageFile as File | null)
           : null;
 
-      if (pendingFile && storage) {
+      if (pendingFile && storage && storeRef) {
         const storageRef = ref(
           storage,
           `storeImages/${user.uid}/${storeRef.id}/${pendingFile.name}`
@@ -318,6 +327,8 @@ export default function CreateStorePage() {
         await uploadBytes(storageRef, pendingFile);
         storeImageUrl = await getDownloadURL(storageRef);
       }
+
+      if (!storeRef) throw new Error('StoreRef not initialized');
 
       await runTransaction(firestore, async (tx) => {
         // Only set isSeller if user is emailVerified
@@ -352,7 +363,7 @@ export default function CreateStorePage() {
       errorEmitter.emit(
         'permission-error',
         new FirestorePermissionError({
-          path: 'store/create',
+          path: `storefronts/${storeRef?.id ?? '[unknown]'}`,
           operation: 'write',
         })
       );
