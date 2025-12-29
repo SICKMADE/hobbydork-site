@@ -330,6 +330,7 @@ export default function CreateStorePage() {
 
       if (!storeRef) throw new Error('StoreRef not initialized');
 
+      // storeRef is guaranteed to be defined below
       await runTransaction(firestore, async (tx) => {
         // Only set isSeller if user is emailVerified
         tx.update(userRef, {
