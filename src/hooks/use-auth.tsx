@@ -129,20 +129,28 @@ function useProvideAuth(): AuthContextType {
     if (!user) return;
 
     if (user.emailVerified && userData?.emailVerified !== true) {
-      updateDoc(doc(db, 'users', user.uid), {
-        emailVerified: true,
-        updatedAt: serverTimestamp(),
-      }).catch(console.error);
+      setDoc(
+        doc(db, 'users', user.uid),
+        {
+          emailVerified: true,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
     }
   }, [user, userData]);
   // Sync Firestore emailVerified after login (no manual code logic)
   useEffect(() => {
     if (!user) return;
     if (user.emailVerified) {
-      updateDoc(doc(db, 'users', user.uid), {
-        emailVerified: true,
-        updatedAt: serverTimestamp(),
-      }).catch(() => {});
+      setDoc(
+        doc(db, 'users', user.uid),
+        {
+          emailVerified: true,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      ).catch(() => {});
     }
   }, [user?.uid, user?.emailVerified]);
 
@@ -289,7 +297,7 @@ function useProvideAuth(): AuthContextType {
       setError(e);
       // log for easier local debugging
       // eslint-disable-next-line no-console
-      console.error('logoutUser error', e);
+      // ...existing code...
       throw e;
     }
   };

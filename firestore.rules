@@ -1,7 +1,20 @@
-rules_version = '2';
+  rules_version = '2';
 
-service cloud.firestore {
-  match /databases/{database}/documents {
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      // --- Simpler user profile rules for onboarding/debug ---
+      match /users/{uid} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+
+        // User can update their own profile EXCEPT seller fields
+        allow update: if request.auth != null
+          && request.auth.uid == uid
+          && !('isSeller' in request.resource.data)
+          && !('sellerStatus' in request.resource.data)
+          && !('stripeAccountId' in request.resource.data);
+
+        // Cloud Functions (Admin SDK) bypass rules automatically
+      }
 
     // ------------- Helpers -------------
 
@@ -65,13 +78,9 @@ service cloud.firestore {
 
     function userCanCreateStore() {
       return isSignedIn() &&
-             emailVerified() &&
              userIsActive() &&
-             !userIsSeller() &&
-             userData().storeId == "" &&
-             userData().stripeOnboarded == true &&
-             userData().stripeAccountId != null &&
-             userData().stripeTermsAgreed == true;
+             userData().isSeller == true &&
+             userData().storeId == "";
     }
 
     function userCanApplyToBeSeller() {

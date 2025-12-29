@@ -40,7 +40,7 @@ const getInitialCart = (): { items: CartItem[], storeId: string | null } => {
             return JSON.parse(storedCart);
         }
     } catch (error) {
-        console.error("Failed to parse cart from localStorage", error);
+        // ...existing code...
     }
     return { items: [], storeId: null };
 };
@@ -57,7 +57,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const cartState = JSON.stringify({ items, storeId });
             localStorage.setItem('vaultverse-cart', cartState);
         } catch (error) {
-            console.error("Failed to save cart to localStorage", error);
+            // ...existing code...
         }
     }, [items, storeId]);
 

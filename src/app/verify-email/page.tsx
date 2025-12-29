@@ -24,18 +24,6 @@ function VerifyEmailContent() {
   const handleSignOut = async () => {
     setSigningOut(true);
     try {
-      await logout();
-      router.replace('/login');
-    } catch (e) {
-      toast({ title: 'Error', description: 'Could not sign out. Please refresh and try again.', variant: 'destructive' });
-    } finally {
-      setSigningOut(false);
-    }
-  };
-
-  // Handle email verification via oobCode in URL and session state
-  useEffect(() => {
-    const oobCode = searchParams?.get("oobCode");
     const mode = searchParams?.get("mode");
     if (!auth.currentUser) {
       if (mode === "verifyEmail" && oobCode) {
@@ -68,7 +56,6 @@ function VerifyEmailContent() {
         if (storedMode === "verifyEmail" && storedCode) {
           setVerifying(true);
           (async () => {
-            try {
               await applyActionCode(auth, storedCode);
               await auth.currentUser?.reload();
               router.replace('/login?verified=1');
@@ -134,6 +121,7 @@ function VerifyEmailContent() {
         </div>
       </div>
 
+<<<<<<< HEAD
       <div className="rounded-lg border bg-card shadow-sm p-6 text-center">
         <h2 className="text-2xl font-semibold">Verify your email</h2>
         <p className="mt-3 text-sm text-muted-foreground">
@@ -144,6 +132,30 @@ function VerifyEmailContent() {
           <Button variant="ghost" onClick={handleSignOut} disabled={signingOut || verifying}>
             {signingOut ? 'Signing out…' : 'Sign out and try again'}
           </Button>
+=======
+        <div className="rounded-lg border bg-card shadow-sm p-6 text-center">
+          <h2 className="text-2xl font-semibold">Verify your email</h2>
+          <p className="mt-3 text-sm text-muted-foreground">
+            We sent a verification link to <strong>{user?.email}</strong>. Click the link in your email to verify your account.
+          </p>
+
+          <div className="mt-6 flex gap-3 justify-center">
+            <Button onClick={handleResend} disabled={sending || verifying}>{sending ? 'Sending…' : 'Resend email'}</Button>
+            <Button variant="outline" onClick={handleCheck} disabled={checking || verifying}>{checking ? 'Checking…' : "I've verified"}</Button>
+            <Button variant="ghost" onClick={handleSignOut} disabled={signingOut || verifying}>
+              {signingOut ? 'Signing out…' : 'Sign out and try again'}
+            </Button>
+          </div>
+          {verifying && (
+            <div className="mt-4 text-sm text-blue-600">Verifying your email…</div>
+          )}
+
+          <div className="mt-4 text-sm text-muted-foreground">
+            If you don't see the email, check your spam folder or try resending.
+          </div>
+
+          {/* ...existing code... */}
+>>>>>>> 1634d88209804140170e6ed7ac6fb73e167e69d0
         </div>
         {verifying && (
           <div className="mt-4 text-sm text-blue-600">Verifying your email…</div>

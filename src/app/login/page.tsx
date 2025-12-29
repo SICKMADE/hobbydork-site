@@ -1,60 +1,57 @@
-"use client";
+'use client';
 
-
-import { useEffect, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import AuthComponent from "@/components/auth/AuthComponent";
-import { useUser } from "@/firebase";
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import AuthComponent from '@/components/auth/AuthComponent';
+import { useUser } from '@/firebase';
 
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isUserLoading } = useUser();
-  const [initialTab, setInitialTab] = useState<"login" | "signup">("login");
-  const [showVerifiedMsg, setShowVerifiedMsg] = useState(false);
+
+  const [initialTab, setInitialTab] = useState<'login' | 'signup'>('login');
+  const [showVerifyMsg, setShowVerifyMsg] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const syncFromHash = () => {
-      setInitialTab(window.location.hash === "#signup" ? "signup" : "login");
+    if (typeof window === 'undefined') return;
+    const sync = () => {
+      setInitialTab(window.location.hash === '#signup' ? 'signup' : 'login');
     };
-
-    // Set initial state and keep it in sync if the hash changes
-    // (Next.js may not remount the page when only the hash changes).
-    syncFromHash();
-    window.addEventListener("hashchange", syncFromHash);
-    return () => window.removeEventListener("hashchange", syncFromHash);
+    sync();
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
   }, []);
 
   useEffect(() => {
-    // Show verified message if redirected from email verification
-    if (searchParams?.get("verified") === "1") {
-      setShowVerifiedMsg(true);
+    if (searchParams?.get('verify') === '1') {
+      setShowVerifyMsg(true);
     }
   }, [searchParams]);
 
   useEffect(() => {
-    if (!isUserLoading && user) {
+    if (isUserLoading) return;
+
+    if (user) {
       if (user.emailVerified) {
-        router.replace("/");
+        router.replace('/');
       } else {
-        router.replace("/verify-email");
+        router.replace('/login?verify=1');
       }
     }
   }, [isUserLoading, user, router]);
 
   if (isUserLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <div className="flex min-h-screen items-center justify-center">Loading…</div>;
   }
 
   if (user) return null;
 
   return (
     <>
-      {showVerifiedMsg && (
-        <div className="mb-4 max-w-md mx-auto bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded text-center">
-          Your email has been verified. Please log in to continue.
+      {showVerifyMsg && (
+        <div className="mb-4 mx-auto max-w-md rounded border border-yellow-300 bg-yellow-50 px-4 py-3 text-center text-sm text-yellow-900">
+          Please verify your email. Check your inbox, then log in.
         </div>
       )}
       <AuthComponent initialTab={initialTab} />
@@ -64,7 +61,7 @@ function LoginPageInner() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading…</div>}>
       <LoginPageInner />
     </Suspense>
   );

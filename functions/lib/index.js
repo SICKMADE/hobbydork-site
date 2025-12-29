@@ -41,15 +41,12 @@ const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const stripe_1 = __importDefault(require("stripe"));
 const cors_1 = __importDefault(require("cors"));
-// ✅ SINGLE ADMIN INIT (DO NOT DUPLICATE ANYWHERE)
 if (!admin.apps.length) {
     admin.initializeApp();
 }
 const db = admin.firestore();
 const corsHandler = (0, cors_1.default)({ origin: true });
-/* =========================
-   HELPERS
-========================= */
+/* ---------------- HELPERS ---------------- */
 function requireAuth(context) {
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "Auth required");
@@ -58,12 +55,10 @@ function requireAuth(context) {
 function requireVerified(context) {
     requireAuth(context);
     if (context.auth.token.email_verified !== true) {
-        throw new functions.https.HttpsError("failed-precondition", "Email must be verified");
+        throw new functions.https.HttpsError("failed-precondition", "Email verification required");
     }
 }
-/* =========================
-   STRIPE
-========================= */
+/* ---------------- STRIPE ---------------- */
 let stripe = null;
 function getStripe() {
     if (stripe)
@@ -74,9 +69,7 @@ function getStripe() {
     stripe = new stripe_1.default(secret, { apiVersion: "2023-10-16" });
     return stripe;
 }
-/* =========================
-   STRIPE CONNECT ONBOARDING
-========================= */
+/* ---------------- ONBOARD STRIPE ---------------- */
 exports.onboardStripe = functions
     .runWith({ secrets: ["STRIPE_SECRET"] })
     .https.onCall(async (_data, context) => {
@@ -104,7 +97,7 @@ exports.onboardStripe = functions
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
     }
-    const baseUrl = process.env.APP_BASE_URL || "http://localhost:9002";
+    const baseUrl = process.env.APP_BASE_URL || "https://www.hobbydork.com";
     const link = await stripe.accountLinks.create({
         account: accountId,
         refresh_url: `${baseUrl}/onboarding/failed`,
@@ -113,10 +106,7 @@ exports.onboardStripe = functions
     });
     return { url: link.url };
 });
-/* =========================
-   CHECK STRIPE SELLER STATUS
-   (CALLED AFTER REDIRECT)
-========================= */
+/* ---------------- CHECK SELLER STATUS ---------------- */
 exports.checkStripeSellerStatus = functions
     .runWith({ secrets: ["STRIPE_SECRET"] })
     .https.onRequest((req, res) => {
@@ -145,11 +135,6 @@ exports.checkStripeSellerStatus = functions
                 });
                 return res.json({ isSeller: true });
             }
-            await userRef.update({
-                isSeller: false,
-                sellerStatus: "PENDING",
-                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            });
             return res.json({ isSeller: false });
         }
         catch (err) {

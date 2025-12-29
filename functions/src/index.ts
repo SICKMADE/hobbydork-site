@@ -3,8 +3,6 @@ import * as admin from "firebase-admin";
 import Stripe from "stripe";
 import cors from "cors";
 
-
-// ✅ SINGLE ADMIN INIT (DO NOT DUPLICATE ANYWHERE)
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -12,9 +10,7 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const corsHandler = cors({ origin: true });
 
-/* =========================
-   HELPERS
-========================= */
+/* ---------------- HELPERS ---------------- */
 
 function requireAuth(context: functions.https.CallableContext) {
   if (!context.auth) {
@@ -27,30 +23,23 @@ function requireVerified(context: functions.https.CallableContext) {
   if (context.auth!.token.email_verified !== true) {
     throw new functions.https.HttpsError(
       "failed-precondition",
-      "Email must be verified"
+      "Email verification required"
     );
   }
 }
 
-/* =========================
-   STRIPE
-========================= */
+/* ---------------- STRIPE ---------------- */
 
 let stripe: Stripe | null = null;
-
 function getStripe() {
   if (stripe) return stripe;
-
   const secret = process.env.STRIPE_SECRET;
   if (!secret) throw new Error("Missing STRIPE_SECRET");
-
   stripe = new Stripe(secret, { apiVersion: "2023-10-16" });
   return stripe;
 }
 
-/* =========================
-   STRIPE CONNECT ONBOARDING
-========================= */
+/* ---------------- ONBOARD STRIPE ---------------- */
 
 export const onboardStripe = functions
   .runWith({ secrets: ["STRIPE_SECRET"] })
@@ -86,7 +75,7 @@ export const onboardStripe = functions
     }
 
     const baseUrl =
-      process.env.APP_BASE_URL || "http://localhost:9002";
+      process.env.APP_BASE_URL || "https://www.hobbydork.com";
 
     const link = await stripe.accountLinks.create({
       account: accountId,
@@ -98,10 +87,7 @@ export const onboardStripe = functions
     return { url: link.url };
   });
 
-/* =========================
-   CHECK STRIPE SELLER STATUS
-   (CALLED AFTER REDIRECT)
-========================= */
+/* ---------------- CHECK SELLER STATUS ---------------- */
 
 export const checkStripeSellerStatus = functions
   .runWith({ secrets: ["STRIPE_SECRET"] })
@@ -126,9 +112,7 @@ export const checkStripeSellerStatus = functions
         }
 
         const stripe = getStripe();
-        const account = await stripe.accounts.retrieve(
-          user.stripeAccountId
-        );
+        const account = await stripe.accounts.retrieve(user.stripeAccountId);
 
         if (account.details_submitted && account.charges_enabled) {
           await userRef.update({
@@ -136,15 +120,8 @@ export const checkStripeSellerStatus = functions
             sellerStatus: "APPROVED",
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
-
           return res.json({ isSeller: true });
         }
-
-        await userRef.update({
-          isSeller: false,
-          sellerStatus: "PENDING",
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
 
         return res.json({ isSeller: false });
       } catch (err) {
