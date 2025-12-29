@@ -56,6 +56,7 @@ function VerifyEmailContent() {
         if (storedMode === "verifyEmail" && storedCode) {
           setVerifying(true);
           (async () => {
+            try {
               await applyActionCode(auth, storedCode);
               await auth.currentUser?.reload();
               router.replace('/login?verified=1');
