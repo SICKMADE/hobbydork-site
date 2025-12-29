@@ -13,86 +13,90 @@ import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 function VerifyEmailContent() {
   const { user, resendVerification, logout } = useAuth();
   // Only link-based verification logic. No manual code, no redundant state.
+  const searchParams = useSearchParams();
+  const oobCode = searchParams?.get("oobCode") || undefined;
   const { toast } = useToast();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
   const [sending, setSending] = useState(false);
   const [checking, setChecking] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const searchParams = useSearchParams();
 
   const handleSignOut = async () => {
     setSigningOut(true);
     try {
-    const mode = searchParams?.get("mode");
-    if (!auth.currentUser) {
+      const mode = searchParams?.get("mode");
+      if (!auth.currentUser) {
+        if (mode === "verifyEmail" && oobCode) {
+          localStorage.setItem("pendingEmailVerification", JSON.stringify({ oobCode, mode }));
+        }
+        router.replace('/login?redirect=/verify-email');
+        return;
+      }
       if (mode === "verifyEmail" && oobCode) {
-        localStorage.setItem("pendingEmailVerification", JSON.stringify({ oobCode, mode }));
-      }
-      router.replace('/login?redirect=/verify-email');
-      return;
-    }
-    if (mode === "verifyEmail" && oobCode) {
-      setVerifying(true);
-      (async () => {
-        try {
-          await applyActionCode(auth, oobCode);
-          await auth.currentUser?.reload();
-          router.replace('/login?verified=1');
-        } catch (e) {
-          const errorMsg = (typeof e === 'object' && e && 'message' in e) ? (e as any).message : 'Could not verify email.';
-          toast({ title: "Verification failed", description: errorMsg, variant: "destructive" });
-          console.error('Verification failed:', e);
-        } finally {
-          setVerifying(false);
-        }
-      })();
-      return;
-    }
-    const pending = localStorage.getItem("pendingEmailVerification");
-    if (pending) {
-      try {
-        const { oobCode: storedCode, mode: storedMode } = JSON.parse(pending);
-        if (storedMode === "verifyEmail" && storedCode) {
-          setVerifying(true);
-          (async () => {
-            try {
-              await applyActionCode(auth, storedCode);
-              await auth.currentUser?.reload();
-              router.replace('/login?verified=1');
-            } catch (e) {
-              const errorMsg = (typeof e === 'object' && e && 'message' in e) ? (e as any).message : 'Could not verify email.';
-              toast({ title: "Verification failed", description: errorMsg, variant: "destructive" });
-              console.error('Verification failed:', e);
-            } finally {
-              setVerifying(false);
-              localStorage.removeItem("pendingEmailVerification");
-            }
-          })();
-          return;
-        }
-      } catch {
-        localStorage.removeItem("pendingEmailVerification");
-      }
-    }
-    async function autoCheck() {
-      await (auth.currentUser.reload?.() ?? Promise.resolve());
-      try {
-        await auth.currentUser.getIdToken(true);
-      } catch {}
-      const current = auth.currentUser;
-      if (current?.emailVerified) {
-        router.replace('/login?verified=1');
-        router.refresh();
-        setTimeout(() => {
-          if (window.location.pathname === '/verify-email') {
-            window.location.assign('/login?verified=1');
+        setVerifying(true);
+        (async () => {
+          try {
+            await applyActionCode(auth, oobCode);
+            await auth.currentUser?.reload();
+            router.replace('/login?verified=1');
+          } catch (e) {
+            const errorMsg = (typeof e === 'object' && e && 'message' in e) ? (e as any).message : 'Could not verify email.';
+            toast({ title: "Verification failed", description: errorMsg, variant: "destructive" });
+            console.error('Verification failed:', e);
+          } finally {
+            setVerifying(false);
           }
-        }, 400);
+        })();
+        return;
       }
+      const pending = localStorage.getItem("pendingEmailVerification");
+      if (pending) {
+        try {
+          const { oobCode: storedCode, mode: storedMode } = JSON.parse(pending);
+          if (storedMode === "verifyEmail" && storedCode) {
+            setVerifying(true);
+            (async () => {
+              try {
+                await applyActionCode(auth, storedCode);
+                await auth.currentUser?.reload();
+                router.replace('/login?verified=1');
+              } catch (e) {
+                const errorMsg = (typeof e === 'object' && e && 'message' in e) ? (e as any).message : 'Could not verify email.';
+                toast({ title: "Verification failed", description: errorMsg, variant: "destructive" });
+                console.error('Verification failed:', e);
+              } finally {
+                setVerifying(false);
+                localStorage.removeItem("pendingEmailVerification");
+              }
+            })();
+            return;
+          }
+        } catch {
+          localStorage.removeItem("pendingEmailVerification");
+        }
+      }
+      async function autoCheck() {
+        await (auth.currentUser.reload?.() ?? Promise.resolve());
+        try {
+          await auth.currentUser.getIdToken(true);
+        } catch {}
+        const current = auth.currentUser;
+        if (current?.emailVerified) {
+          router.replace('/login?verified=1');
+          router.refresh();
+          setTimeout(() => {
+            if (window.location.pathname === '/verify-email') {
+              window.location.assign('/login?verified=1');
+            }
+          }, 400);
+        }
+      }
+      autoCheck();
+    } finally {
+      setSigningOut(false);
     }
-    autoCheck();
-  }, [router, toast, searchParams]);
+  };
 
   const handleResend = async () => {
     try {
@@ -121,8 +125,6 @@ function VerifyEmailContent() {
           <Image src="/hobbydork-head.png" alt="HobbyDork" fill className="object-contain" />
         </div>
       </div>
-
-<<<<<<< HEAD
       <div className="rounded-lg border bg-card shadow-sm p-6 text-center">
         <h2 className="text-2xl font-semibold">Verify your email</h2>
         <p className="mt-3 text-sm text-muted-foreground">
@@ -130,33 +132,10 @@ function VerifyEmailContent() {
         </p>
         <div className="mt-6 flex gap-3 justify-center">
           <Button onClick={handleResend} disabled={sending || verifying}>{sending ? 'Sending…' : 'Resend email'}</Button>
+          <Button variant="outline" onClick={handleCheck} disabled={checking || verifying}>{checking ? 'Checking…' : "I've verified"}</Button>
           <Button variant="ghost" onClick={handleSignOut} disabled={signingOut || verifying}>
             {signingOut ? 'Signing out…' : 'Sign out and try again'}
           </Button>
-=======
-        <div className="rounded-lg border bg-card shadow-sm p-6 text-center">
-          <h2 className="text-2xl font-semibold">Verify your email</h2>
-          <p className="mt-3 text-sm text-muted-foreground">
-            We sent a verification link to <strong>{user?.email}</strong>. Click the link in your email to verify your account.
-          </p>
-
-          <div className="mt-6 flex gap-3 justify-center">
-            <Button onClick={handleResend} disabled={sending || verifying}>{sending ? 'Sending…' : 'Resend email'}</Button>
-            <Button variant="outline" onClick={handleCheck} disabled={checking || verifying}>{checking ? 'Checking…' : "I've verified"}</Button>
-            <Button variant="ghost" onClick={handleSignOut} disabled={signingOut || verifying}>
-              {signingOut ? 'Signing out…' : 'Sign out and try again'}
-            </Button>
-          </div>
-          {verifying && (
-            <div className="mt-4 text-sm text-blue-600">Verifying your email…</div>
-          )}
-
-          <div className="mt-4 text-sm text-muted-foreground">
-            If you don't see the email, check your spam folder or try resending.
-          </div>
-
-          {/* ...existing code... */}
->>>>>>> 1634d88209804140170e6ed7ac6fb73e167e69d0
         </div>
         {verifying && (
           <div className="mt-4 text-sm text-blue-600">Verifying your email…</div>
@@ -164,11 +143,11 @@ function VerifyEmailContent() {
         <div className="mt-4 text-sm text-muted-foreground">
           If you don't see the email, check your spam folder or try resending.
         </div>
-        {/* DEBUG INFO */}
         {/* Debug info removed as requested */}
       </div>
     </div>
   );
+// removed extraneous closing brace
 }
 
 export default function VerifyEmailPage() {
