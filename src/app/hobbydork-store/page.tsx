@@ -308,49 +308,6 @@ export default function HobbyDorkStorePage() {
   }
 
   return (
-    <AppLayout>
-      <div className="max-w-3xl mx-auto p-6 space-y-8">
-        <div className="flex justify-center mb-6">
-          <img src="/hstore.png" alt="HobbyDork Store" className="h-24 w-auto rounded-xl shadow-lg" />
-        </div>
-        <h1 className="text-3xl font-bold">HobbyDork Store</h1>
-        <div className="my-8">
-          <Card className="border-2 border-dashed border-primary bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.15)]">
-            <CardHeader>
-              <CardTitle className="text-2xl text-primary">Coming Soon!</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg text-muted-foreground py-6 text-center">
-                The HobbyDork Store is under construction.<br />
-                Check back soon for new features and products.
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        {/* The rest of the store content is hidden until launch */}
-      </div>
-    </AppLayout>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-2">Get featured on the homepage and attract more buyers to your store.</p>
-              <Button
-                onClick={() => handleBuy({
-                  orderId: "spotlight-" + Date.now(),
-                  listingTitle: "Store Spotlight Slot",
-                  amountCents: 1500,
-                })}
-                disabled={!!loading}
-              >
-                {loading === "spotlight" ? "Processing..." : "Buy Spotlight Slot ($15)"}
-              </Button>
-              {isAdmin && (
-                <div className="mt-4 flex gap-2">
-                  <Button variant="secondary">Manage Slots</Button>
-                  <Button variant="destructive">View Purchases</Button>
-                </div>
-              )}
-            </CardContent>
           </Card>
 
           <Card className="border-2 border-primary shadow-md bg-card/90">
