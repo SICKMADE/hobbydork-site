@@ -11,6 +11,8 @@ import {
 } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
 
+import { Button } from "@/components/ui/button";
+
 export default function AdminUsersPage() {
   const { userData } = useAuth();
   if (userData.role !== "ADMIN") {

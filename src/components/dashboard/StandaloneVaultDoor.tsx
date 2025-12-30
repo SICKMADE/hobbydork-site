@@ -138,7 +138,7 @@ function SafeDoorIcon() {
   );
 }
 
-export function StandaloneVaultDoor() {
+const StandaloneVaultDoor: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [pin, setPin] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -167,9 +167,10 @@ export function StandaloneVaultDoor() {
       }
     } catch (err) {
       setReason('Error verifying PIN');
+    } finally {
       setIsSubmitting(false);
     }
-  // removed stray closing brace
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -213,5 +214,6 @@ export function StandaloneVaultDoor() {
       </DialogContent>
     </Dialog>
   );
-}
-  }
+};
+
+export default StandaloneVaultDoor;

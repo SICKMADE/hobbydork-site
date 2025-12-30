@@ -125,6 +125,69 @@ const SellerAgreementsStep = () => {
 export default function BecomeSellerPage() {
   const { user, profile } = useAuth();
   const firestore = useFirestore();
+  // --- FORM SETUP ---
+  const methods = useForm<SellerAgreementsFormValues>({
+    resolver: zodResolver(sellerAgreementsSchema),
+    mode: "onChange",
+    defaultValues: {
+      agreeTerms: false,
+      agreeAge: false,
+      agreeOneAccount: false,
+      agreeSellerTerms: false,
+    },
+  });
+
+  // --- SUBMIT HANDLER ---
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stripeConnected, setStripeConnected] = useState(false);
+  const [stripeLoading, setStripeLoading] = useState(false);
+  const { toast } = useToast();
+
+  async function onSubmit(data: SellerAgreementsFormValues) {
+    setIsSubmitting(true);
+    try {
+      if (!user) {
+        toast({ title: "User not found", description: "You must be logged in to complete onboarding.", variant: "destructive" });
+        return;
+      }
+      // Example: Save agreements to Firestore or perform onboarding logic
+      await runTransaction(firestore, async (transaction) => {
+        const userRef = doc(firestore, "users", user.uid);
+        transaction.update(userRef, {
+          sellerAgreements: data,
+          sellerOnboarded: true,
+          sellerOnboardedAt: serverTimestamp(),
+        });
+      });
+      toast({ title: "Seller onboarding complete!" });
+    } catch (err) {
+      toast({ title: "Error completing onboarding", description: String(err), variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  // --- STRIPE ONBOARDING ---
+  async function handleStripeOnboarding() {
+    setStripeLoading(true);
+    try {
+      if (!user) {
+        toast({ title: "User not found", description: "You must be logged in to connect Stripe.", variant: "destructive" });
+        return;
+      }
+      // Example: Call a Firebase Function to start Stripe onboarding
+      const functions = getFunctions();
+      const startOnboarding = httpsCallable(functions, "startStripeOnboarding");
+      const result = await startOnboarding({ uid: user.uid });
+      // Simulate Stripe connection for demo
+      setStripeConnected(true);
+      toast({ title: "Stripe connected!" });
+    } catch (err) {
+      toast({ title: "Stripe connection failed", description: String(err), variant: "destructive" });
+    } finally {
+      setStripeLoading(false);
+    }
+  }
   const SellerAgreementsStep = ({ step }: { step: number }) => {
     const { control } = useFormContext<SellerAgreementsFormValues>();
     const steps = [

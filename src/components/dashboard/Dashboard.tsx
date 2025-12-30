@@ -12,7 +12,7 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 import StoreCard from '@/components/StoreCard';
 import type { Store as StoreType, User, Listing } from '@/lib/types';
 import { listingConverter, storeConverter, spotlightConverter } from '@/firebase/firestore/converters';
-import { StandaloneVaultDoor } from './StandaloneVaultDoor';
+import StandaloneVaultDoor from './StandaloneVaultDoor';
 import AskHobbyDork from './AskHobbyDork';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '@/components/ui/button';
