@@ -277,6 +277,33 @@ function useProvideAuth(): AuthContextType {
         await updateProfile(cred.user, { displayName });
       }
 
+      // Always create Firestore user doc immediately after signup
+      const ref = doc(db, 'users', cred.user.uid);
+      await setDoc(ref, {
+        uid: cred.user.uid,
+        email: cred.user.email ?? '',
+        emailVerified: false,
+        displayName: displayName,
+        role: 'USER',
+        status: 'ACTIVE',
+        isSeller: false,
+        sellerStatus: 'NONE',
+        storeId: '',
+        avatar: getDefaultAvatarUrl(cred.user.uid),
+        about: '',
+        notifyMessages: true,
+        notifyOrders: true,
+        notifyISO24: true,
+        notifySpotlight: true,
+        stripeOnboarded: false,
+        stripeAccountId: null,
+        stripeTermsAgreed: false,
+        paymentMethod: null,
+        paymentIdentifier: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
       if (cred.user) {
         await sendEmailVerification(cred.user);
       }

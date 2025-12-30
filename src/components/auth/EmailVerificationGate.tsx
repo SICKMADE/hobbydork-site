@@ -1,32 +1,38 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 
-import { usePathname } from 'next/navigation';
-
-const ALLOWED_WHEN_UNVERIFIED = new Set<string>(['/login', '/verify-email']);
-
-export default function EmailVerificationGate({ children }: { children: React.ReactNode }) {
-  const { profile, loading, user } = useAuth();
+export default function EmailVerificationGate({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { user, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
-    if (!profile || !user) return;
-    // Always reload user to get latest emailVerified status
-    user.reload?.().then(() => {
-      if (!user.emailVerified) {
-        if (!ALLOWED_WHEN_UNVERIFIED.has(pathname)) {
-          router.replace('/verify-email');
-        }
-      }
-    });
-  }, [loading, profile, user, pathname, router]);
+
+    // ✅ allow verify page to render
+    if (pathname === '/verify-email') return;
+
+    // redirect unverified users everywhere else
+    if (user && !user.emailVerified) {
+      router.replace('/verify-email');
+    }
+  }, [user, loading, pathname, router]);
 
   if (loading) return null;
+
+  // ✅ allow verify page to render
+  if (pathname === '/verify-email') {
+    return <>{children}</>;
+  }
+
+  // block rest of app if unverified
   if (user && !user.emailVerified) return null;
 
   return <>{children}</>;

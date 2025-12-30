@@ -4,14 +4,11 @@
     match /databases/{database}/documents {
       // --- Simpler user profile rules for onboarding/debug ---
       match /users/{uid} {
+
         allow read: if request.auth != null && request.auth.uid == uid;
 
-        // User can update their own profile EXCEPT seller fields
-        allow update: if request.auth != null
-          && request.auth.uid == uid
-          && !('isSeller' in request.resource.data)
-          && !('sellerStatus' in request.resource.data)
-          && !('stripeAccountId' in request.resource.data);
+        // Allow user to update their own profile, including onboarding fields
+        allow update: if request.auth != null && request.auth.uid == uid;
 
         // Cloud Functions (Admin SDK) bypass rules automatically
       }

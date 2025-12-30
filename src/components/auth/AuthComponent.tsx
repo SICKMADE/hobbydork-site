@@ -75,7 +75,7 @@ export default function AuthComponent({
         title: 'Verify your email',
         description: 'Check your inbox. Your account unlocks after verification.',
       });
-      router.replace('/login?verify=1');
+      router.replace('/verify-email');
     } catch (e: any) {
       toast({
         title: 'Signup failed',
