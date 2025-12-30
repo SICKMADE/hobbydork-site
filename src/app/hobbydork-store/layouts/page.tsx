@@ -65,21 +65,10 @@ export default function LayoutsPage() {
                 <Button>Buy Layout</Button>
               </div>
             </CardContent>
-          return (
-            <AppLayout>
-              <div className="max-w-xl mx-auto p-6 space-y-8">
-                <h1 className="text-3xl font-bold mb-6 text-primary">Store Layouts</h1>
-                <Card className="border-2 border-dashed border-primary bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.15)]">
-                  <CardHeader>
-                    <CardTitle className="text-2xl text-primary">Coming Soon!</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-lg text-muted-foreground py-6 text-center">
-                      Store layouts are under construction.<br />
-                      Check back soon for new features.
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </AppLayout>
-          );
+          </Card>
+        ))}
+      </div>
+    </AppLayout>
+  );
+}
+
