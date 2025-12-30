@@ -37,4 +37,8 @@ export default function ThemesPage() {
               </div>
             </CardContent>
           </Card>
-          ))}
+        ))}
+      </div>
+    </AppLayout>
+  );
+}
