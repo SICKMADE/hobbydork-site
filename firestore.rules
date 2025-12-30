@@ -103,6 +103,8 @@
     // ------------- users -------------
 
     match /users/{userId} {
+      // Allow seller status to be read after onboarding
+      allow read: if request.auth != null && request.auth.uid == userId;
       // Unverified users may read ONLY their own user doc.
       // Staff can read/list user docs for moderation/admin tasks.
       // Allow creation if signed in and UID matches, with no helper dependencies

@@ -10,7 +10,7 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const corsHandler = cors({ origin: true });
 
-/* ---------------- HELPERS ---------------- */
+/* ================= HELPERS ================= */
 
 function requireAuth(context: functions.https.CallableContext) {
   if (!context.auth) {
@@ -28,7 +28,7 @@ function requireVerified(context: functions.https.CallableContext) {
   }
 }
 
-/* ---------------- STRIPE ---------------- */
+/* ================= STRIPE ================= */
 
 let stripe: Stripe | null = null;
 function getStripe() {
@@ -39,7 +39,7 @@ function getStripe() {
   return stripe;
 }
 
-/* ---------------- ONBOARD STRIPE ---------------- */
+/* ================= STRIPE ONBOARD ================= */
 
 export const onboardStripe = functions
   .runWith({ secrets: ["STRIPE_SECRET"] })
@@ -70,6 +70,7 @@ export const onboardStripe = functions
         stripeAccountId: accountId,
         sellerStatus: "PENDING",
         isSeller: false,
+        stripeOnboarded: false,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     }
@@ -87,7 +88,7 @@ export const onboardStripe = functions
     return { url: link.url };
   });
 
-/* ---------------- CHECK SELLER STATUS ---------------- */
+/* ================= FINALIZE SELLER ================= */
 
 export const checkStripeSellerStatus = functions
   .runWith({ secrets: ["STRIPE_SECRET"] })
@@ -112,14 +113,18 @@ export const checkStripeSellerStatus = functions
         }
 
         const stripe = getStripe();
-        const account = await stripe.accounts.retrieve(user.stripeAccountId);
+        const account = await stripe.accounts.retrieve(
+          user.stripeAccountId
+        );
 
         if (account.details_submitted && account.charges_enabled) {
           await userRef.update({
             isSeller: true,
             sellerStatus: "APPROVED",
+            stripeOnboarded: true,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
+
           return res.json({ isSeller: true });
         }
 
