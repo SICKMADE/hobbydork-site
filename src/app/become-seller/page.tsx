@@ -29,6 +29,7 @@ import { doc, runTransaction, serverTimestamp, collection } from "firebase/fires
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { useToast } from "@/hooks/use-toast";
 import storeAvatar from "@/components/dashboard/hobbydork-head.png";
+import { Progress } from '@/components/ui/progress';
 
 type SellerAgreementsFormValues = z.infer<typeof sellerAgreementsSchema>;
 
@@ -115,7 +116,7 @@ const SellerAgreementsStep = () => {
         )}
       />
       <div className="mt-4 text-sm text-muted-foreground">
-        Need help? <a href="mailto:support@hobbydork.com" className="underline text-primary">Contact Support</a>
+        Need help? <a href="mailto:hobbydorkapp@gmail.com" className="underline text-primary">Contact Support</a>
       </div>
     </div>
   );
@@ -211,7 +212,7 @@ export default function BecomeSellerPage() {
           />
         </div>
         <div className="mt-4 text-sm text-muted-foreground">
-          Need help? <a href="mailto:support@hobbydork.com" className="underline text-primary">Contact Support</a>
+          Need help? <a href="mailto:hobbydorkapp@gmail.com" className="underline text-primary">Contact Support</a>
         </div>
       </div>
     );

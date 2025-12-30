@@ -314,30 +314,22 @@ export default function HobbyDorkStorePage() {
           <img src="/hstore.png" alt="HobbyDork Store" className="h-24 w-auto rounded-xl shadow-lg" />
         </div>
         <h1 className="text-3xl font-bold">HobbyDork Store</h1>
-        <p className="text-muted-foreground mb-6">
-          Welcome to the official HobbyDork Store! Purchase store spotlight slots, custom themes, layouts, and more to enhance your shop.
-        </p>
-
-        {/* Admin Controls Section */}
-        {isAdmin && (
-          <div className="mb-8 p-4 border-2 border-red-500 rounded-lg bg-red-50 shadow">
-            <h2 className="text-xl font-semibold mb-2 text-red-700">Admin Controls</h2>
-            <div className="flex flex-wrap gap-3">
-              <Button variant="outline" onClick={() => setShowProducts(true)}>Manage Products</Button>
-              <Button variant="outline" onClick={() => setShowOrders(true)}>Manage Orders</Button>
-              <Button variant="outline" onClick={() => alert('Open user purchases')}>View User Purchases</Button>
-            </div>
-            <ManageProductsModal open={showProducts} onClose={() => setShowProducts(false)} functions={getFunctions(firebaseApp)} />
-            <ManageOrdersModal open={showOrders} onClose={() => setShowOrders(false)} functions={getFunctions(firebaseApp)} />
-          </div>
-        )}
-
-        <div className="space-y-6">
-          <Card className="border-2 border-primary shadow-md bg-card/90">
+        <div className="my-8">
+          <Card className="border-2 border-dashed border-primary bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.15)]">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Store Spotlight Slot</CardTitle>
-                {isAdmin && <Badge variant="outline" className="bg-primary text-white">Admin</Badge>}
+              <CardTitle className="text-2xl text-primary">Coming Soon!</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg text-muted-foreground py-6 text-center">
+                The HobbyDork Store is under construction.<br />
+                Check back soon for new features and products.
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        {/* The rest of the store content is hidden until launch */}
+      </div>
+    </AppLayout>
               </div>
             </CardHeader>
             <CardContent>

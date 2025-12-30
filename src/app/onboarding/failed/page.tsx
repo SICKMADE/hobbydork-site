@@ -18,7 +18,7 @@ export default function OnboardingFailedPage() {
           </CardHeader>
           <CardContent>
             <div className="py-6 space-y-4 text-center">
-              <p>Please try connecting Stripe again. If the problem persists, contact support.</p>
+              <p>Please try connecting Stripe again. If the problem persists, contact <a href="mailto:hobbydorkapp@gmail.com" className="underline text-primary">support</a>.</p>
               <div className="flex justify-center gap-3">
                 <Button onClick={() => router.push('/store/create')}>Back to Store Setup</Button>
                 <Button variant="outline" onClick={() => router.push('/store/create')}>Retry</Button>

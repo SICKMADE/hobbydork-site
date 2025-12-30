@@ -177,7 +177,7 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-semibold">11. Contact</h2>
           <p>
             If you have questions about this Privacy Policy or your data, contact us
-            at: <span className="font-mono">youremail@example.com</span>
+            at: <span className="font-mono">hobbydorkapp@gmail.com</span>
           </p>
         </section>
       </div>

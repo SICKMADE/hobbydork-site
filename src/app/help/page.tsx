@@ -32,7 +32,7 @@ const faqItems = [
 
 export default function HelpPage() {
     const handleContactClick = () => {
-        window.location.href = "mailto:HOBBYDORKSUPPORT@gmail.com";
+        window.location.href = "mailto:hobbydorkapp@gmail.com";
     };
 
     return (

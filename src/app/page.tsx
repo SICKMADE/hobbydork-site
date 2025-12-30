@@ -23,7 +23,7 @@ export default function Home() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background text-foreground gap-4 p-4 text-center">
         <h1 className="text-2xl font-bold">Account Suspended</h1>
-        <p>Your account has been suspended. Please contact support for assistance.</p>
+        <p>Your account has been suspended. Please contact <a href="mailto:hobbydorkapp@gmail.com" className="underline text-primary">support</a> for assistance.</p>
         <Button onClick={() => logout()} variant="destructive">
           Logout
         </Button>

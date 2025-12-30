@@ -102,72 +102,69 @@ export default function AdminUsersPage() {
           )}
 
           <div className="flex flex-wrap gap-2 mt-2">
-
             {/* --- ROLE MANAGEMENT --- */}
-
             {u.role !== "ADMIN" && u.role !== "MODERATOR" && (
-              <button
-                className="px-3 py-1 bg-blue-600 text-white rounded"
+              <Button
+                variant="secondary"
+                aria-label="Promote to Moderator"
                 onClick={() => promoteToModerator(u.id)}
               >
                 Promote to Moderator
-              </button>
+              </Button>
             )}
-
             {u.role === "MODERATOR" && (
-              <button
-                className="px-3 py-1 bg-gray-600 text-white rounded"
+              <Button
+                variant="outline"
+                aria-label="Remove Moderator"
                 onClick={() => removeModerator(u.id)}
               >
                 Remove Moderator
-              </button>
+              </Button>
             )}
-
             {/* --- SUSPENSIONS --- */}
-
-            <button
-              className="px-3 py-1 bg-yellow-600 text-white rounded"
+            <Button
+              variant="outline"
+              aria-label="Suspend 24 hours"
               onClick={() => suspend(u.id, 24)}
             >
               Suspend 24h
-            </button>
-
-            <button
-              className="px-3 py-1 bg-yellow-600 text-white rounded"
+            </Button>
+            <Button
+              variant="outline"
+              aria-label="Suspend 3 days"
               onClick={() => suspend(u.id, 72)}
             >
               Suspend 3d
-            </button>
-
-            <button
-              className="px-3 py-1 bg-yellow-600 text-white rounded"
+            </Button>
+            <Button
+              variant="outline"
+              aria-label="Suspend 7 days"
               onClick={() => suspend(u.id, 168)}
             >
               Suspend 7d
-            </button>
-
-            <button
-              className="px-3 py-1 bg-yellow-600 text-white rounded"
+            </Button>
+            <Button
+              variant="outline"
+              aria-label="Suspend 30 days"
               onClick={() => suspend(u.id, 720)}
             >
               Suspend 30d
-            </button>
-
+            </Button>
             {/* --- BAN / RESTORE --- */}
-
-            <button
-              className="px-3 py-1 bg-red-700 text-white rounded"
+            <Button
+              variant="destructive"
+              aria-label="Ban User"
               onClick={() => ban(u.id)}
             >
               Ban User
-            </button>
-
-            <button
-              className="px-3 py-1 bg-green-600 text-white rounded"
+            </Button>
+            <Button
+              variant="secondary"
+              aria-label="Restore User"
               onClick={() => restore(u.id)}
             >
               Restore User
-            </button>
+            </Button>
           </div>
         </div>
       ))}
