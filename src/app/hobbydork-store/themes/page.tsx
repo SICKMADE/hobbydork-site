@@ -37,5 +37,4 @@ export default function ThemesPage() {
               </div>
             </CardContent>
           </Card>
-        ))}
-              <div className="max-w-xl mx-auto p-6 space-y-8">
+          ))}
