@@ -308,7 +308,7 @@ export default function HobbyDorkStorePage() {
   }
 
   return (
-          </Card>
+
 
           <Card className="border-2 border-primary shadow-md bg-card/90">
             <CardHeader>
