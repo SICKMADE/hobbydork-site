@@ -30,6 +30,8 @@ import { getFunctions, httpsCallable } from "firebase/functions";
 import { useToast } from "@/hooks/use-toast";
 import storeAvatar from "@/components/dashboard/hobbydork-head.png";
 
+type SellerAgreementsFormValues = z.infer<typeof sellerAgreementsSchema>;
+
 
 const sellerAgreementsSchema = z.object({
   agreeTerms: z.boolean().refine((v) => v === true, {

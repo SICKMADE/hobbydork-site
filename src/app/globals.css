@@ -1,3 +1,11 @@
+/* Chat panel background */
+.bg-chat-panel {
+  background-color: #2f2f2f;
+}
+/* Chat dark background */
+.bg-chat-dark {
+  background-color: #1f1f1f;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -202,6 +210,8 @@ html, body {
 /* Respect user text-size settings across browsers */
 html, body {
   -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 

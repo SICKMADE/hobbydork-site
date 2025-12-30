@@ -123,8 +123,7 @@ export default function ConversationPage() {
   return (
     <AppLayout>
       <div
-        className="flex flex-col w-full h-[calc(100vh-4rem)] p-4 md:p-6"
-        style={{ backgroundColor: "#1f1f1f" }}
+        className="flex flex-col w-full h-[calc(100vh-4rem)] p-4 md:p-6 bg-chat-dark"
       >
         {/* HEADER */}
         <div className="flex justify-between items-center pb-4 border-b border-black/40">
@@ -159,8 +158,7 @@ export default function ConversationPage() {
 
         {/* FULL WIDTH CHAT PANEL */}
         <div
-          className="flex-1 overflow-y-auto w-full p-4 md:p-6 rounded-xl border-2 border-black"
-          style={{ backgroundColor: "#2f2f2f" }}
+          className="flex-1 overflow-y-auto w-full p-4 md:p-6 rounded-xl border-2 border-black bg-chat-panel"
         >
           <MessageList
             messages={messages || []}
