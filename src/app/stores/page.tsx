@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useAuth } from '@/hooks/use-auth';
 
 const DEFAULT_STORE_IMAGE = '/store.png';
 const FALLBACK_STORE_IMAGE = '/SPOTLIGHT.png';
@@ -27,14 +28,23 @@ type StorefrontDoc = {
 
 export default function StoresPage() {
   const firestore = useFirestore();
+  const { user, profile, loading: authLoading } = useAuth();
+  if (authLoading) return null;
+  if (!user) return null;
+  if (!profile?.emailVerified) return null;
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
 
   const storesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!canReadFirestore || !firestore) return null;
     const ref = collection(firestore, 'storefronts');
     return query(ref, where('status', '==', 'ACTIVE'), orderBy('createdAt', 'desc'));
-  }, [firestore]);
+  }, [canReadFirestore, firestore]);
 
-  const { data: stores, isLoading } = useCollection<StorefrontDoc>(storesQuery);
+  const { data: stores, isLoading } = useCollection<StorefrontDoc>(canReadFirestore ? storesQuery : null);
 
   return (
     <AppLayout>

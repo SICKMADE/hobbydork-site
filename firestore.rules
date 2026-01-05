@@ -1,17 +1,7 @@
-  rules_version = '2';
+rules_version = '2';
 
-  service cloud.firestore {
-    match /databases/{database}/documents {
-      // --- Simpler user profile rules for onboarding/debug ---
-      match /users/{uid} {
-
-        allow read: if request.auth != null && request.auth.uid == uid;
-
-        // Allow user to update their own profile, including onboarding fields
-        allow update: if request.auth != null && request.auth.uid == uid;
-
-        // Cloud Functions (Admin SDK) bypass rules automatically
-      }
+service cloud.firestore {
+  match /databases/{database}/documents {
 
     // ------------- Helpers -------------
 
@@ -19,8 +9,8 @@
       return request.auth != null;
     }
 
-    function emailVerified() {
-      return isSignedIn() && userData().emailVerified == true;
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
     }
 
     function uid() {
@@ -44,8 +34,8 @@
     }
 
     function userIsActive() {
-      // "ACTIVE" means not suspended/banned and email is verified.
-      return emailVerified() && userStatus() == "ACTIVE";
+      // Email verification required for any "active" capabilities.
+      return isEmailVerified() && userStatus() == "ACTIVE";
     }
 
     function userIsAdmin() {
@@ -76,8 +66,11 @@
     function userCanCreateStore() {
       return isSignedIn() &&
              userIsActive() &&
-             userData().isSeller == true &&
-             userData().storeId == "";
+             !userIsSeller() &&
+             userData().storeId == "" &&
+             userData().stripeOnboarded == true &&
+             userData().stripeAccountId != null &&
+             userData().stripeTermsAgreed == true;
     }
 
     function userCanApplyToBeSeller() {
@@ -103,12 +96,8 @@
     // ------------- users -------------
 
     match /users/{userId} {
-      // Allow seller status to be read after onboarding
-      allow read: if request.auth != null && request.auth.uid == userId;
       // Unverified users may read ONLY their own user doc.
       // Staff can read/list user docs for moderation/admin tasks.
-      // Allow creation if signed in and UID matches, with no helper dependencies
-      allow create: if request.auth != null && request.auth.uid == userId;
       allow get: if isSignedIn() &&
                 (
                   uid() == userId ||
@@ -116,7 +105,45 @@
                 );
       allow list: if userIsActive() && userIsStaff();
 
-      allow update: if request.auth != null && request.auth.uid == userId;
+      allow create: if isSignedIn() &&
+                    uid() == userId &&
+                    request.resource.data.role == "USER" &&
+                    request.resource.data.status == "ACTIVE";
+
+      allow update: if isSignedIn() &&
+                    (
+                      (
+                        // Regular users cannot change role/status/displayName.
+                        uid() == userId &&
+                        request.resource.data.role == resource.data.role &&
+                        request.resource.data.status == resource.data.status &&
+                        request.resource.data.displayName == resource.data.displayName &&
+                        // Trophies are awarded server-side (Cloud Functions). Users cannot self-award.
+                        request.resource.data.trophies == resource.data.trophies
+                      )
+                      ||
+                      (
+                        // Admin can manage role/status/etc, but displayName stays immutable.
+                        userIsActive() &&
+                        userIsAdmin() &&
+                        request.resource.data.displayName == resource.data.displayName
+                      )
+                      ||
+                      (
+                        // Moderators can suspend users (but cannot ban, change roles, etc).
+                        userIsActive() &&
+                        userIsModerator() &&
+                        request.resource.data.role == resource.data.role &&
+                        request.resource.data.displayName == resource.data.displayName &&
+                        request.resource.data.status == "SUSPENDED" &&
+                        request.resource.data.suspendUntil is timestamp &&
+                        request.resource.data.suspendUntil > request.time &&
+                        request.resource.data.diff(resource.data).changedKeys().hasOnly([
+                          "status",
+                          "suspendUntil"
+                        ])
+                      )
+                    );
 
       allow delete: if userIsAdmin();
 
@@ -216,38 +243,35 @@
                             );
     }
 
-    // ------------- orders (STRIPE FIX HERE) -------------
+// ORDERS
+match /orders/{orderId} {
 
-    match /orders/{orderId} {
-      allow get, list: if userIsActive() &&
-                       (
-                         userIsAdmin() ||
-                         resource.data.buyerUid == uid() ||
-                         resource.data.sellerUid == uid()
-                       );
+  allow get, list: if userIsActive() &&
+                   (
+                     userIsAdmin() ||
+                     resource.data.buyerUid == uid() ||
+                     resource.data.sellerUid == uid()
+                   );
 
-      allow create: if userIsActive() &&
-            request.resource.data.buyerUid == uid() &&
-            request.resource.data.shippingAddress != null &&
-            request.resource.data.shippingAddress.street != null &&
-            request.resource.data.shippingAddress.city != null &&
-            request.resource.data.shippingAddress.state != null &&
-            request.resource.data.shippingAddress.zip != null;
+  allow create: if userIsActive() &&
+                request.resource.data.buyerUid == uid();
 
-      allow update: if
-        userIsAdmin()
-        ||
-        (
-          isSignedIn() &&
-          resource.data.sellerUid == uid() &&
-          request.resource.data.diff(resource.data).changedKeys().hasOnly(["trackingNumber"])
-        );
+  allow update: if
+    userIsAdmin()
+    ||
+    (
+      isSignedIn() &&
+      (
+        resource.data.buyerUid == uid() ||
+        resource.data.sellerUid == uid()
+      )
+    );
 
-      allow delete: if userIsAdmin();
-    }
+  allow delete: if userIsAdmin();
+}
 
-    // ------------- iso24Posts -------------
 
+    // ISO24 posts
     match /iso24Posts/{isoId} {
       allow get, list: if userIsActive();
 
@@ -263,6 +287,7 @@
                                resource.data.ownerUid == uid())
                             );
 
+     // Comments on ISO posts
       match /comments/{commentId} {
         allow get, list: if userIsActive();
 
@@ -278,17 +303,18 @@
       }
     }
 
-    // ------------- community chat (groupChat) -------------
 
-    match /groupChat/{messageId} {
+    // Community chat
+    match /communityMessages/{messageId} {
       allow get, list: if userIsActive();
+
       allow create: if isSignedIn() &&
                     (userIsActive() || userIsAdmin());
+
       allow update, delete: if userIsActive() && userIsStaff();
     }
 
-    // ------------- conversations -------------
-
+    // Conversations and messages
     match /conversations/{conversationId} {
       allow create: if userIsActive() &&
                     request.resource.data.participantUids.hasAny([uid()]);
@@ -311,21 +337,9 @@
                               (isConversationParticipant(conversationId) ||
                                userIsAdmin());
       }
-
-      // Typing indicators are stored as docs under /typing/{uid}.
-      // Allow participants to read typing state, and only write their own.
-      match /typing/{typingId} {
-        allow get, list: if userIsActive() &&
-                         (isConversationParticipant(conversationId) || userIsAdmin());
-
-        allow create, update, delete: if userIsActive() &&
-                                      typingId == uid() &&
-                                      (isConversationParticipant(conversationId) || userIsAdmin());
-      }
     }
 
-    // ------------- reports -------------
-
+    // Reports
     match /reports/{reportId} {
       allow create: if userIsActive() &&
                     request.resource.data.reporterUid == uid();
@@ -341,56 +355,13 @@
       allow delete: if userIsAdmin();
     }
 
-    // ------------- giveawayEntries -------------
-
-    match /giveaways/{giveawayId} {
-      // Readable by active users so the public giveaway page can display it.
-      allow get, list: if userIsActive();
-
-      // Only admins can create/update/delete giveaways.
-      allow create, update, delete: if userIsActive() && userIsAdmin();
-    }
-
-    match /giveawayEntries/{entryId} {
-      function giveawayDoc() {
-        return get(/databases/$(database)/documents/giveaways/$(request.resource.data.giveawayId));
-      }
-
-      function giveawayIsOpen() {
-        return giveawayDoc().data != null &&
-               giveawayDoc().data.isActive == true &&
-               giveawayDoc().data.startAt is timestamp &&
-               giveawayDoc().data.endAt is timestamp &&
-               request.time >= giveawayDoc().data.startAt &&
-               request.time <= giveawayDoc().data.endAt;
-      }
-
-      // Users submit entries; staff reviews them.
-      allow create: if userIsActive() &&
-                    request.resource.data.uid == uid() &&
-                    request.resource.data.giveawayId is string &&
-                    request.resource.data.platform in ["x", "facebook", "instagram", "tiktok"] &&
-                    request.resource.data.postUrl is string &&
-                    request.resource.data.status == "PENDING" &&
-                    giveawayIsOpen();
-
-      // Staff can browse; users can fetch their own entry by id.
-      allow get: if userIsActive() && (userIsStaff() || resource.data.uid == uid());
-      allow list: if userIsActive() && userIsStaff();
-
-      allow update: if userIsActive() && userIsStaff();
-      allow delete: if userIsAdmin();
-    }
-
-    // ------------- spotlightSlots -------------
-
+    // Spotlight slots
     match /spotlightSlots/{slotId} {
       allow get, list: if userIsActive();
       allow create, update, delete: if userIsAdmin();
     }
 
-    // ------------- deny everything else -------------
-
+    // Fallback to deny all access
     match /{path=**} {
       allow read, write: if false;
     }

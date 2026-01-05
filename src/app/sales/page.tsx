@@ -69,58 +69,39 @@ function statusColor(state: OrderState) {
 }
 
 export default function SalesPage() {
-  const { user, userData, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
+  if (authLoading) return null;
+  if (!user) return null;
+  if (!user.emailVerified) return null;
   const firestore = useFirestore();
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
 
   const salesQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!canReadFirestore || !firestore || !user?.uid) return null;
     return query(
-      collection(firestore, 'orders'),
+      collection(firestore, 'orders') as any,
       where('sellerUid', '==', user.uid),
       orderBy('createdAt', 'desc'),
     );
-  }, [firestore, user?.uid]);
+  }, [canReadFirestore, firestore, user?.uid]);
 
   const { data: orders, isLoading } =
-    useCollection<OrderDoc>(salesQuery as any);
+    useCollection<any>(canReadFirestore ? salesQuery : null);
 
-  if (authLoading) {
-    return (
-      <AppLayout>
-        <div className="p-6 space-y-3">
-          <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (!user) {
-    return (
-      <AppLayout>
-        <PlaceholderContent
-          title="Sign in required"
-          description="You must be logged in to view your sales."
-        />
-      </AppLayout>
-    );
-  }
-
-  if (!userData?.isSeller) {
+  if (!profile?.isSeller) {
     return (
       <AppLayout>
         <PlaceholderContent
           title="Not a seller"
-          description="Complete seller onboarding to manage sales."
-        >
-          <Button asChild>
-            <Link href="/become-seller">Become a seller</Link>
-          </Button>
-        </PlaceholderContent>
-      </AppLayout>
-    );
-  }
+          description="You must be a seller to view sales."
+          />
+        </AppLayout>
+      );
+    }
 
   return (
     <AppLayout>
@@ -143,8 +124,10 @@ export default function SalesPage() {
 
         {!isLoading &&
           orders?.map((order) => {
-            const firstItem = order.items?.[0];
-            const totalQty = order.items?.reduce(
+
+            const items: { title?: string; quantity?: number; price?: number }[] = order.items || [];
+            const firstItem = items[0];
+            const totalQty = items.reduce(
               (sum, i) => sum + (i.quantity || 0),
               0,
             );

@@ -2,6 +2,7 @@
 "use client";
 import { useFirestore } from '@/firebase/provider';
 import { query, collection, orderBy } from 'firebase/firestore';
+import { useMemo } from 'react';
 
 import { useAuth } from "@/hooks/use-auth";
 import { useCollection } from "@/firebase";
@@ -11,18 +12,33 @@ import { Separator } from "@/components/ui/separator";
 import { BarChart2, TrendingUp, ShoppingBag } from "lucide-react";
 
 export default function SellerAnalyticsPage() {
-    // Get Firestore instance
-    const firestore = useFirestore();
-  const { user, profile } = useAuth();
-  const { data: orders, isLoading } = useCollection(
-    user?.uid
-      ? query(
-          collection(firestore, 'orders'),
-          // where('sellerId', '==', user.uid),
-          orderBy('createdAt', 'desc')
-        )
-      : null
-  );
+  // Get Firestore instance
+  const firestore = useFirestore();
+  const { user, profile, loading: authLoading } = useAuth();
+  if (authLoading) return null;
+  if (!user) return null;
+  if (!profile?.emailVerified) return null;
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
+  let orders = null;
+  let isLoading = false;
+  const q = useMemo(() => {
+    if (canReadFirestore && firestore && user?.uid) {
+      return query(
+        collection(firestore, 'orders'),
+        // where('sellerId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      );
+    }
+    return null;
+  }, [canReadFirestore, firestore, user?.uid]);
+  const memoizedQ = useMemo(() => q, [q]);
+  const result = useCollection(memoizedQ);
+  orders = result.data;
+  isLoading = result.isLoading;
 
   // Example stats (replace with real aggregation logic)
   const totalSales = orders?.length || 0;

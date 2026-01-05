@@ -47,7 +47,7 @@ type ListingDoc = {
 
 type UserDoc = {
   displayName?: string;
-  avatarUrl?: string;
+  avatar?: string;
 };
 
 type ConversationDoc = {
@@ -60,6 +60,9 @@ export default function ClientNewMessage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, profile, loading: authLoading } = useAuth();
+  if (authLoading) return null;
+  if (!user) return null;
+  if (!profile?.emailVerified) return null;
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -77,7 +80,7 @@ export default function ClientNewMessage() {
 
   // Decide who we are messaging
   useEffect(() => {
-    if (!firestore) return;
+    if (!firestore || !user || !profile?.emailVerified || profile?.status !== "ACTIVE") return;
 
     if (recipientUidParam) {
       setTargetUid(recipientUidParam);
@@ -122,11 +125,11 @@ export default function ClientNewMessage() {
     return () => {
       cancelled = true;
     };
-  }, [firestore, recipientUidParam, sellerUidParam, listingId]);
+  }, [firestore, user, profile, recipientUidParam, sellerUidParam, listingId]);
 
   // Load target user's profile for name/avatar
   useEffect(() => {
-    if (!firestore || !targetUid) {
+    if (!firestore || !user || !profile?.emailVerified || profile?.status !== "ACTIVE" || !targetUid) {
       setTargetProfile(null);
       return;
     }
@@ -158,16 +161,16 @@ export default function ClientNewMessage() {
     return () => {
       cancelled = true;
     };
-  }, [firestore, targetUid]);
+  }, [firestore, user, profile, targetUid]);
 
   const myDisplayName = profile?.displayName || user?.email || 'You';
-  const myAvatar = resolveAvatarUrl((profile as any)?.avatar, user?.uid || null);
+  const myAvatar = resolveAvatarUrl(profile?.avatar, user?.uid || null);
 
   const targetDisplayName = targetProfile?.displayName || 'User';
-  const targetAvatar = resolveAvatarUrl((targetProfile as any)?.avatar, targetUid);
+  const targetAvatar = resolveAvatarUrl(targetProfile?.avatar, targetUid);
 
   const handleSend = async () => {
-    if (!firestore || !user || !targetUid) return;
+    if (!firestore || !user || !profile?.emailVerified || profile?.status !== "ACTIVE" || !targetUid) return;
 
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -232,9 +235,13 @@ export default function ClientNewMessage() {
 
       toast({ title: 'Message sent' });
       router.push(`/messages/${conversationId}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast({ title: 'Send failed', description: err?.message ?? 'Failed to send message', variant: 'destructive' });
+      let message = 'Failed to send message';
+      if (err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string') {
+        message = (err as { message: string }).message;
+      }
+      toast({ title: 'Send failed', description: message, variant: 'destructive' });
     } finally {
       setSending(false);
     }

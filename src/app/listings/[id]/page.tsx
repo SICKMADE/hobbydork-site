@@ -1,6 +1,7 @@
-'use client';
+"use client";
+import { DocumentData } from "firebase/firestore";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -80,7 +81,10 @@ export default function ListingDetailPage() {
   const router = useRouter();
   const listingId = params?.id as string;
 
-  const { user } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
+  if (authLoading) return null;
+  if (!user) return null;
+  if (!profile?.emailVerified) return null;
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -90,22 +94,29 @@ export default function ListingDetailPage() {
 
   /* ---------- LISTING ---------- */
 
-  const listingRef = useMemoFirebase(() => {
-    if (!firestore || !listingId) return null;
-    return doc(firestore, 'listings', listingId);
-  }, [firestore, listingId]);
+  // Only create refs and call useDoc when auth/profile are ready
+  const canQuery = !authLoading && user && profile && profile.uid && profile.emailVerified && profile.status === "ACTIVE";
 
-  const { data: listing, isLoading } = useDoc<Listing>(listingRef);
-  const activeListing = listing as any;
+  const listingRef = useMemoFirebase(() => {
+    if (!canQuery || !firestore || !listingId) return null;
+    return doc(firestore, 'listings', listingId);
+  }, [canQuery, firestore, listingId]);
+
+
+  const { data: listing, isLoading } = useDoc<Listing>(canQuery ? listingRef : null);
+  // Memoize activeListing to prevent re-creation on every render
+  const activeListing = useMemo(() => listing as any, [listing]);
 
   /* ---------- STORE ---------- */
 
-  const storeRef = useMemoFirebase(() => {
-    if (!firestore || !activeListing?.storeId) return null;
-    return doc(firestore, 'storefronts', activeListing.storeId);
-  }, [firestore, activeListing?.storeId]);
 
-  const { data: store } = useDoc<Storefront>(storeRef);
+  const storeId = activeListing?.storeId;
+  const storeRef = useMemoFirebase(() => {
+    if (!canQuery || !firestore || !storeId) return null;
+    return doc(firestore, 'storefronts', storeId);
+  }, [canQuery, firestore, storeId]);
+
+  const { data: store } = useDoc<Storefront>(canQuery ? storeRef : null);
 
   /* ---------- IMAGES (RESTORED) ---------- */
 
@@ -139,19 +150,29 @@ export default function ListingDetailPage() {
 
   /* ---------- SIMILAR ---------- */
 
+
+  const category = activeListing?.category;
   const similarQuery = useMemoFirebase(() => {
-    if (!firestore || !activeListing?.category) return null;
+    if (!canQuery || !firestore || !category) return null;
     return query(
       collection(firestore, 'listings'),
       where('state', '==', 'ACTIVE'),
-      where('category', '==', activeListing.category),
+      where('category', '==', category),
       orderBy('createdAt', 'desc'),
       limit(8)
     );
-  }, [firestore, activeListing?.category]);
+  }, [canQuery, firestore, category]);
 
-  const { data: similarListings } =
-    useCollection<Listing>(similarQuery as any);
+  const similarQueryWithConverter = useMemo(() => {
+    if (canQuery && similarQuery) {
+      return similarQuery.withConverter<Listing>({
+        toFirestore: (listing) => listing as DocumentData,
+        fromFirestore: (snap) => snap.data() as Listing,
+      });
+    }
+    return null;
+  }, [canQuery, similarQuery]);
+  const { data: similarListings } = useCollection<Listing>(similarQueryWithConverter);
 
   /* ---------- BUY NOW (STRIPE) ---------- */
 
@@ -239,18 +260,22 @@ export default function ListingDetailPage() {
       // eslint-disable-next-line no-console
       console.info('[checkout] order created', { orderId: orderRef.id });
 
-      const functions = getFunctions(getApp(), 'us-central1');
-      const createCheckoutSession = httpsCallable(
-        functions,
-        'createCheckoutSession'
-      );
-
-      const res: any = await createCheckoutSession({
-        orderId: orderRef.id,
-        amountCents: Math.round(price * quantity * 100),
-        listingTitle: activeListing.title,
-        appBaseUrl: window.location.origin,
-      });
+      let res: any = null;
+      if (typeof window !== "undefined") {
+        const functions = getFunctions(getApp(), 'us-central1');
+        const createCheckoutSession = httpsCallable(
+          functions,
+          'createCheckoutSession'
+        );
+        res = await createCheckoutSession({
+          orderId: orderRef.id,
+          amountCents: Math.round(price * quantity * 100),
+          listingTitle: activeListing.title,
+          appBaseUrl: window.location.origin,
+        });
+      } else {
+        throw new Error("Cloud Functions are not available. Please try again in the browser.");
+      }
 
       // eslint-disable-next-line no-console
       console.info('[checkout] createCheckoutSession response', res?.data);

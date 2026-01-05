@@ -1,3 +1,18 @@
+import type { SellerApplication } from '@/app/admin/seller-applications/page';
+
+export const sellerApplicationConverter: FirestoreDataConverter<SellerApplication> = {
+  toFirestore(app: SellerApplication) {
+    const { applicationId, ...rest } = app as Partial<SellerApplication>;
+    return rest;
+  },
+  fromFirestore(snapshot: QueryDocumentSnapshot, options?: SnapshotOptions) {
+    const data = snapshot.data(options) as Partial<SellerApplication>;
+    return {
+      ...data,
+      applicationId: data?.applicationId ?? snapshot.id,
+    } as SellerApplication;
+  },
+};
 import type { FirestoreDataConverter, QueryDocumentSnapshot, SnapshotOptions } from 'firebase/firestore'
 import type {
   Listing,
@@ -78,7 +93,7 @@ export const storeConverter: FirestoreDataConverter<Store> = {
 export const reviewConverter: FirestoreDataConverter<Review> = {
   toFirestore(review: Review) {
     const { reviewId, ...rest } = review as Partial<Review>;
-    return rest as any;
+    return rest;
   },
   fromFirestore(snapshot: QueryDocumentSnapshot, options?: SnapshotOptions) {
     const data = snapshot.data(options) as Partial<Review>;

@@ -62,7 +62,7 @@ export default function AdminDashboard() {
               <CardContent className="flex flex-col gap-2">
                 <Button asChild variant="outline"><Link href="/admin/users">Manage Users</Link></Button>
                 <Button asChild variant="outline"><Link href="/admin/orders">Order Moderation</Link></Button>
-                {/* <Button asChild variant="outline"><Link href="/admin/seller-applications">Seller Applications</Link></Button> */}
+                <Button asChild variant="outline"><Link href="/admin/seller-approvals">New Seller Approvals</Link></Button>
                 <Button asChild variant="outline"><Link href="/admin/spotlight">Manage Spotlight Slots</Link></Button>
               </CardContent>
             </Card>

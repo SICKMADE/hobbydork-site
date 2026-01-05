@@ -20,18 +20,16 @@ import {
   Newspaper,
 // ...existing code...
 
-  // Notification Bell Button (styled like search, but smaller)
-  Heart,
-  Settings,
-  User,
-  Star,
-  HelpCircle,
-  ShoppingCart,
-  Package,
-  HeartHandshake,
-  Bell,
-  History,
-  Users,
+    Heart,
+    Settings,
+    User,
+    Star,
+    HelpCircle,
+    ShoppingCart,
+    Package,
+    HeartHandshake,
+    History,
+    Users,
 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -55,41 +53,13 @@ import {
 } from '@/components/ui/avatar';
 import { resolveAvatarUrl } from '@/lib/default-avatar';
 
-type NotificationDoc = {
-  id?: string;
-  isRead?: boolean;
-  readAt?: any | null;
-};
+
 
 const RedLineSeparator = () => (
   <div className="w-full h-[2px] bg-gradient-to-r from-red-900 via-red-600 to-red-900 rounded-full mb-2" />
 );
 
 export default function SidebarNav() {
-    function NotificationBellIcon() {
-      const unread = unreadNotificationsCount;
-      const baseClass =
-        'relative flex items-center justify-center h-8 w-8 rounded-full border-4 border-black transition-all duration-150 hover:scale-105 active:scale-95 shadow-[3px_3px_0_#d90429]';
-      const colorClass =
-        unread > 0
-          ? 'bg-red-500 text-white border-red-600'
-          : 'bg-gray-100 text-gray-400 border-gray-400';
-      return (
-        <Button
-          type="button"
-          aria-label="Notifications"
-          className={`${baseClass} ${colorClass} comic-button`}
-          onClick={() => router.push('/notifications')}
-        >
-          <Bell className="h-4 w-4" />
-          {unread > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-yellow-400 px-1 text-[10px] font-bold text-black border-2 border-white shadow-md">
-              {unread > 9 ? '9+' : unread}
-            </span>
-          )}
-        </Button>
-      );
-    }
   const { user, profile, logout } = useAuth();
   const { isMobile, setOpen } = useSidebar();
   const router = useRouter();
@@ -110,20 +80,8 @@ export default function SidebarNav() {
     router.push('/');
   };
 
-  // Notifications for current user
-  const notificationsQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    return query(
-      collection(firestore, 'users', user.uid, 'notifications'),
-      orderBy('createdAt', 'desc'),
-    );
-  }, [firestore, user?.uid]);
 
-  const { data: notifications } =
-    useCollection<NotificationDoc>(notificationsQuery);
 
-  const unreadNotificationsCount =
-    (notifications || []).filter((n: NotificationDoc) => !n.isRead && !n.readAt).length;
 
   const mainMenuItems = [
     { href: '/', label: 'Home', icon: Home },
@@ -138,24 +96,14 @@ export default function SidebarNav() {
   const personalMenuItems = [
     { href: '/profile', label: 'Profile', icon: User },
     { href: '/activity', label: 'My Activity', icon: History },
-    // Only show orders/sales if seller
-    ...(profile?.isSeller
-      ? [
-          { href: '/orders', label: 'My Orders', icon: Package },
-          { href: '/sales', label: 'My Sales', icon: HeartHandshake },
-        ]
-      : []),
     { href: '/watchlist', label: 'Watchlist', icon: Heart },
     { href: '/favorites', label: 'Favorite Stores', icon: Store },
     { href: '/cart', label: 'Cart', icon: ShoppingCart },
     { href: '/messages', label: 'Messages', icon: MessageSquare },
-    // Notifications menu item removed, only popout button remains
-    { href: '/seller-analytics', label: 'Sales Analytics', icon: Star },
   ];
 
   const sellerMenuItems = [
-    { href: '/listings', label: 'My Listings', icon: Store },
-    { href: '/settings', label: 'Settings', icon: Settings },
+    { href: '/seller/dashboard', label: 'Seller Dashboard', icon: Store },
   ];
 
   const adminMenuItems = [
@@ -168,29 +116,6 @@ export default function SidebarNav() {
 
   return (
     <>
-      {/* Profile block at top */}
-      <SidebarHeader className="p-4 pt-6 flex items-center gap-4">
-        {user && (
-          <div className="flex items-center gap-4 w-full">
-            <div className="flex items-center gap-3 flex-1 rounded-xl border-2 border-black bg-card/70 px-3 py-2 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={avatarUrl} />
-                <AvatarFallback />
-              </Avatar>
-              <div className="min-w-0">
-                <div className="text-sm font-semibold truncate">
-                  {displayName}
-                </div>
-                <div className="text-[11px] text-muted-foreground truncate">
-                  {profile?.isSeller ? 'Seller' : 'Collector'}
-                </div>
-              </div>
-            </div>
-            <NotificationBellIcon />
-          </div>
-        )}
-      </SidebarHeader>
-
       <SidebarContent className="p-4">
         <div className="h-full flex flex-col space-y-4 pt-2">
           {/* Main */}
@@ -231,9 +156,6 @@ export default function SidebarNav() {
               {personalMenuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
-                const showBadge =
-                  item.href === '/notifications' &&
-                  unreadNotificationsCount > 0;
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
@@ -243,13 +165,6 @@ export default function SidebarNav() {
                     >
                       <Icon className="h-5 w-5" />
                       <span>{item.label}</span>
-                      {showBadge && (
-                        <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
-                          {unreadNotificationsCount > 9
-                            ? '9+'
-                            : unreadNotificationsCount}
-                        </span>
-                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -258,9 +173,10 @@ export default function SidebarNav() {
               {!profile?.isSeller && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    isActive={pathname === '/store/setup'}
-                    onClick={() => navigate('/store/setup')}
-                    className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md text-green-600"
+                    isActive={pathname === '/become-seller'}
+                    onClick={() => navigate('/become-seller')}
+                    className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md text-green-700 focus-visible:ring-2 focus-visible:ring-green-500"
+                    aria-label="Apply to Become a Seller"
                   >
                     <span>Apply to Become a Seller</span>
                   </SidebarMenuButton>
@@ -372,15 +288,6 @@ export default function SidebarNav() {
                 );
               })}
 
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={handleLogout}
-                  className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span>Logout</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </div>
         </div>

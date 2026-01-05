@@ -25,6 +25,11 @@ export function useCollection<T = DocumentData>(
 
   useEffect(() => {
     if (!queryRef) {
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.warn('useCollection called with null/undefined ref. Skipping Firestore subscription.');
+        console.trace('useCollection null ref stack');
+      }
       setData(null);
       setIsLoading(false);
       setError(null);
@@ -34,11 +39,12 @@ export function useCollection<T = DocumentData>(
     setIsLoading(true);
     setError(null);
 
+    let unsub = null;
     try {
       // Emit a stack trace so we can locate which component/query started this subscription
       // (helps diagnose unexpected Watch stream state from the backend)
       console.trace('Firestore useCollection subscribing', queryRef);
-      const unsubscribe = onSnapshot(
+      unsub = onSnapshot(
         queryRef as Query<T>,
         (snap: QuerySnapshot<T>) => {
           const docs: WithId<T>[] = snap.docs.map((d) => ({
@@ -51,25 +57,26 @@ export function useCollection<T = DocumentData>(
         (err) => {
           // IMPORTANT: do NOT throw here – just store the error
           console.error('Firestore useCollection error', err);
-          setError(err as any);
+          setError(err);
           setIsLoading(false);
         },
       );
-
-      return () => {
-        try {
-          unsubscribe();
-        } catch (e) {
-          console.warn('Error unsubscribing Firestore snapshot', e);
-        }
-      };
-    } catch (e: any) {
+    } catch (e: unknown) {
       // onSnapshot can throw synchronously for invalid queries/targets; capture that
       console.error('Firestore onSnapshot failed to subscribe', e);
       setError(e);
       setIsLoading(false);
       return;
     }
+    return () => {
+      if (unsub) {
+        try {
+          unsub();
+        } catch (e) {
+          console.warn('Error unsubscribing Firestore snapshot', e);
+        }
+      }
+    };
   }, [queryRef]);
 
   return { data, isLoading, error };

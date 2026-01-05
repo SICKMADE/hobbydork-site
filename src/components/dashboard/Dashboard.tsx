@@ -12,7 +12,7 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 import StoreCard from '@/components/StoreCard';
 import type { Store as StoreType, User, Listing } from '@/lib/types';
 import { listingConverter, storeConverter, spotlightConverter } from '@/firebase/firestore/converters';
-import StandaloneVaultDoor from './StandaloneVaultDoor';
+import { StandaloneVaultDoor } from './StandaloneVaultDoor';
 import AskHobbyDork from './AskHobbyDork';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -101,19 +101,27 @@ function getRandomAnswer(type: 'BUY' | 'SELL') {
 
 function SpotlightStoresSection() {
   const firestore = useFirestore();
-
+  const { user, profile, loading: authLoading } = useAuth();
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
   const spotlightQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!canReadFirestore || !firestore) return null;
     return query(
       collection(firestore, 'storefronts'),
       where('isSpotlighted', '==', true),
       limit(20),
     ).withConverter(storeConverter);
-  }, [firestore]);
-
-  const { data: spotlightStores, isLoading } =
-    useCollection<StoreType>(spotlightQuery);
-
+  }, [canReadFirestore, firestore]);
+  let spotlightStores: StoreType[] | null = null;
+  let isLoading = false;
+  if (canReadFirestore && firestore) {
+    const result = useCollection<StoreType>(spotlightQuery);
+    spotlightStores = result.data;
+    isLoading = result.isLoading;
+  }
   if (!spotlightStores || spotlightStores.length === 0) return null;
 
   return (
@@ -192,32 +200,38 @@ function SpotlightStoresSection() {
 // New Store Card for "Fresh Faces"
 // =====================
 function NewStoreCard({ store }: { store: StoreType }) {
-    const firestore = useFirestore();
+  const firestore = useFirestore();
+  const { user, profile, loading: authLoading } = useAuth();
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
 
-    const ownerRef = useMemoFirebase(() => {
-        if (!firestore || !store.ownerUid) return null;
-        return doc(firestore, 'users', store.ownerUid);
-    }, [firestore, store.ownerUid]);
+  const ownerRef = useMemoFirebase(() => {
+    if (!canReadFirestore || !firestore || !store.ownerUid) return null;
+    return doc(firestore, 'users', store.ownerUid);
+  }, [canReadFirestore, firestore, store.ownerUid]);
     
-    const { data: owner } = useDoc<User>(ownerRef);
-    const cardImage = resolveAvatarUrl(owner?.avatar, store.ownerUid);
+  const { data: owner } = useDoc<User>(canReadFirestore ? ownerRef : null);
+  const cardImage = resolveAvatarUrl(owner?.avatar, store.ownerUid);
 
-    return (
-       <div className="relative flex flex-col items-center gap-2 text-center">
-            <Link href={`/store/${store.storeId}`} className="block">
-                <Avatar className="h-24 w-24 border-2 border-primary/50 transition-transform hover:scale-105">
-                    <AvatarImage src={cardImage} alt={store.storeName} />
-                  <AvatarFallback />
-                </Avatar>
-            </Link>
-            <div className="text-xs mt-2">
-                <p className="font-semibold truncate">{store.storeName}</p>
-                <Button asChild variant="link" className="h-auto p-0 text-xs">
-                    <Link href={`/store/${store.storeId}`}>Visit Store</Link>
-                </Button>
-            </div>
-        </div>
-    );
+  return (
+     <div className="relative flex flex-col items-center gap-2 text-center">
+      <Link href={`/store/${store.storeId}`} className="block">
+        <Avatar className="h-24 w-24 border-2 border-primary/50 transition-transform hover:scale-105">
+          <AvatarImage src={cardImage} alt={store.storeName} />
+          <AvatarFallback />
+        </Avatar>
+      </Link>
+      <div className="text-xs mt-2">
+        <p className="font-semibold truncate">{store.storeName}</p>
+        <Button asChild variant="link" className="h-auto p-0 text-xs">
+          <Link href={`/store/${store.storeId}`}>Visit Store</Link>
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 
@@ -227,20 +241,28 @@ function NewStoreCard({ store }: { store: StoreType }) {
 
 function NewStoresSection() {
   const firestore = useFirestore();
-
+  const { user, profile, loading: authLoading } = useAuth();
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
   const newStoresQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!canReadFirestore || !firestore) return null;
     return query(
       collection(firestore, 'storefronts'),
       where('status', '==', 'ACTIVE'),
       orderBy('createdAt', 'desc'),
       limit(18),
     ).withConverter(storeConverter);
-  }, [firestore]);
-
-  const { data: stores, isLoading } =
-    useCollection<StoreType>(newStoresQuery);
-
+  }, [canReadFirestore, firestore]);
+  let stores: StoreType[] | null = null;
+  let isLoading = false;
+  if (canReadFirestore && firestore) {
+    const result = useCollection<StoreType>(newStoresQuery);
+    stores = result.data;
+    isLoading = result.isLoading;
+  }
   if (!stores || stores.length === 0) return null;
 
   return (
@@ -298,20 +320,28 @@ function NewStoresSection() {
 
 function NewListingsSection() {
   const firestore = useFirestore();
-
+  const { user, profile, loading: authLoading } = useAuth();
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
   const newListingsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!canReadFirestore || !firestore) return null;
     return query(
       collection(firestore, 'listings'),
       where('state', '==', 'ACTIVE'),
       orderBy('createdAt', 'desc'),
       limit(12),
     ).withConverter(listingConverter);
-  }, [firestore]);
-
-  const { data: listings, isLoading: listingsLoading } =
-    useCollection<Listing>(newListingsQuery);
-
+  }, [canReadFirestore, firestore]);
+  let listings: Listing[] | null = null;
+  let listingsLoading = false;
+  if (canReadFirestore && firestore) {
+    const result = useCollection<Listing>(newListingsQuery);
+    listings = result.data;
+    listingsLoading = result.isLoading;
+  }
   if (!listings || listings.length === 0) return null;
 
   return (
@@ -393,7 +423,10 @@ function VaultAndGenieSection() {
    ======================= */
 
 export default function Dashboard() {
-  const { profile, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return null;
+  if (!user.emailVerified) return null;
   const displayName = profile?.displayName ?? 'Collector';
   const isSeller = profile?.isSeller;
 
@@ -419,10 +452,9 @@ export default function Dashboard() {
             {!isSeller ? (
               <Button
                 asChild
-                variant="outline"
-                className="hidden sm:inline-flex border-2 border-black bg-muted/40 hover:bg-muted/60 text-green-600"
+                className="inline-flex border-2 border-black bg-yellow-400 hover:bg-yellow-300 text-black font-bold shadow"
               >
-                <Link href="/store/setup">Apply to Become a Seller</Link>
+                <Link href="/become-seller">Apply to Become Seller</Link>
               </Button>
             ) : (
               <Button
@@ -433,9 +465,11 @@ export default function Dashboard() {
                 <Link href="/search">Browse listings</Link>
               </Button>
             )}
-            <Button asChild className="comic-button">
-              <Link href="/listings/create">Create listing</Link>
-            </Button>
+            {isSeller && (
+              <Button asChild className="comic-button">
+                <Link href="/listings/create">Create listing</Link>
+              </Button>
+            )}
           </div>
         </div>
       </header>

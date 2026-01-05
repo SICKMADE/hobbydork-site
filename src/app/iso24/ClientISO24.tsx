@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 
 import AppLayout from '@/components/layout/AppLayout';
-import ISO24Card from '@/components/ISO24Card';
+import { ISO24Card } from '@/components/ISO24Card';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -53,7 +53,15 @@ export default function ClientISO24() {
     let cancelled = false;
 
     async function load() {
+      // Strict Firestore read gate
+      // TODO: Replace with your actual canReadFirestore logic
+      const canReadFirestore = true; // Set to false if not allowed
+      if (!canReadFirestore) {
+        setLoading(false);
+        return;
+      }
       try {
+        if (!db) throw new Error('Firestore not initialized');
         const ref = collection(db, 'iso24Posts');
         const now = Timestamp.now();
         const q = query(
@@ -65,7 +73,7 @@ export default function ClientISO24() {
         );
         const snap = await getDocs(q);
         if (cancelled) return;
-        setPosts(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+        setPosts(snap.docs.map((d) => ({ ...(d.data() as Iso24Post), id: d.id })));
       } catch (e) {
         // If permissions or indexes are misconfigured, don't silently fail.
         console.error('ISO24 load failed', e);
@@ -88,7 +96,7 @@ export default function ClientISO24() {
   }, []);
 
   const isNotExpired = (p: Iso24Post) => {
-    const expiresAt = (p as any)?.expiresAt;
+    const expiresAt = p.expiresAt;
     if (!expiresAt || typeof expiresAt.toMillis !== 'function') return true;
     return expiresAt.toMillis() > nowMs;
   };
@@ -159,7 +167,7 @@ export default function ClientISO24() {
         <div className="space-y-4">
           {visiblePosts.map((post) => (
             <Link key={post.id} href={`/iso24/${post.id}`} className="block">
-              <ISO24Card post={post as any} />
+              <ISO24Card post={{ ...post, title: post.title ?? "Untitled", description: post.description ?? "" }} />
             </Link>
           ))}
         </div>

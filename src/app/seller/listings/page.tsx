@@ -20,15 +20,18 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SellerListings() {
-  const { user } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [listings, setListings] = useState<Partial<Listing>[]>([]);
 
   useEffect(() => {
-    if (!user) return;
+    // Strict Firestore read gate
+    const canReadFirestore = !!user && user.emailVerified && profile?.status === "ACTIVE";
+    if (!canReadFirestore) return;
 
+    if (!db) return;
     const q = query(
-      collection(db, "listings"),
+      collection(db!, "listings"),
       where("ownerUid", "==", user.uid)
     );
 
@@ -37,12 +40,13 @@ export default function SellerListings() {
     });
 
     return () => unsub();
-  }, [user]);
+  }, [user, profile]);
 
   const setVisibility = async (listingId: string, makePublic: boolean) => {
-    if (!user) return;
+    if (!user || !profile?.emailVerified || profile?.status !== "ACTIVE") return;
+    if (!db) return;
     try {
-      await updateDoc(doc(db, "listings", listingId), {
+      await updateDoc(doc(db!, "listings", listingId), {
         state: makePublic ? "ACTIVE" : "DRAFT",
         status: makePublic ? "ACTIVE" : "DRAFT",
         updatedAt: serverTimestamp(),

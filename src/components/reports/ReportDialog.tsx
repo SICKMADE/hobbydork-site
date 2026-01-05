@@ -49,9 +49,14 @@ export function ReportDialog({
   triggerLabel,
   className,
 }: ReportDialogProps) {
-  const { user } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    user.emailVerified &&
+    profile?.status === "ACTIVE";
 
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string>('NON_PAYMENT');
@@ -73,11 +78,11 @@ export function ReportDialog({
     e: React.FormEvent<HTMLFormElement>,
   ) => {
     e.preventDefault();
-    if (!firestore || !user) {
+    if (!canReadFirestore || !firestore) {
       toast({
         title: 'Sign in required',
         description:
-          'You must be signed in to file a report.',
+          'You must be signed in with an active, verified account to file a report.',
         variant: 'destructive',
       });
       return;
@@ -154,6 +159,7 @@ export function ReportDialog({
             <Label htmlFor="reason">Reason</Label>
             <select
               id="reason"
+              title="Reason for report"
               className="w-full border rounded-md px-2 py-1 text-sm bg-background"
               value={reason}
               onChange={(e) => setReason(e.target.value)}

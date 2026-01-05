@@ -27,9 +27,14 @@ interface ReviewDialogProps {
 }
 
 export default function ReviewDialog({ order, open, onOpenChange }: ReviewDialogProps) {
-    const { profile } = useAuth();
+    const { profile, loading: authLoading } = useAuth();
     const firestore = useFirestore();
     const { toast } = useToast();
+    const canReadFirestore =
+        !authLoading &&
+        !!profile &&
+        profile.emailVerified &&
+        profile.status === "ACTIVE";
     const [hoverRating, setHoverRating] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,8 +49,8 @@ export default function ReviewDialog({ order, open, onOpenChange }: ReviewDialog
     const currentRating = form.watch('rating');
 
     async function onSubmit(values: z.infer<typeof reviewSchema>) {
-        if (!profile || !firestore) {
-            toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to leave a review.' });
+        if (!canReadFirestore || !firestore) {
+            toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in with an active, verified account to leave a review.' });
             return;
         }
         setIsSubmitting(true);

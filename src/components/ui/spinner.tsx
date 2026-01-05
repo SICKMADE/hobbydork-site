@@ -1,9 +1,12 @@
 import React from 'react';
+import './spinner.module.css';
 
 // HobbyDork Spinner: a simple animated logo spinner
 export default function Spinner({ size = 48 }: { size?: number }) {
   return (
-    <div className="flex items-center justify-center" style={{ height: size, width: size }}>
+    <div
+      className={`flex items-center justify-center spinner-size`}
+    >
       <svg
         width={size}
         height={size}

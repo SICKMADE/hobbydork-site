@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { SidebarTrigger } from '../ui/sidebar';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { Search, Bell } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 import { useAuth } from '@/hooks/use-auth';
 import {
@@ -22,7 +22,9 @@ import {
   where,
 } from 'firebase/firestore';
 
+
 import Logo from '@/components/Logo';
+import NotifBell from '@/components/notifications/NotifBell';
 
 type NotificationDoc = {
   id?: string;
@@ -36,22 +38,8 @@ export default function Header() {
   const { user } = useAuth();
   const firestore = useFirestore();
 
-  // Unread notifications for header badge
-  const notifQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    return query(
-      collection(firestore, 'users', user.uid, 'notifications'),
-      where('isRead', '==', false),
-    );
-  }, [firestore, user?.uid]);
 
-  const { data: notifications } =
-    useCollection<NotificationDoc>(notifQuery);
-
-  const unreadCount =
-    (notifications || []).filter(
-      (n) => !n.isRead && !n.readAt,
-    ).length;
+  // Notification logic removed
 
   const runSearch = () => {
     const trimmed = searchTerm.trim();
@@ -69,7 +57,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-30 border-b bg-muted">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2 md:flex-row md:items-center md:justify-between md:px-6 lg:px-8">
-        {/* Row 1: menu + logo + bell (mobile stacks, desktop just left side) */}
+        {/* Row 1: menu + logo (mobile stacks, desktop just left side) */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             {/* MOBILE: red menu button for sidebar */}
@@ -93,25 +81,10 @@ export default function Header() {
               </span>
             </Link>
           </div>
-
-          {/* Notifications bell */}
-          {user && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Notifications"
-              className="relative ml-1"
-              onClick={() => router.push('/notifications')}
-            >
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </Button>
-          )}
+          {/* Notification Bell */}
+          <div className="ml-2 flex items-center">
+            <NotifBell />
+          </div>
         </div>
 
         {/* Row 2: full-width search bar (on md+ this sits to the right) */}

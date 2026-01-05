@@ -28,14 +28,18 @@ export default function OrderDetail({ params }: any) {
   const [order, setOrder] = useState<any>(null);
 
   useEffect(() => {
-    const ref = doc(db, "orders", orderId);
+    // Strict Firestore read gate
+    const canReadFirestore = !!user && user.emailVerified;
+    if (!canReadFirestore) return;
+    if (!db) return;
+    const ref = doc(db!, "orders", orderId);
     const unsub = onSnapshot(ref, (snap) => {
       if (snap.exists()) {
         setOrder({ id: snap.id, ...snap.data() });
       }
     });
     return () => unsub();
-  }, [orderId]);
+  }, [orderId, user]);
 
   if (!order || !user) {
     return <div className="p-6">Loading…</div>;
@@ -48,7 +52,8 @@ export default function OrderDetail({ params }: any) {
 
   async function payNow() {
     try {
-      const fn = httpsCallable(getFunctions(), "createCheckoutSession");
+      const app = typeof window !== 'undefined' ? (await import('firebase/app')).getApp() : undefined;
+      const fn = httpsCallable(getFunctions(app, 'us-central1'), "createCheckoutSession");
 
       const amountCents = Math.round(order.subtotal * 100);
 
@@ -82,7 +87,8 @@ export default function OrderDetail({ params }: any) {
   /* ---------------- SELLER ACTIONS ---------------- */
 
   async function markShipped(trackingNumber: string, carrier: string) {
-    await updateDoc(doc(db, "orders", orderId), {
+    if (!db) return;
+    await updateDoc(doc(db!, "orders", orderId), {
       state: "SHIPPED",
       trackingNumber,
       carrier,
@@ -94,7 +100,8 @@ export default function OrderDetail({ params }: any) {
   /* ---------------- BUYER ACTIONS ---------------- */
 
   async function confirmDelivered() {
-    await updateDoc(doc(db, "orders", orderId), {
+    if (!db) return;
+    await updateDoc(doc(db!, "orders", orderId), {
       state: "DELIVERED",
       deliveredAt: serverTimestamp(),
       updatedAt: serverTimestamp(),

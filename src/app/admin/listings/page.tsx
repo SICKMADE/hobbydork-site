@@ -5,22 +5,34 @@ import { db } from "@/firebase/client-provider";
 import { collection, getDocs, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
 
+
+type Listing = {
+  id: string;
+  title?: string;
+  status?: string;
+  state?: string;
+  removedBy?: string | null;
+  removedReason?: string | null;
+};
+
 export default function AdminListingsPage() {
   const { userData } = useAuth();
   const role = userData.role;
   const isStaff = role === "ADMIN" || role === "MODERATOR";
 
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      if (!isStaff) {
+      // Strict Firestore read gate
+      const canReadFirestore = isStaff;
+      if (!canReadFirestore) {
         setLoading(false);
         return;
       }
       const snap = await getDocs(collection(db, "listings"));
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Listing));
       setItems(data);
       setLoading(false);
     }

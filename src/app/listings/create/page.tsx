@@ -313,7 +313,7 @@ export default function CreateListingPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Select value={category} onValueChange={(val) => setCategory(val as any)}>
+                  <Select value={category} onValueChange={(val) => setCategory(val as (typeof CATEGORY_OPTIONS)[number]["value"])}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -329,7 +329,7 @@ export default function CreateListingPage() {
 
                 <div className="space-y-2">
                   <Label>Condition</Label>
-                  <Select value={condition} onValueChange={(val) => setCondition(val as any)}>
+                  <Select value={condition} onValueChange={(val) => setCondition(val as (typeof CONDITION_OPTIONS)[number]["value"])}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select condition" />
                     </SelectTrigger>

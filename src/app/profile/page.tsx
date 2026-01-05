@@ -41,21 +41,19 @@ const profileSchema = z.object({
 });
 
 export default function ProfilePage() {
-  const { user, userData, loading } = useAuth();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
 
   const DEFAULT_AVATAR = getDefaultAvatarUrl(user?.uid);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(
-    userData?.avatar
-  );
+  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined);
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     values: {
-      about: userData?.about || "",
+      about: "",
     },
   });
 
@@ -67,7 +65,7 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user || !userData) {
+  if (!user) {
     return (
       <AppLayout>
         <div>Profile not available.</div>
@@ -76,9 +74,9 @@ export default function ProfilePage() {
   }
 
   async function uploadAvatarIfNeeded(): Promise<string | undefined> {
-    if (!avatarFile) return userData.avatar;
+    if (!avatarFile) return user?.photoURL ?? undefined;
 
-    if (!user) return userData.avatar;
+    if (!user) return undefined;
 
     const storage = getStorage();
     const safeName = avatarFile.name.replace(/[^\w.-]/g, "_");
@@ -90,9 +88,10 @@ export default function ProfilePage() {
 
   async function onSubmit(values: z.infer<typeof profileSchema>) {
     if (!user) return;
+    if (!db) return;
     setIsSubmitting(true);
     try {
-      const userRef = doc(db, "users", user.uid);
+      const userRef = doc(db!, "users", user.uid);
       const newAvatarUrl = await uploadAvatarIfNeeded();
 
       const payload: Record<string, any> = {
@@ -117,8 +116,8 @@ export default function ProfilePage() {
     }
   }
 
-  const displayName = userData.displayName || "";
-  const email = userData.email || "";
+  const displayName = user.displayName || "";
+  const email = user.email || "";
 
   return (
     <AppLayout>

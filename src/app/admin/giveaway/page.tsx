@@ -90,19 +90,24 @@ export default function AdminGiveawayPage() {
   const [endAt, setEndAt] = React.useState("");
   const [savingConfig, setSavingConfig] = React.useState(false);
 
-  const onPickBanner = (file: File | null) => {
-    setBannerFile(file);
-    if (bannerPreviewUrl) {
-      URL.revokeObjectURL(bannerPreviewUrl);
-      setBannerPreviewUrl(null);
-    }
-    if (file) {
-      setBannerPreviewUrl(URL.createObjectURL(file));
-    }
-  };
+  const onPickBanner = React.useCallback(
+    (file: File | null) => {
+      setBannerFile(file);
+      if (bannerPreviewUrl) {
+        URL.revokeObjectURL(bannerPreviewUrl);
+        setBannerPreviewUrl(null);
+      }
+      if (file) {
+        setBannerPreviewUrl(URL.createObjectURL(file));
+      }
+    },
+    [bannerPreviewUrl]
+  );
 
   React.useEffect(() => {
-    if (!isStaff) return;
+   // Strict Firestore read gate
+   const canReadFirestore = isStaff;
+   if (!canReadFirestore) return;
 
     const q = query(collection(db, "giveawayEntries"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snap) => {
@@ -113,7 +118,9 @@ export default function AdminGiveawayPage() {
   }, [isStaff]);
 
   React.useEffect(() => {
-    if (!isStaff) return;
+    // Strict Firestore read gate
+    const canReadFirestore = isStaff;
+    if (!canReadFirestore) return;
 
     const unsub = onSnapshot(doc(db, "giveaways", GIVEAWAY_ID), (snap) => {
       if (!snap.exists()) {
@@ -138,7 +145,7 @@ export default function AdminGiveawayPage() {
     });
 
     return () => unsub();
-  }, [isStaff]);
+  }, [isStaff, onPickBanner]);
 
   async function saveGiveawayConfig() {
     const start = parseDateTimeLocalValue(startAt);
@@ -189,15 +196,16 @@ export default function AdminGiveawayPage() {
           startAt: start,
           endAt: end,
           updatedAt: serverTimestamp(),
-          createdAt: config ? (config as any).createdAt || serverTimestamp() : serverTimestamp(),
+          createdAt: config && typeof config.createdAt !== 'undefined' ? config.createdAt : serverTimestamp(),
         },
         { merge: true },
       );
 
       toast({ title: "Giveaway saved" });
       onPickBanner(null);
-    } catch (e: any) {
-      toast({ title: "Save failed", description: e?.message || "" });
+    } catch (e) {
+      const err = e as Error;
+      toast({ title: "Save failed", description: err?.message || "" });
     } finally {
       setSavingConfig(false);
     }
@@ -211,8 +219,9 @@ export default function AdminGiveawayPage() {
         reviewedBy: userData?.uid || null,
       });
       toast({ title: `Marked ${status.toLowerCase()}` });
-    } catch (e: any) {
-      toast({ title: "Update failed", description: e?.message || "" });
+    } catch (e) {
+      const err = e as Error;
+      toast({ title: "Update failed", description: err?.message || "" });
     }
   }
 

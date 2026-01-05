@@ -11,13 +11,22 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useAuth } from '@/hooks/use-auth';
+import { resolveAvatarUrl } from '@/lib/default-avatar';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -54,7 +63,7 @@ const SidebarProvider = React.forwardRef<
       open: openProp,
       onOpenChange: setOpenProp,
       className,
-      style,
+      // style,
       children,
       ...props
     },
@@ -129,8 +138,9 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
               <Sheet open={open} onOpenChange={setOpen}>
               <SheetContent side="left" className="p-0 w-64 border-r-2 border-black">
                 <div className="flex flex-col h-full bg-background text-sidebar-foreground">
-                          {children}
-                      </div>
+                <SidebarUserMenu />
+                  {children}
+                </div>
                   </SheetContent>
               </Sheet>
             );
@@ -147,6 +157,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
                 {...props}
             >
                 <div className="flex flex-col h-full">
+                  <SidebarUserMenu />
                     {children}
                 </div>
             </aside>
@@ -386,6 +397,58 @@ const SidebarMenuButton = React.forwardRef<
   }
 )
 SidebarMenuButton.displayName = "SidebarMenuButton"
+
+// User avatar dropdown for sidebar
+
+import { useEffect, useState } from 'react';
+import { db } from '@/firebase/client-provider';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { Bell } from 'lucide-react';
+
+function SidebarUserMenu() {
+  const { profile, logout } = useAuth();
+  // Always use resolveAvatarUrl with fallback to uid or email for default avatar
+  const avatarSeed = profile?.avatar && profile.avatar.trim() !== '' ? profile.avatar : (profile?.uid || profile?.email || '');
+  const avatarUrl = resolveAvatarUrl(profile?.avatar, avatarSeed);
+  // Only show displayName (username), never email
+  let displayName = 'User';
+  if (profile?.displayName && profile.displayName.trim() !== '') {
+    displayName = profile.displayName;
+  }
+
+
+  // Notification logic removed
+
+  return (
+    <div className="flex justify-center items-center p-3 pb-1">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="focus:outline-none relative">
+            <Avatar className="h-14 w-14">
+              <AvatarImage src={avatarUrl} alt={displayName} />
+              <AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
+
+              {/* Notification indicator removed */}
+            </Avatar>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="right" align="start">
+          <DropdownMenuItem asChild>
+
+            {/* Notifications menu item fully removed */}
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <a href="/profile">Profile</a>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+// To use, add <SidebarUserMenu /> at the top of your sidebar layout, above the menu items.
 
 export {
   Sidebar,

@@ -11,9 +11,8 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
-import type { Listing, Order } from "@/lib/types";
+import type { Listing } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { placeholderImages } from "@/lib/placeholder-images";
 import { useForm } from "react-hook-form";
@@ -38,7 +37,6 @@ export default function CartPage() {
   const { profile } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const router = useRouter();
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [showShippingForm, setShowShippingForm] = useState(false);
@@ -95,7 +93,7 @@ export default function CartPage() {
       const batch = writeBatch(firestore);
       const orderRef = doc(collection(firestore, "orders"));
 
-      const order: any = {
+      const order = {
         orderId: orderRef.id,
         buyerUid: profile.uid,
         sellerUid: firstListing.ownerUid,
@@ -120,13 +118,15 @@ export default function CartPage() {
       console.info('[checkout] cart order committed', { orderId: orderRef.id });
 
       // 🔥 STRIPE CHECKOUT (Firebase)
-      const fn = httpsCallable(getFunctions(), "createCheckoutSession");
-      const res: any = await fn({
+      const app = typeof window !== 'undefined' ? (await import('firebase/app')).getApp() : undefined;
+      const fn = httpsCallable(getFunctions(app, 'us-central1'), "createCheckoutSession");
+
+      const res = await fn({
         orderId: orderRef.id,
         listingTitle: firstListing.title,
         amountCents: Math.round(subtotal * 100),
         appBaseUrl: window.location.origin,
-      });
+      }) as { data: { url?: string } };
 
       // eslint-disable-next-line no-console
       console.info('[checkout] cart createCheckoutSession response', res?.data);
@@ -138,10 +138,14 @@ export default function CartPage() {
       }
       window.location.href = url;
 
-    } catch (err: any) {
+    } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[checkout] cart failed', err);
-      toast({ variant: "destructive", title: "Checkout failed", description: err.message });
+      toast({
+        variant: "destructive",
+        title: "Checkout failed",
+        description: err instanceof Error ? err.message : "Checkout failed",
+      });
       setIsCheckingOut(false);
     }
   };

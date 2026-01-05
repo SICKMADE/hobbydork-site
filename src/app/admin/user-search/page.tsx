@@ -11,14 +11,26 @@ import {
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 
+
+type User = {
+  id: string;
+  email?: string;
+  uid?: string;
+  displayName?: string;
+  storeId?: string;
+  stripeAccountId?: string;
+  role?: string;
+  status?: string;
+};
+
 export default function AdminUserSearchPage() {
-  const { userData } = useAuth();
-  const role = userData.role;
+  const { profile } = useAuth();
+  const role = profile?.role;
   const isAdmin = role === "ADMIN";
   const isStaff = isAdmin || role === "MODERATOR";
 
   const [term, setTerm] = useState("");
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
 
   if (!isStaff) {
@@ -26,14 +38,17 @@ export default function AdminUserSearchPage() {
   }
 
   async function runSearch() {
-    if (!term.trim()) return;
+    // Strict Firestore read gate
+    const canReadFirestore = isStaff;
+    if (!term.trim() || !canReadFirestore) return;
 
     setLoading(true);
-    let matches: any[] = [];
+    const matches: User[] = [];
 
     const fields = ["email", "uid", "displayName", "storeId", "stripeAccountId"];
 
     for (const field of fields) {
+      if (!db) continue;
       const q = query(
         collection(db, "users"),
         where(field, "==", term.trim())

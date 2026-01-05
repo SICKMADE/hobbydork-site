@@ -5,9 +5,9 @@ import {
   useContext,
   useEffect,
   useState,
+  ReactNode,
 } from "react";
 import {
-  onAuthStateChanged,
   onIdTokenChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -23,39 +23,50 @@ import {
   setDoc,
   updateDoc,
   serverTimestamp,
+  Firestore,
+  onSnapshot,
 } from "firebase/firestore";
 
-import { auth, db } from "@/firebase/client-provider";
+import { auth as _auth, db as _db } from "@/firebase/client-provider";
 import { getDefaultAvatarUrl } from "@/lib/default-avatar";
 
-type UserDoc = {
+/* ---------------- TYPES ---------------- */
+
+export type UserDoc = {
   uid: string;
   email: string | null;
-  emailVerified?: boolean;
+  emailVerified: boolean;
   displayName: string;
-  role: string;
-  status: string;
+  role: "USER" | "ADMIN" | "MODERATOR";
+  status: "ACTIVE" | "LIMITED" | "BANNED";
   isSeller: boolean;
-  sellerStatus: string;
-  storeId?: string;
-  avatar?: string;
-  about?: string;
-  notifyMessages?: boolean;
-  notifyOrders?: boolean;
-  notifyISO24?: boolean;
-  notifySpotlight?: boolean;
-  stripeOnboarded?: boolean;
+  sellerStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+  storeId: string;
+  avatar: string;
+  about: string;
+  notifyMessages: boolean;
+  notifyOrders: boolean;
+  notifyISO24: boolean;
+  notifySpotlight: boolean;
+  stripeOnboarded: boolean;
   stripeAccountId: string | null;
   stripeTermsAgreed: boolean;
   paymentMethod: string | null;
   paymentIdentifier: string | null;
   createdAt?: unknown;
   updatedAt?: unknown;
-  shippingAddress?: import("@/lib/types").ShippingAddress;
-  [key: string]: unknown;
+  shippingAddress?: {
+    name?: string;
+    address1?: string;
+    address2?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
+  };
 };
 
-const EMPTY_USERDOC: UserDoc = {
+const EMPTY_PROFILE: UserDoc = {
   uid: "",
   email: null,
   emailVerified: false,
@@ -65,7 +76,7 @@ const EMPTY_USERDOC: UserDoc = {
   isSeller: false,
   sellerStatus: "NONE",
   storeId: "",
-  avatar: undefined,
+  avatar: "",
   about: "",
   notifyMessages: true,
   notifyOrders: true,
@@ -76,337 +87,169 @@ const EMPTY_USERDOC: UserDoc = {
   stripeTermsAgreed: false,
   paymentMethod: null,
   paymentIdentifier: null,
-  shippingAddress: undefined,
 };
+
+/* ---------------- CONTEXT ---------------- */
 
 type AuthContextType = {
   user: User | null;
+  profile: UserDoc | null;
   userData: UserDoc;
   loading: boolean;
-  profile: UserDoc;
-  error?: unknown | null;
   login: (email: string, password: string) => Promise<UserCredential>;
-  signup: (email: string, password: string, displayName: string) => Promise<UserCredential>;
-  signIn: (email: string, password: string) => Promise<UserCredential>;
-  signUp: (
+  signup: (
     email: string,
     password: string,
     displayName: string
   ) => Promise<UserCredential>;
   logout: () => Promise<void>;
   resendVerification: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<UserCredential>;
+  signUp: (
+    email: string,
+    password: string,
+    displayName: string
+  ) => Promise<UserCredential>;
+  refreshIdToken: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const authState = useProvideAuth();
-  return (
-    <AuthContext.Provider value={authState}>
-      {children}
-    </AuthContext.Provider>
-  );
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const value = useProvideAuth();
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used inside AuthProvider");
-  }
+  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
   return ctx;
 }
 
+/* ---------------- CORE ---------------- */
+
 function useProvideAuth(): AuthContextType {
   const [user, setUser] = useState<User | null>(null);
-  const [userData, setUserData] = useState<UserDoc>(EMPTY_USERDOC);
+  const [profile, setProfile] = useState<UserDoc | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<unknown | null>(null);
-  useEffect(() => {
-    if (!user) return;
-
-    if (user.emailVerified && userData?.emailVerified !== true) {
-      setDoc(
-        doc(db, 'users', user.uid),
-        {
-          emailVerified: true,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-    }
-  }, [user, userData]);
-  // Sync Firestore emailVerified after login (no manual code logic)
-  useEffect(() => {
-    if (!user) return;
-    if (user.emailVerified) {
-      setDoc(
-        doc(db, 'users', user.uid),
-        {
-          emailVerified: true,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      ).catch(() => {});
-    }
-  }, [user?.uid, user?.emailVerified]);
 
   useEffect(() => {
-    let isMounted = true;
+    if (!_auth || !_db) return;
 
-    // Defensive: if client SDKs aren't available yet, fail gracefully.
-    if (!auth || !db) {
-      setError(new Error("Firebase client SDKs not initialized."));
-      setLoading(false);
-      return;
-    }
+    const db: Firestore = _db;
+    let unsubProfile: (() => void) | null = null;
 
-    // NOTE: email verification changes do NOT trigger onAuthStateChanged.
-    // onIdTokenChanged fires when tokens refresh (e.g. after getIdToken(true)),
-    // so it keeps Firestore's users/{uid}.emailVerified in sync.
-    const unsub = onIdTokenChanged(auth, (firebaseUser) => {
-      (async () => {
-        try {
-          if (!isMounted) return;
-          setError(null);
+    const unsubAuth = onIdTokenChanged(_auth, async (firebaseUser) => {
+      setLoading(true);
 
-          if (!firebaseUser) {
-            setUser(null);
-            setUserData(EMPTY_USERDOC);
-            return;
-          }
+      if (unsubProfile) {
+        unsubProfile();
+        unsubProfile = null;
+      }
 
-          setUser(firebaseUser);
+      if (!firebaseUser) {
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
 
-          const ref = doc(db, "users", firebaseUser.uid);
-          const snap = await getDoc(ref);
+      // 🔥 THIS IS THE FIX
+      await firebaseUser.reload();
+          
+      setUser(firebaseUser);
+      const ref = doc(db, "users", firebaseUser.uid);
 
-          if (snap.exists()) {
-            const existing = snap.data() as UserDoc;
-            // Keep Firestore doc in sync with Auth verification state.
-            if (existing.emailVerified !== firebaseUser.emailVerified) {
-              try {
-                await updateDoc(ref, {
-                  emailVerified: firebaseUser.emailVerified,
-                  updatedAt: serverTimestamp(),
-                });
-              } catch (_e) {
-                // ignore permissions/offline; UI gating uses Auth state
-              }
-            }
-
-            setUserData({
-              ...EMPTY_USERDOC,
-              ...existing,
+      unsubProfile = onSnapshot(ref, async (snap) => {
+        if (snap.exists()) {
+          const data = snap.data() as UserDoc;
+          if (data.emailVerified !== firebaseUser.emailVerified) {
+            await updateDoc(ref, {
               emailVerified: firebaseUser.emailVerified,
-            });
-          } else {
-            // Create user doc if missing (first signup)
-            const newUserData: UserDoc = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email ?? "",
-              emailVerified: firebaseUser.emailVerified,
-              displayName: firebaseUser.displayName ?? "",
-              role: "USER",
-              status: "ACTIVE",
-              isSeller: false,
-              sellerStatus: "NONE",
-              storeId: "",
-              avatar: getDefaultAvatarUrl(firebaseUser.uid),
-              about: "",
-              notifyMessages: true,
-              notifyOrders: true,
-              notifyISO24: true,
-              notifySpotlight: true,
-              stripeOnboarded: false,
-              stripeAccountId: null,
-              stripeTermsAgreed: false,
-              paymentMethod: null,
-              paymentIdentifier: null,
-              createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
-            };
-            try {
-              await setDoc(ref, newUserData);
-            } catch (e) {
-              console.error('Firestore setDoc failed:', e);
-            }
-            setUserData({
-              ...EMPTY_USERDOC,
-              ...newUserData,
-              // avoid leaking FieldValue into UI state; keep minimal fields
-              createdAt: undefined,
-              updatedAt: undefined,
             });
           }
-        } catch (e) {
-          if (!isMounted) return;
-          setError(e);
-          // If something fails (e.g. Firestore permissions/offline), avoid leaving UI stuck.
-          setUserData(EMPTY_USERDOC);
-        } finally {
-          if (!isMounted) return;
-          setLoading(false);
+          setProfile({
+            ...EMPTY_PROFILE,
+            ...data,
+            emailVerified: firebaseUser.emailVerified,
+          });
+        } else {
+          const newUser: UserDoc = {
+            ...EMPTY_PROFILE,
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            emailVerified: firebaseUser.emailVerified,
+            displayName: firebaseUser.displayName ?? "",
+            avatar: getDefaultAvatarUrl(firebaseUser.uid),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          };
+          await setDoc(ref, newUser);
+          setProfile(newUser);
         }
-      })();
+        setLoading(false);
+      });
     });
 
     return () => {
-      isMounted = false;
-      unsub();
+      unsubAuth();
+      if (unsubProfile) unsubProfile();
     };
   }, []);
 
-  /* ---------- AUTH ACTIONS ---------- */
+  /* ---------------- ACTIONS ---------------- */
 
-  const signInUser = (email: string, password: string) =>
-    signInWithEmailAndPassword(auth, email, password);
+  const login = (email: string, password: string) =>
+    signInWithEmailAndPassword(_auth!, email, password);
 
-  const signUpUser = async (
+  const signup = async (
     email: string,
     password: string,
     displayName: string
   ) => {
-    try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const cred = await createUserWithEmailAndPassword(
+      _auth!,
+      email,
+      password
+    );
 
-      if (cred.user && displayName) {
-        await updateProfile(cred.user, { displayName });
-      }
-
-      // Always create Firestore user doc immediately after signup
-      const ref = doc(db, 'users', cred.user.uid);
-      await setDoc(ref, {
-        uid: cred.user.uid,
-        email: cred.user.email ?? '',
-        emailVerified: false,
-        displayName: displayName,
-        role: 'USER',
-        status: 'ACTIVE',
-        isSeller: false,
-        sellerStatus: 'NONE',
-        storeId: '',
-        avatar: getDefaultAvatarUrl(cred.user.uid),
-        about: '',
-        notifyMessages: true,
-        notifyOrders: true,
-        notifyISO24: true,
-        notifySpotlight: true,
-        stripeOnboarded: false,
-        stripeAccountId: null,
-        stripeTermsAgreed: false,
-        paymentMethod: null,
-        paymentIdentifier: null,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      if (cred.user) {
-        await sendEmailVerification(cred.user);
-      }
-
-      return cred;
-    } catch (e) {
-      setError(e);
-      throw e;
-    }
+    await updateProfile(cred.user, { displayName });
+    await sendEmailVerification(cred.user);
+    return cred;
   };
 
-  const logoutUser = async () => {
-    try {
-      await signOut(auth);
-      setUser(null);
-      setUserData(EMPTY_USERDOC);
-    } catch (e) {
-      setError(e);
-      // log for easier local debugging
-      // eslint-disable-next-line no-console
-      // ...existing code...
-      throw e;
-    }
+  const logout = async () => {
+    await signOut(_auth!);
+    setUser(null);
+    setProfile(null);
   };
 
   const resendVerification = async () => {
-    const current = auth.currentUser;
-    if (!current) {
-      throw new Error('Not signed in.');
-    }
+    if (!_auth?.currentUser) throw new Error("Not signed in");
+    await sendEmailVerification(_auth.currentUser);
+  };
 
-    // Ensure we have the latest emailVerified state.
-    try {
-      await (current.reload?.() ?? Promise.resolve());
-    } catch {
-      // ignore reload errors; still attempt send below
-    }
-
-    if (current.emailVerified) {
-      return;
-    }
-
-
-    try {
-      await sendEmailVerification(current);
-    } catch (e: any) {
-      const code = String(e?.code ?? '');
-
-
-      // Always use production URL for continueUrl
-      const continueUrl = 'https://hobbydork.com/verify-email';
-
-      const domainHelpMessage =
-        `Resend blocked by Firebase domain settings. ` +
-        `In Firebase Console → Authentication → Settings → Authorized domains, add your site domain (e.g. hobbydork.com and www.hobbydork.com). ` +
-        `Then set Vercel env NEXT_PUBLIC_SITE_URL=https://hobbydork.com and redeploy.` +
-        (continueUrl ? ` (Continue URL: ${continueUrl})` : '');
-
-      // If the domain/continue URL isn't whitelisted in Firebase, retry without settings.
-      if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri') {
-        try {
-          await sendEmailVerification(current);
-          return;
-        } catch (e2: any) {
-          const code2 = String(e2?.code ?? '');
-          if (code2 === 'auth/too-many-requests') {
-            throw new Error('Too many attempts. Please wait a bit and try again.');
-          }
-
-          if (code2 === 'auth/unauthorized-continue-uri' || code2 === 'auth/invalid-continue-uri') {
-            throw new Error(`${domainHelpMessage} (Firebase: ${code2})`);
-          }
-
-          throw new Error(e2?.message ?? 'Could not resend verification email.');
-        }
-      }
-
-      if (code === 'auth/too-many-requests') {
-        throw new Error('Too many attempts. Please wait a bit and try again.');
-      }
-
-      if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri') {
-        throw new Error(`${domainHelpMessage} (Firebase: ${code})`);
-      }
-
-      throw new Error(e?.message ?? 'Could not resend verification email.');
+  // Helper to force-refresh the ID token (e.g., after email verification)
+  const refreshIdToken = async () => {
+    if (_auth?.currentUser) {
+      await _auth.currentUser.getIdToken(true);
     }
   };
 
+  // userData is a non-nullable version of profile, fallback to EMPTY_PROFILE
+  const userData = profile ?? EMPTY_PROFILE;
   return {
     user,
+    profile,
     userData,
-    // backward-compatible alias expected by callers
-    profile: userData,
     loading,
-    error,
-    // alias names
-    login: signInUser,
-    signup: signUpUser,
-    // original names (keep both)
-    signIn: signInUser,
-    signUp: signUpUser,
-    logout: logoutUser,
+    login,
+    signup,
+    signIn: login,
+    signUp: signup,
+    logout,
     resendVerification,
+    refreshIdToken,
   };
 }

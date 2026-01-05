@@ -51,20 +51,27 @@ type ConversationDoc = {
 
 export default function MessagesPage() {
   const { user, profile, loading: authLoading } = useAuth();
+  if (authLoading) return null;
+  if (!user) return null;
+  if (!profile?.emailVerified) return null;
   const firestore = useFirestore();
   const router = useRouter();
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
 
   const conversationsQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-
+    if (!canReadFirestore || !firestore || !user?.uid) return null;
     return query(
       collection(firestore, 'conversations'),
       where('participantUids', 'array-contains', user.uid),
     );
-  }, [firestore, user?.uid]);
+  }, [canReadFirestore, firestore, user?.uid]);
 
   const { data: conversations, isLoading } =
-    useCollection<ConversationDoc>(conversationsQuery as any);
+    useCollection<ConversationDoc>(canReadFirestore ? conversationsQuery : null);
 
   if (authLoading) {
     return (

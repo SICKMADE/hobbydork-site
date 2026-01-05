@@ -107,7 +107,7 @@ export default function AdminSpotlightPage() {
 
     try {
       await updateDoc(storeRef, update);
-    } catch (_err) {
+    } catch {
       const contextualError = new FirestorePermissionError({
         path: storeRef.path,
         operation: 'update',
@@ -133,7 +133,7 @@ export default function AdminSpotlightPage() {
             : undefined;
         await syncStoreSpotlight(slot.storeId, newActive, endAt);
       }
-    } catch (_err) {
+    } catch {
       const contextualError = new FirestorePermissionError({
         path: slotRef.path,
         operation: 'update',
@@ -167,7 +167,7 @@ export default function AdminSpotlightPage() {
           'The new slot has been added and the store is spotlighted.',
       });
       form.reset();
-    } catch (_err) {
+    } catch {
       const contextualError = new FirestorePermissionError({
         path: 'spotlightSlots',
         operation: 'create',

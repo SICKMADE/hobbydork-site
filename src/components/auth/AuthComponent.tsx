@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { useAuth } from '@/hooks/use-auth';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '@/firebase/client-provider';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -39,6 +41,21 @@ export default function AuthComponent({
   const { toast } = useToast();
   const router = useRouter();
   const [tab, setTab] = React.useState<'login' | 'signup'>(initialTab);
+  const [resetEmail, setResetEmail] = React.useState('');
+  const [resetSent, setResetSent] = React.useState(false);
+  const [resetError, setResetError] = React.useState<string | null>(null);
+  async function onForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setResetSent(false);
+    setResetError(null);
+    try {
+      if (!auth) throw new Error('Auth is not initialized.');
+      await sendPasswordResetEmail(auth as import('firebase/auth').Auth, resetEmail);
+      setResetSent(true);
+    } catch (err: any) {
+      setResetError(err?.message || 'Could not send reset email.');
+    }
+  }
 
   const loginForm = useForm({
     resolver: zodResolver(loginSchema),
@@ -128,6 +145,21 @@ export default function AuthComponent({
                 <Button className="w-full" type="submit">Log In</Button>
               </form>
             </Form>
+            <div className="mt-4 text-center">
+              <form onSubmit={onForgotPassword} className="flex flex-col items-center gap-2">
+                <Input
+                  type="email"
+                  placeholder="Enter your email to reset password"
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  className="max-w-xs"
+                  required
+                />
+                <Button type="submit" variant="link" className="p-0 h-auto text-xs">Forgot password?</Button>
+              </form>
+              {resetSent && <div className="text-green-600 text-xs mt-1">Password reset email sent.</div>}
+              {resetError && <div className="text-red-600 text-xs mt-1">{resetError}</div>}
+            </div>
           </TabsContent>
 
           <TabsContent value="signup">

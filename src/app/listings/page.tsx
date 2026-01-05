@@ -30,7 +30,19 @@ export default function ListingsSearchPage() {
   async function loadListings() {
     setLoading(true);
 
-    let q = query(collection(db, "listings"), where("state", "==", "ACTIVE"));
+    // Strict Firestore read gate
+    // TODO: Replace with your actual canReadFirestore logic
+    const canReadFirestore = true; // Set to false if not allowed
+    if (!canReadFirestore) {
+      setLoading(false);
+      return;
+    }
+
+    if (!db) {
+      setLoading(false);
+      return;
+    }
+    const q = query(collection(db!, "listings"), where("state", "==", "ACTIVE"));
 
     const allSnap = await getDocs(q);
     let data = allSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as Listing[];

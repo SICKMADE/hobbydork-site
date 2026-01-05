@@ -1,8 +1,23 @@
 
-'use client';
+"use client";
+import { sellerApplicationConverter } from '@/firebase/firestore/converters';
+import './seller-applications.css';
+
+// Visual checklist box component
+function ChecklistBox({ label, complete }: { label: string; complete: boolean }) {
+  return (
+    <div
+      className={`checklist-box flex flex-col items-center justify-center rounded-md px-2 py-1 text-xs font-medium mb-1 ${
+        complete ? 'bg-green-200 text-green-900 border border-green-400' : 'bg-gray-200 text-gray-500 border border-gray-300'
+      }`}
+    >
+      <span>{label}</span>
+      <span className="text-lg">{complete ? '✓' : '–'}</span>
+    </div>
+  );
+}
 
 import React from 'react';
-import Image from 'next/image';
 
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuth } from '@/hooks/use-auth';
@@ -46,7 +61,6 @@ type SellerApplication = {
   ownerUid: string;
   ownerEmail?: string | null;
   ownerDisplayName?: string | null;
-  inventoryImageUrl: string;
   notes?: string | null;
   social?: {
     instagram?: string | null;
@@ -58,8 +72,8 @@ type SellerApplication = {
   };
   sellerAgreementAccepted?: boolean;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  createdAt?: any;
-  updatedAt?: any;
+  createdAt?: { toDate: () => Date } | null;
+  updatedAt?: { toDate: () => Date } | null;
 };
 
 function statusBadge(status: SellerApplication['status']) {
@@ -93,7 +107,7 @@ export default function AdminSellerApplicationsPage() {
   const appsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collection(firestore, 'sellerApplications'),
+      collection(firestore, 'sellerApplications').withConverter(sellerApplicationConverter),
       orderBy('createdAt', 'desc'),
     );
   }, [firestore]);
@@ -101,7 +115,7 @@ export default function AdminSellerApplicationsPage() {
   const {
     data: apps,
     isLoading,
-  } = useCollection<SellerApplication>(appsQuery as any);
+  } = useCollection<SellerApplication>(appsQuery);
 
   if (!isAdmin) {
     return (
@@ -156,6 +170,7 @@ export default function AdminSellerApplicationsPage() {
         // Mark user as APPROVED seller (they still go through store setup)
         tx.update(userRef, {
           sellerStatus: 'APPROVED',
+          isSeller: true,
           updatedAt: serverTimestamp(),
         });
       });
@@ -165,12 +180,12 @@ export default function AdminSellerApplicationsPage() {
         description:
           'The user can now create their store and start listing items.',
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       toast({
         variant: 'destructive',
         title: 'Error approving seller',
-        description: err?.message ?? 'Could not approve application.',
+        description: err instanceof Error ? err.message : 'Could not approve application.',
       });
     }
   };
@@ -219,12 +234,12 @@ export default function AdminSellerApplicationsPage() {
         description:
           'The application has been rejected. You can always manually revisit it later.',
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       toast({
         variant: 'destructive',
         title: 'Error rejecting seller',
-        description: err?.message ?? 'Could not reject application.',
+        description: err instanceof Error ? err.message : 'Could not reject application.',
       });
     }
   };
@@ -259,6 +274,7 @@ export default function AdminSellerApplicationsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Seller</TableHead>
+                    <TableHead>Checklist</TableHead>
                     <TableHead>Inventory</TableHead>
                     <TableHead>Notes / Social</TableHead>
                     <TableHead>Status</TableHead>
@@ -266,97 +282,106 @@ export default function AdminSellerApplicationsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {apps.map((app) => (
-                    <TableRow key={app.applicationId}>
-                      <TableCell className="align-top text-xs">
-                        <div className="font-medium">
-                          {app.ownerDisplayName || 'Unknown user'}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {app.ownerEmail || 'No email'}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground">
-                          UID: {app.ownerUid}
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="align-top">
-                        <div className="relative h-20 w-32 overflow-hidden rounded-md border bg-muted">
-                          <Image
-                            src={app.inventoryImageUrl}
-                            alt="Inventory proof"
-                            fill
-                            className="object-contain"
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="align-top text-xs">
-                        {app.notes && (
-                          <p className="mb-2 whitespace-pre-wrap text-xs">
-                            {app.notes}
-                          </p>
-                        )}
-                        {app.social && (
-                          <div className="space-y-0.5 text-[11px] text-muted-foreground">
-                            {app.social.instagram && (
-                              <p>IG: {app.social.instagram}</p>
-                            )}
-                            {app.social.facebook && (
-                              <p>FB: {app.social.facebook}</p>
-                            )}
-                            {app.social.twitter && (
-                              <p>TW: {app.social.twitter}</p>
-                            )}
-                            {app.social.tiktok && (
-                              <p>TT: {app.social.tiktok}</p>
-                            )}
-                            {app.social.website && (
-                              <p>Site: {app.social.website}</p>
-                            )}
-                            {app.social.other && (
-                              <p>Other: {app.social.other}</p>
-                            )}
+                  {apps.map((app) => {
+                    // Checklist logic
+                    const checklist = [
+                      {
+                        label: 'Terms Agreed',
+                        complete: !!app.sellerAgreementAccepted,
+                      },
+                      {
+                        label: 'Intent/Description',
+                        complete: !!app.notes && app.notes.trim().length > 0,
+                      },
+                    ];
+                    const allComplete = checklist.every((item) => item.complete);
+                    return (
+                      <TableRow key={app.applicationId}>
+                        <TableCell className="align-top text-xs">
+                          <div className="font-medium">
+                            {app.ownerDisplayName || 'Unknown user'}
                           </div>
-                        )}
-                        {app.sellerAgreementAccepted === false && (
-                          <p className="mt-1 text-[11px] text-red-500">
-                            Did not accept seller agreement
-                          </p>
-                        )}
-                      </TableCell>
-
-                      <TableCell className="align-top">
-                        {statusBadge(app.status)}
-                      </TableCell>
-
-                      <TableCell className="align-top text-right">
-                        {app.status === 'PENDING' ? (
-                          <div className="flex flex-col items-end gap-1">
-                            <Button
-                              size="sm"
-                              className="h-7 px-2 text-[11px]"
-                              onClick={() => handleApprove(app)}
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 px-2 text-[11px]"
-                              onClick={() => handleReject(app)}
-                            >
-                              Reject
-                            </Button>
+                          <div className="text-[11px] text-muted-foreground">
+                            {app.ownerEmail || 'No email'}
                           </div>
-                        ) : (
-                          <span className="text-[11px] text-muted-foreground">
-                            No actions
-                          </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          <div className="text-[11px] text-muted-foreground">
+                            UID: {app.ownerUid}
+                          </div>
+                        </TableCell>
+                        <TableCell className="align-top">
+                          <div className="flex flex-col gap-1">
+                            {checklist.map((item) => (
+                              <ChecklistBox key={item.label} label={item.label} complete={item.complete} />
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell className="align-top text-xs">
+                          {app.notes && (
+                            <p className="mb-2 whitespace-pre-wrap text-xs">
+                              {app.notes}
+                            </p>
+                          )}
+                          {app.social && (
+                            <div className="space-y-0.5 text-[11px] text-muted-foreground">
+                              {app.social.instagram && (
+                                <p>IG: {app.social.instagram}</p>
+                              )}
+                              {app.social.facebook && (
+                                <p>FB: {app.social.facebook}</p>
+                              )}
+                              {app.social.twitter && (
+                                <p>TW: {app.social.twitter}</p>
+                              )}
+                              {app.social.tiktok && (
+                                <p>TT: {app.social.tiktok}</p>
+                              )}
+                              {app.social.website && (
+                                <p>Site: {app.social.website}</p>
+                              )}
+                              {app.social.other && (
+                                <p>Other: {app.social.other}</p>
+                              )}
+                            </div>
+                          )}
+                          {app.sellerAgreementAccepted === false && (
+                            <p className="mt-1 text-[11px] text-red-500">
+                              Did not accept seller agreement
+                            </p>
+                          )}
+                        </TableCell>
+                        <TableCell className="align-top">
+                          {statusBadge(app.status)}
+                        </TableCell>
+                        <TableCell className="align-top text-right">
+                          {app.status === 'PENDING' ? (
+                            <div className="flex flex-col items-end gap-1">
+                              <Button
+                                size="sm"
+                                className="h-7 px-2 text-[11px]"
+                                onClick={() => handleApprove(app)}
+                                disabled={!allComplete}
+                                title={allComplete ? '' : 'All requirements must be complete to approve'}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-[11px]"
+                                onClick={() => handleReject(app)}
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground">
+                              No actions
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}

@@ -7,14 +7,15 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
 export default function VerifyEmailPage() {
-  const { user, logout, resendVerification } = useAuth();
+  const { user, logout, resendVerification, refreshIdToken } = useAuth();
   const [resendStatus, setResendStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [checkStatus, setCheckStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [checkMsg, setCheckMsg] = useState<string>('');
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md rounded-lg border bg-card p-6 text-center shadow-sm">
-
         {/* LOGO */}
         <div className="mb-6 flex justify-center">
           <div className="relative h-24 w-24">
@@ -35,33 +36,44 @@ export default function VerifyEmailPage() {
           <strong>{user?.email ?? 'your email address'}</strong>
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Click the link in your email to activate your account.
+          Please check your inbox and click the link to verify your email address.<br />
+          <span className="font-medium text-primary">After verifying, click the button below to check your status. You do not need to log out.</span>
         </p>
-        <div className="mt-4">
+
+        <div className="mt-8 flex flex-col gap-4 items-center">
           <Button
-            variant="secondary"
+            variant="default"
+            size="lg"
+            className="w-full font-semibold text-base"
             onClick={async () => {
-              setResendStatus('loading');
-              setErrorMsg('');
+              setCheckStatus('loading');
+              setCheckMsg('');
               try {
-                await resendVerification();
-                setResendStatus('success');
+                await refreshIdToken();
+                window.location.reload();
               } catch (e: any) {
-                setResendStatus('error');
-                setErrorMsg(e?.message || 'Could not resend verification email.');
+                setCheckStatus('error');
+                let errorText = 'Could not check verification.';
+                if (e?.message) {
+                  errorText = `Error: ${e.message}`;
+                } else if (typeof e === 'string') {
+                  errorText = `Error: ${e}`;
+                } else if (e && e.toString) {
+                  errorText = `Error: ${e.toString()}`;
+                }
+                setCheckMsg(errorText);
               }
             }}
-            disabled={resendStatus === 'loading'}
-            className="flex items-center justify-center gap-2"
+            disabled={checkStatus === 'loading'}
           >
-            {resendStatus === 'loading' ? <Loader2 className="animate-spin h-4 w-4" /> : null}
-            {resendStatus === 'loading' ? 'Resending…' : 'Resend verification email'}
+            {checkStatus === 'loading' ? <Loader2 className="animate-spin h-4 w-4" /> : null}
+            {checkStatus === 'loading' ? 'Checking…' : 'Check verification'}
           </Button>
-          {resendStatus === 'success' && (
-            <div className="mt-2 text-green-700 text-sm animate-fade-in-slow">Verification email sent!</div>
+          {checkStatus === 'success' && (
+            <div className="mt-2 text-green-700 text-sm animate-fade-in-slow">{checkMsg}</div>
           )}
-          {resendStatus === 'error' && (
-            <div className="mt-2 text-red-700 text-sm animate-fade-in-slow">{errorMsg}</div>
+          {checkStatus === 'error' && (
+            <div className="mt-2 text-red-700 text-sm animate-fade-in-slow">{checkMsg}</div>
           )}
         </div>
 
@@ -69,16 +81,9 @@ export default function VerifyEmailPage() {
           <Button variant="outline" onClick={logout}>
             Log out
           </Button>
-          <Button
-            variant="ghost"
-            className="text-xs text-blue-700 mt-2"
-            onClick={() => window.location.href = 'mailto:hobbydorkapp@gmail.com'}
-          >
-            Help
-          </Button>
         </div>
         <p className="mt-4 text-xs text-muted-foreground">
-          After verifying, log back in to continue.
+          Need help? <a href="mailto:hobbydorkapp@gmail.com" className="underline text-blue-700">Contact support</a>.
         </p>
       </div>
     </div>

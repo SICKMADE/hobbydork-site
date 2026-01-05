@@ -44,9 +44,14 @@ export function LeaveReviewDialog({
   triggerLabel,
   className,
 }: LeaveReviewDialogProps) {
-  const { user } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    user.emailVerified &&
+    profile?.status === "ACTIVE";
 
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState<number>(0);
@@ -66,11 +71,11 @@ export function LeaveReviewDialog({
     e: React.FormEvent<HTMLFormElement>,
   ) => {
     e.preventDefault();
-    if (!firestore || !user) {
+    if (!canReadFirestore || !firestore) {
       toast({
         title: 'Sign in required',
         description:
-          'You must be signed in to leave a review.',
+          'You must be signed in and have an active, verified account to leave a review.',
         variant: 'destructive',
       });
       return;
@@ -199,6 +204,7 @@ export function LeaveReviewDialog({
                   key={star}
                   type="button"
                   className="p-1"
+                  title={`Set rating to ${star} star${star > 1 ? 's' : ''}`}
                   onMouseEnter={() =>
                     setHoverRating(star)
                   }

@@ -50,11 +50,19 @@ function formatDate(ts?: Timestamp) {
 }
 
 export default function ActivityPage() {
-  const { user } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
+  if (authLoading) return null;
+  if (!user) return null;
+  if (!user.emailVerified) return null;
   const firestore = useFirestore();
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
 
   const listingsQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!canReadFirestore || !firestore || !user?.uid) return null;
     const ref = collection(firestore, 'listings');
     return query(
       ref,
@@ -62,10 +70,10 @@ export default function ActivityPage() {
       orderBy('createdAt', 'desc'),
       limit(10),
     );
-  }, [firestore, user?.uid]);
+  }, [canReadFirestore, firestore, user?.uid]);
 
   const isoQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!canReadFirestore || !firestore || !user?.uid) return null;
     const ref = collection(firestore, 'iso24Posts');
     return query(
       ref,
@@ -73,10 +81,10 @@ export default function ActivityPage() {
       orderBy('createdAt', 'desc'),
       limit(10),
     );
-  }, [firestore, user?.uid]);
+  }, [canReadFirestore, firestore, user?.uid]);
 
   const ordersQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!canReadFirestore || !firestore || !user?.uid) return null;
     const ref = collection(firestore, 'orders');
     return query(
       ref,
@@ -84,14 +92,14 @@ export default function ActivityPage() {
       orderBy('createdAt', 'desc'),
       limit(10),
     );
-  }, [firestore, user?.uid]);
+  }, [canReadFirestore, firestore, user?.uid]);
 
   const { data: listings, isLoading: loadingListings } =
-    useCollection<ListingDoc>(listingsQuery);
+    useCollection<ListingDoc>(canReadFirestore ? listingsQuery : null);
   const { data: isoPosts, isLoading: loadingIso } =
-    useCollection<Iso24Doc>(isoQuery);
+    useCollection<Iso24Doc>(canReadFirestore ? isoQuery : null);
   const { data: orders, isLoading: loadingOrders } =
-    useCollection<OrderDoc>(ordersQuery);
+    useCollection<OrderDoc>(canReadFirestore ? ordersQuery : null);
 
   if (!user) {
     return (

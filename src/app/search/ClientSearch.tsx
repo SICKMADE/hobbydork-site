@@ -62,6 +62,15 @@ const conditionOptions = [
 export default function ClientSearch() {
   const firestore = useFirestore();
   const searchParams = useSearchParams();
+  const { user, profile, loading: authLoading } = require('@/hooks/use-auth').useAuth();
+  if (authLoading) return null;
+  if (!user) return null;
+  if (!profile?.emailVerified) return null;
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
 
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -71,7 +80,7 @@ export default function ClientSearch() {
   const q = (searchParams?.get('q') || '').trim().toLowerCase();
 
   const listingsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!canReadFirestore || !firestore) return null;
 
     // Only ACTIVE listings, newest first
     return query(
@@ -79,12 +88,12 @@ export default function ClientSearch() {
       where('state', '==', 'ACTIVE'),
       orderBy('createdAt', 'desc'),
     );
-  }, [firestore]);
+  }, [canReadFirestore, firestore]);
 
   const {
     data: listings,
     isLoading,
-  } = useCollection<Listing>(listingsQuery);
+  } = useCollection<Listing>(canReadFirestore ? listingsQuery : null);
 
   const filteredListings = useMemo(() => {
     let items: any[] = (listings as any[]) || [];

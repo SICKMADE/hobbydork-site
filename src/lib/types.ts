@@ -1,3 +1,24 @@
+export type Iso24Post = {
+    id: string;
+    title?: string;
+    description?: string;
+    category?: string;
+    imageUrl?: string;
+    ownerUid?: string;
+    status?: string;
+    createdAt?: Timestamp;
+    expiresAt?: Timestamp;
+};
+// Notification type for new notification system
+export type Notification = {
+    id: string;
+    type: 'MESSAGE' | 'ORDER' | 'SYSTEM' | 'GENERIC';
+    title: string;
+    body: string;
+    createdAt: import('firebase/firestore').Timestamp;
+    read: boolean;
+    relatedId?: string;
+};
 
 import { Timestamp } from "firebase/firestore";
 
@@ -130,18 +151,8 @@ export type ISO24 = {
     status?: 'OPEN' | 'CLOSED' | 'ACTIVE' | 'EXPIRED' | string;
 }
 
-export type NotificationType = "MESSAGE" | "ORDER" | "ORDER_STATUS" | "ISO24" | "SPOTLIGHT" | "GENERIC";
 
-export type Notification = {
-    id: string;
-    userUid: string;
-    type: NotificationType;
-    title: string;
-    body: string;
-    relatedId: string | null; // e.g., orderId, conversationId
-    createdAt: Timestamp;
-    read: boolean;
-}
+// Notification types removed
 
 export type Review = {
     reviewId: string;

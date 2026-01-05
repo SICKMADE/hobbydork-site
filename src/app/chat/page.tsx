@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/firebase/client-provider";
 import {
@@ -33,46 +34,75 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 export default function GroupChatPage() {
-  const { user, userData } = useAuth(); // userData contains role
+  const { user, profile } = useAuth(); // profile contains role
   const { toast } = useToast();
-  const [messages, setMessages] = useState<any[]>([]);
+  type Message = {
+    id: string;
+    uid: string;
+    displayName?: string;
+    avatar?: string | null;
+    role?: string;
+    text: string;
+    createdAt?: { toDate: () => Date };
+    storeId?: string | null; // allow storeId for actionUser
+  };
+  const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
 
-  const [actionUser, setActionUser] = useState<any>(null);
+  const [actionUser, setActionUser] = useState<(Message & { messageId?: string }) | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // LOAD LIVE MESSAGES
+  // Strict Firestore read gate
   useEffect(() => {
+    const canReadFirestore = !!user && user.emailVerified;
+    if (!canReadFirestore || !db) return;
     const qMsg = query(
       collection(db, "groupChat"),
       orderBy("createdAt", "asc")
     );
+    // TypeScript-safe Firestore query debug
+    console.trace('🔥 Firestore QUERY:', qMsg?.toString?.() ?? qMsg);
     const unsub = onSnapshot(qMsg, (snap) => {
-      setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setMessages(
+        snap.docs.map((d) => {
+          const data = d.data();
+          // Ensure all Message fields are present
+          return {
+            id: d.id,
+            uid: data.uid,
+            displayName: data.displayName,
+            avatar: data.avatar,
+            role: data.role,
+            text: data.text,
+            createdAt: data.createdAt,
+            storeId: data.storeId ?? null,
+          };
+        })
+      );
       setTimeout(() => bottomRef.current?.scrollIntoView(), 50);
     });
     return () => unsub();
-  }, []);
+  }, [user]);
 
   // SEND MESSAGE
   async function send() {
-    if (!user || !text.trim()) return;
+    if (!user || !profile || !text.trim() || !db) return;
 
     try {
       await addDoc(collection(db, "groupChat"), {
         uid: user.uid,
-        displayName: userData.displayName,
-        avatar: userData.avatar || null,
-        role: userData.role || "USER",
+        displayName: profile.displayName,
+        avatar: profile.avatar || null,
+        role: profile.role || "USER",
         text,
         createdAt: serverTimestamp(),
       });
 
       setText("");
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({
         title: "Could not send",
-        description: e?.message ?? "Message send failed.",
+        description: e instanceof Error ? e.message : "Message send failed.",
         variant: "destructive",
       });
     }
@@ -80,13 +110,17 @@ export default function GroupChatPage() {
 
   // DELETE SINGLE MESSAGE (admin/mod)
   async function deleteMessage(messageId: string) {
+    if (!db) return;
     await deleteDoc(doc(db, "groupChat", messageId));
     setActionUser(null);
   }
 
   // DELETE ALL MESSAGES FROM USER (admin only)
   async function deleteAllMessages(targetUid: string) {
+    const canReadFirestore = !!user && user.emailVerified;
+    if (!canReadFirestore || !db) return;
     const q = query(collection(db, "groupChat"), where("uid", "==", targetUid));
+    console.trace('🔥 Firestore QUERY:', q?.toString?.() ?? q);
     const snap = await getDocs(q);
     const batchDeletes = snap.docs.map((d) => deleteDoc(d.ref));
     await Promise.all(batchDeletes);
@@ -95,8 +129,11 @@ export default function GroupChatPage() {
 
   // SUSPEND USER (mod/admin)
   async function suspendUser(targetUid: string, hours: number) {
+    const canReadFirestore = !!user && user.emailVerified;
+    if (!canReadFirestore || !db) return;
     const until = new Date(Date.now() + hours * 60 * 60 * 1000);
     const q = query(collection(db, "users"), where("uid", "==", targetUid));
+    console.trace('🔥 Firestore QUERY:', q?.toString?.() ?? q);
     const snap = await getDocs(q);
 
     if (!snap.empty) {
@@ -110,7 +147,10 @@ export default function GroupChatPage() {
 
   // BAN USER (admin only)
   async function banUser(targetUid: string) {
+    const canReadFirestore = !!user && user.emailVerified;
+    if (!canReadFirestore || !db) return;
     const q = query(collection(db, "users"), where("uid", "==", targetUid));
+    console.trace('🔥 Firestore QUERY:', q?.toString?.() ?? q);
     const snap = await getDocs(q);
 
     if (!snap.empty) {
@@ -124,6 +164,8 @@ export default function GroupChatPage() {
 
   // VIEW STORE
   async function viewStoreFromMessage(targetUid: string, storeIdFromMessage?: string | null) {
+    const canReadFirestore = !!user && user.emailVerified;
+    if (!canReadFirestore || !db) return;
     try {
       if (storeIdFromMessage) {
         window.location.href = `/store/${storeIdFromMessage}`;
@@ -135,6 +177,7 @@ export default function GroupChatPage() {
         collection(db, "storefronts"),
         where("ownerUid", "==", targetUid)
       );
+      console.trace('🔥 Firestore QUERY:', qStores?.toString?.() ?? qStores);
       const snapStores = await getDocs(qStores);
       if (!snapStores.empty) {
         window.location.href = `/store/${snapStores.docs[0].id}`;
@@ -145,10 +188,10 @@ export default function GroupChatPage() {
         title: "No store found",
         description: "This user does not have a store set up.",
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({
         title: "Could not open store",
-        description: e?.message ?? "Please try again.",
+        description: e instanceof Error ? e.message : "Please try again.",
         variant: "destructive",
       });
     }
@@ -174,8 +217,8 @@ export default function GroupChatPage() {
     );
   }
 
-  const isAdmin = userData?.role === "ADMIN";
-  const isMod = userData?.role === "MODERATOR";
+  const isAdmin = profile?.role === "ADMIN";
+  const isMod = profile?.role === "MODERATOR";
   const isStaff = isAdmin || isMod;
 
   const roleLabel = (role?: string) => {
@@ -238,12 +281,14 @@ export default function GroupChatPage() {
               className="w-full justify-start"
               variant="destructive"
               onClick={() => {
-                addDoc(collection(db, "reports"), {
-                  reporterUid: user.uid,
-                  targetUid: actionUser.uid,
-                  reason: "Live Chat Report",
-                  createdAt: serverTimestamp(),
-                });
+                if (db) {
+                  addDoc(collection(db, "reports"), {
+                    reporterUid: user.uid,
+                    targetUid: actionUser.uid,
+                    reason: "Live Chat Report",
+                    createdAt: serverTimestamp(),
+                  });
+                }
                 setActionUser(null);
               }}
             >
@@ -257,7 +302,7 @@ export default function GroupChatPage() {
                 <Button
                   className="w-full justify-start"
                   variant="destructive"
-                  onClick={() => deleteMessage(actionUser.messageId)}
+                  onClick={() => deleteMessage(actionUser.id)}
                 >
                   Delete Message
                 </Button>
@@ -339,13 +384,16 @@ export default function GroupChatPage() {
               {!isSelf && (
                 <button
                   type="button"
-                  onClick={() => setActionUser({ ...m, messageId: m.id })}
+                  title="View user actions"
+                  onClick={() => setActionUser(m)}
                   className="shrink-0"
                 >
-                  <img
+                  <Image
                     src={m.avatar || getDefaultAvatarUrl(m.uid)}
                     className="w-9 h-9 rounded-full object-cover border"
                     alt="avatar"
+                    width={36}
+                    height={36}
                   />
                 </button>
               )}
@@ -354,7 +402,8 @@ export default function GroupChatPage() {
                 <div className={`flex items-center gap-2 mb-1 ${isSelf ? "justify-end" : ""}`}>
                   <button
                     type="button"
-                    onClick={() => setActionUser({ ...m, messageId: m.id })}
+                    title="View user actions"
+                    onClick={() => setActionUser(m)}
                     className="text-xs font-semibold hover:underline"
                   >
                     {m.displayName || "User"}
@@ -375,13 +424,16 @@ export default function GroupChatPage() {
               {isSelf && (
                 <button
                   type="button"
-                  onClick={() => setActionUser({ ...m, messageId: m.id })}
+                  title="View user actions"
+                  onClick={() => setActionUser(m)}
                   className="shrink-0"
                 >
-                  <img
-                    src={m.avatar || userData.avatar || getDefaultAvatarUrl(user.uid)}
+                  <Image
+                    src={m.avatar || profile?.avatar || getDefaultAvatarUrl(user.uid)}
                     className="w-9 h-9 rounded-full object-cover border"
                     alt="avatar"
+                    width={36}
+                    height={36}
                   />
                 </button>
               )}

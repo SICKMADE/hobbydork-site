@@ -1,57 +1,47 @@
-import * as functions from "firebase-functions";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import Stripe from "stripe";
-import cors from "cors";
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
-
+admin.initializeApp();
 const db = admin.firestore();
-const corsHandler = cors({ origin: true });
 
 /* ================= HELPERS ================= */
 
-function requireAuth(context: functions.https.CallableContext) {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Auth required");
+function requireVerified(request: any) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Auth required");
   }
-}
 
-function requireVerified(context: functions.https.CallableContext) {
-  requireAuth(context);
-  if (context.auth!.token.email_verified !== true) {
-    throw new functions.https.HttpsError(
+  if (request.auth.token.email_verified !== true) {
+    throw new HttpsError(
       "failed-precondition",
       "Email verification required"
     );
   }
+
+  return request.auth.uid;
 }
 
 /* ================= STRIPE ================= */
 
-let stripe: Stripe | null = null;
-function getStripe() {
-  if (stripe) return stripe;
-  const secret = process.env.STRIPE_SECRET;
-  if (!secret) throw new Error("Missing STRIPE_SECRET");
-  stripe = new Stripe(secret, { apiVersion: "2023-10-16" });
-  return stripe;
-}
+const stripe = new Stripe(process.env.STRIPE_SECRET!, {
+  apiVersion: "2023-10-16",
+});
 
-/* ================= STRIPE ONBOARD ================= */
+/* ================= CREATE STRIPE ONBOARDING ================= */
 
-export const onboardStripe = functions
-  .runWith({ secrets: ["STRIPE_SECRET"] })
-  .https.onCall(async (_data, context) => {
-    requireVerified(context);
+export const createStripeOnboarding = onCall(
+  {
+    region: "us-central1",
+    secrets: ["STRIPE_SECRET", "APP_BASE_URL"],
+  },
+  async (request) => {
+    const uid = requireVerified(request);
 
-    const uid = context.auth!.uid;
     const userRef = db.collection("users").doc(uid);
     const snap = await userRef.get();
     const user = snap.data();
 
-    const stripe = getStripe();
     let accountId = user?.stripeAccountId;
 
     if (!accountId) {
@@ -66,72 +56,81 @@ export const onboardStripe = functions
 
       accountId = account.id;
 
-      await userRef.update({
-        stripeAccountId: accountId,
-        sellerStatus: "PENDING",
-        isSeller: false,
-        stripeOnboarded: false,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      await userRef.set(
+        {
+          stripeAccountId: accountId,
+          sellerStatus: "PENDING",
+          isSeller: false,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
     }
 
     const baseUrl =
-      process.env.APP_BASE_URL || "https://www.hobbydork.com";
+      process.env.APP_BASE_URL || "http://localhost:9002";
 
     const link = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${baseUrl}/onboarding/failed`,
+      refresh_url: `${baseUrl}/onboarding/terms`,
       return_url: `${baseUrl}/onboarding/success`,
       type: "account_onboarding",
     });
 
     return { url: link.url };
-  });
+  }
+);
 
 /* ================= FINALIZE SELLER ================= */
 
-export const checkStripeSellerStatus = functions
-  .runWith({ secrets: ["STRIPE_SECRET"] })
-  .https.onRequest((req, res) => {
-    corsHandler(req, res, async () => {
-      try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader?.startsWith("Bearer ")) {
-          return res.status(401).json({ error: "Unauthorized" });
-        }
+export const finalizeSeller = onCall(
+  {
+    region: "us-central1",
+    secrets: ["STRIPE_SECRET"],
+  },
+  async (request) => {
+    const uid = requireVerified(request);
 
-        const idToken = authHeader.split("Bearer ")[1];
-        const decoded = await admin.auth().verifyIdToken(idToken);
-        const uid = decoded.uid;
+    const userRef = db.collection("users").doc(uid);
+    const snap = await userRef.get();
+    const user = snap.data();
 
-        const userRef = db.collection("users").doc(uid);
-        const snap = await userRef.get();
-        const user = snap.data();
+    if (!user?.stripeAccountId) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Stripe not connected"
+      );
+    }
 
-        if (!user?.stripeAccountId) {
-          return res.json({ isSeller: false });
-        }
+    const account = await stripe.accounts.retrieve(
+      user.stripeAccountId
+    );
 
-        const stripe = getStripe();
-        const account = await stripe.accounts.retrieve(
-          user.stripeAccountId
-        );
+    if (!account.details_submitted || !account.charges_enabled) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Stripe onboarding incomplete"
+      );
+    }
 
-        if (account.details_submitted && account.charges_enabled) {
-          await userRef.update({
-            isSeller: true,
-            sellerStatus: "APPROVED",
-            stripeOnboarded: true,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-
-          return res.json({ isSeller: true });
-        }
-
-        return res.json({ isSeller: false });
-      } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "internal error" });
-      }
+    await userRef.update({
+      isSeller: true,
+      sellerStatus: "APPROVED",
+      stripeOnboarded: true, // Set true when Stripe onboarding is complete
+      stripeTermsAgreed: true, // Set true when Stripe onboarding is complete
+      // storeId: "your-store-id", // <-- Set this if you have it at this point
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-  });
+
+    // Log new seller approval for admin monitoring
+    await db.collection("sellerApprovals").add({
+      uid,
+      email: user.email,
+      displayName: user.ownerDisplayName || user.displayName || "",
+      approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+      stripeAccountId: user.stripeAccountId,
+    });
+
+    return { ok: true };
+  }
+);

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { db } from "@/firebase/client-provider";
+import type { Firestore } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
 import {
   collection,
   query,
-  where,
   orderBy,
   onSnapshot,
   updateDoc,
@@ -38,17 +38,19 @@ export default function AdminReportsPage() {
   const isModerator = role === "MODERATOR";
   const isStaff = isAdmin || isModerator;
 
+  const dbSafe = db as Firestore;
+  const reportsQuery = useMemo(() => {
+    if (!isStaff) return null;
+    return query(collection(dbSafe, "reports"), orderBy("createdAt", "desc"));
+  }, [dbSafe, isStaff]);
+
   useEffect(() => {
-    if (!isStaff) return;
-
-    let q = query(collection(db, "reports"), orderBy("createdAt", "desc"));
-
-    const unsub = onSnapshot(q, (snap) => {
+    if (!reportsQuery) return;
+    const unsub = onSnapshot(reportsQuery, (snap) => {
       setReports(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Report));
     });
-
     return () => unsub();
-  }, [userData]);
+  }, [reportsQuery]);
 
   if (!isStaff)
     return <div className="p-6">You do not have access.</div>;
@@ -59,7 +61,8 @@ export default function AdminReportsPage() {
   });
 
   async function resolveReport(id: string) {
-    await updateDoc(doc(db, "reports", id), {
+    const dbSafe = db as Firestore;
+    await updateDoc(doc(dbSafe, "reports", id), {
       resolved: true,
       resolvedAt: new Date(),
     });

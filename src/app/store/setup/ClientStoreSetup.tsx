@@ -54,7 +54,7 @@ export default function ClientStoreSetup() {
   });
 
   async function onSubmit(values: FormValues) {
-    if (!user || !profile || !firestore) return;
+    if (!user || !profile || !firestore || !profile.emailVerified || profile.status !== "ACTIVE") return;
 
     if (!profile.stripeAccountId) {
       toast({

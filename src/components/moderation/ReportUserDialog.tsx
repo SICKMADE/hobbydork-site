@@ -63,9 +63,14 @@ export function ReportUserDialog({
   targetDisplayName,
   context,
 }: ReportUserDialogProps) {
-  const { user } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    user.emailVerified &&
+    profile?.status === "ACTIVE";
 
   const [reason, setReason] = useState<Reason>('Scam / fraud');
   const [details, setDetails] = useState('');
@@ -77,12 +82,12 @@ export function ReportUserDialog({
   };
 
   const handleSubmit = async () => {
-    if (!firestore || !user) {
+    if (!canReadFirestore || !firestore) {
       toast({
         variant: 'destructive',
         title: 'Not signed in',
         description:
-          'You must be signed in to submit a report.',
+          'You must be signed in with an active, verified account to submit a report.',
       });
       return;
     }

@@ -12,12 +12,14 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 
 function WatchedListing({ listingId }: { listingId: string }) {
   const firestore = useFirestore();
+  const { profile, loading: authLoading } = useAuth();
+  const canQuery = !authLoading && profile && profile.uid;
   const listingRef = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!canQuery || !firestore) return null;
     return doc(firestore, "listings", listingId);
-  }, [firestore, listingId]);
+  }, [canQuery, firestore, listingId]);
 
-  const { data: listing, isLoading } = useDoc<Listing>(listingRef);
+  const { data: listing, isLoading } = useDoc<Listing>(canQuery ? listingRef : null);
 
   if (isLoading) {
     return <div>Loading item...</div>;
@@ -31,19 +33,27 @@ function WatchedListing({ listingId }: { listingId: string }) {
 }
 
 export default function ClientWatchlist() {
-  const { profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
+  if (authLoading) return null;
+  if (!user) return null;
+  if (!user.emailVerified) return null;
   const firestore = useFirestore();
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
 
   const watchlistQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.uid) return null;
+    if (!canReadFirestore || !firestore || !profile?.uid) return null;
     return collection(
       firestore,
       `users/${profile.uid}/watchlist`
     ).withConverter(watchlistConverter);
-  }, [firestore, profile]);
+  }, [canReadFirestore, firestore, profile]);
 
   const { data: watchlistItems, isLoading } =
-    useCollection<WatchlistItem>(watchlistQuery);
+    useCollection<WatchlistItem>(canReadFirestore ? watchlistQuery : null);
 
   return (
     <AppLayout>

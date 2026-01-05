@@ -1,5 +1,5 @@
 'use client';
-    
+
 import { useState, useEffect } from 'react';
 import {
   DocumentReference,
@@ -8,86 +8,80 @@ import {
   FirestoreError,
   DocumentSnapshot,
 } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { useAuth } from '@/hooks/use-auth';
 
 /** Utility type to add an 'id' field to a given type T. */
 type WithId<T> = T & { id: string };
 
-/**
- * Interface for the return value of the useDoc hook.
- * @template T Type of the document data.
- */
 export interface UseDocResult<T> {
-  data: WithId<T> | null; // Document data with ID, or null.
-  isLoading: boolean;       // True if loading.
-  error: FirestoreError | Error | null; // Error object, or null.
+  data: WithId<T> | null;
+  isLoading: boolean;
+  error: FirestoreError | Error | null;
 }
 
-/**
- * React hook to subscribe to a single Firestore document in real-time.
- * Handles nullable references.
- * 
- * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery or BAD THINGS WILL HAPPEN
- * use useMemo to memoize it per React guidence.  Also make sure that it's dependencies are stable
- * references
- *
- *
- * @template T Optional type for document data. Defaults to any.
- * @param {DocumentReference<DocumentData> | null | undefined} docRef -
- * The Firestore DocumentReference. Waits if null/undefined.
- * @returns {UseDocResult<T>} Object with data, isLoading, error.
- */
-export function useDoc<T = any>(
+export function useDoc<T = unknown>(
   memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
 ): UseDocResult<T> {
-  type StateDataType = WithId<T> | null;
+  const { user, loading: authLoading, profile } = useAuth();
 
-  const [data, setData] = useState<StateDataType>(null);
+  const [data, setData] = useState<WithId<T> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+
   useEffect(() => {
-    if (!memoizedDocRef) {
-      setData(null);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
-  
+    // 🔒 HARD GATES — THIS IS THE FIX
+    if (authLoading) return;
+    if (!user) return;
+    if (!profile?.emailVerified) return;
+    if (!memoizedDocRef) return;
+
     setIsLoading(true);
     setError(null);
-  
+
+    let unsub: (() => void) | null = null;
+
     try {
-      // Emit a stack trace so we can locate which component/doc started this subscription
-      console.trace('Firestore useDoc subscribing', memoizedDocRef?.path ?? memoizedDocRef);
-      const unsubscribe = onSnapshot(
-        memoizedDocRef,
-        (snap) => {
-          // @ts-expect-error generic
-          setData(snap.exists() ? { id: snap.id, ...snap.data() } : null);
+      if (process.env.NODE_ENV !== 'production') {
+        console.trace('Firestore useDoc subscribing:', memoizedDocRef.path);
+      }
+
+      unsub = onSnapshot(
+        memoizedDocRef as DocumentReference<T>,
+        (snap: DocumentSnapshot<T>) => {
+          if (!snap.exists()) {
+            setData(null);
+          } else {
+            setData({ id: snap.id, ...(snap.data() as T) });
+          }
           setIsLoading(false);
         },
         (err) => {
-          setError(err);
+          console.error('Firestore useDoc permission/error', err);
+          if (err && (err.code === 'permission-denied' || err.message?.includes('Missing or insufficient permissions'))) {
+            setError(new Error('You do not have permission to access this document.'));
+          } else {
+            setError(err);
+          }
           setIsLoading(false);
         },
       );
-
-      return () => {
-        try {
-          unsubscribe();
-        } catch (e) {
-          console.warn('Error unsubscribing Firestore doc snapshot', e);
-        }
-      };
-    } catch (e: any) {
-      console.error('Firestore onSnapshot failed to subscribe (doc)', e);
-      setError(e);
+    } catch (e) {
+      console.error('Firestore useDoc subscribe crash', e);
+      setError(e as Error);
       setIsLoading(false);
-      return;
     }
-  }, [memoizedDocRef?.path]); // <<< change deps to this
-  
+
+    return () => {
+      try {
+        unsub?.();
+      } catch {}
+    };
+  }, [
+    memoizedDocRef,
+    user?.uid,
+    authLoading,
+    profile?.emailVerified,
+  ]);
 
   return { data, isLoading, error };
 }

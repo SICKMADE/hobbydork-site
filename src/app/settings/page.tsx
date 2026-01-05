@@ -52,25 +52,12 @@ export default function SettingsPage() {
             notifyOrders: profile?.notifyOrders ?? true,
             notifyISO24: profile?.notifyISO24 ?? true,
             notifySpotlight: profile?.notifySpotlight ?? true,
-            shippingAddress: profile?.shippingAddress
-                ? {
-                    ...profile.shippingAddress,
-                    address2: profile.shippingAddress.address2 ?? ""
-                }
-                : {
-                    name: profile?.displayName || "",
-                    address1: "",
-                    address2: "",
-                    city: "",
-                    state: "",
-                    zip: "",
-                    country: "USA",
-                },
+            shippingAddress: undefined,
         },
     });
 
     async function onSubmit(values: z.infer<typeof settingsSchema>) {
-        if (!user || !firestore) return;
+        if (!user || !firestore || !profile?.emailVerified || profile?.status !== "ACTIVE") return;
         setIsSubmitting(true);
         try {
             const userRef = doc(firestore, 'users', user.uid);
@@ -121,8 +108,8 @@ export default function SettingsPage() {
                         </Card>
                         <Card>
                             <CardHeader>
-                                <CardTitle>Notifications</CardTitle>
-                                <CardDescription>Manage your email and push notification preferences.</CardDescription>
+                                {/* Notifications removed */}
+                                {/* Notification CardDescription removed */}
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <FormField control={form.control} name="notifyMessages" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4"><div className="space-y-0.5"><FormLabel className="text-base">New Messages</FormLabel><FormMessage /></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />

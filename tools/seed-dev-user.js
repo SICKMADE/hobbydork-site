@@ -8,14 +8,19 @@
  * Adjust ports if your emulators run on different ports.
  */
 
-const admin = require('firebase-admin');
+
+import admin from 'firebase-admin';
 
 const PROJECT_ID = process.env.FIREBASE_PROJECT || 'demo-project';
+
 
 process.env.GCLOUD_PROJECT = PROJECT_ID;
 
 // Initialize Admin SDK (will connect to emulators when env vars are set)
-admin.initializeApp({ projectId: PROJECT_ID });
+if (!admin.apps.length) {
+  admin.initializeApp({ projectId: PROJECT_ID });
+}
+
 
 const auth = admin.auth();
 const db = admin.firestore();
@@ -57,6 +62,11 @@ async function main() {
   console.log('  password:', password);
   console.log('\nNow open your app, sign in with the test user, and continue the flow.');
 }
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
 
 main().catch((err) => {
   console.error(err);

@@ -11,10 +11,13 @@ export default function BuyerOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!user) return;
+    // Strict Firestore read gate
+    const canReadFirestore = !!user && user.emailVerified;
+    if (!canReadFirestore) return;
 
+    if (!db) return;
     const q = query(
-      collection(db, "orders"),
+      collection(db!, "orders"),
       where("buyerUid", "==", user.uid)
     );
 

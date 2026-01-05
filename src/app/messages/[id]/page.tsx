@@ -32,27 +32,36 @@ import AvatarMenu from '@/components/messaging/AvatarMenu';
 export default function ConversationPage() {
   const params = useParams<{ id: string }>();
   const conversationId = params?.id;
-  const { user } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
+  if (authLoading) return null;
+  if (!user) return null;
+  if (!profile?.emailVerified) return null;
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
-  const convoRef = useMemoFirebase(() => {
-    if (!firestore || !conversationId) return null;
-    return doc(firestore, "conversations", conversationId);
-  }, [firestore, conversationId]);
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
 
-  const { data: conversation } = useDoc<any>(convoRef);
+  const convoRef = useMemoFirebase(() => {
+    if (!canReadFirestore || !firestore || !conversationId) return null;
+    return doc(firestore, "conversations", conversationId);
+  }, [canReadFirestore, firestore, conversationId]);
+
+  const { data: conversation } = useDoc<any>(canReadFirestore ? convoRef : null);
 
   const messagesQuery = useMemoFirebase(() => {
-    if (!firestore || !conversationId) return null;
+    if (!canReadFirestore || !firestore || !conversationId) return null;
     return query(
       collection(firestore, "conversations", conversationId, "messages"),
       orderBy("createdAt", "asc")
     );
-  }, [firestore, conversationId]);
+  }, [canReadFirestore, firestore, conversationId]);
 
-  const { data: messages } = useCollection<any>(messagesQuery);
+  const { data: messages } = useCollection<any>(canReadFirestore ? messagesQuery : null);
 
   const profiles = useMemo(() => {
     const participantArray: string[] =

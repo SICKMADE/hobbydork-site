@@ -7,41 +7,42 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function NotifBell() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    if (!user) return;
+    // HARD GATES
+    if (loading) return;
+    if (!user?.uid) return;
+    if (!user.emailVerified) return;
+    if (!db) return;
+
+    const notifPath = `/users/${user.uid}/notifications`;
+    console.log('[NotifBell] Querying notifications for user:', user.uid, 'Path:', notifPath);
 
     const qNotif = query(
-      collection(db, "notifications"),
-      where("uid", "==", user.uid),
-      where("seen", "==", false)
+      collection(db!, "users", user.uid, "notifications"),
+      where("read", "==", false)
     );
 
-    let unsub: (() => void) | undefined = undefined;
-    try {
-      unsub = onSnapshot(qNotif, (snap) => {
+    const unsub = onSnapshot(
+      qNotif,
+      (snap) => {
         setCount(snap.size);
-      });
-    } catch (err) {
-      console.error('NotifBell: onSnapshot failed', err);
-    }
-
-    return () => {
-      try {
-        if (typeof unsub === 'function') unsub();
-      } catch (e) {
-        console.warn('NotifBell: error during unsubscribe', e);
+      },
+      (err) => {
+        console.error('[NotifBell] Firestore onSnapshot error:', err);
       }
-    };
-  }, [user]);
+    );
 
-  if (!user) return null;
+    return () => unsub();
+  }, [user, loading]);
+
+  if (!user || !user.emailVerified) return null;
 
   return (
     <Link href="/notifications" className="relative">
-      🔔
+      <span role="img" aria-label="Notifications">🔔</span>
       {count > 0 && (
         <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-2">
           {count}

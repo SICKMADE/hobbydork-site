@@ -4,16 +4,16 @@ import {
   doc,
   serverTimestamp,
   updateDoc,
+  Firestore,
 } from "firebase/firestore";
 
 /**
  * Sends a message in a conversation.
  */
-export async function sendMessage(
   conversationId: string,
   senderUid: string,
   text: string,
-  firestore: any
+  firestore: Firestore
 ) {
   if (!conversationId || !senderUid || !firestore) {
     console.error("sendMessage() missing required args.");

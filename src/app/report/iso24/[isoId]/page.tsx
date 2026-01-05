@@ -25,14 +25,18 @@ export default function ReportISO24Page({ params }: any) {
   // Load ISO post to get owner UID
   useEffect(() => {
     async function loadISO() {
-      const snap = await getDoc(doc(db, "iso24Posts", isoId));
+      // Strict Firestore read gate (replace with your actual canReadFirestore logic)
+      const canReadFirestore = !!user && user.emailVerified;
+      if (!canReadFirestore) return;
+      if (!db) return;
+      const snap = await getDoc(doc(db!, "iso24Posts", isoId));
       if (snap.exists()) {
         const data = snap.data();
         setOwnerUid(data.ownerUid);
       }
     }
     loadISO();
-  }, [isoId]);
+  }, [isoId, user]);
 
   async function submitReport() {
     if (!reason) return alert("Select a reason");
@@ -44,7 +48,8 @@ export default function ReportISO24Page({ params }: any) {
         return alert("You must be signed in to submit a report.");
       }
 
-      await addDoc(collection(db, "reports"), {
+      if (!db) return;
+      await addDoc(collection(db!, "reports"), {
         reporterUid: user.uid,
         targetUid: ownerUid,
         isoId,
@@ -79,6 +84,7 @@ export default function ReportISO24Page({ params }: any) {
 
         <select
           className="border p-2 rounded w-full"
+          title="Reason for report"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
         >

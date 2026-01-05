@@ -21,10 +21,14 @@ export default function GlobalError({ error, reset }: { error: Error; reset: () 
         <h2 className="text-xl font-bold mb-2">An application error occurred</h2>
         <p className="text-sm text-muted-foreground mb-4">The app encountered an error. You can copy the details and send them to the developer for debugging.</p>
 
+        <label htmlFor="error-details" className="sr-only">Error details</label>
         <textarea
+          id="error-details"
           readOnly
           value={details ?? "(no details)"}
           className="w-full h-56 p-2 bg-transparent border rounded text-sm font-mono"
+          placeholder="Error details"
+          title="Error details"
         />
 
         <div className="mt-4 flex gap-2 justify-end">

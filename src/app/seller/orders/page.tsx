@@ -14,14 +14,17 @@ type Order = {
 };
 
 export default function SellerOrdersPage() {
-  const { user } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    if (!user) return;
+    // Strict Firestore read gate
+    const canReadFirestore = !!user && user.emailVerified && profile?.status === "ACTIVE";
+    if (!canReadFirestore) return;
 
+    if (!db) return;
     const q = query(
-      collection(db, "orders"),
+      collection(db!, "orders"),
       where("sellerUid", "==", user.uid)
     );
 
@@ -40,7 +43,7 @@ export default function SellerOrdersPage() {
     });
 
     return () => unsub();
-  }, [user]);
+  }, [user, profile]);
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-4">

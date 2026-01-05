@@ -37,7 +37,7 @@ export default function PrivacyPage() {
             <li>ISO24 posts: text content, categories, timestamps</li>
             <li>Messages and chat: content you send through HobbyDork</li>
             <li>Reports: content of reports you submit about other users/content</li>
-            <li>Settings: notification preferences, watchlist/favorites</li>
+            {/* Notification privacy settings removed */}
           </ul>
 
           <h3 className="font-semibold">2.2 Information collected automatically</h3>
@@ -69,7 +69,7 @@ export default function PrivacyPage() {
             <li>Display your content to other users</li>
             <li>Enforce our Terms of Service and community rules</li>
             <li>Detect and prevent fraud, spam, and abuse</li>
-            <li>Send notifications related to activity on your account</li>
+            {/* Notification privacy info removed */}
             <li>Improve and debug the app</li>
             <li>Analyze usage to understand and improve features</li>
           </ul>

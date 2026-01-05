@@ -7,6 +7,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ISO24 } from "@/lib/types";
+
+import type { Iso24Post } from "@/lib/types";
+type ISO24CardProps = {
+  post: ISO24 | Iso24Post;
+};
 import { formatDistanceToNow } from "date-fns";
 import { ImageIcon } from "lucide-react";
 import { useDoc, useFirestore, useMemoFirebase } from "@/firebase";
@@ -16,12 +21,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { resolveAvatarUrl } from "@/lib/default-avatar";
 import { labelIso24Category, normalizeIso24Category } from "@/lib/iso24";
 
-interface ISO24CardProps {
-  post: ISO24;
-}
 
-export default function ISO24Card({ post }: ISO24CardProps) {
+import { useAuth } from "@/hooks/use-auth";
+
+
+export function ISO24Card({ post }: ISO24CardProps) {
   const firestore = useFirestore();
+  const { user: authUser, profile, loading: authLoading } = useAuth();
+  const canReadFirestore =
+    !authLoading &&
+    !!authUser &&
+    authUser.emailVerified &&
+    profile?.status === "ACTIVE";
 
   // Support multiple possible field names: creatorUid, userUid, ownerUid
   const record = post as unknown as Record<string, unknown>;
@@ -32,16 +43,17 @@ export default function ISO24Card({ post }: ISO24CardProps) {
     "";
 
   const userRef = useMemoFirebase(() => {
-    if (!firestore || !creatorUid) return null;
+    if (!canReadFirestore || !firestore || !creatorUid) return null;
     return doc(firestore, "users", creatorUid);
-  }, [firestore, creatorUid]);
+  }, [canReadFirestore, firestore, creatorUid]);
 
-  const { data: user } = useDoc<User>(userRef);
+  const { data: user } = useDoc<User>(canReadFirestore ? userRef : null);
 
   const expiresField = (record.expiresAt as unknown) ?? null;
-  const expiresAt = expiresField && typeof (expiresField as { toDate?: unknown }).toDate === 'function'
-    ? (expiresField as { toDate: () => Date }).toDate()
-    : null;
+  const expiresAt =
+    expiresField && typeof (expiresField as { toDate?: unknown }).toDate === "function"
+      ? (expiresField as { toDate: () => Date }).toDate()
+      : null;
   const expiresIn = expiresAt
     ? formatDistanceToNow(expiresAt, { addSuffix: true })
     : "soon";

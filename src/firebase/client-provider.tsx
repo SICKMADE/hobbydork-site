@@ -1,4 +1,14 @@
+
 'use client';
+
+export const functions: Functions | undefined = (() => {
+  try {
+    const s = clientSdks();
+    return s?.functions ?? undefined;
+  } catch (e) {
+    return undefined;
+  }
+})();
 
 import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
@@ -43,7 +53,12 @@ function clientSdks() {
   return _clientSdks;
 }
 
-export const db = ((): any => {
+import type { Firestore } from 'firebase/firestore';
+import type { Auth } from 'firebase/auth';
+import type { FirebaseStorage } from 'firebase/storage';
+import type { Functions } from 'firebase/functions';
+
+export const db: Firestore | undefined = (() => {
   try {
     const s = clientSdks();
     return s?.firestore;
@@ -52,7 +67,7 @@ export const db = ((): any => {
   }
 })();
 
-export const auth = ((): any => {
+export const auth: Auth | undefined = (() => {
   try {
     const s = clientSdks();
     return s?.auth;
@@ -61,7 +76,7 @@ export const auth = ((): any => {
   }
 })();
 
-export const storage = ((): any => {
+export const storage: FirebaseStorage | undefined = (() => {
   try {
     const s = clientSdks();
     if (!s) return undefined;
@@ -71,14 +86,6 @@ export const storage = ((): any => {
   }
 })();
 
-export const functions = ((): any => {
-  try {
-    const s = clientSdks();
-    if (!s) return undefined;
-    return getFunctions(s.firebaseApp);
-  } catch (e) {
-    return undefined;
-  }
-})();
+
 
 export default FirebaseClientProvider;

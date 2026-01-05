@@ -140,7 +140,7 @@ export default function StorePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const storeIdParam = params?.id;
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -152,12 +152,18 @@ export default function StorePage() {
     setEffectiveStoreId(storeIdParam);
   }, [storeIdParam]);
 
-  const storeRef = useMemoFirebase(() => {
-    if (!firestore || !effectiveStoreId) return null;
-    return doc(firestore, "storefronts", effectiveStoreId);
-  }, [firestore, effectiveStoreId]);
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
 
-  const { data: store, isLoading: storeLoading } = useDoc<StoreDoc>(storeRef as any);
+  const storeRef = useMemoFirebase(() => {
+    if (!canReadFirestore || !firestore || !effectiveStoreId) return null;
+    return doc(firestore, "storefronts", effectiveStoreId);
+  }, [canReadFirestore, firestore, effectiveStoreId]);
+
+  const { data: store, isLoading: storeLoading } = useDoc<StoreDoc>(canReadFirestore ? storeRef as any : null);
 
   const [newStoreImageFile, setNewStoreImageFile] = React.useState<File | null>(null);
   const [newStoreImagePreviewUrl, setNewStoreImagePreviewUrl] = React.useState<string | null>(null);
@@ -170,7 +176,7 @@ export default function StorePage() {
   }, [newStoreImagePreviewUrl]);
 
   React.useEffect(() => {
-    if (!firestore) return;
+    if (!canReadFirestore || !firestore) return;
     if (!storeIdParam) return;
     if (storeLoading) return;
     if (store) return;
@@ -183,7 +189,7 @@ export default function StorePage() {
           where("ownerUid", "==", storeIdParam),
           limit(1),
         );
-        const snap = await getDocs(q);
+        const snap = canReadFirestore ? await getDocs(q) : { empty: true, docs: [] };
         if (snap.empty) return;
 
         const resolvedId = snap.docs[0].id;
@@ -195,27 +201,25 @@ export default function StorePage() {
         // If rules block this lookup, just fall back to the normal not-found UI.
       }
     })();
-  }, [firestore, storeIdParam, storeLoading, store, effectiveStoreId, router]);
+  }, [canReadFirestore, firestore, storeIdParam, storeLoading, store, effectiveStoreId, router]);
 
   const listingsQuery = useMemoFirebase(() => {
-    if (!firestore || !effectiveStoreId) return null;
+    if (!canReadFirestore || !firestore || !effectiveStoreId) return null;
     return query(
       collection(firestore, "listings"),
       where("storeId", "==", effectiveStoreId),
       where("state", "==", "ACTIVE")
     );
-  }, [firestore, effectiveStoreId]);
+  }, [canReadFirestore, firestore, effectiveStoreId]);
 
-  const { data: listings, isLoading: listingsLoading } = useCollection<ListingDoc>(
-    listingsQuery as any
-  );
+  const { data: listings, isLoading: listingsLoading } = useCollection<ListingDoc>(canReadFirestore ? listingsQuery as any : null);
 
   const reviewsQuery = useMemoFirebase(() => {
-    if (!firestore || !effectiveStoreId) return null;
+    if (!canReadFirestore || !firestore || !effectiveStoreId) return null;
     return query(collection(firestore, "storefronts", effectiveStoreId, "reviews"));
-  }, [firestore, effectiveStoreId]);
+  }, [canReadFirestore, firestore, effectiveStoreId]);
 
-  const { data: reviews, isLoading: reviewsLoading } = useCollection<ReviewDoc>(reviewsQuery as any);
+  const { data: reviews, isLoading: reviewsLoading } = useCollection<ReviewDoc>(canReadFirestore ? reviewsQuery as any : null);
 
   const storeUrl =
     typeof window !== "undefined"

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { db } from "@/firebase/client-provider";
+import { db, functions } from "@/firebase/client-provider";
 import {
   addDoc,
   collection,
@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { httpsCallable } from "firebase/functions";
-import { functions } from "@/firebase/client-provider";
+// import { functions } from "@/firebase/client-provider"; // Removed: not exported from client-provider
 import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,8 +43,15 @@ export default function ISODetailPage() {
     if (!isoId) return;
 
     async function load() {
+      // Strict Firestore read gate
+      const canReadFirestore = !!user && user.emailVerified;
+      if (!canReadFirestore) {
+        setLoading(false);
+        return;
+      }
+      if (!db) return;
       try {
-        const ref = doc(db, "iso24Posts", String(isoId));
+        const ref = doc(db!, "iso24Posts", String(isoId));
         const snap = await getDoc(ref);
         if (snap.exists()) {
           setISO({ id: snap.id, ...snap.data() });
@@ -55,12 +62,16 @@ export default function ISODetailPage() {
     }
 
     load();
-  }, [isoId]);
+  }, [isoId, user]);
 
   useEffect(() => {
     if (!isoId) return;
     async function loadOffers() {
-      const ref = collection(db, "iso24Posts", String(isoId), "comments");
+      // Strict Firestore read gate
+      const canReadFirestore = !!user && user.emailVerified;
+      if (!canReadFirestore) return;
+      if (!db) return;
+      const ref = collection(db!, "iso24Posts", String(isoId), "comments");
       const q = query(
         ref,
         where("type", "==", "FULFILLMENT"),
@@ -72,15 +83,16 @@ export default function ISODetailPage() {
     }
 
     loadOffers();
-  }, [isoId]);
+  }, [isoId, user]);
 
   async function submitOffer() {
     if (!user?.uid || !isoId) return;
     if (!offerUrl.trim()) return;
 
     setSubmittingOffer(true);
+    if (!db) return;
     try {
-      await addDoc(collection(db, "iso24Posts", String(isoId), "comments"), {
+      await addDoc(collection(db!, "iso24Posts", String(isoId), "comments"), {
         type: "FULFILLMENT",
         authorUid: user.uid,
         listingUrl: offerUrl.trim(),
@@ -89,7 +101,7 @@ export default function ISODetailPage() {
 
       setOfferUrl("");
 
-      const ref = collection(db, "iso24Posts", String(isoId), "comments");
+      const ref = collection(db!, "iso24Posts", String(isoId), "comments");
       const q = query(
         ref,
         where("type", "==", "FULFILLMENT"),
@@ -115,7 +127,8 @@ export default function ISODetailPage() {
 
     setAwarding(true);
     try {
-      const award = httpsCallable(functions, "awardIsoTrophy");
+      if (!functions) throw new Error("Cloud Functions not initialized");
+      const award = httpsCallable(functions as import("firebase/functions").Functions, "awardIsoTrophy");
       await award({ isoId: String(isoId), commentId: offerId });
 
       toast({ title: "Trophy awarded" });

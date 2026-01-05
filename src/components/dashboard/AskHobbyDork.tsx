@@ -51,20 +51,20 @@ export default function AskHobbyDork() {
   }
 
   return (
-    <div className="relative w-full max-w-xs sm:max-w-md mx-auto">
+    <div className="relative w-[420px] max-w-full">
       {/* TV BODY */}
       <div className="relative rounded-[28px] bg-zinc-900 border-[6px] border-zinc-800 shadow-[0_30px_60px_rgba(0,0,0,0.6)] p-4">
 
         {/* Antennas */}
-        <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex gap-6 sm:gap-10">
-          <div className="w-1 h-8 sm:h-10 bg-zinc-600 rotate-[-25deg]" />
-          <div className="w-1 h-8 sm:h-10 bg-zinc-600 rotate-[25deg]" />
+        <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex gap-10">
+          <div className="w-1 h-10 bg-zinc-600 rotate-[-25deg]" />
+          <div className="w-1 h-10 bg-zinc-600 rotate-[25deg]" />
         </div>
 
         {/* SCREEN */}
         <div
           className={clsx(
-            'relative h-48 sm:h-[260px] rounded-[16px] overflow-hidden bg-black border-4 border-zinc-700',
+            'relative h-[260px] rounded-[16px] overflow-hidden bg-black border-4 border-zinc-700',
             mode === 'off' && 'animate-tv-off'
           )}
         >
@@ -87,7 +87,7 @@ export default function AskHobbyDork() {
                   title="Ask HobbyDork"
                   className="absolute inset-0"
                   onClick={() => setMode('choice')}
-                >Ask HobbyDork</button>
+                ></button>
               </div>
             )}
 
@@ -127,8 +127,8 @@ export default function AskHobbyDork() {
 
         {/* DIALS */}
         <div className="absolute right-3 bottom-6 space-y-3">
-          <div className="h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-zinc-700" />
-          <div className="h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-zinc-700" />
+          <div className="h-6 w-6 rounded-full bg-zinc-700" />
+          <div className="h-6 w-6 rounded-full bg-zinc-700" />
         </div>
       </div>
 

@@ -104,7 +104,7 @@ function isLikelyPostUrl(platform: Platform, url: string) {
 }
 
 export default function GiveawayPage() {
-  const { user, userData, loading } = useAuth();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
 
   const [config, setConfig] = React.useState<GiveawayConfig | null>(null);
@@ -116,18 +116,23 @@ export default function GiveawayPage() {
 
   const platformMeta = PLATFORM_OPTIONS.find((p) => p.value === platform);
 
+  const canReadFirestore =
+    !loading &&
+    !!user &&
+    user.emailVerified;
+
   React.useEffect(() => {
+    if (!canReadFirestore) return;
+    if (!db) return;
     const unsub = onSnapshot(doc(db, "giveaways", GIVEAWAY_ID), (snap) => {
       if (!snap.exists()) {
         setConfig(null);
         return;
       }
-
       setConfig(snap.data() as GiveawayConfig);
     });
-
     return () => unsub();
-  }, []);
+  }, [canReadFirestore]);
 
   const now = Date.now();
   const startMs = config?.startAt?.toDate?.() ? config.startAt.toDate().getTime() : null;
@@ -187,10 +192,7 @@ export default function GiveawayPage() {
       return;
     }
 
-    if (!userData) {
-      toast({ title: "Account still loading", description: "Try again in a moment." });
-      return;
-    }
+    // userData removed; rely on user and loading only
 
     if (!postUrl.trim()) {
       toast({ title: "Missing link", description: "Paste the URL to your social post." });
@@ -208,14 +210,14 @@ export default function GiveawayPage() {
     setSubmitting(true);
     try {
       // Prevent duplicate entries per platform per giveaway per user.
+      if (!db) return;
       const existingQ = query(
         collection(db, "giveawayEntries"),
         where("uid", "==", user.uid),
         where("giveawayId", "==", GIVEAWAY_ID),
         where("platform", "==", platform),
       );
-
-      const existingSnap = await getDocs(existingQ);
+      const existingSnap = canReadFirestore ? await getDocs(existingQ) : { empty: true };
       if (!existingSnap.empty) {
         toast({
           title: "Already submitted",
@@ -224,6 +226,7 @@ export default function GiveawayPage() {
         return;
       }
 
+      if (!db) return;
       await addDoc(collection(db, "giveawayEntries"), {
         uid: user.uid,
         giveawayId: GIVEAWAY_ID,
@@ -238,10 +241,10 @@ export default function GiveawayPage() {
         description: "Thanks! Your entry is pending review.",
       });
       setPostUrl("");
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({
         title: "Could not submit entry",
-        description: e?.message || "Please try again.",
+        description: e instanceof Error ? e.message : "Please try again.",
       });
     } finally {
       setSubmitting(false);

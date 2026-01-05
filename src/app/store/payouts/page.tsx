@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { httpsCallable } from "firebase/functions";
-import { functions } from "@/firebase/client-provider";
+import { getFirebase } from "@/firebase/client-init";
 
 export default function PayoutsPage() {
   const { user } = useAuth();
@@ -19,6 +19,8 @@ export default function PayoutsPage() {
 
     async function load() {
       try {
+        const functions = getFirebase().functions;
+        if (!functions) throw new Error("Cloud Functions are not available. Please try again in the browser.");
         const getPayouts = httpsCallable(functions, "getStripePayouts");
         const result = await getPayouts({});
 

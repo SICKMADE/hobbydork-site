@@ -1,7 +1,6 @@
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, Firestore } from "firebase/firestore";
 
-export async function createConversation(
-  firestore: any,
+  firestore: Firestore,
   participantUids: string[]
 ) {
   if (!firestore || !participantUids?.length) return null;

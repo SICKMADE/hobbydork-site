@@ -36,49 +36,35 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkStripeSellerStatus = exports.onboardStripe = void 0;
-const functions = __importStar(require("firebase-functions"));
+exports.finalizeSeller = exports.createStripeOnboarding = void 0;
+const https_1 = require("firebase-functions/v2/https");
 const admin = __importStar(require("firebase-admin"));
 const stripe_1 = __importDefault(require("stripe"));
-const cors_1 = __importDefault(require("cors"));
-if (!admin.apps.length) {
-    admin.initializeApp();
-}
+admin.initializeApp();
 const db = admin.firestore();
-const corsHandler = (0, cors_1.default)({ origin: true });
-/* ---------------- HELPERS ---------------- */
-function requireAuth(context) {
-    if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "Auth required");
+/* ================= HELPERS ================= */
+function requireVerified(request) {
+    if (!request.auth) {
+        throw new https_1.HttpsError("unauthenticated", "Auth required");
     }
-}
-function requireVerified(context) {
-    requireAuth(context);
-    if (context.auth.token.email_verified !== true) {
-        throw new functions.https.HttpsError("failed-precondition", "Email verification required");
+    if (request.auth.token.email_verified !== true) {
+        throw new https_1.HttpsError("failed-precondition", "Email verification required");
     }
+    return request.auth.uid;
 }
-/* ---------------- STRIPE ---------------- */
-let stripe = null;
-function getStripe() {
-    if (stripe)
-        return stripe;
-    const secret = process.env.STRIPE_SECRET;
-    if (!secret)
-        throw new Error("Missing STRIPE_SECRET");
-    stripe = new stripe_1.default(secret, { apiVersion: "2023-10-16" });
-    return stripe;
-}
-/* ---------------- ONBOARD STRIPE ---------------- */
-exports.onboardStripe = functions
-    .runWith({ secrets: ["STRIPE_SECRET"] })
-    .https.onCall(async (_data, context) => {
-    requireVerified(context);
-    const uid = context.auth.uid;
+/* ================= STRIPE ================= */
+const stripe = new stripe_1.default(process.env.STRIPE_SECRET, {
+    apiVersion: "2023-10-16",
+});
+/* ================= CREATE STRIPE ONBOARDING ================= */
+exports.createStripeOnboarding = (0, https_1.onCall)({
+    region: "us-central1",
+    secrets: ["STRIPE_SECRET", "APP_BASE_URL"],
+}, async (request) => {
+    const uid = requireVerified(request);
     const userRef = db.collection("users").doc(uid);
     const snap = await userRef.get();
     const user = snap.data();
-    const stripe = getStripe();
     let accountId = user?.stripeAccountId;
     if (!accountId) {
         const account = await stripe.accounts.create({
@@ -90,56 +76,53 @@ exports.onboardStripe = functions
             },
         });
         accountId = account.id;
-        await userRef.update({
+        await userRef.set({
             stripeAccountId: accountId,
             sellerStatus: "PENDING",
             isSeller: false,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        }, { merge: true });
     }
-    const baseUrl = process.env.APP_BASE_URL || "https://www.hobbydork.com";
+    const baseUrl = process.env.APP_BASE_URL || "http://localhost:9002";
     const link = await stripe.accountLinks.create({
         account: accountId,
-        refresh_url: `${baseUrl}/onboarding/failed`,
+        refresh_url: `${baseUrl}/onboarding/terms`,
         return_url: `${baseUrl}/onboarding/success`,
         type: "account_onboarding",
     });
     return { url: link.url };
 });
-/* ---------------- CHECK SELLER STATUS ---------------- */
-exports.checkStripeSellerStatus = functions
-    .runWith({ secrets: ["STRIPE_SECRET"] })
-    .https.onRequest((req, res) => {
-    corsHandler(req, res, async () => {
-        try {
-            const authHeader = req.headers.authorization;
-            if (!authHeader?.startsWith("Bearer ")) {
-                return res.status(401).json({ error: "Unauthorized" });
-            }
-            const idToken = authHeader.split("Bearer ")[1];
-            const decoded = await admin.auth().verifyIdToken(idToken);
-            const uid = decoded.uid;
-            const userRef = db.collection("users").doc(uid);
-            const snap = await userRef.get();
-            const user = snap.data();
-            if (!user?.stripeAccountId) {
-                return res.json({ isSeller: false });
-            }
-            const stripe = getStripe();
-            const account = await stripe.accounts.retrieve(user.stripeAccountId);
-            if (account.details_submitted && account.charges_enabled) {
-                await userRef.update({
-                    isSeller: true,
-                    sellerStatus: "APPROVED",
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                });
-                return res.json({ isSeller: true });
-            }
-            return res.json({ isSeller: false });
-        }
-        catch (err) {
-            console.error(err);
-            res.status(500).json({ error: "internal error" });
-        }
+/* ================= FINALIZE SELLER ================= */
+exports.finalizeSeller = (0, https_1.onCall)({
+    region: "us-central1",
+    secrets: ["STRIPE_SECRET"],
+}, async (request) => {
+    const uid = requireVerified(request);
+    const userRef = db.collection("users").doc(uid);
+    const snap = await userRef.get();
+    const user = snap.data();
+    if (!user?.stripeAccountId) {
+        throw new https_1.HttpsError("failed-precondition", "Stripe not connected");
+    }
+    const account = await stripe.accounts.retrieve(user.stripeAccountId);
+    if (!account.details_submitted || !account.charges_enabled) {
+        throw new https_1.HttpsError("failed-precondition", "Stripe onboarding incomplete");
+    }
+    await userRef.update({
+        isSeller: true,
+        sellerStatus: "APPROVED",
+        stripeOnboarded: true, // Set true when Stripe onboarding is complete
+        stripeTermsAgreed: true, // Set true when Stripe onboarding is complete
+        // storeId: "your-store-id", // <-- Set this if you have it at this point
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+    // Log new seller approval for admin monitoring
+    await db.collection("sellerApprovals").add({
+        uid,
+        email: user.email,
+        displayName: user.ownerDisplayName || user.displayName || "",
+        approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+        stripeAccountId: user.stripeAccountId,
+    });
+    return { ok: true };
 });

@@ -12,12 +12,18 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 
 function FavoriteStore({ storeId }: { storeId: string }) {
   const firestore = useFirestore();
+  const { user, profile, loading: authLoading } = useAuth();
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
   const storeRef = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!canReadFirestore || !firestore) return null;
     return doc(firestore, "storefronts", storeId);
-  }, [firestore, storeId]);
+  }, [canReadFirestore, firestore, storeId]);
 
-  const { data: store, isLoading } = useDoc<Store>(storeRef);
+  const { data: store, isLoading } = useDoc<Store>(canReadFirestore ? storeRef : null);
 
   if (isLoading) {
     return <div>Loading store...</div>;
@@ -31,19 +37,27 @@ function FavoriteStore({ storeId }: { storeId: string }) {
 }
 
 export default function ClientFavorites() {
-  const { profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
+  if (authLoading) return null;
+  if (!user) return null;
+  if (!user.emailVerified) return null;
   const firestore = useFirestore();
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.emailVerified &&
+    profile?.status === "ACTIVE";
 
   const favoritesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.uid) return null;
+    if (!canReadFirestore || !firestore || !profile?.uid) return null;
     return collection(
       firestore,
       `users/${profile.uid}/favoriteStores`
     ).withConverter(favoriteStoreConverter);
-  }, [firestore, profile]);
+  }, [canReadFirestore, firestore, profile]);
 
   const { data: favoriteItems, isLoading } =
-    useCollection<FavoriteStoreItem>(favoritesQuery);
+    useCollection<FavoriteStoreItem>(canReadFirestore ? favoritesQuery : null);
 
   return (
     <AppLayout>

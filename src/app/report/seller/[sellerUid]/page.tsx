@@ -25,7 +25,8 @@ export default function ReportSellerPage({ params }: any) {
         return alert("You must be signed in to submit a report.");
       }
 
-      await addDoc(collection(db, "reports"), {
+      if (!db) throw new Error('Database not initialized');
+      await addDoc(collection(db as any, "reports"), {
         reporterUid: user.uid,
         targetUid: sellerUid,
         context: "seller",
@@ -52,10 +53,13 @@ export default function ReportSellerPage({ params }: any) {
       <div className="space-y-2">
         <p className="font-semibold">Reason</p>
 
+        <label htmlFor="reason-select" className="sr-only">Reason</label>
         <select
+          id="reason-select"
           className="border p-2 rounded w-full"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
+          title="Reason"
         >
           <option value="">Select a reason…</option>
           <option value="scam">Scam / Fraud Attempt</option>

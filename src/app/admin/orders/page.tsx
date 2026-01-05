@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/firebase/client-provider";
+const dbSafe = db as import("firebase/firestore").Firestore;
 import {
   collection,
   getDocs,
@@ -14,29 +15,57 @@ import { useAuth } from "@/hooks/use-auth";
 
 export default function AdminOrdersPage() {
   const { userData } = useAuth();
-  if (userData.role !== "ADMIN") {
-    return <div className="p-6">You do not have access.</div>;
-  }
-
-  const [orders, setOrders] = useState<any[]>([]);
+  type Order = {
+    id: string;
+    status?: string;
+    buyerStoreId?: string;
+    buyerUid?: string;
+    sellerStoreId?: string;
+    sellerUid?: string;
+    listingId?: string;
+    stripeSessionId?: string;
+    stripePaymentIntent?: string;
+    stripePayoutId?: string;
+    fraudFlag?: boolean;
+    fraudReason?: string;
+    dispute?: boolean;
+    disputeNotes?: string;
+    adminLocked?: boolean;
+    adminNotes?: string;
+  };
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+
+
+
 
   useEffect(() => {
     async function load() {
-      const snap = await getDocs(collection(db, "orders"));
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // Strict Firestore read gate
+      const canReadFirestore = userData.role === "ADMIN";
+      if (!canReadFirestore) {
+        setLoading(false);
+        return;
+      }
+      const snap = await getDocs(collection(dbSafe, "orders"));
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Order));
       setOrders(data);
       setLoading(false);
     }
     load();
   }, []);
 
+  if (userData.role !== "ADMIN") {
+    return <div className="p-6">You do not have access.</div>;
+  }
+  if (loading) return <div className="p-6">Loading Orders…</div>;
+
   if (loading) return <div className="p-6">Loading Orders…</div>;
 
   // Update field helpers
   async function markFraud(id: string) {
     const reason = prompt("Fraud Reason:");
-    await updateDoc(doc(db, "orders", id), {
+    await updateDoc(doc(dbSafe, "orders", id), {
       fraudFlag: true,
       fraudReason: reason || "Suspicious activity",
       updatedAt: serverTimestamp(),
@@ -44,7 +73,7 @@ export default function AdminOrdersPage() {
   }
 
   async function clearFraud(id: string) {
-    await updateDoc(doc(db, "orders", id), {
+    await updateDoc(doc(dbSafe, "orders", id), {
       fraudFlag: false,
       fraudReason: null,
       updatedAt: serverTimestamp(),
@@ -53,7 +82,7 @@ export default function AdminOrdersPage() {
 
   async function addDispute(id: string) {
     const notes = prompt("Dispute Notes:");
-    await updateDoc(doc(db, "orders", id), {
+    await updateDoc(doc(dbSafe, "orders", id), {
       dispute: true,
       disputeNotes: notes || "Dispute opened",
       updatedAt: serverTimestamp(),
@@ -61,7 +90,7 @@ export default function AdminOrdersPage() {
   }
 
   async function clearDispute(id: string) {
-    await updateDoc(doc(db, "orders", id), {
+    await updateDoc(doc(dbSafe, "orders", id), {
       dispute: false,
       disputeNotes: null,
       updatedAt: serverTimestamp(),
@@ -69,14 +98,14 @@ export default function AdminOrdersPage() {
   }
 
   async function lockOrder(id: string) {
-    await updateDoc(doc(db, "orders", id), {
+    await updateDoc(doc(dbSafe, "orders", id), {
       adminLocked: true,
       updatedAt: serverTimestamp(),
     });
   }
 
   async function unlockOrder(id: string) {
-    await updateDoc(doc(db, "orders", id), {
+    await updateDoc(doc(dbSafe, "orders", id), {
       adminLocked: false,
       updatedAt: serverTimestamp(),
     });
@@ -84,7 +113,7 @@ export default function AdminOrdersPage() {
 
   async function addNote(id: string) {
     const note = prompt("Admin Note:");
-    await updateDoc(doc(db, "orders", id), {
+    await updateDoc(doc(dbSafe, "orders", id), {
       adminNotes: note || "",
       updatedAt: serverTimestamp(),
     });
@@ -93,16 +122,13 @@ export default function AdminOrdersPage() {
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-bold">Order Moderation</h1>
-
       {orders.map((o) => (
         <div key={o.id} className="border bg-white shadow p-4 rounded space-y-3">
-
           {/* Order header */}
           <div className="flex justify-between items-center">
             <p className="font-semibold text-lg">Order #{o.id}</p>
             <p>Status: {o.status}</p>
           </div>
-
           {/* Buyer + Seller */}
           <div className="text-sm space-y-1">
             <p>
@@ -124,14 +150,12 @@ export default function AdminOrdersPage() {
               </Link>
             </p>
           </div>
-
           {/* Stripe data */}
           <div className="text-sm text-gray-700 space-y-1">
             <p>Checkout Session: {o.stripeSessionId}</p>
             <p>Payment Intent: {o.stripePaymentIntent}</p>
             <p>Payout ID: {o.stripePayoutId || "None Yet"}</p>
           </div>
-
           {/* Indicators */}
           <div className="space-y-1">
             {o.fraudFlag && (
@@ -148,10 +172,8 @@ export default function AdminOrdersPage() {
               <p className="text-blue-600 text-sm">🔒 Order Locked</p>
             )}
           </div>
-
           {/* Admin Actions */}
           <div className="flex flex-wrap gap-2 pt-2">
-
             {/* Fraud Controls */}
             {!o.fraudFlag ? (
               <button
@@ -168,7 +190,6 @@ export default function AdminOrdersPage() {
                 Clear Fraud
               </button>
             )}
-
             {/* Dispute Controls */}
             {!o.dispute ? (
               <button
@@ -185,7 +206,6 @@ export default function AdminOrdersPage() {
                 Clear Dispute
               </button>
             )}
-
             {/* Lock controls */}
             {!o.adminLocked ? (
               <button
@@ -202,7 +222,6 @@ export default function AdminOrdersPage() {
                 Unlock Order
               </button>
             )}
-
             {/* Admin Notes */}
             <button
               onClick={() => addNote(o.id)}

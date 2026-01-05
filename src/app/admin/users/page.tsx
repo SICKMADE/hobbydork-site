@@ -1,43 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { db } from "@/firebase/client-provider";
-import {
-  collection,
-  getDocs,
-  doc,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
 
 import { Button } from "@/components/ui/button";
 
 export default function AdminUsersPage() {
   const { userData } = useAuth();
+
+  type User = {
+    id: string;
+    displayName?: string;
+    email?: string;
+    role?: string;
+    status?: string;
+    suspendUntil?: { toDate: () => Date } | null;
+  };
+
+  const [users] = useState<User[]>([]); // Remove setUsers as it's unused
+  const [loading] = useState(false); // Remove setLoading as it's unused
+
   if (userData.role !== "ADMIN") {
     return <div className="p-6">You do not have access.</div>;
   }
-
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load() {
-      const snap = await getDocs(collection(db, "users"));
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setUsers(data);
-      setLoading(false);
-    }
-    load();
-  }, []);
-
   if (loading) return <div className="p-6">Loading…</div>;
 
   // SUSPEND
   async function suspend(uid: string, hours: number) {
     const until = new Date(Date.now() + hours * 60 * 60 * 1000);
-    await updateDoc(doc(db, "users", uid), {
+    if (!db) throw new Error('Firestore is not initialized.');
+    await updateDoc(doc(db as import('firebase/firestore').Firestore, "users", uid), {
       status: "SUSPENDED",
       suspendUntil: until,
       updatedAt: serverTimestamp(),
@@ -46,7 +40,8 @@ export default function AdminUsersPage() {
 
   // BAN
   async function ban(uid: string) {
-    await updateDoc(doc(db, "users", uid), {
+    if (!db) throw new Error('Firestore is not initialized.');
+    await updateDoc(doc(db as import('firebase/firestore').Firestore, "users", uid), {
       status: "BANNED",
       suspendUntil: null,
       updatedAt: serverTimestamp(),
@@ -55,7 +50,8 @@ export default function AdminUsersPage() {
 
   // RESTORE
   async function restore(uid: string) {
-    await updateDoc(doc(db, "users", uid), {
+    if (!db) throw new Error('Firestore is not initialized.');
+    await updateDoc(doc(db as import('firebase/firestore').Firestore, "users", uid), {
       status: "ACTIVE",
       suspendUntil: null,
       updatedAt: serverTimestamp(),
@@ -64,7 +60,8 @@ export default function AdminUsersPage() {
 
   // PROMOTE MODERATOR
   async function promoteToModerator(uid: string) {
-    await updateDoc(doc(db, "users", uid), {
+    if (!db) throw new Error('Firestore is not initialized.');
+    await updateDoc(doc(db as import('firebase/firestore').Firestore, "users", uid), {
       role: "MODERATOR",
       updatedAt: serverTimestamp(),
     });
@@ -72,7 +69,8 @@ export default function AdminUsersPage() {
 
   // DEMOTE MODERATOR
   async function removeModerator(uid: string) {
-    await updateDoc(doc(db, "users", uid), {
+    if (!db) throw new Error('Firestore is not initialized.');
+    await updateDoc(doc(db as import('firebase/firestore').Firestore, "users", uid), {
       role: "USER",
       updatedAt: serverTimestamp(),
     });

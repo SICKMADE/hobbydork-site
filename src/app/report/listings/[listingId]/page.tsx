@@ -25,14 +25,18 @@ export default function ReportListingPage({ params }: any) {
   // Load listing owner
   useEffect(() => {
     async function loadListing() {
-      const snap = await getDoc(doc(db, "listings", listingId));
+      // Strict Firestore read gate (replace with your actual canReadFirestore logic)
+      const canReadFirestore = !!user && user.emailVerified;
+      if (!canReadFirestore) return;
+      if (!db) return;
+      const snap = await getDoc(doc(db!, "listings", listingId));
       if (snap.exists()) {
         const data = snap.data();
         setSellerUid(data.ownerUid);
       }
     }
     loadListing();
-  }, [listingId]);
+  }, [listingId, user]);
 
   async function submitReport() {
     if (!reason) return alert("Select a reason");
@@ -44,7 +48,8 @@ export default function ReportListingPage({ params }: any) {
         return alert("You must be signed in to submit a report.");
       }
 
-      await addDoc(collection(db, "reports"), {
+      if (!db) return;
+      await addDoc(collection(db!, "reports"), {
         reporterUid: user.uid,
         targetUid: sellerUid,
         listingId,
@@ -79,6 +84,7 @@ export default function ReportListingPage({ params }: any) {
 
         <select
           className="border p-2 rounded w-full"
+          title="Reason for report"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
         >
