@@ -24,7 +24,7 @@ import {
 import { ISO24_CATEGORY_OPTIONS, type Iso24Category } from "@/lib/iso24";
 
 export default function CreateISO() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -51,7 +51,15 @@ export default function CreateISO() {
   async function makeIso() {
     if (!user) return;
     if (!title.trim()) return;
-
+    // ...existing code...
+    if (profile?.status && profile.status !== "ACTIVE") {
+      toast({
+        title: "Account restricted",
+        description: "Your account is not active.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (imageFile && !storage) {
       toast({
         title: "Uploads unavailable",
@@ -65,6 +73,7 @@ export default function CreateISO() {
 
     const expiresAt = Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
 
+    if (!db) return;
     const docRef = await addDoc(collection(db, "iso24Posts"), {
       ownerUid: user.uid,
       title,
@@ -78,6 +87,7 @@ export default function CreateISO() {
 
     try {
       if (imageFile) {
+        if (!storage) throw new Error("Storage unavailable. Please try again later.");
         const safeName = imageFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const path = `iso24Images/${user.uid}/${docRef.id}/${Date.now()}-${safeName}`;
         const storageRef = ref(storage, path);

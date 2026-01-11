@@ -26,7 +26,7 @@ export default function ReportISO24Page({ params }: any) {
   useEffect(() => {
     async function loadISO() {
       // Strict Firestore read gate (replace with your actual canReadFirestore logic)
-      const canReadFirestore = !!user && user.emailVerified;
+      const canReadFirestore = !!user;
       if (!canReadFirestore) return;
       if (!db) return;
       const snap = await getDoc(doc(db!, "iso24Posts", isoId));

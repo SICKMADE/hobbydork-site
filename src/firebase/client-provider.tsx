@@ -88,4 +88,3 @@ export const storage: FirebaseStorage | undefined = (() => {
 
 
 
-export default FirebaseClientProvider;

@@ -50,7 +50,7 @@ export function LeaveReviewDialog({
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    user.emailVerified &&
+    //
     profile?.status === "ACTIVE";
 
   const [open, setOpen] = useState(false);
@@ -156,8 +156,8 @@ export function LeaveReviewDialog({
       setOpen(false);
     } catch (err: any) {
       toast({
-        title: 'Error submitting review',
-        description: err?.message ?? 'Could not submit review.',
+        title: 'Could not submit review',
+        description: 'Something went wrong. Please try again. If the problem continues, contact support.',
         variant: 'destructive',
       });
       setSubmitting(false);

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import SellerOnboardingStepper from "@/components/onboarding/SellerOnboardingStepper";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -54,6 +54,14 @@ type SellerAgreementsFormValues = z.infer<typeof sellerAgreementsSchema>;
 
 export default function BecomeSellerTermsPage() {
   const { user, profile } = useAuth();
+  // Generate storeId from displayName (slugify)
+  const storeId = useMemo(() => {
+    if (!profile?.displayName) return "";
+    return profile.displayName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }, [profile?.displayName]);
   const firestore = useFirestore();
   const methods = useForm<SellerAgreementsFormValues>({
     resolver: zodResolver(sellerAgreementsSchema),
@@ -85,6 +93,10 @@ export default function BecomeSellerTermsPage() {
         toast({ title: "User not found", description: "You must be logged in to complete onboarding.", variant: "destructive" });
         return;
       }
+      if (!storeId) {
+        toast({ title: "Store name missing", description: "Display name is required to generate a store ID.", variant: "destructive" });
+        return;
+      }
       const appRef = doc(collection(firestore, 'sellerApplications'));
       await runTransaction(firestore, async (transaction) => {
         transaction.set(appRef, {
@@ -104,6 +116,7 @@ export default function BecomeSellerTermsPage() {
         // Only update allowed fields in user doc (not role, isSeller, sellerStatus)
         const userRef = doc(firestore, "users", user.uid);
         transaction.update(userRef, {
+          storeId,
           sellerAgreements: data,
           sellerOnboarded: true,
           sellerOnboardedAt: serverTimestamp(),
@@ -141,6 +154,7 @@ export default function BecomeSellerTermsPage() {
             <CardTitle className="text-3xl font-extrabold text-red-400 text-center">Seller Terms & Agreement</CardTitle>
             <CardDescription className="text-center text-gray-300">
               <span className="block mb-2">Your store name will be: <span className="font-bold text-red-200">{profile?.displayName ?? ""}</span> (cannot be changed)</span>
+              <span className="block mb-2 text-xs text-gray-400">Store ID: <span className="font-mono text-red-300">{storeId}</span></span>
               <span className="text-sm">Please read and agree to all terms below to continue.</span>
             </CardDescription>
           </CardHeader>

@@ -36,7 +36,7 @@ async function main() {
     uid = user.uid;
     console.log('User already exists:', uid);
   } catch (err) {
-    const user = await auth.createUser({ email, password, emailVerified: true });
+    const user = await auth.createUser({ email, password }); //
     uid = user.uid;
     console.log('Created auth user:', uid);
   }

@@ -144,7 +144,12 @@ export default function ListingsSearchPage() {
             <div className="mt-4 text-muted-foreground">Loading listings...</div>
           </div>
         ) : listings.length === 0 ? (
-          <div className="text-muted-foreground">No results.</div>
+          <div className="flex flex-col items-center justify-center min-h-[200px] text-center text-muted-foreground">
+            <div className="text-4xl mb-2">🔍</div>
+            <div className="font-semibold mb-1">No results found</div>
+            <div className="mb-2 text-sm">Try changing your filters or check back later for new listings.</div>
+            <a href="/" className="comic-button px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 transition">Go Home</a>
+          </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {listings.map((l) => (

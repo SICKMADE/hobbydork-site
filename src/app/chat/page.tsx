@@ -54,14 +54,15 @@ export default function GroupChatPage() {
 
   // Strict Firestore read gate
   useEffect(() => {
-    const canReadFirestore = !!user && user.emailVerified;
-    if (!canReadFirestore || !db) return;
+    if (!user || profile?.status !== "ACTIVE" || !db) return;
     const qMsg = query(
       collection(db, "groupChat"),
       orderBy("createdAt", "asc")
     );
     // TypeScript-safe Firestore query debug
     console.trace('🔥 Firestore QUERY:', qMsg?.toString?.() ?? qMsg);
+    // Enforce check at call site
+    if (!user || profile?.status !== "ACTIVE") return;
     const unsub = onSnapshot(qMsg, (snap) => {
       setMessages(
         snap.docs.map((d) => {
@@ -82,12 +83,20 @@ export default function GroupChatPage() {
       setTimeout(() => bottomRef.current?.scrollIntoView(), 50);
     });
     return () => unsub();
-  }, [user]);
+  }, [user, profile]);
 
   // SEND MESSAGE
   async function send() {
     if (!user || !profile || !text.trim() || !db) return;
-
+    // Enforce check at call site
+    if (profile.status !== "ACTIVE") {
+      toast({
+        title: "Account restricted",
+        description: "Your account is not active.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       await addDoc(collection(db, "groupChat"), {
         uid: user.uid,
@@ -110,15 +119,18 @@ export default function GroupChatPage() {
 
   // DELETE SINGLE MESSAGE (admin/mod)
   async function deleteMessage(messageId: string) {
-    if (!db) return;
+    if (!user || profile?.status !== "ACTIVE" || !db) return;
+    // Enforce check at call site
+    if (profile.status !== "ACTIVE") return;
     await deleteDoc(doc(db, "groupChat", messageId));
     setActionUser(null);
   }
 
   // DELETE ALL MESSAGES FROM USER (admin only)
   async function deleteAllMessages(targetUid: string) {
-    const canReadFirestore = !!user && user.emailVerified;
-    if (!canReadFirestore || !db) return;
+    if (!user || profile?.status !== "ACTIVE" || !db) return;
+    // Enforce check at call site
+    if (profile.status !== "ACTIVE") return;
     const q = query(collection(db, "groupChat"), where("uid", "==", targetUid));
     console.trace('🔥 Firestore QUERY:', q?.toString?.() ?? q);
     const snap = await getDocs(q);
@@ -129,8 +141,9 @@ export default function GroupChatPage() {
 
   // SUSPEND USER (mod/admin)
   async function suspendUser(targetUid: string, hours: number) {
-    const canReadFirestore = !!user && user.emailVerified;
-    if (!canReadFirestore || !db) return;
+    if (!user || profile?.status !== "ACTIVE" || !db) return;
+    // Enforce check at call site
+    if (profile.status !== "ACTIVE") return;
     const until = new Date(Date.now() + hours * 60 * 60 * 1000);
     const q = query(collection(db, "users"), where("uid", "==", targetUid));
     console.trace('🔥 Firestore QUERY:', q?.toString?.() ?? q);
@@ -147,8 +160,9 @@ export default function GroupChatPage() {
 
   // BAN USER (admin only)
   async function banUser(targetUid: string) {
-    const canReadFirestore = !!user && user.emailVerified;
-    if (!canReadFirestore || !db) return;
+    if (!user || profile?.status !== "ACTIVE" || !db) return;
+    // Enforce check at call site
+    if (profile.status !== "ACTIVE") return;
     const q = query(collection(db, "users"), where("uid", "==", targetUid));
     console.trace('🔥 Firestore QUERY:', q?.toString?.() ?? q);
     const snap = await getDocs(q);
@@ -164,7 +178,7 @@ export default function GroupChatPage() {
 
   // VIEW STORE
   async function viewStoreFromMessage(targetUid: string, storeIdFromMessage?: string | null) {
-    const canReadFirestore = !!user && user.emailVerified;
+    const canReadFirestore = !!user;
     if (!canReadFirestore || !db) return;
     try {
       if (storeIdFromMessage) {
@@ -172,9 +186,9 @@ export default function GroupChatPage() {
         return;
       }
 
-      // Avoid reading users/{uid} (often blocked). Prefer storefronts lookup by ownerUid.
+      // Avoid reading users/{uid} (often blocked). Prefer stores lookup by ownerUid.
       const qStores = query(
-        collection(db, "storefronts"),
+        collection(db, "stores"),
         where("ownerUid", "==", targetUid)
       );
       console.trace('🔥 Firestore QUERY:', qStores?.toString?.() ?? qStores);

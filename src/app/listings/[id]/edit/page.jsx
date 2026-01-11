@@ -453,7 +453,11 @@ export default function EditListingPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm text-muted-foreground">No images yet.</div>
+                  <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground text-sm">
+                    <div className="text-3xl mb-2">🖼️</div>
+                    <div className="font-semibold mb-1">No images yet</div>
+                    <div className="mb-2 text-xs">Upload images to make your listing more attractive.</div>
+                  </div>
                 )}
               </div>
 

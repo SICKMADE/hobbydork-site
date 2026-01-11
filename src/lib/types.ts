@@ -1,3 +1,22 @@
+export type SellerApplication = {
+    applicationId: string;
+    ownerUid: string;
+    ownerEmail?: string | null;
+    ownerDisplayName?: string | null;
+    notes?: string | null;
+    social?: {
+        instagram?: string | null;
+        facebook?: string | null;
+        twitter?: string | null;
+        tiktok?: string | null;
+        website?: string | null;
+        other?: string | null;
+    };
+    sellerAgreementAccepted?: boolean;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    createdAt?: { toDate: () => Date } | null;
+    updatedAt?: { toDate: () => Date } | null;
+};
 export type Iso24Post = {
     id: string;
     title?: string;
@@ -45,6 +64,7 @@ export type User = {
     notifyISO24: boolean;
     notifySpotlight: boolean;
     blockedUsers: string[];
+    stripeAccountId?: string | null;
 };
 
 export type Store = {

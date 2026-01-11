@@ -31,13 +31,8 @@ function LoginPageInner() {
 
   useEffect(() => {
     if (isUserLoading) return;
-
     if (user) {
-      if (user.emailVerified) {
-        router.replace('/');
-      } else {
-        router.replace('/login?verify=1');
-      }
+      router.replace('/');
     }
   }, [isUserLoading, user, router]);
 
@@ -45,15 +40,10 @@ function LoginPageInner() {
     return <div className="flex min-h-screen items-center justify-center">Loading…</div>;
   }
 
-  if (user) return null;
+  //
 
   return (
     <>
-      {showVerifyMsg && (
-        <div className="mb-4 mx-auto max-w-md rounded border border-yellow-300 bg-yellow-50 px-4 py-3 text-center text-sm text-yellow-900">
-          Please verify your email. Check your inbox, then log in.
-        </div>
-      )}
       <AuthComponent initialTab={initialTab} />
     </>
   );

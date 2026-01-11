@@ -211,6 +211,14 @@ export default function LandingPage() {
       </header>
 
       <main className="container mx-auto px-4 py-12 md:py-20 relative z-10">
+        {/* Value Proposition Section */}
+        <section className="mb-16 text-center">
+          <h2 className="text-3xl sm:text-4xl font-extrabold mb-4">Why HobbyDork?</h2>
+          <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-6">
+            HobbyDork is the all-in-one marketplace and community for collectors. Buy, sell, and connect with trusted hobbyists. Enjoy secure payments, real-time chat, and unique features like ISO24 and The Vault.
+          </p>
+        </section>
+
         <section className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-start lg:items-center">
           <div className="text-center max-w-xl mx-auto">
             <div className="flex justify-center">
@@ -229,25 +237,43 @@ export default function LandingPage() {
             <p className="max-w-md mx-auto text-base sm:text-lg lg:text-xl leading-relaxed text-muted-foreground mb-7">
               SELL YOUR COMICS, SPORTS CARDS, POKEMON CARDS, VIDEO GAMES, TOYS, AND ALL OTHER COLLECTIBLES
             </p>
-            <Button
-              asChild
-              size="lg"
-              className="text-base sm:text-lg px-8 sm:px-10 py-5 sm:py-7 rounded-full comic-button"
-            >
-              <Link href="/login#signup">
-                Start Your Collection
-                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </Button>
+            <div className="flex flex-col gap-4 items-center">
+              <Button
+                asChild
+                size="lg"
+                className="text-base sm:text-lg px-8 sm:px-10 py-5 sm:py-7 rounded-full comic-button"
+              >
+                <Link href="/login#signup">
+                  Start Your Collection
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="text-base sm:text-lg px-8 sm:px-10 py-5 sm:py-7 rounded-full border-2 border-black bg-muted/40 hover:bg-muted/60"
+              >
+                <Link href="/search">
+                  Browse the App
+                </Link>
+              </Button>
+            </div>
           </div>
           <div className="animate-fade-in-slow lg:justify-self-end">
             <DynamicImageShowcase />
           </div>
         </section>
 
+        {/* Seller Invitation Section */}
         <section className="py-24">
-          <div className="relative py-12 px-8 rounded-2xl bg-card/80 border-2 border-black shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
-            <div className="grid md:grid-cols-3 gap-8 md:gap-12 items-start">
+          <div className="relative py-12 px-8 rounded-2xl bg-card/80 border-2 border-black shadow-[3px_3px_0_rgba(0,0,0,0.25)] text-center">
+            <h2 className="text-2xl font-bold mb-4">Become a Seller</h2>
+            <p className="max-w-xl mx-auto mb-6 text-muted-foreground">Join our curated community of trusted sellers. Set up your store, list your collectibles, and reach passionate buyers in minutes.</p>
+            <Button asChild size="lg" className="comic-button mb-8">
+              <Link href="/become-seller">Apply to Sell</Link>
+            </Button>
+            <div className="grid md:grid-cols-3 gap-8 md:gap-12 items-start mt-8">
               <SellingStep
                 icon={UserPlus}
                 title="Apply to Sell"
@@ -267,6 +293,7 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Features Section */}
         <section className="py-24">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, featureIndex) => (
@@ -277,6 +304,27 @@ export default function LandingPage() {
                 description={feature.description}
               />
             ))}
+          </div>
+        </section>
+
+        {/* Testimonials/Trust Section */}
+        <section className="py-24">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-2xl font-bold mb-8">What Collectors Are Saying</h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="bg-card/70 border-2 border-black rounded-xl p-6 shadow">
+                <p className="mb-4 text-lg font-semibold">“The best place to buy and sell comics. The community is amazing!”</p>
+                <span className="block text-sm text-muted-foreground">— Jamie, Collector</span>
+              </div>
+              <div className="bg-card/70 border-2 border-black rounded-xl p-6 shadow">
+                <p className="mb-4 text-lg font-semibold">“I set up my store in minutes and made my first sale the same day.”</p>
+                <span className="block text-sm text-muted-foreground">— Alex, Seller</span>
+              </div>
+              <div className="bg-card/70 border-2 border-black rounded-xl p-6 shadow">
+                <p className="mb-4 text-lg font-semibold">“ISO24 helped me find a rare card I’d been hunting for years.”</p>
+                <span className="block text-sm text-muted-foreground">— Morgan, Card Hunter</span>
+              </div>
+            </div>
           </div>
         </section>
       </main>

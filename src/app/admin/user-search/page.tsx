@@ -26,8 +26,8 @@ type User = {
 export default function AdminUserSearchPage() {
   const { profile } = useAuth();
   const role = profile?.role;
-  const isAdmin = role === "ADMIN";
-  const isStaff = isAdmin || role === "MODERATOR";
+  const isAdmin = role === "ADMIN" && profile?.status === "ACTIVE";
+  const isStaff = (isAdmin || role === "MODERATOR") && profile?.status === "ACTIVE";
 
   const [term, setTerm] = useState("");
   const [results, setResults] = useState<User[]>([]);
@@ -136,7 +136,11 @@ export default function AdminUserSearchPage() {
         ))}
 
         {results.length === 0 && !loading && term !== "" && (
-          <p className="text-gray-600">No users found.</p>
+          <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+            <div className="text-4xl mb-2">🙍‍♂️</div>
+            <div className="font-semibold mb-1">No users found</div>
+            <div className="mb-2 text-sm">Try a different search term or check your spelling.</div>
+          </div>
         )}
       </div>
     </div>

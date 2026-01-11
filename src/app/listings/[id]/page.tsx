@@ -84,7 +84,7 @@ export default function ListingDetailPage() {
   const { user, profile, loading: authLoading } = useAuth();
   if (authLoading) return null;
   if (!user) return null;
-  if (!profile?.emailVerified) return null;
+  //
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -95,7 +95,7 @@ export default function ListingDetailPage() {
   /* ---------- LISTING ---------- */
 
   // Only create refs and call useDoc when auth/profile are ready
-  const canQuery = !authLoading && user && profile && profile.uid && profile.emailVerified && profile.status === "ACTIVE";
+  const canQuery = !authLoading && user && profile && profile.uid && profile.status === "ACTIVE";
 
   const listingRef = useMemoFirebase(() => {
     if (!canQuery || !firestore || !listingId) return null;
@@ -113,7 +113,7 @@ export default function ListingDetailPage() {
   const storeId = activeListing?.storeId;
   const storeRef = useMemoFirebase(() => {
     if (!canQuery || !firestore || !storeId) return null;
-    return doc(firestore, 'storefronts', storeId);
+    return doc(firestore, 'stores', storeId);
   }, [canQuery, firestore, storeId]);
 
   const { data: store } = useDoc<Storefront>(canQuery ? storeRef : null);
@@ -186,7 +186,6 @@ export default function ListingDetailPage() {
       isOwner,
       isSoldOut,
     });
-
     if (!user) {
       toast({
         title: 'Sign in required',
@@ -196,6 +195,8 @@ export default function ListingDetailPage() {
       router.push('/login');
       return;
     }
+
+
 
     if (!firestore) {
       toast({

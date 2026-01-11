@@ -25,22 +25,27 @@ export default function AdminListingsPage() {
 
   useEffect(() => {
     async function load() {
-      // Strict Firestore read gate
-      const canReadFirestore = isStaff;
-      if (!canReadFirestore) {
+      if (!isStaff || !db) {
         setLoading(false);
         return;
       }
+      // Enforce check at call site
       const snap = await getDocs(collection(db, "listings"));
       const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Listing));
       setItems(data);
       setLoading(false);
     }
     load();
-  }, [isStaff]);
+  }, [isStaff, db]);
 
   async function remove(id: string) {
+    if (!db || !isStaff) {
+      alert("You do not have permission to remove listings.");
+      return;
+    }
     const reason = prompt("Reason for removal:");
+    // Enforce check at call site
+    if (!isStaff) return;
     await updateDoc(doc(db, "listings", id), {
       status: "REMOVED",
       state: "HIDDEN",
@@ -51,6 +56,10 @@ export default function AdminListingsPage() {
   }
 
   async function restore(id: string) {
+    if (!db) {
+      alert("Database unavailable. Could not restore listing.");
+      return;
+    }
     await updateDoc(doc(db, "listings", id), {
       status: "ACTIVE",
       state: "ACTIVE",

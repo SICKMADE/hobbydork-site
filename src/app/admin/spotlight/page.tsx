@@ -90,7 +90,7 @@ export default function AdminSpotlightPage() {
     endAt?: Date,
   ) => {
     if (!firestore || !storeId) return;
-    const storeRef = doc(firestore, 'storefronts', storeId);
+    const storeRef = doc(firestore, 'stores', storeId);
     const update: {
       isSpotlighted: boolean;
       updatedAt: ReturnType<typeof serverTimestamp>;

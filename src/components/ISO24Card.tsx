@@ -31,7 +31,7 @@ export function ISO24Card({ post }: ISO24CardProps) {
   const canReadFirestore =
     !authLoading &&
     !!authUser &&
-    authUser.emailVerified &&
+    //
     profile?.status === "ACTIVE";
 
   // Support multiple possible field names: creatorUid, userUid, ownerUid

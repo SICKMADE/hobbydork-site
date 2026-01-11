@@ -42,7 +42,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function ClientStoreSetup() {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
@@ -54,8 +54,8 @@ export default function ClientStoreSetup() {
   });
 
   async function onSubmit(values: FormValues) {
-    if (!user || !profile || !firestore || !profile.emailVerified || profile.status !== "ACTIVE") return;
-
+    if (!user || !profile || !firestore || profile.status !== "ACTIVE") return;
+    // ...existing code...
     if (!profile.stripeAccountId) {
       toast({
         variant: 'destructive',
@@ -68,7 +68,7 @@ export default function ClientStoreSetup() {
     setLoading(true);
 
     try {
-      const storeRef = doc(firestore, 'storefronts', profile.storeId || user.uid);
+      const storeRef = doc(firestore, 'stores', profile.storeId || user.uid);
 
       await setDoc(storeRef, {
         storeId: storeRef.id,
@@ -83,13 +83,27 @@ export default function ClientStoreSetup() {
         updatedAt: serverTimestamp(),
       });
 
+      // Update user's profile with new storeId
+      const userRef = doc(firestore, 'users', user.uid);
+      await setDoc(userRef, {
+        storeId: storeRef.id,
+        isSeller: true,
+        sellerStatus: 'ACTIVE',
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      // Refresh profile to ensure up-to-date state
+      if (typeof refreshProfile === 'function') {
+        await refreshProfile();
+      }
+
       toast({
         title: 'Store created',
         description: 'Your store is live.',
       });
 
-      router.push(`/store/${storeRef.id}`);
-      router.refresh();
+      // Always redirect to the new store page after creation
+      router.replace(`/store/${storeRef.id}`);
     } catch (err: any) {
       console.error(err);
       toast({

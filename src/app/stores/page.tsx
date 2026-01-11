@@ -28,19 +28,12 @@ type StorefrontDoc = {
 
 export default function StoresPage() {
   const firestore = useFirestore();
-  const { user, profile, loading: authLoading } = useAuth();
-  if (authLoading) return null;
-  if (!user) return null;
-  if (!profile?.emailVerified) return null;
-  const canReadFirestore =
-    !authLoading &&
-    !!user &&
-    profile?.emailVerified &&
-    profile?.status === "ACTIVE";
+  // Public browsing: no user/profile checks
+  const canReadFirestore = !!firestore;
 
   const storesQuery = useMemoFirebase(() => {
-    if (!canReadFirestore || !firestore) return null;
-    const ref = collection(firestore, 'storefronts');
+    if (!canReadFirestore) return null;
+    const ref = collection(firestore, 'stores');
     return query(ref, where('status', '==', 'ACTIVE'), orderBy('createdAt', 'desc'));
   }, [canReadFirestore, firestore]);
 

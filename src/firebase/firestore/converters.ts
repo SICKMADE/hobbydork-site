@@ -1,4 +1,4 @@
-import type { SellerApplication } from '@/app/admin/seller-applications/page';
+import type { SellerApplication } from '@/lib/types';
 
 export const sellerApplicationConverter: FirestoreDataConverter<SellerApplication> = {
   toFirestore(app: SellerApplication) {

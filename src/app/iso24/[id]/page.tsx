@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { db, functions } from "@/firebase/client-provider";
+import { db } from "@/firebase/client-provider";
+import { getFirebase } from "@/firebase/client-init";
 import {
   addDoc,
   collection,
@@ -29,10 +30,11 @@ export default function ISODetailPage() {
   const params = useParams();
   const isoId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
-
-  const [iso, setISO] = useState<any>(null);
+  const isGuest = !user;
+    const isGuest = !user;
+    const needsOverlay = isGuest;
   const [loading, setLoading] = useState(true);
   const [offers, setOffers] = useState<any[]>([]);
   const [offerUrl, setOfferUrl] = useState("");
@@ -43,8 +45,8 @@ export default function ISODetailPage() {
     if (!isoId) return;
 
     async function load() {
-      // Strict Firestore read gate
-      const canReadFirestore = !!user && user.emailVerified;
+      //
+      const canReadFirestore = !!user;
       if (!canReadFirestore) {
         setLoading(false);
         return;
@@ -67,16 +69,8 @@ export default function ISODetailPage() {
   useEffect(() => {
     if (!isoId) return;
     async function loadOffers() {
-      // Strict Firestore read gate
-      const canReadFirestore = !!user && user.emailVerified;
-      if (!canReadFirestore) return;
-      if (!db) return;
-      const ref = collection(db!, "iso24Posts", String(isoId), "comments");
-      const q = query(
-        ref,
-        where("type", "==", "FULFILLMENT"),
-        orderBy("createdAt", "desc")
-      );
+      //
+      const canReadFirestore = !!user;
 
       const snap = await getDocs(q);
       setOffers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -89,6 +83,14 @@ export default function ISODetailPage() {
     if (!user?.uid || !isoId) return;
     if (!offerUrl.trim()) return;
 
+    if (profile?.status && profile.status !== "ACTIVE") {
+      toast({
+        variant: "destructive",
+        title: "Account restricted",
+        description: "Your account is not active.",
+      });
+      return;
+    }
     setSubmittingOffer(true);
     if (!db) return;
     try {
@@ -105,14 +107,6 @@ export default function ISODetailPage() {
       const q = query(
         ref,
         where("type", "==", "FULFILLMENT"),
-        orderBy("createdAt", "desc")
-      );
-      const snap = await getDocs(q);
-      setOffers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      toast({ title: "Link submitted" });
-    } catch (err: any) {
-      toast({
-        variant: "destructive",
         title: "Could not submit",
         description: err?.message || "Try again.",
       });
@@ -125,8 +119,17 @@ export default function ISODetailPage() {
     if (!user?.uid || !isoId) return;
     if (!iso || iso.ownerUid !== user.uid) return;
 
+    if (profile?.status && profile.status !== "ACTIVE") {
+      toast({
+        variant: "destructive",
+        title: "Account restricted",
+        description: "Your account is not active.",
+      });
+      return;
+    }
     setAwarding(true);
     try {
+      const { functions } = getFirebase();
       if (!functions) throw new Error("Cloud Functions not initialized");
       const award = httpsCallable(functions as import("firebase/functions").Functions, "awardIsoTrophy");
       await award({ isoId: String(isoId), commentId: offerId });
@@ -150,6 +153,20 @@ export default function ISODetailPage() {
         <div className="p-6">Not found.</div>
       </AppLayout>
     );
+  if (needsOverlay) {
+    return (
+      <AppLayout>
+        <div className="mx-auto w-full max-w-2xl px-4 py-16 flex flex-col items-center justify-center text-center">
+          <img src="/ISO.png" alt="ISO24" width={120} height={48} className="mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-2">ISO24</h2>
+          <p className="mb-4 text-muted-foreground">Sign in and verify your email to view or interact with ISO24 posts.</p>
+          <Button asChild className="comic-button">
+            <a href="/login">Sign In / Verify</a>
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
   if (loading)
     return (
       <AppLayout>
@@ -247,7 +264,11 @@ export default function ISODetailPage() {
             <div className="space-y-2">
               <div className="text-sm font-medium">Listing links</div>
               {offers.length === 0 && (
-                <div className="text-sm text-muted-foreground">No links yet.</div>
+                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground text-sm">
+                  <div className="text-3xl mb-2">🔗</div>
+                  <div className="font-semibold mb-1">No links yet</div>
+                  <div className="mb-2 text-xs">When someone submits a listing, it will appear here.</div>
+                </div>
               )}
               {offers.map((o) => (
                 <div

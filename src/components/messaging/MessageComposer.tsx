@@ -20,7 +20,9 @@ export default function MessageComposer({
   const [text, setText] = useState("");
 
   async function updateTyping(isTyping: boolean) {
-    if (!conversationId || !user || !user.emailVerified) return;
+    if (!conversationId || !user) {
+      return;
+    }
 
     await setDoc(
       doc(firestore, "conversations", conversationId, "typing", user.uid),

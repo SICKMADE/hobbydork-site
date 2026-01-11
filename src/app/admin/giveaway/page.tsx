@@ -36,6 +36,7 @@ type GiveawayConfig = {
   isActive?: boolean;
   startAt?: { toDate: () => Date };
   endAt?: { toDate: () => Date };
+  createdAt?: any;
 };
 
 function toDateTimeLocalValue(d: Date | null) {
@@ -105,9 +106,9 @@ export default function AdminGiveawayPage() {
   );
 
   React.useEffect(() => {
-   // Strict Firestore read gate
-   const canReadFirestore = isStaff;
-   if (!canReadFirestore) return;
+    // Strict Firestore read gate
+    const canReadFirestore = isStaff;
+    if (!canReadFirestore || !db) return;
 
     const q = query(collection(db, "giveawayEntries"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snap) => {
@@ -120,7 +121,7 @@ export default function AdminGiveawayPage() {
   React.useEffect(() => {
     // Strict Firestore read gate
     const canReadFirestore = isStaff;
-    if (!canReadFirestore) return;
+    if (!canReadFirestore || !db) return;
 
     const unsub = onSnapshot(doc(db, "giveaways", GIVEAWAY_ID), (snap) => {
       if (!snap.exists()) {
@@ -179,6 +180,14 @@ export default function AdminGiveawayPage() {
     try {
       let nextImageUrl = imageUrl.trim();
       if (bannerFile && userData?.uid) {
+        if (!storage) {
+          toast({
+            title: "Storage unavailable",
+            description: "Could not upload image. Please try again later.",
+            variant: "destructive",
+          });
+          return;
+        }
         const safeName = bannerFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const path = `giveawayImages/${userData.uid}/${GIVEAWAY_ID}/${Date.now()}-${safeName}`;
         const storageRef = ref(storage, path);
@@ -186,6 +195,14 @@ export default function AdminGiveawayPage() {
         nextImageUrl = await getDownloadURL(storageRef);
       }
 
+      if (!db) {
+        toast({
+          title: "Database unavailable",
+          description: "Could not save giveaway. Please try again later.",
+          variant: "destructive",
+        });
+        return;
+      }
       await setDoc(
         doc(db, "giveaways", GIVEAWAY_ID),
         {
@@ -213,6 +230,14 @@ export default function AdminGiveawayPage() {
 
   async function setStatus(id: string, status: GiveawayEntry["status"]) {
     try {
+      if (!db) {
+        toast({
+          title: "Database unavailable",
+          description: "Could not update status. Please try again later.",
+          variant: "destructive",
+        });
+        return;
+      }
       await updateDoc(doc(db, "giveawayEntries", id), {
         status,
         reviewedAt: new Date(),

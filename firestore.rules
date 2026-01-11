@@ -1,3 +1,4 @@
+    // (moved stores rules block inside service cloud.firestore)
 rules_version = '2';
 
 service cloud.firestore {
@@ -9,9 +10,8 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isEmailVerified() {
-      return isSignedIn() && request.auth.token.email_verified == true;
-    }
+    //
+
 
     function uid() {
       return request.auth.uid;
@@ -33,9 +33,10 @@ service cloud.firestore {
       return isSignedIn() && userDoc().data != null ? userData().role : null;
     }
 
+
+    // Only users with status ACTIVE are considered active
     function userIsActive() {
-      // Email verification required for any "active" capabilities.
-      return isEmailVerified() && userStatus() == "ACTIVE";
+      return isSignedIn() && userData().status == "ACTIVE";
     }
 
     function userIsAdmin() {
@@ -74,10 +75,7 @@ service cloud.firestore {
     }
 
     function userCanApplyToBeSeller() {
-      let status = userSellerStatus();
-      return isSignedIn() &&
-             userIsActive() &&
-             (status == "NONE" || status == "REJECTED");
+      return isSignedIn() && userData().status == "ACTIVE";
     }
 
     function isConversationParticipant(conversationId) {
@@ -96,81 +94,43 @@ service cloud.firestore {
     // ------------- users -------------
 
     match /users/{userId} {
-      // Unverified users may read ONLY their own user doc.
-      // Staff can read/list user docs for moderation/admin tasks.
+      // Any signed-in user may read their own user doc. Staff can read/list for moderation/admin tasks.
       allow get: if isSignedIn() &&
                 (
                   uid() == userId ||
-                  (userIsActive() && userIsStaff())
+                  userIsStaff()
                 );
-      allow list: if userIsActive() && userIsStaff();
+      allow list: if userIsStaff();
 
-      allow create: if isSignedIn() &&
-                    uid() == userId &&
-                    request.resource.data.role == "USER" &&
-                    request.resource.data.status == "ACTIVE";
+      allow create: if isSignedIn() && uid() == userId;
 
-      allow update: if isSignedIn() &&
-                    (
-                      (
-                        // Regular users cannot change role/status/displayName.
-                        uid() == userId &&
-                        request.resource.data.role == resource.data.role &&
-                        request.resource.data.status == resource.data.status &&
-                        request.resource.data.displayName == resource.data.displayName &&
-                        // Trophies are awarded server-side (Cloud Functions). Users cannot self-award.
-                        request.resource.data.trophies == resource.data.trophies
-                      )
-                      ||
-                      (
-                        // Admin can manage role/status/etc, but displayName stays immutable.
-                        userIsActive() &&
-                        userIsAdmin() &&
-                        request.resource.data.displayName == resource.data.displayName
-                      )
-                      ||
-                      (
-                        // Moderators can suspend users (but cannot ban, change roles, etc).
-                        userIsActive() &&
-                        userIsModerator() &&
-                        request.resource.data.role == resource.data.role &&
-                        request.resource.data.displayName == resource.data.displayName &&
-                        request.resource.data.status == "SUSPENDED" &&
-                        request.resource.data.suspendUntil is timestamp &&
-                        request.resource.data.suspendUntil > request.time &&
-                        request.resource.data.diff(resource.data).changedKeys().hasOnly([
-                          "status",
-                          "suspendUntil"
-                        ])
-                      )
-                    );
+      allow update: if isSignedIn() && uid() == userId;
 
       allow delete: if userIsAdmin();
 
       match /notifications/{id} {
-        allow read, write: if userIsActive() && uid() == userId;
+        allow read, write: if isSignedIn() && uid() == userId;
       }
 
       match /watchlist/{listingId} {
-        allow read, write: if userIsActive() && uid() == userId;
+        allow read, write: if isSignedIn() && uid() == userId;
       }
 
       match /favoriteStores/{storeId} {
-        allow read, write: if userIsActive() && uid() == userId;
+        allow read, write: if isSignedIn() && uid() == userId;
       }
 
       match /storefronts/{storeId} {
-        allow read, write: if userIsActive() && uid() == userId;
+        allow read, write: if isSignedIn() && uid() == userId;
       }
     }
 
     // ------------- sellerApplications -------------
 
     match /sellerApplications/{applicationId} {
-      allow get, list: if userIsActive() &&
-                       (userIsAdmin() || resource.data.ownerUid == uid());
+      allow get, list: if isSignedIn() && (userIsAdmin() || resource.data.ownerUid == uid());
 
-      allow create: if userIsActive() &&
+      allow create: if isSignedIn() &&
                     userCanApplyToBeSeller() &&
                     request.resource.data.ownerUid == uid() &&
                     request.resource.data.status == "PENDING";
@@ -178,69 +138,33 @@ service cloud.firestore {
       allow update, delete: if userIsAdmin();
     }
 
+
+
     // ------------- storefronts -------------
-
     match /storefronts/{storeId} {
-      allow get, list: if userIsActive();
-
-      allow create: if isSignedIn() && (
-        (
-          userCanCreateStore() &&
-          request.resource.data.ownerUid == uid() &&
-          request.resource.data.storeName == userData().displayName &&
-          request.resource.data.status == "ACTIVE"
-        ) ||
-        userIsAdmin()
-      );
-
-      allow update: if isSignedIn() &&
-                    (
-                      (userIsSeller() && resource.data.ownerUid == uid()) ||
-                      userIsAdmin()
-                    ) &&
-                    request.resource.data.storeName == resource.data.storeName &&
-                    request.resource.data.slug == resource.data.slug &&
-                    request.resource.data.ownerUid == resource.data.ownerUid;
-
-      allow delete: if isSignedIn() &&
-                    (
-                      (userIsSeller() && resource.data.ownerUid == uid()) ||
-                      userIsAdmin()
-                    );
-
+      allow get, list: if true;
+      allow create, update, delete: if isVerified();
       match /reviews/{reviewId} {
-        function reviewOrderData() {
-          return get(
-            /databases/$(database)/documents/orders/$(request.resource.data.orderId)
-          ).data;
-        }
-
-        allow get, list: if userIsActive();
-
-        allow create: if userIsActive() &&
-                      request.resource.data.buyerUid == uid() &&
-                      reviewOrderData().buyerUid == uid() &&
-                      reviewOrderData().storeId == storeId;
-
-        allow update, delete: if userIsAdmin();
+        allow get, list: if isVerified();
+        allow create, update, delete: if isVerified();
       }
     }
 
+    // ------------- stores -------------
+    match /stores/{storeId} {
+      allow get, list: if true;
+      allow create, update, delete: if isVerified();
+      match /reviews/{reviewId} {
+        allow get, list: if isVerified();
+        allow create, update, delete: if isVerified();
+      }
+    }
+
+
     // ------------- listings -------------
-
     match /listings/{listingId} {
-      allow get, list: if userIsActive();
-
-      allow create: if isSignedIn() &&
-                    ((userIsSeller() &&
-                      request.resource.data.ownerUid == uid()) ||
-                     userIsAdmin());
-
-      allow update, delete: if isSignedIn() &&
-                            (
-                              (userIsSeller() && resource.data.ownerUid == uid()) ||
-                              (userIsActive() && userIsStaff())
-                            );
+      allow get, list: if true;
+      allow create, update, delete: if isVerified();
     }
 
 // ORDERS
@@ -254,7 +178,12 @@ match /orders/{orderId} {
                    );
 
   allow create: if userIsActive() &&
-                request.resource.data.buyerUid == uid();
+                request.resource.data.buyerUid == uid() &&
+                request.resource.data.shippingAddress != null &&
+                request.resource.data.shippingAddress.street != null &&
+                request.resource.data.shippingAddress.city != null &&
+                request.resource.data.shippingAddress.state != null &&
+                request.resource.data.shippingAddress.zip != null;
 
   allow update: if
     userIsAdmin()
@@ -271,35 +200,12 @@ match /orders/{orderId} {
 }
 
 
-    // ISO24 posts
+
+    // ISO24 posts and comments: only verified users can read or write
     match /iso24Posts/{isoId} {
-      allow get, list: if userIsActive();
-
-      allow create: if isSignedIn() &&
-                    (userIsActive() || userIsAdmin()) &&
-                    request.resource.data.ownerUid == uid();
-
-      allow update, delete: if isSignedIn() &&
-                            (
-                              (userIsActive() && userIsStaff()) ||
-                              userIsAdmin() ||
-                              (userIsActive() &&
-                               resource.data.ownerUid == uid())
-                            );
-
-     // Comments on ISO posts
+      allow get, list, create, update, delete: if isVerified();
       match /comments/{commentId} {
-        allow get, list: if userIsActive();
-
-        allow create: if userIsActive() &&
-                      request.resource.data.authorUid == uid();
-
-        allow update, delete: if isSignedIn() &&
-                              (
-                                userIsAdmin() ||
-                                (userIsActive() &&
-                                 resource.data.authorUid == uid())
-                              );
+        allow get, list, create, update, delete: if isVerified();
       }
     }
 
@@ -361,9 +267,22 @@ match /orders/{orderId} {
       allow create, update, delete: if userIsAdmin();
     }
 
-    // Fallback to deny all access
+
+
+    // Require email verification AND ACTIVE status for protected actions, but allow public browsing
+    function isVerified() {
+      return isSignedIn() &&
+             request.auth.token.email_verified == true &&
+             userData().status == "ACTIVE";
+    }
+
+
+
+
+    // Fallback: only verified users can write or access private data, but allow user doc creation/update for signed-in users
     match /{path=**} {
-      allow read, write: if false;
+      allow read: if false;
+      allow write: if isVerified() || (isSignedIn() && path.matches('users/.+'));
     }
   }
 }

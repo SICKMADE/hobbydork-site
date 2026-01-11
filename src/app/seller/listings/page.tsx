@@ -25,11 +25,9 @@ export default function SellerListings() {
   const [listings, setListings] = useState<Partial<Listing>[]>([]);
 
   useEffect(() => {
-    // Strict Firestore read gate
-    const canReadFirestore = !!user && user.emailVerified && profile?.status === "ACTIVE";
-    if (!canReadFirestore) return;
-
-    if (!db) return;
+    if (!user || profile?.status !== "ACTIVE" || !db) return;
+    // Enforce check at call site
+    if (profile.status !== "ACTIVE") return;
     const q = query(
       collection(db!, "listings"),
       where("ownerUid", "==", user.uid)
@@ -43,8 +41,9 @@ export default function SellerListings() {
   }, [user, profile]);
 
   const setVisibility = async (listingId: string, makePublic: boolean) => {
-    if (!user || !profile?.emailVerified || profile?.status !== "ACTIVE") return;
-    if (!db) return;
+    if (!user || profile?.status !== "ACTIVE" || !db) return;
+    // Enforce check at call site
+    if (profile.status !== "ACTIVE") return;
     try {
       await updateDoc(doc(db!, "listings", listingId), {
         state: makePublic ? "ACTIVE" : "DRAFT",

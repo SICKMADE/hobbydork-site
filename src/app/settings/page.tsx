@@ -38,7 +38,7 @@ const settingsSchema = z.object({
 });
 
 export default function SettingsPage() {
-    const { profile, user } = useAuth();
+    const { profile, user, resendVerification } = useAuth();
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,7 +57,7 @@ export default function SettingsPage() {
     });
 
     async function onSubmit(values: z.infer<typeof settingsSchema>) {
-        if (!user || !firestore || !profile?.emailVerified || profile?.status !== "ACTIVE") return;
+        if (!user || !firestore || profile?.status !== "ACTIVE") return;
         setIsSubmitting(true);
         try {
             const userRef = doc(firestore, 'users', user.uid);
@@ -120,6 +120,7 @@ export default function SettingsPage() {
                         </Card>
                         <Card>
                             <CardHeader>
+                        // ...existing code...
                                 <CardTitle>Shipping Address</CardTitle>
                                 <CardDescription>Your default shipping address will be used for purchases and order fulfillment. You can update it anytime.</CardDescription>
                             </CardHeader>

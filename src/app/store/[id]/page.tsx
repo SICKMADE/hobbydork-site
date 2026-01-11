@@ -140,9 +140,11 @@ export default function StorePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const storeIdParam = params?.id;
-  const { user, profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { user, loading: authLoading } = useAuth();
+  // Allow reading Firestore if user is loaded (auth checked), or if user is present (authed), or if user is null (guest)
+  const canReadFirestore = !authLoading;
 
   // Some parts of the app historically linked to /store/{uid}. If that happens,
   // resolve the seller's storefront doc by ownerUid and use the real storeId.
@@ -152,18 +154,12 @@ export default function StorePage() {
     setEffectiveStoreId(storeIdParam);
   }, [storeIdParam]);
 
-  const canReadFirestore =
-    !authLoading &&
-    !!user &&
-    profile?.emailVerified &&
-    profile?.status === "ACTIVE";
-
   const storeRef = useMemoFirebase(() => {
-    if (!canReadFirestore || !firestore || !effectiveStoreId) return null;
-    return doc(firestore, "storefronts", effectiveStoreId);
-  }, [canReadFirestore, firestore, effectiveStoreId]);
+    if (!firestore || !effectiveStoreId) return null;
+    return doc(firestore, "stores", effectiveStoreId);
+  }, [firestore, effectiveStoreId]);
 
-  const { data: store, isLoading: storeLoading } = useDoc<StoreDoc>(canReadFirestore ? storeRef as any : null);
+  const { data: store, isLoading: storeLoading } = useDoc<StoreDoc>(storeRef as any);
 
   const [newStoreImageFile, setNewStoreImageFile] = React.useState<File | null>(null);
   const [newStoreImagePreviewUrl, setNewStoreImagePreviewUrl] = React.useState<string | null>(null);
@@ -185,7 +181,7 @@ export default function StorePage() {
     (async () => {
       try {
         const q = query(
-          collection(firestore, "storefronts"),
+          collection(firestore, "stores"),
           where("ownerUid", "==", storeIdParam),
           limit(1),
         );
@@ -216,7 +212,7 @@ export default function StorePage() {
 
   const reviewsQuery = useMemoFirebase(() => {
     if (!canReadFirestore || !firestore || !effectiveStoreId) return null;
-    return query(collection(firestore, "storefronts", effectiveStoreId, "reviews"));
+    return query(collection(firestore, "stores", effectiveStoreId, "reviews"));
   }, [canReadFirestore, firestore, effectiveStoreId]);
 
   const { data: reviews, isLoading: reviewsLoading } = useCollection<ReviewDoc>(canReadFirestore ? reviewsQuery as any : null);
@@ -604,8 +600,10 @@ export default function StorePage() {
             )}
 
             {!reviewsLoading && reviewItems.length === 0 && (
-              <div className="text-sm text-muted-foreground">
-                No reviews yet. Completed orders will show up here once buyers leave feedback.
+              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground text-sm">
+                <div className="text-3xl mb-2">⭐</div>
+                <div className="font-semibold mb-1">No reviews yet</div>
+                <div className="mb-2 text-xs">Completed orders will show up here once buyers leave feedback.</div>
               </div>
             )}
 

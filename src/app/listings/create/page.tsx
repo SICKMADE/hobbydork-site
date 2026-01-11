@@ -171,6 +171,7 @@ export default function CreateListingPage() {
     try {
       // 1️⃣ Create listing
       const state = publishNow ? "ACTIVE" : "DRAFT";
+      if (!db) return;
       const listingRef = await addDoc(collection(db, "listings"), {
         title: title.trim(),
         description: description.trim(),
@@ -194,6 +195,10 @@ export default function CreateListingPage() {
       const listingId = listingRef.id;
       const urls: string[] = [];
       // 2️⃣ Upload images
+      if (!storage) {
+        toast({ title: "Storage not available", description: "Image upload is currently unavailable. Please try again later.", variant: "destructive" });
+        return;
+      }
       for (let i = 0; i < images.length; i++) {
         const file = images[i];
         const path = `listingImages/${user.uid}/${listingId}/${file.name}`;
@@ -219,6 +224,7 @@ export default function CreateListingPage() {
         });
       }
       // 3️⃣ Update listing with images
+      if (!db) return;
       await updateDoc(doc(db, "listings", listingId), {
         imageUrls: urls,
         primaryImageUrl: urls[0],

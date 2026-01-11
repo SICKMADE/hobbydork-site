@@ -26,7 +26,7 @@ export default function ReportListingPage({ params }: any) {
   useEffect(() => {
     async function loadListing() {
       // Strict Firestore read gate (replace with your actual canReadFirestore logic)
-      const canReadFirestore = !!user && user.emailVerified;
+      const canReadFirestore = !!user;
       if (!canReadFirestore) return;
       if (!db) return;
       const snap = await getDoc(doc(db!, "listings", listingId));

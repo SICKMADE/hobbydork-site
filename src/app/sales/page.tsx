@@ -72,12 +72,12 @@ export default function SalesPage() {
   const { user, profile, loading: authLoading } = useAuth();
   if (authLoading) return null;
   if (!user) return null;
-  if (!user.emailVerified) return null;
+  if (profile?.status !== "ACTIVE") return null;
   const firestore = useFirestore();
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    profile?.emailVerified &&
+    //
     profile?.status === "ACTIVE";
 
   const salesQuery = useMemoFirebase(() => {

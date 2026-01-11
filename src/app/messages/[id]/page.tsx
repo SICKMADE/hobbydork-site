@@ -35,7 +35,7 @@ export default function ConversationPage() {
   const { user, profile, loading: authLoading } = useAuth();
   if (authLoading) return null;
   if (!user) return null;
-  if (!profile?.emailVerified) return null;
+  //
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
@@ -43,7 +43,7 @@ export default function ConversationPage() {
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    profile?.emailVerified &&
+    //
     profile?.status === "ACTIVE";
 
   const convoRef = useMemoFirebase(() => {

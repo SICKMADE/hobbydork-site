@@ -10,11 +10,12 @@ import {
 /**
  * Sends a message in a conversation.
  */
+export async function sendMessage(
   conversationId: string,
   senderUid: string,
   text: string,
   firestore: Firestore
-) {
+): Promise<string | void> {
   if (!conversationId || !senderUid || !firestore) {
     console.error("sendMessage() missing required args.");
     return;

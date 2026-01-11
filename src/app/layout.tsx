@@ -5,7 +5,6 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { AuthProvider } from '@/hooks/use-auth';
 import SignedOutGate from '@/components/auth/SignedOutGate';
 import EmailVerificationGate from '@/components/auth/EmailVerificationGate';
-
 import { CartProvider } from '@/hooks/use-cart';
 import { VaultProvider } from '@/lib/vault';
 import { Toaster } from '@/components/ui/toaster';

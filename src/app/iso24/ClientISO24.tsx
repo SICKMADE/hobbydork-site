@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/use-auth';
 import Image from 'next/image';
 
 import AppLayout from '@/components/layout/AppLayout';
@@ -17,6 +18,11 @@ import {
 
 import { db } from '@/firebase/client-provider';
 import {
+  ISO24_CATEGORY_OPTIONS,
+  labelIso24Category,
+  normalizeIso24Category,
+} from '@/lib/iso24';
+import {
   collection,
   getDocs,
   orderBy,
@@ -24,12 +30,6 @@ import {
   where,
   Timestamp,
 } from 'firebase/firestore';
-
-import {
-  ISO24_CATEGORY_OPTIONS,
-  labelIso24Category,
-  normalizeIso24Category,
-} from '@/lib/iso24';
 
 type Iso24Post = {
   id: string;
@@ -44,22 +44,21 @@ type Iso24Post = {
 };
 
 export default function ClientISO24() {
+  const { user } = useAuth();
+  const isGuest = !user;
+  const needsOverlay = isGuest;
   const [posts, setPosts] = useState<Iso24Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   useEffect(() => {
+    if (needsOverlay) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
-
     async function load() {
-      // Strict Firestore read gate
-      // TODO: Replace with your actual canReadFirestore logic
-      const canReadFirestore = true; // Set to false if not allowed
-      if (!canReadFirestore) {
-        setLoading(false);
-        return;
-      }
       try {
         if (!db) throw new Error('Firestore not initialized');
         const ref = collection(db, 'iso24Posts');
@@ -68,27 +67,23 @@ export default function ClientISO24() {
           ref,
           where('status', '==', 'OPEN'),
           where('expiresAt', '>', now),
-          // Lowest to highest remaining time (soonest expiring first)
           orderBy('expiresAt', 'asc'),
         );
         const snap = await getDocs(q);
         if (cancelled) return;
         setPosts(snap.docs.map((d) => ({ ...(d.data() as Iso24Post), id: d.id })));
       } catch (e) {
-        // If permissions or indexes are misconfigured, don't silently fail.
         console.error('ISO24 load failed', e);
         if (!cancelled) setPosts([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-
     load();
-
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [needsOverlay]);
 
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 30_000);
@@ -107,6 +102,20 @@ export default function ClientISO24() {
     return normalizeIso24Category(p.category) === categoryFilter;
   });
 
+  if (needsOverlay) {
+    return (
+      <AppLayout>
+        <div className="mx-auto w-full max-w-2xl px-4 py-16 flex flex-col items-center justify-center text-center">
+          <Image src="/ISO.png" alt="ISO24" width={120} height={48} className="mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-2">ISO24</h2>
+          <p className="mb-4 text-muted-foreground">Sign in to browse or post ISO24 requests.</p>
+          <Button asChild className="comic-button">
+            <Link href="/login">Sign In</Link>
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
   return (
     <AppLayout>
       <div className="mx-auto w-full max-w-5xl px-4 py-6 space-y-4">
@@ -132,7 +141,6 @@ export default function ClientISO24() {
             </Link>
           </div>
         </div>
-
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border-2 border-black bg-card/70 px-4 py-3 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
           <div className="text-sm font-semibold">Browse by category</div>
           <div className="w-full sm:w-64">
@@ -151,19 +159,15 @@ export default function ClientISO24() {
             </Select>
           </div>
         </div>
-
         {loading && <div className="text-sm text-muted-foreground">Loading ISO posts…</div>}
-
         {!loading && posts.length === 0 && (
           <div className="text-sm text-muted-foreground">No open ISO posts right now.</div>
         )}
-
         {!loading && posts.length > 0 && visiblePosts.length === 0 && (
           <div className="text-sm text-muted-foreground">
             No open ISO posts in {labelIso24Category(categoryFilter)}.
           </div>
         )}
-
         <div className="space-y-4">
           {visiblePosts.map((post) => (
             <Link key={post.id} href={`/iso24/${post.id}`} className="block">

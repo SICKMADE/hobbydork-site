@@ -62,7 +62,7 @@ export default function ClientNewMessage() {
   const { user, profile, loading: authLoading } = useAuth();
   if (authLoading) return null;
   if (!user) return null;
-  if (!profile?.emailVerified) return null;
+  //
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -80,7 +80,7 @@ export default function ClientNewMessage() {
 
   // Decide who we are messaging
   useEffect(() => {
-    if (!firestore || !user || !profile?.emailVerified || profile?.status !== "ACTIVE") return;
+    if (!firestore || !user || profile?.status !== "ACTIVE") return;
 
     if (recipientUidParam) {
       setTargetUid(recipientUidParam);
@@ -129,7 +129,7 @@ export default function ClientNewMessage() {
 
   // Load target user's profile for name/avatar
   useEffect(() => {
-    if (!firestore || !user || !profile?.emailVerified || profile?.status !== "ACTIVE" || !targetUid) {
+    if (!firestore || !user || profile?.status !== "ACTIVE" || !targetUid) {
       setTargetProfile(null);
       return;
     }
@@ -170,7 +170,7 @@ export default function ClientNewMessage() {
   const targetAvatar = resolveAvatarUrl(targetProfile?.avatar, targetUid);
 
   const handleSend = async () => {
-    if (!firestore || !user || !profile?.emailVerified || profile?.status !== "ACTIVE" || !targetUid) return;
+    if (!firestore || !user || profile?.status !== "ACTIVE" || !targetUid) return;
 
     const trimmed = text.trim();
     if (!trimmed) return;

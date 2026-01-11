@@ -29,7 +29,7 @@ export default function OrderDetail({ params }: any) {
 
   useEffect(() => {
     // Strict Firestore read gate
-    const canReadFirestore = !!user && user.emailVerified;
+    const canReadFirestore = !!user;
     if (!canReadFirestore) return;
     if (!db) return;
     const ref = doc(db!, "orders", orderId);

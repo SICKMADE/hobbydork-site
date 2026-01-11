@@ -36,13 +36,13 @@ export default function ClientWatchlist() {
   const { user, profile, loading: authLoading } = useAuth();
   if (authLoading) return null;
   if (!user) return null;
-  if (!user.emailVerified) return null;
+    if (profile?.status !== "ACTIVE") return null;
   const firestore = useFirestore();
-  const canReadFirestore =
-    !authLoading &&
-    !!user &&
-    profile?.emailVerified &&
-    profile?.status === "ACTIVE";
+    const canReadFirestore =
+      !authLoading &&
+      !!user &&
+      //
+      profile?.status === "ACTIVE";
 
   const watchlistQuery = useMemoFirebase(() => {
     if (!canReadFirestore || !firestore || !profile?.uid) return null;
@@ -64,7 +64,11 @@ export default function ClientWatchlist() {
           <PlaceholderContent
             title="Your Watchlist is Empty"
             description="Add items to your watchlist to keep track of them here."
-          />
+          >
+            <div className="mt-4 flex justify-center">
+              <a href="/listings" className="comic-button px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 transition">Browse Listings</a>
+            </div>
+          </PlaceholderContent>
         )}
         {!isLoading && watchlistItems && watchlistItems.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

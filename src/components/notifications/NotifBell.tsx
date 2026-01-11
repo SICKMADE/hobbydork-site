@@ -11,34 +11,41 @@ export default function NotifBell() {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    // HARD GATES
-    if (loading) return;
-    if (!user?.uid) return;
-    if (!user.emailVerified) return;
-    if (!db) return;
+    if (loading || !user?.uid || !db) return;
 
     const notifPath = `/users/${user.uid}/notifications`;
     console.log('[NotifBell] Querying notifications for user:', user.uid, 'Path:', notifPath);
 
     const qNotif = query(
-      collection(db!, "users", user.uid, "notifications"),
+      collection(db, "users", user.uid, "notifications"),
       where("read", "==", false)
     );
 
-    const unsub = onSnapshot(
-      qNotif,
-      (snap) => {
-        setCount(snap.size);
-      },
-      (err) => {
-        console.error('[NotifBell] Firestore onSnapshot error:', err);
+    let unsub: (() => void) | undefined;
+    try {
+      unsub = onSnapshot(
+        qNotif,
+        (snap) => {
+          setCount(snap.size);
+        },
+        (err) => {
+          console.error('[NotifBell] Firestore onSnapshot error:', err);
+        }
+      );
+    } catch (e) {
+      console.error('[NotifBell] Firestore onSnapshot setup error:', e);
+    }
+
+    return () => {
+      if (typeof unsub === 'function') {
+        try { unsub(); } catch {}
       }
-    );
+    };
+  }, [user, loading, db]);
 
-    return () => unsub();
-  }, [user, loading]);
-
-  if (!user || !user.emailVerified) return null;
+  if (!user) {
+    return null;
+  }
 
   return (
     <Link href="/notifications" className="relative">

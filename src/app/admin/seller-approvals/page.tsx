@@ -30,6 +30,10 @@ export default function SellerApprovalsAdmin() {
 
   useEffect(() => {
     // Live updates with onSnapshot
+    if (!db) {
+      setLoading(false);
+      return;
+    }
     const q = query(collection(db, "sellerApprovals"), orderBy("approvedAt", "desc"));
     const unsub = onSnapshot(q, snap => {
       setApprovals(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -55,11 +59,19 @@ export default function SellerApprovalsAdmin() {
 
   // Mark as reviewed
   const markReviewed = async (id: string) => {
+    if (!db) {
+      alert("Database unavailable. Could not mark as reviewed.");
+      return;
+    }
     await updateDoc(doc(db, "sellerApprovals", id), { reviewed: true });
   };
 
   // Save admin note
   const saveNote = async (id: string) => {
+    if (!db) {
+      alert("Database unavailable. Could not save note.");
+      return;
+    }
     await updateDoc(doc(db, "sellerApprovals", id), { adminNote: noteEdit[id] || "" });
     setNoteEdit(e => {
       const copy = { ...e };

@@ -195,9 +195,11 @@ export default function CartPage() {
                 </form>
               </Form>
             ) : items.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">Your cart is empty.</p>
-                <Button asChild><Link href="/search">Shop</Link></Button>
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="text-4xl mb-2">🛒</div>
+                <div className="font-semibold mb-1">Your cart is empty</div>
+                <div className="text-muted-foreground mb-4">Add items to your cart to start shopping.</div>
+                <Button asChild><Link href="/search">Browse Listings</Link></Button>
               </div>
             ) : (
               <div className="space-y-6">

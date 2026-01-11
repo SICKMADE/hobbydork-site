@@ -71,13 +71,13 @@ export default function OnboardingSuccess() {
           You now have access to all seller features.<br />
           Welcome to the Hobbydork marketplace!
         </p>
-        <Link
-          href="/seller/dashboard"
-          className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-lg px-8 py-3 font-bold rounded-full shadow-lg border-4 border-b-8 border-r-8 border-gray-700 active:border-b-4 active:border-r-4 active:translate-y-1 transition-all duration-100 select-none focus:outline-none focus:ring-2 focus:ring-red-400 w-full sm:w-auto"
-          aria-label="Go to Seller Dashboard"
-        >
-          Go to Seller Dashboard
-        </Link>
+            <Link
+              href="/seller/dashboard"
+              className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-lg px-8 py-3 font-bold rounded-full shadow-lg border-4 border-b-8 border-r-8 border-gray-700 active:border-b-4 active:border-r-4 active:translate-y-1 transition-all duration-100 select-none focus:outline-none focus:ring-2 focus:ring-red-400 w-full sm:w-auto"
+              aria-label="Go to Seller Dashboard"
+            >
+              Go to Seller Dashboard
+            </Link>
       </div>
     </div>
   );

@@ -18,8 +18,8 @@ export default function SellerOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    // Strict Firestore read gate
-    const canReadFirestore = !!user && user.emailVerified && profile?.status === "ACTIVE";
+    // Updated Firestore read gate: require only ACTIVE status
+    const canReadFirestore = !!user && profile?.status === "ACTIVE";
     if (!canReadFirestore) return;
 
     if (!db) return;

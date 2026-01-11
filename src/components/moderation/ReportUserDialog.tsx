@@ -69,7 +69,7 @@ export function ReportUserDialog({
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    user.emailVerified &&
+    //
     profile?.status === "ACTIVE";
 
   const [reason, setReason] = useState<Reason>('Scam / fraud');

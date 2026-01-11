@@ -61,7 +61,7 @@ export default function FinalizeSellerPage() {
 
   // --- Responsive, accessible, and commented UI ---
   return (
-    <div className="min-h-screen h-screen flex flex-col items-center justify-center p-4 bg-[url('/grid.avg')] bg-cover bg-center">
+    <div className="min-h-screen h-screen flex flex-col items-center justify-center p-4 bg-[url('/grid.svg')] bg-cover bg-center">
       {/* Loading spinner for initial load */}
       {showSpinner && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">

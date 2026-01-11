@@ -64,7 +64,12 @@ export default function PayoutsPage() {
         <h2 className="text-xl font-semibold mb-3">Recent Payouts</h2>
 
         {payouts.length === 0 ? (
-          <p className="text-gray-600">No payouts yet.</p>
+          <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+            <div className="text-4xl mb-2">💸</div>
+            <div className="font-semibold mb-1">No payouts yet</div>
+            <div className="mb-2 text-sm">Once you receive payments, your payouts will show up here.</div>
+            <a href="/store/dashboard" className="comic-button px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 transition">Go to Dashboard</a>
+          </div>
         ) : (
           <div className="space-y-3">
             {payouts.map((p) => (
@@ -72,10 +77,7 @@ export default function PayoutsPage() {
                 <p className="font-semibold">Amount: ${p.amount / 100}</p>
                 <p>Status: {p.status}</p>
                 <p>
-                  Arrival:{" "}
-                  {p.arrival_date
-                    ? new Date(p.arrival_date * 1000).toLocaleDateString()
-                    : "—"}
+                  Arrival: {p.arrival_date ? new Date(p.arrival_date * 1000).toLocaleDateString() : "—"}
                 </p>
               </div>
             ))}

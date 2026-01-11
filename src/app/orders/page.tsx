@@ -12,7 +12,7 @@ export default function BuyerOrdersPage() {
 
   useEffect(() => {
     // Strict Firestore read gate
-    const canReadFirestore = !!user && user.emailVerified;
+    const canReadFirestore = !!user;
     if (!canReadFirestore) return;
 
     if (!db) return;

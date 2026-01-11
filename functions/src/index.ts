@@ -7,20 +7,7 @@ const db = admin.firestore();
 
 /* ================= HELPERS ================= */
 
-function requireVerified(request: any) {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Auth required");
-  }
 
-  if (request.auth.token.email_verified !== true) {
-    throw new HttpsError(
-      "failed-precondition",
-      "Email verification required"
-    );
-  }
-
-  return request.auth.uid;
-}
 
 /* ================= STRIPE ================= */
 
@@ -36,8 +23,11 @@ export const createStripeOnboarding = onCall(
     secrets: ["STRIPE_SECRET", "APP_BASE_URL"],
   },
   async (request) => {
-    const uid = requireVerified(request);
-
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Auth required");
+    if (!request.auth || request.auth.token.email_verified !== true) {
+      throw new HttpsError("failed-precondition", "Email verification required");
+    }
     const userRef = db.collection("users").doc(uid);
     const snap = await userRef.get();
     const user = snap.data();
@@ -89,7 +79,11 @@ export const finalizeSeller = onCall(
     secrets: ["STRIPE_SECRET"],
   },
   async (request) => {
-    const uid = requireVerified(request);
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Auth required");
+    if (!request.auth || request.auth.token.email_verified !== true) {
+      throw new HttpsError("failed-precondition", "Email verification required");
+    }
 
     const userRef = db.collection("users").doc(uid);
     const snap = await userRef.get();
@@ -113,12 +107,34 @@ export const finalizeSeller = onCall(
       );
     }
 
+    // Generate storeId from displayName (slugify)
+    const displayName = user.ownerDisplayName || user.displayName || "";
+    const storeId = displayName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    // Create store document
+    const storeRef = db.collection("stores").doc(storeId);
+    const storeSnap = await storeRef.get();
+    if (!storeSnap.exists) {
+      await storeRef.set({
+        id: storeId,
+        ownerId: uid,
+        displayName,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        avatar: user.photoURL || "/hobbydork-head.png",
+        status: "ACTIVE",
+      });
+    }
+
+    // Update user doc with storeId and seller flags
     await userRef.update({
       isSeller: true,
       sellerStatus: "APPROVED",
-      stripeOnboarded: true, // Set true when Stripe onboarding is complete
-      stripeTermsAgreed: true, // Set true when Stripe onboarding is complete
-      // storeId: "your-store-id", // <-- Set this if you have it at this point
+      stripeOnboarded: true,
+      stripeTermsAgreed: true,
+      storeId,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -126,11 +142,11 @@ export const finalizeSeller = onCall(
     await db.collection("sellerApprovals").add({
       uid,
       email: user.email,
-      displayName: user.ownerDisplayName || user.displayName || "",
+      displayName,
       approvedAt: admin.firestore.FieldValue.serverTimestamp(),
       stripeAccountId: user.stripeAccountId,
     });
 
-    return { ok: true };
+    return { ok: true, storeId };
   }
 );

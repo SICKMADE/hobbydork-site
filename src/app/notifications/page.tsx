@@ -21,12 +21,14 @@ export default function NotificationsPage() {
   const canReadFirestore =
     !loading &&
     !!user &&
-    user.emailVerified &&
+    //
     profile?.status === "ACTIVE";
 
   useEffect(() => {
-    if (!canReadFirestore) return;
-    if (!db) return;
+    if (!canReadFirestore || !db) return;
+
+    // Enforce check at call site
+    if (!user || profile?.status !== "ACTIVE") return;
 
     const q = query(
       collection(db, "users", user.uid, "notifications"),
@@ -46,6 +48,8 @@ export default function NotificationsPage() {
         // mark unread as read
         data.forEach((n) => {
           if (!n.read) {
+            // Enforce check at call site
+            if (!user || profile?.status !== "ACTIVE") return;
             updateDoc(
               doc(db!, "users", user.uid, "notifications", n.id),
               { read: true }
@@ -57,17 +61,17 @@ export default function NotificationsPage() {
         if (err && err.code === "permission-denied") {
           setFirestoreError("You do not have permission to view notifications.");
         } else {
-          setFirestoreError("An error occurred loading notifications.");
+          setFirestoreError("An error occurred while loading notifications.");
         }
       }
     );
 
     return () => unsub();
-  }, [canReadFirestore, user]);
+  }, [canReadFirestore, db, user, profile]);
 
   if (loading) return null;
   if (!user) return <div className="p-6">Sign in required.</div>;
-  if (!user.emailVerified)
+  //
     return <div className="p-6">Verify your email to view notifications.</div>;
   if (firestoreError)
     return <div className="p-6 text-red-600">{firestoreError}</div>;
@@ -77,7 +81,12 @@ export default function NotificationsPage() {
       <h1 className="text-2xl font-bold">Notifications</h1>
 
       {items.length === 0 ? (
-        <p>No notifications.</p>
+        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground text-center">
+          <div className="text-4xl mb-2">🔔</div>
+          <div className="font-semibold mb-1">No notifications yet</div>
+          <div className="text-sm mb-4">You'll see updates and alerts here as you use the app.</div>
+          <a href="/" className="comic-button px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 transition">Explore the App</a>
+        </div>
       ) : (
         <div className="space-y-3">
           {items.map((n) => (

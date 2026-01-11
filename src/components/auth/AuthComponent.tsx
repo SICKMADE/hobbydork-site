@@ -3,7 +3,7 @@
 import React from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '@/firebase/client-provider';
+import { auth } from '@/firebase/client';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -43,19 +43,6 @@ export default function AuthComponent({
   const [tab, setTab] = React.useState<'login' | 'signup'>(initialTab);
   const [resetEmail, setResetEmail] = React.useState('');
   const [resetSent, setResetSent] = React.useState(false);
-  const [resetError, setResetError] = React.useState<string | null>(null);
-  async function onForgotPassword(e: React.FormEvent) {
-    e.preventDefault();
-    setResetSent(false);
-    setResetError(null);
-    try {
-      if (!auth) throw new Error('Auth is not initialized.');
-      await sendPasswordResetEmail(auth as import('firebase/auth').Auth, resetEmail);
-      setResetSent(true);
-    } catch (err: any) {
-      setResetError(err?.message || 'Could not send reset email.');
-    }
-  }
 
   const loginForm = useForm({
     resolver: zodResolver(loginSchema),
@@ -74,6 +61,7 @@ export default function AuthComponent({
 
   async function onLogin(values: z.infer<typeof loginSchema>) {
     try {
+      if (!signIn) throw new Error('Sign in is not available.');
       await signIn(values.email, values.password);
       router.replace('/');
     } catch (e: any) {
@@ -87,6 +75,7 @@ export default function AuthComponent({
 
   async function onSignup(values: z.infer<typeof signupSchema>) {
     try {
+      if (!signUp) throw new Error('Sign up is not available.');
       await signUp(values.email, values.password, values.displayName);
       toast({
         title: 'Verify your email',
@@ -97,6 +86,25 @@ export default function AuthComponent({
       toast({
         title: 'Signup failed',
         description: e?.message ?? 'Could not create account',
+        variant: 'destructive',
+      });
+    }
+  }
+
+  async function onResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setResetSent(false);
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      setResetSent(true);
+      toast({
+        title: 'Password reset sent',
+        description: 'Check your email for a reset link.',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Reset failed',
+        description: err?.message || 'Could not send reset email.',
         variant: 'destructive',
       });
     }
@@ -146,19 +154,13 @@ export default function AuthComponent({
               </form>
             </Form>
             <div className="mt-4 text-center">
-              <form onSubmit={onForgotPassword} className="flex flex-col items-center gap-2">
-                <Input
-                  type="email"
-                  placeholder="Enter your email to reset password"
-                  value={resetEmail}
-                  onChange={e => setResetEmail(e.target.value)}
-                  className="max-w-xs"
-                  required
-                />
-                <Button type="submit" variant="link" className="p-0 h-auto text-xs">Forgot password?</Button>
-              </form>
-              {resetSent && <div className="text-green-600 text-xs mt-1">Password reset email sent.</div>}
-              {resetError && <div className="text-red-600 text-xs mt-1">{resetError}</div>}
+              <button
+                className="text-xs text-blue-700 underline"
+                onClick={() => setTab('reset' as any)}
+                type="button"
+              >
+                Forgot password?
+              </button>
             </div>
           </TabsContent>
 
@@ -218,6 +220,33 @@ export default function AuthComponent({
               <Link href="/terms" className="underline">Terms</Link> and{' '}
               <Link href="/privacy" className="underline">Privacy Policy</Link>.
             </p>
+          </TabsContent>
+
+          <TabsContent value="reset">
+            <form onSubmit={onResetPassword} className="space-y-4">
+              <div>
+                <FormLabel>Email</FormLabel>
+                <Input
+                  type="email"
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <Button className="w-full" type="submit">Send password reset</Button>
+              {resetSent && (
+                <div className="text-green-700 text-xs mt-2">Reset email sent!</div>
+              )}
+            </form>
+            <div className="mt-4 text-center">
+              <button
+                className="text-xs text-blue-700 underline"
+                onClick={() => setTab('login')}
+                type="button"
+              >
+                Back to login
+              </button>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

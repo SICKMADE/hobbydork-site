@@ -33,7 +33,7 @@ export default function ReviewDialog({ order, open, onOpenChange }: ReviewDialog
     const canReadFirestore =
         !authLoading &&
         !!profile &&
-        profile.emailVerified &&
+        //
         profile.status === "ACTIVE";
     const [hoverRating, setHoverRating] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,8 +104,8 @@ export default function ReviewDialog({ order, open, onOpenChange }: ReviewDialog
             form.reset();
 
         } catch (error: any) {
-            console.error('Error submitting review:', error);
-            toast({ variant: 'destructive', title: 'Submission Failed', description: error.message || 'Could not submit your review.' });
+            // No technical details in user-facing toast
+            toast({ variant: 'destructive', title: 'Could not submit review', description: 'Something went wrong. Please try again. If the problem continues, contact support.' });
         } finally {
             setIsSubmitting(false);
         }

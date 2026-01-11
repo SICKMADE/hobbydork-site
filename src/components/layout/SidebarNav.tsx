@@ -59,12 +59,17 @@ const RedLineSeparator = () => (
   <div className="w-full h-[2px] bg-gradient-to-r from-red-900 via-red-600 to-red-900 rounded-full mb-2" />
 );
 
-export default function SidebarNav() {
+interface SidebarNavProps {}
+
+export default function SidebarNav({}: SidebarNavProps) {
   const { user, profile, logout } = useAuth();
   const { isMobile, setOpen } = useSidebar();
   const router = useRouter();
   const pathname = usePathname();
   const firestore = useFirestore();
+
+  // User is considered verified if logged in and emailVerified is true
+  const isVerified = !!user && !!profile?.emailVerified;
 
   const displayName = profile?.displayName || user?.email || 'My account';
   const avatarUrl = resolveAvatarUrl(profile?.avatar, user?.uid || user?.email || displayName);
@@ -84,31 +89,27 @@ export default function SidebarNav() {
 
 
   const mainMenuItems = [
-    { href: '/', label: 'Home', icon: Home },
-    { href: '/search', label: 'Browse', icon: Search },
-    { href: '/stores', label: 'Stores', icon: Users },
-    { href: '/hobbydork-store', label: 'HobbyDork Store', icon: Store },
-    { href: '/iso24', label: 'ISO24', icon: Newspaper },
-    { href: '/chat', label: 'Community', icon: MessageSquare },
-    { href: '/giveaway', label: 'Giveaway', icon: Star },
+    { href: '/', label: 'Home', icon: Home, protected: false },
+    { href: '/search', label: 'Browse', icon: Search, protected: false },
+    { href: '/stores', label: 'Stores', icon: Users, protected: false },
+    { href: '/hobbydork-store', label: 'HobbyDork Store', icon: Store, protected: false },
+    { href: '/iso24', label: 'ISO24', icon: Newspaper, protected: false },
+    { href: '/chat', label: 'Community', icon: MessageSquare, protected: false },
+    { href: '/giveaway', label: 'Giveaway', icon: Star, protected: false },
   ];
 
-  const personalMenuItems = [
-    { href: '/profile', label: 'Profile', icon: User },
-    { href: '/activity', label: 'My Activity', icon: History },
-    { href: '/watchlist', label: 'Watchlist', icon: Heart },
-    { href: '/favorites', label: 'Favorite Stores', icon: Store },
-    { href: '/cart', label: 'Cart', icon: ShoppingCart },
-    { href: '/messages', label: 'Messages', icon: MessageSquare },
-  ];
+  // Only show dashboard links if user is present
+  const personalMenuItems = user
+    ? [{ href: '/buyer/dashboard', label: 'Buyer Dashboard', icon: Home, protected: true }]
+    : [];
 
-  const sellerMenuItems = [
-    { href: '/seller/dashboard', label: 'Seller Dashboard', icon: Store },
-  ];
+  const sellerMenuItems = user && profile?.isSeller
+    ? [{ href: '/seller/dashboard', label: 'Seller Dashboard', icon: Store, protected: true }]
+    : [];
 
-  const adminMenuItems = [
-    { href: '/admin', label: 'Admin Dashboard', icon: Star },
-  ];
+  const adminMenuItems = isVerified && profile?.role === 'ADMIN'
+    ? [{ href: '/admin', label: 'Admin Dashboard', icon: Star, protected: true }]
+    : [];
 
   const helpMenuItems = [
     { href: '/help', label: 'Help & FAQ', icon: HelpCircle },
@@ -129,12 +130,14 @@ export default function SidebarNav() {
               {mainMenuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
+                const isDisabled = false;
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      onClick={() => navigate(item.href)}
-                      className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
+                      onClick={() => !isDisabled && navigate(item.href)}
+                      className={`justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md ${isDisabled ? 'opacity-50 pointer-events-none' : ''}`}
+                      disabled={isDisabled}
                     >
                       <Icon className="h-5 w-5" />
                       <span className="truncate">{item.label}</span>
@@ -145,83 +148,68 @@ export default function SidebarNav() {
             </SidebarMenu>
           </div>
 
-          {/* My Stuff */}
-          <div
-          >
-            <SidebarMenu>
-              <RedLineSeparator />
-              <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                My Stuff
-              </p>
-              {personalMenuItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => navigate(item.href)}
-                      className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-              {/* If not a seller, show apply button */}
-              {!profile?.isSeller && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={pathname === '/become-seller'}
-                    onClick={() => navigate('/become-seller')}
-                    className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md text-green-700 focus-visible:ring-2 focus-visible:ring-green-500"
-                    aria-label="Apply to Become a Seller"
-                  >
-                    <span>Apply to Become a Seller</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-            </SidebarMenu>
-          </div>
-
-          {/* My Store (seller only) */}
-          {profile?.isSeller && (
-            <div
-            >
+          {/* My Stuff (only for verified users) */}
+          {isVerified && (
+            <div>
               <SidebarMenu>
                 <RedLineSeparator />
                 <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  My Store
+                  My Stuff
                 </p>
-
-                {/* Direct link to public store page */}
-                {profile?.storeId && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      isActive={pathname.startsWith(
-                        `/store/${profile.storeId}`,
-                      )}
-                      onClick={() =>
-                        navigate(`/store/${profile.storeId}`)
-                      }
-                      className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
-                    >
-                      <Store className="h-5 w-5" />
-                      <span>My Store</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-
-                {sellerMenuItems.map((item) => {
+                {personalMenuItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href;
+                  const isDisabled = false;
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         isActive={isActive}
-                        onClick={() => navigate(item.href)}
-                        className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
+                        onClick={() => !isDisabled && navigate(item.href)}
+                        className={`justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md ${isDisabled ? 'opacity-50 pointer-events-none' : ''}`}
+                        disabled={isDisabled}
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+                {/* If not a seller, show apply button */}
+                {!profile?.isSeller && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={pathname === '/become-seller'}
+                      onClick={() => navigate('/become-seller')}
+                      className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md text-green-700 focus-visible:ring-2 focus-visible:ring-green-500"
+                      aria-label="Apply to Become a Seller"
+                    >
+                      <span>Apply to Become a Seller</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+            </div>
+          )}
+
+          {/* Seller Dashboard entry only (seller only, verified only) */}
+          {isVerified && profile?.isSeller && (
+            <div>
+              <SidebarMenu>
+                <RedLineSeparator />
+                <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  Seller
+                </p>
+                {sellerMenuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href;
+                  const isDisabled = false;
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        onClick={() => !isDisabled && navigate(item.href)}
+                        className={`justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md ${isDisabled ? 'opacity-50 pointer-events-none' : ''}`}
+                        disabled={isDisabled}
                       >
                         <Icon className="h-5 w-5" />
                         <span>{item.label}</span>
@@ -233,10 +221,9 @@ export default function SidebarNav() {
             </div>
           )}
 
-          {/* Admin */}
-          {profile?.role === 'ADMIN' && (
-            <div
-            >
+          {/* Admin (verified only) */}
+          {isVerified && profile?.role === 'ADMIN' && (
+            <div>
               <SidebarMenu>
                 <RedLineSeparator />
                 <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -245,12 +232,14 @@ export default function SidebarNav() {
                 {adminMenuItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href;
+                  const isDisabled = false;
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         isActive={isActive}
-                        onClick={() => navigate(item.href)}
-                        className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
+                        onClick={() => !isDisabled && navigate(item.href)}
+                        className={`justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md ${isDisabled ? 'opacity-50 pointer-events-none' : ''}`}
+                        disabled={isDisabled}
                       >
                         <Icon className="h-5 w-5" />
                         <span>{item.label}</span>

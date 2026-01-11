@@ -50,6 +50,7 @@ export default function SellerDashboardPage() {
 
     async function load() {
       try {
+        if (!db) return;
         // Load seller account
         const sellerRef = doc(db, "users", user.uid);
         const sellerSnap = await getDoc(sellerRef);
@@ -65,7 +66,7 @@ export default function SellerDashboardPage() {
           }
 
           if (sellerData.storeId) {
-            const storeRef = doc(db, "storefronts", sellerData.storeId);
+            const storeRef = doc(db, "stores", sellerData.storeId);
             const storeSnap = await getDoc(storeRef);
             if (storeSnap.exists()) {
               setStorefront({ id: storeSnap.id, ...storeSnap.data() });
@@ -128,7 +129,7 @@ export default function SellerDashboardPage() {
         });
 
       } catch (err) {
-        toast({ title: "Error", description: err?.message ?? "Failed to load seller dashboard." });
+        toast({ title: "Could not load dashboard", description: "Something went wrong. Please try again. If the problem continues, contact support." });
       } finally {
         setLoading(false);
       }
@@ -153,14 +154,15 @@ export default function SellerDashboardPage() {
       await uploadBytes(storageRef, newStoreImageFile);
       const url = await getDownloadURL(storageRef);
 
-      const storeRef = doc(db, "storefronts", seller.storeId);
+      if (!db) return;
+      const storeRef = doc(db, "stores", seller.storeId);
       await updateDoc(storeRef, { storeImageUrl: url, updatedAt: serverTimestamp() });
 
       setStorefront((prev) => (prev ? { ...prev, storeImageUrl: url } : prev));
       setNewStoreImageFile(null);
       toast({ title: "Store image updated" });
     } catch (err) {
-      toast({ title: "Upload failed", description: err?.message ?? "Failed to upload store image.", variant: "destructive" });
+      toast({ title: "Could not upload image", description: "Something went wrong. Please try again. If the problem continues, contact support.", variant: "destructive" });
     } finally {
       setUploadingStoreImage(false);
     }
@@ -176,14 +178,14 @@ export default function SellerDashboardPage() {
         window.location.href = result.data.url;
       } else {
         toast({
-          title: "Stripe Error",
-          description: "Unable to start onboarding.",
+          title: "Could not start Stripe onboarding",
+          description: "Something went wrong. Please try again. If the problem continues, contact support.",
         });
       }
     } catch (error) {
       toast({
-        title: "Stripe Error",
-        description: error.message || "Unable to start onboarding.",
+        title: "Could not start Stripe onboarding",
+        description: "Something went wrong. Please try again. If the problem continues, contact support.",
       });
     }
   }
@@ -191,7 +193,14 @@ export default function SellerDashboardPage() {
   if (!user) {
     return (
       <AppLayout>
-        <div className="p-6">You must sign in to view the dashboard.</div>
+        <div className="p-6 flex flex-col items-center justify-center min-h-[40vh] text-center">
+          <div className="text-4xl mb-2">🔒</div>
+          <div className="font-semibold text-lg mb-2">Sign in to view your dashboard</div>
+          <div className="text-muted-foreground mb-4">You must sign in to view your seller dashboard.</div>
+          <Button asChild className="comic-button">
+            <a href="/login">Sign In</a>
+          </Button>
+        </div>
       </AppLayout>
     );
   }
@@ -199,7 +208,10 @@ export default function SellerDashboardPage() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="p-6">Loading dashboard…</div>
+        <div className="p-6 flex flex-col items-center justify-center min-h-[40vh] text-center">
+          <div className="animate-spin text-3xl mb-2">⏳</div>
+          <div className="font-semibold text-lg mb-2">Loading your dashboard…</div>
+        </div>
       </AppLayout>
     );
   }
@@ -219,12 +231,18 @@ export default function SellerDashboardPage() {
           </CardHeader>
           <CardContent>
             {stripeStatus === "NONE" ? (
-              <div className="space-y-2">
-                <div className="text-sm text-destructive">You must connect Stripe to receive payments.</div>
+              <div className="space-y-2 flex flex-col items-start">
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <span className="text-xl">⚠️</span>
+                  <span>You must connect Stripe to receive payments.</span>
+                </div>
                 <Button onClick={startStripeOnboarding} className="comic-button">Connect Stripe</Button>
               </div>
             ) : (
-              <div className="text-sm">Stripe account connected.</div>
+              <div className="flex items-center gap-2 text-sm text-success-foreground">
+                <span className="text-xl">✅</span>
+                <span>Stripe account connected.</span>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -246,8 +264,9 @@ export default function SellerDashboardPage() {
                   className="w-full max-h-[260px] object-contain rounded-md border-2 border-black bg-muted"
                 />
               ) : (
-                <div className="text-sm text-muted-foreground">
-                  No store image uploaded yet.
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="text-xl">🖼️</span>
+                  <span>No store image uploaded yet.</span>
                 </div>
               )}
 
@@ -308,7 +327,11 @@ export default function SellerDashboardPage() {
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Recent Orders</h2>
           {orders.length === 0 ? (
-            <div className="text-sm text-muted-foreground">No orders yet.</div>
+            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground text-sm">
+              <div className="text-3xl mb-2">📭</div>
+              <div>No orders yet.</div>
+              <div className="mt-2 text-xs">When you make a sale, your orders will appear here.</div>
+            </div>
           ) : (
             <div className="space-y-3">
               {orders.slice(0, 10).map((o) => (
@@ -336,7 +359,11 @@ export default function SellerDashboardPage() {
           </div>
 
           {activeListings.length === 0 ? (
-            <div className="text-sm text-muted-foreground">No active listings.</div>
+            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground text-sm">
+              <div className="text-3xl mb-2">📦</div>
+              <div>No active listings.</div>
+              <div className="mt-2 text-xs">Ready to sell something? <Link href="/listings/create" className="underline">Create your first listing</Link>.</div>
+            </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {activeListings.map((l) => {
@@ -363,7 +390,11 @@ export default function SellerDashboardPage() {
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Sold Listings</h2>
           {soldListings.length === 0 ? (
-            <div className="text-sm text-muted-foreground">No sold listings.</div>
+            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground text-sm">
+              <div className="text-3xl mb-2">🕒</div>
+              <div>No sold listings yet.</div>
+              <div className="mt-2 text-xs">Once you sell something, your sold listings will show up here.</div>
+            </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {soldListings.map((l) => {

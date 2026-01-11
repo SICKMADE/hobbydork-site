@@ -2,11 +2,11 @@ import { collection, query, where, getDocs, addDoc, serverTimestamp, Firestore }
 
 // Import useAuth or pass canReadFirestore as a parameter if needed
 
+export async function openConversation(
   firestore: Firestore,
   currentUid: string,
   otherUid: string
-) {
-
+): Promise<string | null> {
   // Strict Firestore read gate
   // You may want to pass canReadFirestore as a parameter, or import your auth/profile logic here
   // For now, add a placeholder check (replace with your actual canReadFirestore logic)

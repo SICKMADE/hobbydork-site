@@ -56,25 +56,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
-type SellerApplication = {
-  applicationId: string;
-  ownerUid: string;
-  ownerEmail?: string | null;
-  ownerDisplayName?: string | null;
-  notes?: string | null;
-  social?: {
-    instagram?: string | null;
-    facebook?: string | null;
-    twitter?: string | null;
-    tiktok?: string | null;
-    website?: string | null;
-    other?: string | null;
-  };
-  sellerAgreementAccepted?: boolean;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  createdAt?: { toDate: () => Date } | null;
-  updatedAt?: { toDate: () => Date } | null;
-};
+import type { SellerApplication } from '@/lib/types';
 
 function statusBadge(status: SellerApplication['status']) {
   switch (status) {
@@ -102,7 +84,7 @@ export default function AdminSellerApplicationsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const isAdmin = profile?.role === 'ADMIN';
+  const isAdmin = profile?.role === 'ADMIN' && profile?.status === 'ACTIVE';
 
   const appsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -264,9 +246,12 @@ export default function AdminSellerApplicationsPage() {
             )}
 
             {!isLoading && (!apps || apps.length === 0) && (
-              <p className="text-sm text-muted-foreground">
-                No seller applications yet.
-              </p>
+              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                <div className="text-4xl mb-2">📝</div>
+                <div className="font-semibold mb-1">No seller applications yet</div>
+                <div className="mb-2 text-sm">New seller applications will appear here for review.</div>
+                <a href="/admin" className="comic-button px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 transition">Go to Admin Home</a>
+              </div>
             )}
 
             {!isLoading && apps && apps.length > 0 && (

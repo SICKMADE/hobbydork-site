@@ -119,7 +119,7 @@ export default function GiveawayPage() {
   const canReadFirestore =
     !loading &&
     !!user &&
-    user.emailVerified;
+    //
 
   React.useEffect(() => {
     if (!canReadFirestore) return;

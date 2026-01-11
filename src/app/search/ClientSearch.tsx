@@ -65,11 +65,11 @@ export default function ClientSearch() {
   const { user, profile, loading: authLoading } = require('@/hooks/use-auth').useAuth();
   if (authLoading) return null;
   if (!user) return null;
-  if (!profile?.emailVerified) return null;
+  if (profile?.status !== "ACTIVE") return null;
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    profile?.emailVerified &&
+    //
     profile?.status === "ACTIVE";
 
   const [showFilters, setShowFilters] = useState(false);
@@ -309,9 +309,11 @@ export default function ClientSearch() {
 
       {!isLoading && total === 0 && (
         <Card>
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            No listings found. Try changing your filters or
-            search terms.
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+            <div className="text-4xl mb-2">🔍</div>
+            <div className="font-semibold mb-1">No listings found</div>
+            <div className="mb-2 text-sm">Try changing your filters or search terms.</div>
+            <a href="/" className="comic-button px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 transition">Go Home</a>
           </CardContent>
         </Card>
       )}

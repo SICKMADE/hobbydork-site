@@ -19,11 +19,17 @@ type UseCollectionResult<T> = {
 export function useCollection<T = DocumentData>(
   queryRef: Query<T> | null | undefined,
 ): UseCollectionResult<T> {
+  const { user, loading: authLoading, profile } = require('@/hooks/use-auth').useAuth();
   const [data, setData] = useState<WithId<T>[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(!!queryRef);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    // 🔒 HARD GATES — prevent subscription unless user is verified and active
+    if (authLoading) return;
+    if (!user) return;
+    //
+    if (profile?.status !== 'ACTIVE') return;
     if (!queryRef) {
       if (process.env.NODE_ENV !== 'production') {
         // eslint-disable-next-line no-console
@@ -57,14 +63,14 @@ export function useCollection<T = DocumentData>(
         (err) => {
           // IMPORTANT: do NOT throw here – just store the error
           console.error('Firestore useCollection error', err);
-          setError(err);
+          setError(err instanceof Error ? err : new Error(String(err)));
           setIsLoading(false);
         },
       );
     } catch (e: unknown) {
       // onSnapshot can throw synchronously for invalid queries/targets; capture that
       console.error('Firestore onSnapshot failed to subscribe', e);
-      setError(e);
+      setError(e instanceof Error ? e : new Error(String(e)));
       setIsLoading(false);
       return;
     }
@@ -77,7 +83,7 @@ export function useCollection<T = DocumentData>(
         }
       }
     };
-  }, [queryRef]);
+  }, [queryRef, user, authLoading, profile?.status]);
 
   return { data, isLoading, error };
 }

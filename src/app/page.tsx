@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useUser } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import AppLayout from '@/components/layout/AppLayout';
-import Dashboard from '@/components/dashboard/Dashboard';
+import HomeDashboard from '@/components/dashboard/HomeDashboard';
 import LandingPage from '@/components/landing/LandingPage';
 
 export default function Home() {
@@ -33,7 +33,7 @@ export default function Home() {
 
   return (
     <AppLayout>
-      <Dashboard />
+      <HomeDashboard user={profile} profile={profile} />
     </AppLayout>
   );
 }

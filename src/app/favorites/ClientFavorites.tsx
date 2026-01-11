@@ -16,11 +16,11 @@ function FavoriteStore({ storeId }: { storeId: string }) {
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    profile?.emailVerified &&
+    //
     profile?.status === "ACTIVE";
   const storeRef = useMemoFirebase(() => {
     if (!canReadFirestore || !firestore) return null;
-    return doc(firestore, "storefronts", storeId);
+    return doc(firestore, "stores", storeId);
   }, [canReadFirestore, firestore, storeId]);
 
   const { data: store, isLoading } = useDoc<Store>(canReadFirestore ? storeRef : null);
@@ -40,12 +40,12 @@ export default function ClientFavorites() {
   const { user, profile, loading: authLoading } = useAuth();
   if (authLoading) return null;
   if (!user) return null;
-  if (!user.emailVerified) return null;
+  //
   const firestore = useFirestore();
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    profile?.emailVerified &&
+    //
     profile?.status === "ACTIVE";
 
   const favoritesQuery = useMemoFirebase(() => {
@@ -68,7 +68,11 @@ export default function ClientFavorites() {
           <PlaceholderContent
             title="No Favorite Stores Yet"
             description="Add stores to your favorites to see them here."
-          />
+          >
+            <div className="mt-4 flex justify-center">
+              <a href="/stores" className="comic-button px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 transition">Browse Stores</a>
+            </div>
+          </PlaceholderContent>
         )}
         {!isLoading && favoriteItems && favoriteItems.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -32,7 +32,7 @@ export function useDoc<T = unknown>(
     // 🔒 HARD GATES — THIS IS THE FIX
     if (authLoading) return;
     if (!user) return;
-    if (!profile?.emailVerified) return;
+    //
     if (!memoizedDocRef) return;
 
     setIsLoading(true);
@@ -80,7 +80,7 @@ export function useDoc<T = unknown>(
     memoizedDocRef,
     user?.uid,
     authLoading,
-    profile?.emailVerified,
+    //
   ]);
 
   return { data, isLoading, error };

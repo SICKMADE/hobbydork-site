@@ -1,255 +1,163 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from "react";
-import {
-  onIdTokenChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  sendEmailVerification,
-  updateProfile,
-  User,
-  UserCredential,
-} from "firebase/auth";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  serverTimestamp,
-  Firestore,
-  onSnapshot,
-} from "firebase/firestore";
 
-import { auth as _auth, db as _db } from "@/firebase/client-provider";
-import { getDefaultAvatarUrl } from "@/lib/default-avatar";
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import type { ReactNode } from 'react';
+import { onAuthStateChanged, User as FirebaseUser, signOut as firebaseSignOut, sendEmailVerification } from 'firebase/auth';
+import { initiateEmailSignUp } from '@/firebase/non-blocking-login';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/firebase/client';
+import { getDefaultAvatarUrl } from '@/lib/default-avatar';
+// If UserDoc is not exported, fallback to a generic type
+// Remove the next line and use the fallback if import fails
+import type { User as UserDoc } from '@/lib/types';
 
-/* ---------------- TYPES ---------------- */
 
-export type UserDoc = {
-  uid: string;
-  email: string | null;
-  emailVerified: boolean;
-  displayName: string;
-  role: "USER" | "ADMIN" | "MODERATOR";
-  status: "ACTIVE" | "LIMITED" | "BANNED";
-  isSeller: boolean;
-  sellerStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
-  storeId: string;
-  avatar: string;
-  about: string;
-  notifyMessages: boolean;
-  notifyOrders: boolean;
-  notifyISO24: boolean;
-  notifySpotlight: boolean;
-  stripeOnboarded: boolean;
-  stripeAccountId: string | null;
-  stripeTermsAgreed: boolean;
-  paymentMethod: string | null;
-  paymentIdentifier: string | null;
-  createdAt?: unknown;
-  updatedAt?: unknown;
-  shippingAddress?: {
-    name?: string;
-    address1?: string;
-    address2?: string;
-    city?: string;
-    state?: string;
-    zip?: string;
-    country?: string;
-  };
-};
 
-const EMPTY_PROFILE: UserDoc = {
-  uid: "",
-  email: null,
-  emailVerified: false,
-  displayName: "",
-  role: "USER",
-  status: "ACTIVE",
-  isSeller: false,
-  sellerStatus: "NONE",
-  storeId: "",
-  avatar: "",
-  about: "",
-  notifyMessages: true,
-  notifyOrders: true,
-  notifyISO24: true,
-  notifySpotlight: true,
-  stripeOnboarded: false,
-  stripeAccountId: null,
-  stripeTermsAgreed: false,
-  paymentMethod: null,
-  paymentIdentifier: null,
-};
-
-/* ---------------- CONTEXT ---------------- */
-
-type AuthContextType = {
-  user: User | null;
-  profile: UserDoc | null;
-  userData: UserDoc;
+// Define the shape of the AuthContext
+interface AuthContextType {
+  user: FirebaseUser | null;
+  userData: UserDoc | null;
+  profile: UserDoc | null; // alias for userData
   loading: boolean;
-  login: (email: string, password: string) => Promise<UserCredential>;
-  signup: (
-    email: string,
-    password: string,
-    displayName: string
-  ) => Promise<UserCredential>;
-  logout: () => Promise<void>;
-  resendVerification: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<UserCredential>;
-  signUp: (
-    email: string,
-    password: string,
-    displayName: string
-  ) => Promise<UserCredential>;
-  refreshIdToken: () => Promise<void>;
-};
-
-const AuthContext = createContext<AuthContextType | null>(null);
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const value = useProvideAuth();
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  error: string | null;
+  refreshProfile: () => Promise<void>;
+  signOut: () => Promise<void>;
+  sendVerification: () => Promise<void>;
+  logout: () => Promise<void>; // alias for signOut
+  signIn?: (...args: any[]) => any;
+  signUp?: (...args: any[]) => any;
+  resendVerification?: () => Promise<void>;
 }
 
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
-  return ctx;
-}
+  const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/* ---------------- CORE ---------------- */
+  export const AuthProvider = ({ children }: { children: ReactNode }) => {
+    const [user, setUser] = useState<FirebaseUser | null>(null);
+    const [userData, setUserData] = useState<UserDoc | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-function useProvideAuth(): AuthContextType {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserDoc | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!_auth || !_db) return;
-
-    const db: Firestore = _db;
-    let unsubProfile: (() => void) | null = null;
-
-    const unsubAuth = onIdTokenChanged(_auth, async (firebaseUser) => {
-      setLoading(true);
-
-      if (unsubProfile) {
-        unsubProfile();
-        unsubProfile = null;
-      }
-
-      if (!firebaseUser) {
-        setUser(null);
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
-
-      // 🔥 THIS IS THE FIX
-      await firebaseUser.reload();
-          
-      setUser(firebaseUser);
-      const ref = doc(db, "users", firebaseUser.uid);
-
-      unsubProfile = onSnapshot(ref, async (snap) => {
-        if (snap.exists()) {
-          const data = snap.data() as UserDoc;
-          if (data.emailVerified !== firebaseUser.emailVerified) {
-            await updateDoc(ref, {
-              emailVerified: firebaseUser.emailVerified,
-              updatedAt: serverTimestamp(),
-            });
-          }
-          setProfile({
-            ...EMPTY_PROFILE,
-            ...data,
-            emailVerified: firebaseUser.emailVerified,
-          });
+    // Fetch user profile from Firestore
+    const fetchUserProfile = useCallback(async (uid: string) => {
+      try {
+        const userDocRef = doc(db, 'users', uid);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+          setUserData(userSnap.data() as UserDoc);
         } else {
-          const newUser: UserDoc = {
-            ...EMPTY_PROFILE,
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            emailVerified: firebaseUser.emailVerified,
-            displayName: firebaseUser.displayName ?? "",
-            avatar: getDefaultAvatarUrl(firebaseUser.uid),
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          };
-          await setDoc(ref, newUser);
-          setProfile(newUser);
+          setUserData(null);
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch user profile');
+        setUserData(null);
+      }
+    }, []);
+
+    // Listen for Firebase Auth state changes
+    useEffect(() => {
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        setUser(firebaseUser);
+        setLoading(true);
+        setError(null);
+        if (firebaseUser) {
+          await fetchUserProfile(firebaseUser.uid);
+        } else {
+          setUserData(null);
         }
         setLoading(false);
       });
-    });
+      return () => unsubscribe();
+    }, [fetchUserProfile]);
 
-    return () => {
-      unsubAuth();
-      if (unsubProfile) unsubProfile();
+    // Manual profile refresh
+    const refreshProfile = useCallback(async () => {
+      if (user) {
+        setLoading(true);
+        await fetchUserProfile(user.uid);
+        setLoading(false);
+      }
+    }, [user, fetchUserProfile]);
+
+    // Sign out
+    const signOut = useCallback(async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await firebaseSignOut(auth);
+        setUser(null);
+        setUserData(null);
+      } catch (err: any) {
+        setError(err.message || 'Sign out failed');
+      } finally {
+        setLoading(false);
+      }
+    }, []);
+
+    // Send email verification
+    const sendVerification = useCallback(async () => {
+      if (user) {
+        try {
+          await sendEmailVerification(user);
+        } catch (err: any) {
+          setError(err.message || 'Failed to send verification email');
+        }
+      }
+    }, [user]);
+
+    // Backward-compatible aliases
+    const logout = signOut;
+    const profile = userData;
+    // Placeholder signIn for legacy consumers
+    const signIn = undefined;
+
+    // Email/password sign up implementation
+    const signUp = useCallback((email: string, password: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        initiateEmailSignUp(auth, email, password);
+      } catch (err: any) {
+        setError(err.message || 'Sign up failed');
+      } finally {
+        setLoading(false);
+      }
+    }, []);
+    const resendVerification = useCallback(async () => {
+      if (!user) throw new Error('No user is logged in.');
+      try {
+        await sendEmailVerification(user);
+      } catch (err: any) {
+        throw new Error(err.message || 'Failed to send verification email');
+      }
+    }, [user]);
+
+    const value: AuthContextType = {
+      user,
+      userData,
+      profile,
+      loading,
+      error,
+      refreshProfile,
+      signOut,
+      sendVerification,
+      logout,
+      signIn,
+      signUp,
+      resendVerification,
     };
-  }, []);
 
-  /* ---------------- ACTIONS ---------------- */
-
-  const login = (email: string, password: string) =>
-    signInWithEmailAndPassword(_auth!, email, password);
-
-  const signup = async (
-    email: string,
-    password: string,
-    displayName: string
-  ) => {
-    const cred = await createUserWithEmailAndPassword(
-      _auth!,
-      email,
-      password
+    return (
+      <AuthContext.Provider value={value}>
+        {children}
+      </AuthContext.Provider>
     );
-
-    await updateProfile(cred.user, { displayName });
-    await sendEmailVerification(cred.user);
-    return cred;
   };
 
-  const logout = async () => {
-    await signOut(_auth!);
-    setUser(null);
-    setProfile(null);
-  };
-
-  const resendVerification = async () => {
-    if (!_auth?.currentUser) throw new Error("Not signed in");
-    await sendEmailVerification(_auth.currentUser);
-  };
-
-  // Helper to force-refresh the ID token (e.g., after email verification)
-  const refreshIdToken = async () => {
-    if (_auth?.currentUser) {
-      await _auth.currentUser.getIdToken(true);
+  export function useAuth() {
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+      throw new Error('useAuth must be used within an AuthProvider');
     }
-  };
-
-  // userData is a non-nullable version of profile, fallback to EMPTY_PROFILE
-  const userData = profile ?? EMPTY_PROFILE;
-  return {
-    user,
-    profile,
-    userData,
-    loading,
-    login,
-    signup,
-    signIn: login,
-    signUp: signup,
-    logout,
-    resendVerification,
-    refreshIdToken,
-  };
-}
+    return context;
+  }

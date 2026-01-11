@@ -55,7 +55,7 @@ export function ReportDialog({
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    user.emailVerified &&
+    //
     profile?.status === "ACTIVE";
 
   const [open, setOpen] = useState(false);
@@ -119,10 +119,8 @@ export function ReportDialog({
       setDetails('');
     } catch (err: any) {
       toast({
-        title: 'Error submitting report',
-        description:
-          err?.message ??
-          'Could not submit your report.',
+        title: 'Could not submit report',
+        description: 'Something went wrong. Please try again. If the problem continues, contact support.',
         variant: 'destructive',
       });
       setSubmitting(false);
