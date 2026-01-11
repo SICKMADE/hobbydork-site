@@ -10,7 +10,7 @@ import { useMemoFirebase, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import StoreCard from '@/components/StoreCard';
-import type { Store as StoreType, User, Listing } from '@/lib/types';
+import type { Store as StoreType, Listing } from '@/lib/types';
 import { listingConverter, storeConverter, spotlightConverter } from '@/firebase/firestore/converters';
 import StandaloneVaultDoor from './StandaloneVaultDoor';
 import AskHobbyDork from './AskHobbyDork';
@@ -396,9 +396,9 @@ function VaultAndGenieSection() {
    Main Dashboard
    ======================= */
 
-import type { UserDoc } from '@/hooks/use-auth';
+import type { User } from '@/lib/types';
 interface HomeDashboardProps {
-  user: UserDoc | null;
+  user: User | null;
   profile: any; // Use the correct type for your profile if available
 }
 

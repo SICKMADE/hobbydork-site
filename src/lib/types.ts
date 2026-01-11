@@ -65,6 +65,15 @@ export type User = {
     notifySpotlight: boolean;
     blockedUsers: string[];
     stripeAccountId?: string | null;
+    shippingAddress?: {
+        name?: string;
+        address1?: string;
+        address2?: string;
+        city?: string;
+        state?: string;
+        zip?: string;
+        country?: string;
+    };
 };
 
 export type Store = {

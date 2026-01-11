@@ -42,7 +42,7 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     async function load() {
       // Strict Firestore read gate
-      const canReadFirestore = userData.role === "ADMIN";
+      const canReadFirestore = userData?.role === "ADMIN";
       if (!canReadFirestore) {
         setLoading(false);
         return;
@@ -53,9 +53,9 @@ export default function AdminOrdersPage() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [userData]);
 
-  if (userData.role !== "ADMIN") {
+  if (userData?.role !== "ADMIN") {
     return <div className="p-6">You do not have access.</div>;
   }
   if (loading) return <div className="p-6">Loading Orders…</div>;

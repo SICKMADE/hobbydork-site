@@ -116,10 +116,9 @@ export default function GiveawayPage() {
 
   const platformMeta = PLATFORM_OPTIONS.find((p) => p.value === platform);
 
-  const canReadFirestore =
+  const canReadFirestore: boolean =
     !loading &&
-    !!user &&
-    //
+    !!user;
 
   React.useEffect(() => {
     if (!canReadFirestore) return;

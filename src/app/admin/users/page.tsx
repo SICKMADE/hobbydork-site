@@ -22,17 +22,17 @@ export default function AdminUsersPage() {
   const [users] = useState<User[]>([]); // Remove setUsers as it's unused
   const [loading] = useState(false); // Remove setLoading as it's unused
 
-  if (userData.role !== "ADMIN") {
+  if (userData?.role !== "ADMIN") {
     return <div className="p-6">You do not have access.</div>;
   }
   if (loading) return <div className="p-6">Loading…</div>;
 
   // SUSPEND
   async function suspend(uid: string, hours: number) {
-    if (!db || userData.role !== "ADMIN") throw new Error('You do not have permission.');
+    if (!db || userData?.role !== "ADMIN") throw new Error('You do not have permission.');
     const until = new Date(Date.now() + hours * 60 * 60 * 1000);
     // Enforce check at call site
-    if (userData.role !== "ADMIN") return;
+    if (userData?.role !== "ADMIN") return;
     await updateDoc(doc(db as import('firebase/firestore').Firestore, "users", uid), {
       status: "SUSPENDED",
       suspendUntil: until,
@@ -42,9 +42,9 @@ export default function AdminUsersPage() {
 
   // BAN
   async function ban(uid: string) {
-    if (!db || userData.role !== "ADMIN") throw new Error('You do not have permission.');
+    if (!db || userData?.role !== "ADMIN") throw new Error('You do not have permission.');
     // Enforce check at call site
-    if (userData.role !== "ADMIN") return;
+    if (userData?.role !== "ADMIN") return;
     await updateDoc(doc(db as import('firebase/firestore').Firestore, "users", uid), {
       status: "BANNED",
       suspendUntil: null,
@@ -54,9 +54,9 @@ export default function AdminUsersPage() {
 
   // RESTORE
   async function restore(uid: string) {
-    if (!db || userData.role !== "ADMIN") throw new Error('You do not have permission.');
+    if (!db || userData?.role !== "ADMIN") throw new Error('You do not have permission.');
     // Enforce check at call site
-    if (userData.role !== "ADMIN") return;
+    if (userData?.role !== "ADMIN") return;
     await updateDoc(doc(db as import('firebase/firestore').Firestore, "users", uid), {
       status: "ACTIVE",
       suspendUntil: null,

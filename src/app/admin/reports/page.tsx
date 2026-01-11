@@ -33,7 +33,7 @@ export default function AdminReportsPage() {
   const [reports, setReports] = useState<Report[]>([] as Report[]);
   const [filter, setFilter] = useState("ALL");
 
-  const role = userData.role;
+  const role = userData?.role;
   const isAdmin = role === "ADMIN";
   const isModerator = role === "MODERATOR";
   const isStaff = isAdmin || isModerator;

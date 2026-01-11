@@ -33,13 +33,13 @@ export default function ISODetailPage() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const isGuest = !user;
-    const isGuest = !user;
-    const needsOverlay = isGuest;
+  const needsOverlay = isGuest;
   const [loading, setLoading] = useState(true);
   const [offers, setOffers] = useState<any[]>([]);
   const [offerUrl, setOfferUrl] = useState("");
   const [submittingOffer, setSubmittingOffer] = useState(false);
   const [awarding, setAwarding] = useState(false);
+  const [iso, setISO] = useState<any>(null);
 
   useEffect(() => {
     if (!isoId) return;
@@ -56,7 +56,7 @@ export default function ISODetailPage() {
         const ref = doc(db!, "iso24Posts", String(isoId));
         const snap = await getDoc(ref);
         if (snap.exists()) {
-          setISO({ id: snap.id, ...snap.data() });
+          setISO({ id: snap.id, ...(snap.data() || {}) });
         }
       } finally {
         setLoading(false);
@@ -71,9 +71,11 @@ export default function ISODetailPage() {
     async function loadOffers() {
       //
       const canReadFirestore = !!user;
-
+      if (!db) return;
+      const ref = collection(db, "iso24Posts", String(isoId), "comments");
+      const q = query(ref, where("type", "==", "FULFILLMENT"));
       const snap = await getDocs(q);
-      setOffers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setOffers(snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) })));
     }
 
     loadOffers();
@@ -102,11 +104,9 @@ export default function ISODetailPage() {
       });
 
       setOfferUrl("");
-
-      const ref = collection(db!, "iso24Posts", String(isoId), "comments");
-      const q = query(
-        ref,
-        where("type", "==", "FULFILLMENT"),
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
         title: "Could not submit",
         description: err?.message || "Try again.",
       });

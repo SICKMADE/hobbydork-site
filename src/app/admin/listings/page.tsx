@@ -17,7 +17,7 @@ type Listing = {
 
 export default function AdminListingsPage() {
   const { userData } = useAuth();
-  const role = userData.role;
+  const role = userData?.role;
   const isStaff = role === "ADMIN" || role === "MODERATOR";
 
   const [items, setItems] = useState<Listing[]>([]);
