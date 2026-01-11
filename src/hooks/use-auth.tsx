@@ -111,6 +111,7 @@ type AuthContextType = {
   ) => Promise<UserCredential>;
   logout: () => Promise<void>;
   resendVerification: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -137,6 +138,20 @@ export function useAuth() {
 }
 
 function useProvideAuth(): AuthContextType {
+    // Reload user profile from Firestore and update state
+    const refreshProfile = async () => {
+      if (!user || !db) return;
+      try {
+        const ref = doc(db, "users", user.uid);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const existing = snap.data() as UserDoc;
+          setUserData({ ...EMPTY_USERDOC, ...existing, emailVerified: user.emailVerified });
+        }
+      } catch (e) {
+        setError(e);
+      }
+    };
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserDoc>(EMPTY_USERDOC);
   const [loading, setLoading] = useState(true);
@@ -446,5 +461,6 @@ function useProvideAuth(): AuthContextType {
     signUp: signUpUser,
     logout: logoutUser,
     resendVerification,
+    refreshProfile,
   };
 }
