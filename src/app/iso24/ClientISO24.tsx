@@ -118,9 +118,9 @@ export default function ClientISO24() {
   }
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-5xl px-4 py-6 space-y-4">
+      <div className="mx-auto w-full max-w-5xl px-2 xs:px-4 py-4 xs:py-6 space-y-3 xs:space-y-4">
         <div className="rounded-xl border-2 border-black bg-card/70 overflow-hidden shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
-          <div className="relative h-28 sm:h-36 md:h-44 bg-muted">
+          <div className="relative h-20 xs:h-28 sm:h-36 md:h-44 bg-muted">
             <Image
               src="/ISO.png"
               alt="ISO24"
@@ -129,10 +129,10 @@ export default function ClientISO24() {
               className="object-contain"
             />
           </div>
-          <div className="p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-extrabold tracking-tight">ISO24</h1>
-              <p className="text-sm text-muted-foreground">
+          <div className="p-3 xs:p-4 flex flex-col gap-2 xs:gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-0.5 xs:space-y-1">
+              <h1 className="text-xl xs:text-2xl font-extrabold tracking-tight">ISO24</h1>
+              <p className="text-xs xs:text-sm text-muted-foreground">
                 Post what you’re looking for. People have 24 hours to help.
               </p>
             </div>
@@ -141,8 +141,8 @@ export default function ClientISO24() {
             </Link>
           </div>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border-2 border-black bg-card/70 px-4 py-3 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
-          <div className="text-sm font-semibold">Browse by category</div>
+        <div className="flex flex-col gap-2 xs:gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border-2 border-black bg-card/70 px-2 xs:px-4 py-2 xs:py-3 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+          <div className="text-xs xs:text-sm font-semibold">Browse by category</div>
           <div className="w-full sm:w-64">
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="border-2 border-black bg-muted/30">
@@ -168,7 +168,7 @@ export default function ClientISO24() {
             No open ISO posts in {labelIso24Category(categoryFilter)}.
           </div>
         )}
-        <div className="space-y-4">
+        <div className="space-y-2 xs:space-y-4">
           {visiblePosts.map((post) => (
             <Link key={post.id} href={`/iso24/${post.id}`} className="block">
               <ISO24Card post={{ ...post, title: post.title ?? "Untitled", description: post.description ?? "" }} />

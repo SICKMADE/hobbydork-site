@@ -121,10 +121,10 @@ export default function ProfilePage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-2xl px-2 xs:px-4 py-4">
         <Card>
-          <CardHeader className="text-center">
-            <Avatar className="mx-auto mb-4 h-24 w-24">
+          <CardHeader className="text-center p-4 xs:p-6">
+            <Avatar className="mx-auto mb-4 h-20 w-20 xs:h-24 xs:w-24">
               <AvatarImage
                 src={avatarPreview || DEFAULT_AVATAR}
                 alt={displayName}
@@ -132,20 +132,20 @@ export default function ProfilePage() {
               <AvatarFallback />
             </Avatar>
 
-            <CardTitle className="text-3xl">{displayName}</CardTitle>
+            <CardTitle className="text-xl xs:text-2xl md:text-3xl">{displayName}</CardTitle>
             {email && <CardDescription>{email}</CardDescription>}
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="p-4 xs:p-6">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Display name</Label>
-                  <Input value={displayName} disabled readOnly />
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 xs:space-y-6">
+                <div className="space-y-1 xs:space-y-2">
+                  <Label className="text-sm xs:text-base">Display name</Label>
+                  <Input value={displayName} disabled readOnly className="text-sm xs:text-base" />
                 </div>
 
-                <div className="space-y-2">
-                  <FormLabel>Profile picture</FormLabel>
+                <div className="space-y-1 xs:space-y-2">
+                  <FormLabel className="text-sm xs:text-base">Profile picture</FormLabel>
                   <Input
                     type="file"
                     accept="image/*"
@@ -156,6 +156,7 @@ export default function ProfilePage() {
                         setAvatarPreview(URL.createObjectURL(file));
                       }
                     }}
+                    className="text-sm xs:text-base"
                   />
                 </div>
 
@@ -164,16 +165,16 @@ export default function ProfilePage() {
                   name="about"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>About me</FormLabel>
+                      <FormLabel className="text-sm xs:text-base">About me</FormLabel>
                       <FormControl>
-                        <Textarea {...field} rows={5} />
+                        <Textarea {...field} rows={5} className="text-sm xs:text-base" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                <Button type="submit" className="w-full text-sm xs:text-base" disabled={isSubmitting}>
                   {isSubmitting ? "Saving..." : "Save changes"}
                 </Button>
               </form>

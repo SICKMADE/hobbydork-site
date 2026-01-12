@@ -354,7 +354,7 @@ export default function StorePage() {
 
   return (
     <AppLayout>
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto space-y-6 px-2 sm:px-4">
         {isOwner && (
           <Card className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
             <CardHeader>
@@ -396,7 +396,7 @@ export default function StorePage() {
         {/* Hero / header */}
         <Panel>
           <div className="relative overflow-hidden rounded-2xl">
-            <div className="relative h-[220px] md:h-[320px] border-b-4 border-black">
+            <div className="relative h-40 xs:h-48 sm:h-56 md:h-[320px] border-b-4 border-black">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={coverUrl}
@@ -417,19 +417,19 @@ export default function StorePage() {
               <div className="tape-corner bottom-right" />
             </div>
 
-            <div className="p-4 md:p-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div className="flex items-end gap-4 min-w-0">
+            <div className="p-3 xs:p-4 md:p-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div className="flex items-end gap-2 sm:gap-4 min-w-0 flex-col sm:flex-row sm:items-end">
                 <Avatar className="h-20 w-20 md:h-24 md:w-24 border-4 border-black comic-avatar-shadow bg-muted">
                   <AvatarImage src={avatarUrl} />
                   <AvatarFallback>{storeName?.charAt(0).toUpperCase() || "S"}</AvatarFallback>
                 </Avatar>
 
                 <div className="min-w-0">
-                  <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight truncate">
+                  <h1 className="text-xl xs:text-2xl md:text-3xl font-extrabold tracking-tight truncate">
                     {storeName}
                   </h1>
 
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <div className="mt-1 flex flex-wrap items-center gap-1 sm:gap-2">
                     {ratingCount > 0 ? (
                       <div className="flex items-center gap-2">
                         <RenderStars avg={ratingAverage} size={16} />
@@ -449,15 +449,15 @@ export default function StorePage() {
                   </div>
 
                   {about && (
-                    <p className="mt-2 text-sm text-muted-foreground line-clamp-3 whitespace-pre-line">
+                    <p className="mt-2 text-xs xs:text-sm text-muted-foreground line-clamp-3 whitespace-pre-line">
                       {about}
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 md:items-end">
-                <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col gap-2 md:items-end w-full sm:w-auto">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                   <Button
                     size="sm"
                     variant="outline"
@@ -497,8 +497,8 @@ export default function StorePage() {
 
         {/* Listings */}
         <Panel>
-          <div className="p-4 md:p-6 space-y-3">
-            <div className="flex items-center justify-between gap-3">
+          <div className="p-3 xs:p-4 md:p-6 space-y-3">
+            <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 xs:gap-3">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="h-5 w-5 text-primary" />
                 <h2 className="text-base font-bold tracking-wide">Active listings</h2>
@@ -523,7 +523,7 @@ export default function StorePage() {
             )}
 
             {!listingsLoading && listingItems.length > 0 && (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2 xs:gap-3 grid-cols-1 sm:grid-cols-2">
                 {listingItems.map((listing) => {
                   const img = listing.primaryImageUrl || listing.imageUrls?.[0];
                   const categoryLabel =
@@ -532,8 +532,8 @@ export default function StorePage() {
                   return (
                     <Link key={listing.id} href={`/listings/${listing.id}`} className="block">
                       <div className="h-full rounded-xl border-2 border-black bg-card/80 hover:bg-card transition-colors shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
-                        <div className="flex gap-3 p-3">
-                          <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 border-black bg-muted">
+                        <div className="flex gap-2 xs:gap-3 p-2 xs:p-3">
+                          <div className="relative h-20 w-20 xs:h-24 xs:w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 border-black bg-muted">
                             {img ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
@@ -550,11 +550,11 @@ export default function StorePage() {
 
                           <div className="min-w-0 flex-1 flex flex-col justify-between">
                             <div className="space-y-1">
-                              <p className="text-sm font-bold leading-snug line-clamp-2">
+                              <p className="text-xs xs:text-sm font-bold leading-snug line-clamp-2">
                                 {listing.title}
                               </p>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-lg font-extrabold text-primary">
+                              <div className="flex flex-wrap items-center gap-1 xs:gap-2">
+                                <span className="text-base xs:text-lg font-extrabold text-primary">
                                   ${Number(listing.price || 0).toFixed(2)}
                                 </span>
                                 <Badge
@@ -566,7 +566,7 @@ export default function StorePage() {
                               </div>
                             </div>
 
-                            <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
+                            <div className="flex items-center justify-between pt-1 text-[11px] xs:text-xs text-muted-foreground">
                               <span>{listing.quantityAvailable} in stock</span>
                               {listing.createdText && <span>Listed {listing.createdText}</span>}
                             </div>
@@ -583,8 +583,8 @@ export default function StorePage() {
 
         {/* Reviews */}
         <Panel>
-          <div className="p-4 md:p-6 space-y-3">
-            <div className="flex items-center gap-2">
+          <div className="p-3 xs:p-4 md:p-6 space-y-3">
+            <div className="flex items-center gap-1 xs:gap-2">
               <Star className="h-5 w-5 text-yellow-500" />
               <h2 className="text-base font-bold tracking-wide">Recent reviews</h2>
             </div>
@@ -592,7 +592,7 @@ export default function StorePage() {
             <RedLineSeparator />
 
             {reviewsLoading && (
-              <div className="space-y-2">
+              <div className="space-y-1 xs:space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} className="h-16 w-full" />
                 ))}
@@ -608,7 +608,7 @@ export default function StorePage() {
             )}
 
             {!reviewsLoading && reviewItems.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-1 xs:space-y-2">
                 {reviewItems
                   .sort(
                     (a, b) => (b.created?.getTime?.() || 0) - (a.created?.getTime?.() || 0),
@@ -619,13 +619,13 @@ export default function StorePage() {
                       key={review.id}
                       className="rounded-xl border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)]"
                     >
-                      <div className="flex items-start gap-3 p-3">
+                      <div className="flex items-start gap-2 xs:gap-3 p-2 xs:p-3">
                         <div className="mt-0.5">
                           <RenderStars avg={review.rating} size={14} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm">{review.comment || "No comment provided."}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">
+                          <p className="text-xs xs:text-sm">{review.comment || "No comment provided."}</p>
+                          <p className="mt-1 text-[11px] xs:text-xs text-muted-foreground">
                             From order #{review.orderId?.slice?.(0, 8) || ""}
                             {review.createdText ? ` • ${review.createdText}` : ""}
                           </p>

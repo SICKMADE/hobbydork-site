@@ -12,6 +12,8 @@ import {
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { useToast } from "@/hooks/use-toast";
 
+import { ToastAction } from "@/components/ui/toast";
+
 type OrderStatus =
   | "PENDING_PAYMENT"
   | "PAID"
@@ -77,9 +79,14 @@ export default function OrderDetail({ params }: any) {
       // eslint-disable-next-line no-console
       console.error('[checkout] payNow failed', err);
       toast({
-        title: "Checkout failed",
-        description: err?.message ?? "Stripe error",
+        title: "Payment could not be processed",
+        description: `${err?.message ?? "An unexpected error occurred. Please try again."}`,
         variant: "destructive",
+        action: (
+          <ToastAction altText="Report a problem" asChild>
+            <a href="/help" target="_blank" rel="noopener">Report a problem</a>
+          </ToastAction>
+        ),
       });
     }
   }
@@ -109,19 +116,19 @@ export default function OrderDetail({ params }: any) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-6">
+    <div className="max-w-3xl mx-auto p-3 xs:p-4 md:p-6 space-y-4 xs:space-y-6">
 
-      <h1 className="text-2xl font-bold">Order Details</h1>
+      <h1 className="text-xl xs:text-2xl font-bold">Order Details</h1>
 
-      <div className="p-4 border rounded bg-white shadow space-y-2">
-        <p className="font-semibold text-xl">
+      <div className="p-3 xs:p-4 border rounded bg-white shadow space-y-2">
+        <p className="font-semibold text-lg xs:text-xl">
           {order.items?.[0]?.title ?? "Order"}
         </p>
-        <p>${order.subtotal?.toFixed(2)}</p>
-        <p>Status: {order.state}</p>
+        <p className="text-sm xs:text-base">${order.subtotal?.toFixed(2)}</p>
+        <p className="text-sm xs:text-base">Status: {order.state}</p>
 
         {order.trackingNumber && (
-          <p className="mt-2">
+          <p className="mt-2 text-xs xs:text-sm">
             Tracking: {order.carrier} — {order.trackingNumber}
           </p>
         )}
@@ -131,7 +138,7 @@ export default function OrderDetail({ params }: any) {
       {isBuyer && order.state === "PENDING_PAYMENT" && (
         <button
           onClick={payNow}
-          className="px-4 py-2 bg-indigo-600 text-white rounded"
+          className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded text-sm xs:text-base"
         >
           Pay with Stripe
         </button>
@@ -140,14 +147,14 @@ export default function OrderDetail({ params }: any) {
       {isBuyer && order.state === "SHIPPED" && (
         <button
           onClick={confirmDelivered}
-          className="px-4 py-2 bg-green-600 text-white rounded"
+          className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded text-sm xs:text-base"
         >
           Confirm Delivered
         </button>
       )}
 
       {isBuyer && order.state === "DELIVERED" && (
-        <p className="text-green-600 font-semibold">
+        <p className="text-green-600 font-semibold text-sm xs:text-base">
           Order delivered. You may now leave feedback.
         </p>
       )}
@@ -176,11 +183,11 @@ function SellerFulfillForm({ onSubmit }: any) {
   const canMarkShipped = labelPurchased && carrier.trim() && tracking.trim();
 
   return (
-    <div className="p-4 border rounded bg-white shadow space-y-3">
-      <p className="font-semibold text-lg">Fulfill Order</p>
+    <div className="p-3 xs:p-4 border rounded bg-white shadow space-y-2 xs:space-y-3">
+      <p className="font-semibold text-base xs:text-lg">Fulfill Order</p>
 
       <button
-        className={`px-4 py-2 rounded ${labelPurchased ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+        className={`w-full sm:w-auto px-4 py-2 rounded text-sm xs:text-base ${labelPurchased ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}
         onClick={handlePurchaseLabel}
         disabled={labelPurchased}
         type="button"
@@ -189,7 +196,7 @@ function SellerFulfillForm({ onSubmit }: any) {
       </button>
 
       <input
-        className="border p-2 rounded w-full mt-2"
+        className="border p-2 rounded w-full mt-2 text-sm xs:text-base"
         placeholder="Carrier (USPS, UPS, FedEx)"
         value={carrier}
         onChange={(e) => setCarrier(e.target.value)}
@@ -197,7 +204,7 @@ function SellerFulfillForm({ onSubmit }: any) {
       />
 
       <input
-        className="border p-2 rounded w-full"
+        className="border p-2 rounded w-full text-sm xs:text-base"
         placeholder="Tracking Number"
         value={tracking}
         onChange={(e) => setTracking(e.target.value)}
@@ -206,7 +213,7 @@ function SellerFulfillForm({ onSubmit }: any) {
 
       <button
         onClick={() => onSubmit(tracking, carrier)}
-        className={`px-4 py-2 rounded ${canMarkShipped ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-500'}`}
+        className={`w-full sm:w-auto px-4 py-2 rounded text-sm xs:text-base ${canMarkShipped ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-500'}`}
         disabled={!canMarkShipped}
         type="button"
       >

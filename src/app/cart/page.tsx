@@ -142,9 +142,13 @@ export default function CartPage() {
       // eslint-disable-next-line no-console
       console.error('[checkout] cart failed', err);
       toast({
+        title: "Payment could not be processed",
+        description: `${err instanceof Error ? err.message : "An unexpected error occurred. Please try again."}`,
         variant: "destructive",
-        title: "Checkout failed",
-        description: err instanceof Error ? err.message : "Checkout failed",
+        action: {
+          label: "Report a problem",
+          url: "/help"
+        }
       });
       setIsCheckingOut(false);
     }

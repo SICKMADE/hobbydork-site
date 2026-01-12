@@ -83,31 +83,31 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold">User Management</h1>
+    <div className="max-w-4xl mx-auto p-2 xs:p-4 md:p-6 space-y-4 xs:space-y-6">
+      <h1 className="text-xl xs:text-2xl font-bold">User Management</h1>
 
       {users.map((u) => (
         <div
           key={u.id}
-          className="border p-4 bg-white rounded shadow space-y-2"
+          className="border p-2 xs:p-4 bg-white rounded shadow space-y-1 xs:space-y-2"
         >
-          <p className="font-semibold">
+          <p className="font-semibold text-sm xs:text-base">
             {u.role === "ADMIN" && "👑 "}
             {u.role === "MODERATOR" && "🛡️ "}
             {u.displayName}
           </p>
 
-          <p>Email: {u.email}</p>
-          <p>Role: {u.role}</p>
-          <p>Status: {u.status}</p>
+          <p className="text-xs xs:text-sm">Email: {u.email}</p>
+          <p className="text-xs xs:text-sm">Role: {u.role}</p>
+          <p className="text-xs xs:text-sm">Status: {u.status}</p>
 
           {u.suspendUntil && (
-            <p className="text-sm text-gray-600">
+            <p className="text-xs xs:text-sm text-gray-600">
               Suspended Until: {new Date(u.suspendUntil.toDate()).toLocaleString()}
             </p>
           )}
 
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="flex flex-wrap gap-1 xs:gap-2 mt-2">
             {/* --- ROLE MANAGEMENT --- */}
             {u.role !== "ADMIN" && u.role !== "MODERATOR" && (
               <Button

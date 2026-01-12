@@ -1,6 +1,8 @@
 "use client";
 import { DocumentData } from "firebase/firestore";
 
+import { ToastAction } from "@/components/ui/toast";
+
 import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -290,10 +292,18 @@ export default function ListingDetailPage() {
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error('[checkout] buyNow failed', err);
+      // Use ToastAction for the action button
+      // Import ToastAction at the top if not already
+      // import { ToastAction } from "@/components/ui/toast";
       toast({
-        title: 'Checkout failed',
-        description: err?.message ?? 'Stripe error',
+        title: 'Payment could not be processed',
+        description: `${err?.message ?? "An unexpected error occurred. Please try again."}`,
         variant: 'destructive',
+        action: (
+          <ToastAction altText="Report a problem" asChild>
+            <a href="/help" target="_blank" rel="noopener">Report a problem</a>
+          </ToastAction>
+        ),
       });
       setRedirecting(false);
     }
@@ -326,9 +336,9 @@ export default function ListingDetailPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-6xl mx-auto p-6 space-y-8">
+      <div className="max-w-6xl mx-auto p-2 xs:p-4 md:p-6 space-y-6 xs:space-y-8">
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 xs:gap-8">
 
           {/* IMAGE */}
           <div>
@@ -352,7 +362,7 @@ export default function ListingDetailPage() {
             </Card>
 
             {imageUrls.length > 1 && (
-              <div className="flex gap-2 mt-3 overflow-x-auto">
+              <div className="flex gap-1 xs:gap-2 mt-2 xs:mt-3 overflow-x-auto">
                 {imageUrls.map((url, idx) => (
                   <Button
                     key={idx}
@@ -378,7 +388,7 @@ export default function ListingDetailPage() {
           {/* DETAILS */}
           <div className="space-y-4">
 
-            <div className="flex gap-2">
+            <div className="flex gap-1 xs:gap-2 flex-wrap">
               <Badge>{activeListing.category}</Badge>
               {activeListing.condition && (
                 <Badge variant="outline">
@@ -387,20 +397,20 @@ export default function ListingDetailPage() {
               )}
             </div>
 
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-xl xs:text-2xl md:text-3xl font-bold">
               {activeListing.title}
             </h1>
 
-            <div className="text-3xl font-bold text-green-500">
+            <div className="text-lg xs:text-2xl md:text-3xl font-bold text-green-500">
               ${price.toFixed(2)}
             </div>
 
             <Separator />
 
             <Card>
-              <CardContent className="space-y-3 py-4">
-                <div className="flex justify-between">
-                  <span>Qty</span>
+              <CardContent className="space-y-2 xs:space-y-3 py-3 xs:py-4">
+                <div className="flex flex-col xs:flex-row xs:justify-between gap-2 xs:gap-0">
+                  <span className="text-xs xs:text-sm">Qty</span>
                   <input
                     type="number"
                     min={1}
@@ -414,13 +424,13 @@ export default function ListingDetailPage() {
                         )
                       )
                     }
-                    className="w-20 border rounded px-2 py-1"
+                    className="w-full xs:w-20 border rounded px-2 py-1 text-xs xs:text-sm"
                     placeholder="Qty"
                   />
                 </div>
 
                 <Button
-                  className="w-full"
+                  className="w-full text-xs xs:text-base"
                   disabled={redirecting || isSoldOut}
                   onClick={handleBuyNow}
                 >
@@ -428,7 +438,7 @@ export default function ListingDetailPage() {
                   {redirecting ? 'Redirecting…' : 'Buy It Now'}
                 </Button>
 
-                <Button variant="outline" className="w-full" asChild>
+                <Button variant="outline" className="w-full text-xs xs:text-base" asChild>
                   <Link
                     href={`/messages/new?sellerUid=${activeListing.ownerUid}&listingId=${listingId}`}
                   >
@@ -443,8 +453,8 @@ export default function ListingDetailPage() {
 
         {Array.isArray(similarListings) && similarListings?.length > 0 && (
           <section>
-            <h2 className="text-lg font-semibold mb-3">Similar items</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <h2 className="text-base xs:text-lg font-semibold mb-2 xs:mb-3">Similar items</h2>
+            <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-2 xs:gap-4">
               {(similarListings ?? []).map((l: any) => (
                 <ListingCard key={l.id} listing={l} />
               ))}

@@ -106,7 +106,7 @@ export const createStripeOnboarding = onCall(
     }
 
     const baseUrl =
-      process.env.APP_BASE_URL || "http://localhost:9002";
+      process.env["app.base_url"] || "http://localhost:9002";
 
     const link = await stripe.accountLinks.create({
       account: accountId,
@@ -198,3 +198,5 @@ export const finalizeSeller = onCall(
     return { ok: true, storeId };
   }
 );
+
+export { stripeWebhook } from "./stripeWebhook";
