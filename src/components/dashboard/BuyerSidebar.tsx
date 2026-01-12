@@ -17,7 +17,10 @@ const RedLineSeparator = () => (
   <div className="w-full h-[2px] bg-gradient-to-r from-red-900 via-red-600 to-red-900 rounded-full mb-2" />
 );
 
+
 import { useAuth } from "@/hooks/use-auth";
+
+export default function BuyerSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();

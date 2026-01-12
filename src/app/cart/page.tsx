@@ -13,6 +13,7 @@ import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import type { Listing } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { useState } from "react";
 import { placeholderImages } from "@/lib/placeholder-images";
 import { useForm } from "react-hook-form";
@@ -145,10 +146,11 @@ export default function CartPage() {
         title: "Payment could not be processed",
         description: `${err instanceof Error ? err.message : "An unexpected error occurred. Please try again."}`,
         variant: "destructive",
-        action: {
-          label: "Report a problem",
-          url: "/help"
-        }
+        action: (
+          <ToastAction asChild altText="Report a problem">
+            <a href="/help">Report a problem</a>
+          </ToastAction>
+        )
       });
       setIsCheckingOut(false);
     }
