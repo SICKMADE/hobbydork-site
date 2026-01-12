@@ -36,12 +36,53 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.finalizeSeller = exports.createStripeOnboarding = void 0;
+exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = void 0;
+// All imports must be at the very top to avoid ReferenceError in compiled JS
 const https_1 = require("firebase-functions/v2/https");
 const admin = __importStar(require("firebase-admin"));
 const stripe_1 = __importDefault(require("stripe"));
 admin.initializeApp();
 const db = admin.firestore();
+/* ================= CREATE STRIPE CHECKOUT SESSION ================= */
+exports.createCheckoutSession = (0, https_1.onCall)({
+    region: "us-central1",
+    secrets: ["STRIPE_SECRET", "APP_BASE_URL"],
+}, async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid)
+        throw new https_1.HttpsError("unauthenticated", "Auth required");
+    if (!request.auth || request.auth.token.email_verified !== true) {
+        throw new https_1.HttpsError("failed-precondition", "Email verification required");
+    }
+    const { orderId, listingTitle, amountCents, appBaseUrl } = request.data || {};
+    if (!orderId || !listingTitle || !amountCents || !appBaseUrl) {
+        throw new https_1.HttpsError("invalid-argument", "Missing required parameters");
+    }
+    // Optionally: validate order in Firestore here
+    const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        mode: "payment",
+        line_items: [
+            {
+                price_data: {
+                    currency: "usd",
+                    product_data: {
+                        name: listingTitle,
+                    },
+                    unit_amount: amountCents,
+                },
+                quantity: 1,
+            },
+        ],
+        success_url: `${appBaseUrl}/cart/success?orderId=${orderId}`,
+        cancel_url: `${appBaseUrl}/cart/cancel?orderId=${orderId}`,
+        metadata: {
+            orderId,
+            buyerUid: uid,
+        },
+    });
+    return { url: session.url };
+});
 /* ================= HELPERS ================= */
 /* ================= STRIPE ================= */
 const stripe = new stripe_1.default(process.env.STRIPE_SECRET, {

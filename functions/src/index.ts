@@ -5,6 +5,54 @@ import Stripe from "stripe";
 admin.initializeApp();
 const db = admin.firestore();
 
+/* ================= CREATE STRIPE CHECKOUT SESSION ================= */
+
+export const createCheckoutSession = onCall(
+  {
+    region: "us-central1",
+    secrets: ["STRIPE_SECRET", "APP_BASE_URL"],
+  },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Auth required");
+    if (!request.auth || request.auth.token.email_verified !== true) {
+      throw new HttpsError("failed-precondition", "Email verification required");
+    }
+
+    const { orderId, listingTitle, amountCents, appBaseUrl } = request.data || {};
+    if (!orderId || !listingTitle || !amountCents || !appBaseUrl) {
+      throw new HttpsError("invalid-argument", "Missing required parameters");
+    }
+
+    // Optionally: validate order in Firestore here
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: listingTitle,
+            },
+            unit_amount: amountCents,
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${appBaseUrl}/cart/success?orderId=${orderId}`,
+      cancel_url: `${appBaseUrl}/cart/cancel?orderId=${orderId}`,
+      metadata: {
+        orderId,
+        buyerUid: uid,
+      },
+    });
+
+    return { url: session.url };
+  }
+);
+
 /* ================= HELPERS ================= */
 
 
