@@ -1,3 +1,10 @@
+/* Grid background utility for order pages */
+.bg-grid {
+  background-image: url('/grid.svg');
+  background-size: 20px 20px;
+  background-repeat: repeat;
+  background-position: center;
+}
 /* Custom background grid pattern for seller pages */
 .bg-grid-pattern {
   background-image: url('/grid.svg');

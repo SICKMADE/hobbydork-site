@@ -55,7 +55,42 @@ export const createCheckoutSession = onCall(
 
 /* ================= HELPERS ================= */
 
+/**
+ * Audit log helper for sensitive actions
+ */
+async function logAudit(action: string, context: Record<string, any>) {
+  await db.collection("auditLogs").add({
+    action,
+    ...context,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
 
+/**
+ * Helper to send notification to user
+ */
+async function sendNotification(uid: string, type: string, title: string, body: string, relatedId?: string) {
+  await db.collection("users").doc(uid).collection("notifications").add({
+    type,
+    title,
+    body,
+    relatedId,
+    read: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+/**
+ * Error monitoring: log backend errors to Firestore for alerting
+ */
+async function logError(error: Error | string, context: Record<string, any> = {}) {
+  await db.collection("errorLogs").add({
+    error: typeof error === "string" ? error : error.message,
+    stack: typeof error === "string" ? undefined : error.stack,
+    ...context,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
 
 /* ================= STRIPE ================= */
 
@@ -196,6 +231,109 @@ export const finalizeSeller = onCall(
     });
 
     return { ok: true, storeId };
+  }
+);
+
+/* ================= SECURE ORDER STATUS UPDATE ================= */
+
+export const updateOrderStatus = onCall(
+  {
+    region: "us-central1",
+  },
+  async (request) => {
+    try {
+      const uid = request.auth?.uid;
+      if (!uid) throw new HttpsError("unauthenticated", "Auth required");
+      if (!request.auth || request.auth.token.email_verified !== true) {
+        throw new HttpsError("failed-precondition", "Email verification required");
+      }
+      const { orderId, updates } = request.data || {};
+      if (!orderId || !updates || typeof updates !== "object") {
+        throw new HttpsError("invalid-argument", "Missing orderId or updates");
+      }
+      // Only allow specific fields
+      const allowedFields = [
+        "status",
+        "trackingNumber",
+        "shippingLabelUrl",
+        "estimatedDelivery",
+        "feedback",
+        "updatedAt"
+      ];
+      const updateKeys = Object.keys(updates);
+      if (!updateKeys.every((k) => allowedFields.includes(k))) {
+        throw new HttpsError("permission-denied", "Attempt to update forbidden fields");
+      }
+      // Fetch order
+      const orderRef = db.collection("orders").doc(orderId);
+      const orderSnap = await orderRef.get();
+      if (!orderSnap.exists) {
+        throw new HttpsError("not-found", "Order not found");
+      }
+      const order = orderSnap.data();
+      if (!order) {
+        throw new HttpsError("not-found", "Order data missing");
+      }
+      // Only buyer or seller can update
+      if (order.buyerUid !== uid && order.sellerUid !== uid) {
+        throw new HttpsError("permission-denied", "Not authorized to update this order");
+      }
+      // Validate status transitions (example: only allow certain transitions)
+      if (updates.status) {
+        const validStatuses = ["PAID", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED", "DISPUTED"];
+        if (!validStatuses.includes(updates.status)) {
+          throw new HttpsError("invalid-argument", "Invalid status value");
+        }
+        // Example: only seller can mark as SHIPPED
+        if (updates.status === "SHIPPED" && order.sellerUid !== uid) {
+          throw new HttpsError("permission-denied", "Only seller can mark as shipped");
+        }
+        // Only buyer can mark as DELIVERED
+        if (updates.status === "DELIVERED" && order.buyerUid !== uid) {
+          throw new HttpsError("permission-denied", "Only buyer can mark as delivered");
+        }
+      }
+      // Validate feedback (if present)
+      if (updates.feedback && typeof updates.feedback !== "string") {
+        throw new HttpsError("invalid-argument", "Feedback must be a string");
+      }
+      // Validate shippingLabelUrl (if present)
+      if (updates.shippingLabelUrl && typeof updates.shippingLabelUrl !== "string") {
+        throw new HttpsError("invalid-argument", "Shipping label URL must be a string");
+      }
+      // Perform update
+      await orderRef.update(updates);
+      await logAudit("order-status-update", {
+        orderId: orderId,
+        updatedBy: uid,
+        updates,
+        role: order.buyerUid === uid ? "buyer" : order.sellerUid === uid ? "seller" : "unknown",
+      });
+      // Send notifications based on status change
+      if (updates.status) {
+        if (updates.status === "SHIPPED") {
+          await sendNotification(order.buyerUid, "ORDER", "Order shipped", `Your order #${orderId} has shipped.`, orderId);
+        }
+        if (updates.status === "DELIVERED") {
+          await sendNotification(order.sellerUid, "ORDER", "Order delivered", `Order #${orderId} was marked delivered by buyer.`, orderId);
+        }
+        if (updates.status === "CANCELLED") {
+          await sendNotification(order.buyerUid, "ORDER", "Order cancelled", `Order #${orderId} was cancelled.`, orderId);
+          await sendNotification(order.sellerUid, "ORDER", "Order cancelled", `Order #${orderId} was cancelled.`, orderId);
+        }
+        if (updates.status === "REFUNDED") {
+          await sendNotification(order.buyerUid, "ORDER", "Order refunded", `Order #${orderId} was refunded.`, orderId);
+        }
+        if (updates.status === "DISPUTED") {
+          await sendNotification(order.sellerUid, "ORDER", "Order disputed", `Order #${orderId} was disputed by buyer.`, orderId);
+        }
+      }
+      return { ok: true };
+    } catch (error) {
+      const orderId = request.data?.orderId || null;
+      await logError(error instanceof Error ? error : String(error), { function: "updateOrderStatus", orderId });
+      throw error;
+    }
   }
 );
 

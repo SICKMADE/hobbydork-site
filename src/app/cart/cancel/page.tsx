@@ -3,11 +3,9 @@
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
 import Link from "next/link";
-import Image from "next/image";
 
-export default function CartSuccessPage() {
+export default function CartCancelPage() {
   return (
     <AppLayout>
       <div
@@ -15,34 +13,34 @@ export default function CartSuccessPage() {
       >
         <Card className="w-full max-w-xl md:max-w-2xl border-4 border-yellow-400 shadow-[0_8px_32px_rgba(0,0,0,0.25)]">
           <CardHeader className="flex flex-col items-center gap-2">
-            <Image
-              src="/success.png"
-              alt="Success"
+            <img
+              src="/fail.png"
+              alt="Payment Cancelled"
               width={200}
               height={200}
-              className="mb-2 rounded-full border-2 border-red-500"
-              priority
+              className="mb-2 rounded-full border-2 border-red-500 bg-white object-contain"
             />
-            <CardTitle className="text-2xl font-bold text-center">Thank you for your purchase!</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center text-red-600">Payment Cancelled</CardTitle>
           </CardHeader>
           <CardContent className="text-center text-muted-foreground">
-            <p>Thanks for shopping with HobbyDork! Your order is confirmed and we appreciate your support.</p>
+            <p>Your payment didn’t go through or was cancelled.</p>
+            <p className="mt-2">If you’d like to try again, just click below. If you need help or have questions, our support team is ready to assist you.</p>
           </CardContent>
           <div className="flex flex-col sm:flex-row gap-4 items-center pb-6">
-            <Link href="/orders">
+            <Link href="/cart">
               <Button
                 variant="default"
                 className="w-40 inline-flex items-center justify-center rounded-full bg-red-500 text-white shadow-[0_6px_0_#7f1010] active:translate-y-1 active:shadow-[0_0px_0_#7f1010] transition-all text-lg font-bold border-4 border-b-8 border-r-8 border-gray-700 active:border-b-4 active:border-r-4 active:translate-y-1"
               >
-                View My Orders
+                Try Again
               </Button>
             </Link>
-            <Link href="/">
+            <Link href="/help">
               <Button
                 variant="outline"
                 className="w-40 inline-flex items-center justify-center rounded-full bg-zinc-800 text-white shadow-[0_6px_0_#7f1010] active:translate-y-1 active:shadow-[0_0px_0_#7f1010] transition-all text-lg font-bold border-4 border-b-8 border-r-8 border-gray-700 active:border-b-4 active:border-r-4 active:translate-y-1"
               >
-                Back to Home
+                Get Help
               </Button>
             </Link>
           </div>

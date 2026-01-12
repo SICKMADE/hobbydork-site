@@ -191,8 +191,19 @@ match /orders/{orderId} {
     (
       isSignedIn() &&
       (
-        resource.data.buyerUid == uid() ||
-        resource.data.sellerUid == uid()
+        // Buyer can only update allowed fields
+        (resource.data.buyerUid == uid() &&
+          request.resource.data.keys().hasOnly(['status','trackingNumber','feedback','shippingAddress','updatedAt']) &&
+          request.resource.data.buyerUid == resource.data.buyerUid &&
+          request.resource.data.sellerUid == resource.data.sellerUid
+        )
+        // Seller can only update allowed fields
+        ||
+        (resource.data.sellerUid == uid() &&
+          request.resource.data.keys().hasOnly(['status','trackingNumber','shippingLabelUrl','estimatedDelivery','updatedAt']) &&
+          request.resource.data.buyerUid == resource.data.buyerUid &&
+          request.resource.data.sellerUid == resource.data.sellerUid
+        )
       )
     );
 

@@ -1,10 +1,12 @@
+
 "use client";
+import Link from "next/link";
 
 import { useEffect, useState } from "react";
 import { db } from "@/firebase/client-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
-import Link from "next/link";
+
 
 export default function BuyerOrdersPage() {
   const { user } = useAuth();
@@ -35,9 +37,9 @@ export default function BuyerOrdersPage() {
       {orders.map((o) => (
         <Link key={o.id} href={`/orders/${o.id}`}>
           <div className="p-4 border rounded bg-white shadow cursor-pointer">
-            <p className="font-semibold">{o.listingTitle}</p>
-            <p>${o.amount}</p>
-            <p>Status: {o.status}</p>
+            <p className="font-semibold">{o.items?.[0]?.title ?? "Order"}</p>
+            <p>${o.subtotal?.toFixed(2)}</p>
+            <p>Status: {o.state}</p>
           </div>
         </Link>
       ))}

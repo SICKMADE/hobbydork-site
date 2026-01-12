@@ -50,7 +50,7 @@ export default function SellerOrdersPage() {
       <h1 className="text-2xl font-bold">Orders to Fulfill</h1>
 
       {orders.map((o) => (
-        <Link key={o.id} href={`/orders/${o.id}`}>
+        <Link key={o.id} href={`/seller/orders/${o.id}`}>
           <div className="p-4 border rounded bg-white shadow cursor-pointer">
             <p className="font-semibold">{o.listingTitle}</p>
             <p>${o.amount}</p>
