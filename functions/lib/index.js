@@ -36,8 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = void 0;
-// All imports must be at the very top to avoid ReferenceError in compiled JS
+exports.stripeWebhook = exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const admin = __importStar(require("firebase-admin"));
 const stripe_1 = __importDefault(require("stripe"));
@@ -120,7 +119,7 @@ exports.createStripeOnboarding = (0, https_1.onCall)({
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
     }
-    const baseUrl = process.env.APP_BASE_URL || "http://localhost:9002";
+    const baseUrl = process.env["app.base_url"] || "http://localhost:9002";
     const link = await stripe.accountLinks.create({
         account: accountId,
         refresh_url: `${baseUrl}/onboarding/terms`,
@@ -188,3 +187,5 @@ exports.finalizeSeller = (0, https_1.onCall)({
     });
     return { ok: true, storeId };
 });
+var stripeWebhook_1 = require("./stripeWebhook");
+Object.defineProperty(exports, "stripeWebhook", { enumerable: true, get: function () { return stripeWebhook_1.stripeWebhook; } });
