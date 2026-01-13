@@ -18,11 +18,29 @@ import { cn } from "@/lib/utils";
 
 
 import { useAuth } from "@/hooks/use-auth";
+import { useEffect, useState } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/firebase/client-provider";
 
 export default function SellerSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const [storeId, setStoreId] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchSellerProfile() {
+      if (!user?.uid || !db) return;
+      const sellerRef = doc(db, "users", user.uid);
+      const sellerSnap = await getDoc(sellerRef);
+      if (sellerSnap.exists()) {
+        const sellerData = sellerSnap.data();
+        if (sellerData.storeId) setStoreId(sellerData.storeId);
+      }
+    }
+    fetchSellerProfile();
+  }, [user]);
+
   if (!user) return null;
 
 
@@ -36,6 +54,7 @@ export default function SellerSidebar() {
     { href: "/seller/payouts", label: "Payouts", icon: DollarSign },
     { href: "/seller/settings", label: "Settings", icon: Settings },
     { href: "/", label: "Home", icon: Home },
+    { href: storeId ? `/store/${storeId}` : "/hobbydork-store", label: "My Store", icon: Store },
   ];
 
   // Help & Account section

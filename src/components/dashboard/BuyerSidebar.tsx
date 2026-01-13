@@ -28,6 +28,7 @@ export default function BuyerSidebar() {
   if (!user) return null;
 
   const buyerLinks = [
+    { href: "/", label: "Home", icon: Home },
     { href: "/buyer/dashboard", label: "Overview", icon: Home },
     { href: "/orders", label: "My Orders", icon: ShoppingBag },
     { href: "/watchlist", label: "Watchlist", icon: Heart },
@@ -35,7 +36,6 @@ export default function BuyerSidebar() {
     { href: "/profile", label: "Profile", icon: User },
     { href: "/activity", label: "Activity", icon: History },
     { href: "/settings", label: "Settings", icon: Settings },
-    { href: "/", label: "Home", icon: Home },
   ];
 
   const handleNav = (href: string) => {
@@ -44,8 +44,8 @@ export default function BuyerSidebar() {
   };
 
   const sidebarContent = (
-    <SidebarContent className="p-4 bg-sidebar text-sidebar-foreground border-r border-gray-800 flex flex-col" style={{ width: '240px', minWidth: '240px', maxWidth: '240px', boxSizing: 'border-box', flex: '0 0 240px', zIndex: 2 }}>
-      <div className="h-full flex flex-col space-y-6 pt-2">
+    <SidebarContent className="p-6 bg-sidebar text-sidebar-foreground border-r border-gray-800 flex flex-col" style={{ width: '280px', minWidth: '260px', maxWidth: '320px', boxSizing: 'border-box', flex: '0 0 280px', zIndex: 2 }}>
+      <div className="h-full flex flex-col space-y-8 pt-2">
         <SidebarMenu>
           <RedLineSeparator />
           <div className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Buyer</div>
@@ -57,7 +57,7 @@ export default function BuyerSidebar() {
                   isActive={isActive}
                   onClick={() => handleNav(href)}
                   className={cn(
-                    "justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md",
+                    "justify-start gap-3 text-base font-semibold tracking-wide w-full px-3 py-3 rounded-lg",
                     isActive ? "bg-muted text-primary" : "text-muted-foreground"
                   )}
                 >

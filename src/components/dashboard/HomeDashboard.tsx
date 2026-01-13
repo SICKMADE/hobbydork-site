@@ -12,7 +12,7 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 import StoreCard from '@/components/StoreCard';
 import type { Store as StoreType, Listing } from '@/lib/types';
 import { listingConverter, storeConverter, spotlightConverter } from '@/firebase/firestore/converters';
-import StandaloneVaultDoor from './StandaloneVaultDoor';
+import { StandaloneVaultDoor } from './StandaloneVaultDoor';
 import AskHobbyDork from './AskHobbyDork';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -195,14 +195,13 @@ function SpotlightStoresSection() {
 // =====================
 function NewStoreCard({ store }: { store: StoreType }) {
     const firestore = useFirestore();
-
     const ownerRef = useMemoFirebase(() => {
         if (!firestore || !store.ownerUid) return null;
         return doc(firestore, 'users', store.ownerUid);
     }, [firestore, store.ownerUid]);
-    
     const { data: owner } = useDoc<User>(ownerRef);
     const cardImage = resolveAvatarUrl(owner?.avatar, store.ownerUid);
+    const username = owner?.displayName || owner?.email || "New Seller";
 
     return (
        <div className="relative flex flex-col items-center gap-2 text-center">
@@ -214,6 +213,7 @@ function NewStoreCard({ store }: { store: StoreType }) {
             </Link>
             <div className="text-xs mt-2">
                 <p className="font-semibold truncate">{store.storeName}</p>
+                <p className="text-muted-foreground font-normal truncate">{username}</p>
                 <Button asChild variant="link" className="h-auto p-0 text-xs">
                     <Link href={`/store/${store.storeId}`}>Visit Store</Link>
                 </Button>

@@ -1,3 +1,15 @@
+.tape-corner.z-10 {
+  z-index: 10;
+}
+/* Store banner image and overlay utility classes */
+.store-banner-img {
+  z-index: 1;
+  position: relative;
+  border-radius: 16px;
+}
+.store-banner-gradient {
+  z-index: 2;
+}
 /* Grid background utility for order pages */
 .bg-grid {
   background-image: url('/grid.svg');
@@ -191,37 +203,37 @@ html, body {
   color: rgb(255, 255, 255);
 }
 
+
 .tape-corner {
-  width: 38px;
-  height: 18px;
+  width: 54px;
+  height: 14px;
   background: #e7d9a7;
   position: absolute;
-  opacity: 0.9;
-  z-index: 10;
+  opacity: 0.92;
+  z-index: 20;
+  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.10);
+  border-radius: 0;
+  border: 1.5px solid #d2c48c;
 }
-
 .tape-corner.top-left {
-  top: -14px;
-  left: -14px;
-  transform: rotate(-11deg);
+  top: -12px;
+  left: -12px;
+  transform: rotate(-18deg);
 }
-
 .tape-corner.top-right {
-  top: -14px;
-  right: -14px;
-  transform: rotate(11deg);
+  top: -12px;
+  right: -12px;
+  transform: rotate(18deg);
 }
-
 .tape-corner.bottom-left {
-  bottom: -14px;
-  left: -14px;
-  transform: rotate(7deg);
+  bottom: -12px;
+  left: -12px;
+  transform: rotate(13deg);
 }
-
 .tape-corner.bottom-right {
-  bottom: -14px;
-  right: -14px;
-  transform: rotate(-8deg);
+  bottom: -12px;
+  right: -12px;
+  transform: rotate(-13deg);
 }
 
 /* --------------------------------------------------

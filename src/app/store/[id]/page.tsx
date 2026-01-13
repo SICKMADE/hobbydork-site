@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+// Store image upload state and logic (moved from dashboard)
+// ...existing code...
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -136,7 +138,17 @@ function RenderStars({ avg, size = 14 }: { avg: number | null; size?: number }) 
   );
 }
 
+
 export default function StorePage() {
+  // --- HOOKS: Always call hooks at the top, before any conditional returns ---
+  const [ownerName, setOwnerName] = React.useState<string>("");
+
+
+  // (Removed duplicate variable declarations)
+
+
+  // Fallback: use owner's displayName if storeName is missing (must be after 'store' is declared)
+
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const storeIdParam = params?.id;
@@ -336,7 +348,13 @@ export default function StorePage() {
   const itemsSold = store.itemsSold ?? 0;
   const isOwner = user?.uid === store.ownerUid;
 
-  const storeName = store.storeName || "Store";
+  // DEBUG: Log store object and storeName
+  if (typeof window !== "undefined") {
+    // eslint-disable-next-line no-console
+    console.log("[StorePage] store:", store, "storeName:", store?.storeName);
+  }
+  // (No duplicate variable declarations below)
+  const storeName = store?.storeName || ownerName || "Store";
   const avatarUrl = store.avatarUrl || "/hobbydork-head.png";
   const coverUrl = store.storeImageUrl || "/store.png";
   const about = store.about;
@@ -355,6 +373,7 @@ export default function StorePage() {
   return (
     <AppLayout>
       <div className="max-w-5xl mx-auto space-y-6 px-2 sm:px-4">
+        {/* Store image upload UI for owner only */}
         {isOwner && (
           <Card className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
             <CardHeader>
@@ -369,16 +388,13 @@ export default function StorePage() {
                 accept="image/*"
                 onChange={(e) => onPickStoreImage(e.target.files?.[0] ?? null)}
               />
-
               {newStoreImagePreviewUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={newStoreImagePreviewUrl}
                   alt="New store image preview"
                   className="w-full max-h-[260px] object-contain rounded-md border-2 border-black bg-muted"
                 />
               )}
-
               <div className="flex justify-end">
                 <Button
                   type="button"
@@ -395,13 +411,13 @@ export default function StorePage() {
 
         {/* Hero / header */}
         <Panel>
-          <div className="relative overflow-hidden rounded-2xl">
-            <div className="relative h-40 xs:h-48 sm:h-56 md:h-[320px] border-b-4 border-black">
+          <div className="relative overflow-visible rounded-xl">
+            <div className="relative h-40 xs:h-48 sm:h-56 md:h-[320px] border-b-4 border-black overflow-visible">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={coverUrl}
                 alt={`${storeName} store banner`}
-                className="h-full w-full object-contain bg-muted"
+                className="h-full w-full object-contain bg-muted rounded-xl store-banner-img"
                 onError={(e) => {
                   const img = e.currentTarget;
                   if (img.dataset.fallbackApplied === '1') return;
@@ -409,12 +425,12 @@ export default function StorePage() {
                   img.src = '/SPOTLIGHT.png';
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-
-              <div className="tape-corner top-left" />
-              <div className="tape-corner top-right" />
-              <div className="tape-corner bottom-left" />
-              <div className="tape-corner bottom-right" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent store-banner-gradient" />
+              {/* Tape corners must be after the image to appear on top */}
+              <div className="tape-corner top-left z-10" />
+              <div className="tape-corner top-right z-10" />
+              <div className="tape-corner bottom-left z-10" />
+              <div className="tape-corner bottom-right z-10" />
             </div>
 
             <div className="p-3 xs:p-4 md:p-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">

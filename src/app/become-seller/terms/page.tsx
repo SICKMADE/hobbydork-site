@@ -63,18 +63,30 @@ export default function BecomeSellerTermsPage() {
       .replace(/^-+|-+$/g, "");
   }, [profile?.displayName]);
   const firestore = useFirestore();
-  const methods = useForm<SellerAgreementsFormValues>({
-    resolver: zodResolver(sellerAgreementsSchema),
-    mode: "onChange",
-    defaultValues: {
-      agreeTerms: false,
-      agreeAge: false,
-      agreeOneAccount: false,
-      agreeSellerTerms: false,
-      agreeShip2Days: false,
-      sellerIntent: '',
-    },
-  });
+    const methods = useForm<SellerAgreementsFormValues>({
+      resolver: zodResolver(sellerAgreementsSchema),
+      mode: "onChange",
+      defaultValues: {
+        agreeTerms: false,
+        agreeAge: false,
+        agreeOneAccount: false,
+        agreeSellerTerms: false,
+        agreeShip2Days: false,
+        sellerIntent: '',
+      },
+    });
+
+    // Explicitly reset form on mount to prevent browser autofill or cache from pre-checking boxes
+    useEffect(() => {
+      methods.reset({
+        agreeTerms: false,
+        agreeAge: false,
+        agreeOneAccount: false,
+        agreeSellerTerms: false,
+        agreeShip2Days: false,
+        sellerIntent: '',
+      });
+    }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 

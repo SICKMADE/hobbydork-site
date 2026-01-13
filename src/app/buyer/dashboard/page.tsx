@@ -2,6 +2,9 @@
 
 
 import BuyerSidebar from "@/components/dashboard/BuyerSidebar";
+import BuyerAddressForm from "@/components/dashboard/BuyerAddressForm";
+// ...existing code...
+import { Dialog, DialogTrigger, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -21,16 +24,18 @@ export default function BuyerDashboard() {
   if (!user) {
     return (
       <div className="flex min-h-screen bg-background items-center justify-center">
-        <div className="bg-background/90 p-8 rounded-2xl shadow-xl border border-red-500 text-center">
-          <h1 className="text-2xl font-bold mb-2">Sign in to view your dashboard</h1>
-          <Link href="/login" className="comic-button px-6 py-2 rounded text-white bg-primary hover:bg-primary/90 transition">Sign In</Link>
+        <div className="bg-background/90 p-8 rounded-2xl custom-btn-shadow border-4 border-primary text-center">
+          <h1 className="text-2xl font-bold mb-2 text-white">Sign in to view your dashboard</h1>
+          <Link href="/login" className="comic-button px-6 py-2 rounded custom-btn-shadow text-white bg-destructive border-2 border-primary hover:bg-primary hover:text-black transition">Sign In</Link>
         </div>
       </div>
     );
   }
 
   const displayName = profile?.displayName ?? user.email ?? "Collector";
-  const avatarUrl = profile?.avatar || undefined;
+  // Always resolve avatar, fallback to default if missing
+  const { resolveAvatarUrl } = require("@/lib/default-avatar");
+  const avatarUrl = resolveAvatarUrl(profile?.avatar, profile?.uid);
 
   const { SidebarProvider } = require("@/components/ui/sidebar");
   // Fetch stats and orders
@@ -59,111 +64,82 @@ export default function BuyerDashboard() {
     <SidebarProvider>
       <div className="flex min-h-screen bg-background">
         <BuyerSidebar />
-        <main className="flex-1 flex flex-col items-center justify-center p-4 bg-[url('/grid.avg')] bg-cover bg-center">
-          <div className="max-w-3xl w-full flex flex-col gap-8 rounded-2xl shadow-2xl border border-red-500 bg-background/90 backdrop-blur-md p-8 md:p-12">
-            {/* Profile summary */}
-            <div className="flex items-center gap-4 mb-4">
-              <Avatar className="h-16 w-16 border-2 border-primary/50">
-                <AvatarImage src={avatarUrl} alt={displayName} />
-                <AvatarFallback>{displayName[0]}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="text-3xl font-extrabold text-red-400">Welcome, {displayName}</h1>
-                <p className="text-sm text-gray-300">Buyer Dashboard</p>
-              </div>
+        <main className="flex-1 flex items-center justify-center p-2 bg-grid bg-[length:150px_150px] bg-center">
+          <div className="max-w-5xl w-full flex flex-col gap-8 rounded-2xl border-2 border-destructive bg-background/95 p-8 md:p-12">
+            {/* Dashboard PNG header at very top */}
+            <div className="flex flex-col items-center mb-8">
+              <img src="/BUYERDASH.PNG" alt="Buyer Dashboard" className="w-78 h-28 object-contain mb-2 drop-shadow-lg" />
             </div>
-            {/* Quick stats with tooltips */}
-            <TooltipProvider>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="bg-gray-800 rounded-xl p-4 flex flex-col items-center border-2 border-gray-700 shadow cursor-help">
-                      <span className="text-2xl font-bold text-white">{orderCount}</span>
-                      <span className="text-xs text-gray-300 mt-1">Orders</span>
+            {/* Stats grid directly under PNG */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                  {/* Orders */}
+                  <Link href="/orders" className="contents">
+                    <div className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)] rounded-lg cursor-pointer hover:bg-primary/10 transition flex flex-col items-center justify-center p-4">
+                      <div className="text-sm font-semibold">Orders</div>
+                      <div className="text-2xl font-bold">{orderCount}</div>
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent>Number of orders you’ve placed.</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="bg-gray-800 rounded-xl p-4 flex flex-col items-center border-2 border-gray-700 shadow cursor-help">
-                      <span className="text-2xl font-bold text-white">{watchlistCount}</span>
-                      <span className="text-xs text-gray-300 mt-1">Watchlist</span>
+                  </Link>
+                  {/* Watchlist */}
+                  <Link href="/watchlist" className="contents">
+                    <div className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)] rounded-lg cursor-pointer hover:bg-primary/10 transition flex flex-col items-center justify-center p-4">
+                      <div className="text-sm font-semibold">Watchlist</div>
+                      <div className="text-2xl font-bold">{watchlistCount}</div>
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent>Items you’re watching for price drops or updates.</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="bg-gray-800 rounded-xl p-4 flex flex-col items-center border-2 border-gray-700 shadow cursor-help">
-                      <span className="text-2xl font-bold text-white">{unreadMessages}</span>
-                      <span className="text-xs text-gray-300 mt-1">Unread Messages</span>
+                  </Link>
+                  {/* Unread */}
+                  <Link href="/messages" className="contents">
+                    <div className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)] rounded-lg cursor-pointer hover:bg-primary/10 transition flex flex-col items-center justify-center p-4">
+                      <div className="text-sm font-semibold">Unread</div>
+                      <div className="text-2xl font-bold">{unreadMessages}</div>
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent>Messages from sellers or support you haven’t read yet.</TooltipContent>
-                </Tooltip>
-              </div>
-            </TooltipProvider>
-            {/* Recent Orders */}
-            <div>
-              <h2 className="text-lg font-semibold mb-2">Recent Orders</h2>
+                  </Link>
+                  {/* Address Shortcut */}
+                  <button type="button" className="contents">
+                    <div className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)] rounded-lg cursor-pointer hover:bg-primary/10 transition flex flex-col items-center justify-center p-4">
+                      <div className="text-sm font-semibold">Shipping Address</div>
+                      <div className="text-2xl font-bold">Edit</div>
+                    </div>
+                  </button>
+                </div>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogTitle>Edit Shipping Address</DialogTitle>
+                <BuyerAddressForm />
+              </DialogContent>
+            </Dialog>
+            {/* Remove old stats grid, replaced by shortcut grid above */}
+            {/* Recent Orders - styled card */}
+            <div className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)] rounded-2xl p-6">
+              {/* Removed header text, only PNG at top */}
               {orders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground text-sm">
-                  <div className="text-3xl mb-2">🛒</div>
+                <div className="flex flex-col items-center justify-center py-4 text-muted-foreground text-xs">
+                  <div className="text-2xl mb-1">🛒</div>
                   <div>No orders yet.</div>
-                  <div className="mt-2 text-xs">When you place an order, it will show up here.</div>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <ul className="space-y-2">
                   {orders.slice(0, 5).map((o) => (
-                    <Link key={o.id} href={`/orders/${o.id}`} className="block">
-                      <div className="p-4 border rounded bg-gray-800 shadow flex flex-col md:flex-row md:items-center md:justify-between gap-2 cursor-pointer hover:bg-gray-700 transition">
-                        <div>
-                          <div className="font-semibold">{o.listingTitle || "Order"}</div>
-                          <div className="text-xs text-gray-400">Status: {o.status || ""}</div>
-                        </div>
-                        <div className="text-sm font-bold">${typeof o.amount === 'number' ? o.amount.toFixed(2) : o.amount}</div>
+                    <li key={o.id} className="border border-primary rounded-lg bg-background/80 p-3 flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-base text-white">{o.items?.[0]?.title || o.listingTitle || "Order"}</div>
+                        <div className="text-xs text-white">{o.createdAt && o.createdAt.seconds ? new Date(o.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</div>
                       </div>
-                    </Link>
+                      <div className="flex flex-col items-end">
+                        <span className={`px-2 py-1 rounded text-[10px] font-bold ${o.state === 'DELIVERED' ? 'bg-green-600 text-white' : o.state === 'SHIPPED' ? 'bg-blue-600 text-white' : o.state === 'PAID' ? 'bg-yellow-500 text-black' : 'bg-destructive text-white'}`}>{o.state || o.status || "N/A"}</span>
+                        <span className="text-xs font-bold text-green-400 mt-1">${typeof o.subtotal === 'number' ? o.subtotal.toFixed(2) : o.amount}</span>
+                      </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
-              <div className="mt-4 text-right">
-                <Link href="/orders" className="text-primary underline text-sm">View all orders</Link>
+              <div className="mt-2 text-right">
+                <Link href="/orders" className="text-primary underline text-xs font-bold">
+                  View all orders
+                </Link>
               </div>
             </div>
-            {/* Main actions with tooltips */}
-            <TooltipProvider>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link href="/watchlist" className="bg-gray-800 rounded-2xl shadow-lg border-2 border-gray-700 hover:border-red-400 hover:bg-gray-900 transition-all p-6 flex flex-col items-center cursor-pointer group">
-                      <span className="font-semibold text-lg text-white mb-1 group-hover:text-red-400">Watchlist</span>
-                      <span className="text-sm text-gray-300">See items you’re watching.</span>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>View and manage your watchlist.</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link href="/messages" className="bg-gray-800 rounded-2xl shadow-lg border-2 border-gray-700 hover:border-red-400 hover:bg-gray-900 transition-all p-6 flex flex-col items-center cursor-pointer group">
-                      <span className="font-semibold text-lg text-white mb-1 group-hover:text-red-400">Messages</span>
-                      <span className="text-sm text-gray-300">Check your messages and conversations.</span>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>Read and reply to messages from sellers or support.</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link href="/profile" className="bg-gray-800 rounded-2xl shadow-lg border-2 border-gray-700 hover:border-red-400 hover:bg-gray-900 transition-all p-6 flex flex-col items-center cursor-pointer group">
-                      <span className="font-semibold text-lg text-white mb-1 group-hover:text-red-400">Profile</span>
-                      <span className="text-sm text-gray-300">Edit your profile and settings.</span>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>Edit your account details and preferences.</TooltipContent>
-                </Tooltip>
-              </div>
-            </TooltipProvider>
           </div>
         </main>
       </div>

@@ -116,7 +116,7 @@ Button.displayName = 'Button';
 // --- Self-Contained Vault Door ---
 function SafeDoorIcon() {
   return (
-    <div className="relative w-64 h-48 sm:w-64 sm:h-48 w-full h-40 flex items-center justify-center cursor-pointer group">
+    <div className="relative w-64 h-48 flex items-center justify-center cursor-pointer group">
       <div className="absolute w-full h-full rounded-lg bg-gradient-to-br from-neutral-600 to-neutral-800 shadow-lg" />
       <div className="absolute w-[95%] h-[90%] rounded-lg bg-gradient-to-br from-neutral-700 to-neutral-800 shadow-inner" />
       <div className="absolute w-[85%] h-[80%] rounded-lg bg-gradient-to-b from-neutral-600 to-neutral-700 border-4 border-neutral-800" />
@@ -138,7 +138,7 @@ function SafeDoorIcon() {
   );
 }
 
-const StandaloneVaultDoor: React.FC = () => {
+export function StandaloneVaultDoor() {
   const [isOpen, setIsOpen] = useState(false);
   const [pin, setPin] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -165,55 +165,89 @@ const StandaloneVaultDoor: React.FC = () => {
         toast({ title: 'Incorrect PIN', description: result.reason, variant: 'destructive' });
         handleClear();
       }
-    } catch (err) {
-      setReason('Error verifying PIN');
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to communicate with the vault system.', variant: 'destructive' });
+      handleClear();
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  const resetVault = () => {
+    setIsOpen(false);
+    setIsCorrect(false);
+    setPin('');
+    setReason('');
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open ? resetVault() : setIsOpen(true)}>
       <DialogTrigger asChild>
-        <Button variant="secondary" className="w-full max-w-xs mx-auto mb-6" onClick={() => setIsOpen(true)}>
-          <AwardIcon className="mr-2 h-5 w-5" />
-          Open Vault
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-lg w-full p-4 sm:p-6">
-        <DialogTitle className="mb-2">Vault Access</DialogTitle>
-        <DialogDescription className="mb-4">Enter your 4-digit PIN to unlock the vault.</DialogDescription>
-        <div className="flex flex-col items-center gap-4">
+        <button className="bg-card p-8 rounded-lg flex flex-col items-center gap-4 text-center" aria-label="Open Vault" title="Open Vault">
+          <h3 className="text-2xl font-bold"></h3>
+          <p className="max-w-md text-muted-foreground"></p>
           <SafeDoorIcon />
-          <div className="flex gap-2 mt-2">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className={cn("w-8 h-8 rounded bg-muted border-2 border-black flex items-center justify-center text-xl font-mono", pin.length > i ? "bg-primary text-white" : "")}>{pin[i] || ''}</div>
-            ))}
-          </div>
-          <div className="grid grid-cols-3 gap-2 mt-4 w-full max-w-xs">
-            {[...'123456789'].map((d) => (
-              <Button key={d} variant="outline" className="h-12 text-lg" onClick={() => handlePinClick(d)}>{d}</Button>
-            ))}
-            <Button variant="ghost" className="h-12 text-lg" onClick={handleBackspace}>&larr;</Button>
-            <Button variant="ghost" className="h-12 text-lg" onClick={handleClear}>C</Button>
-            <Button variant="ghost" className="h-12 text-lg" disabled>
-              {/* Empty cell */}
-            </Button>
-          </div>
-          <div className="mt-4 text-sm text-muted-foreground min-h-[24px]">
-            {reason && <span className="text-red-600">{reason}</span>}
-            {isCorrect && <span className="text-green-600">Vault unlocked!</span>}
-          </div>
+        </button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <div className="sr-only">
+            <DialogTitle>{isCorrect ? "Vault Unlocked" : "Unlock the Vault"}</DialogTitle>
+            <DialogDescription>
+            {isCorrect
+                ? "You have successfully unlocked the vault. Claim your prize."
+                : "Enter the 4-digit PIN to unlock the vault and win a prize."}
+            </DialogDescription>
         </div>
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-4">
-          <Button type="button" className="w-full sm:w-auto" disabled={isSubmitting || pin.length !== 4} onClick={checkPin}>
-            {isSubmitting ? <Loader2 className="animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-            <span>Unlock</span>
-          </Button>
-        </div>
+
+        {isCorrect ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center">
+            <AwardIcon className="w-16 h-16 text-yellow-400 animate-bounce" />
+            <h2 className="mt-4 font-headline text-2xl font-bold">Congratulations, You Won!</h2>
+            <p className="mt-2 text-muted-foreground">{reason}</p>
+            <a href="mailto:winner@example.com?subject=I%20unlocked%20the%20HOBBYDORK%20vault!" className="mt-6">
+                <Button>
+                    <MailIcon className="mr-2 h-4 w-4"/>
+                    Claim Your Prize
+                </Button>
+            </a>
+          </div>
+        ) : (
+          <>
+            <div className="text-center space-y-1.5">
+                <h2 className="text-lg font-semibold leading-none tracking-tight font-headline">Enter PIN</h2>
+                <p className="text-sm text-muted-foreground">Enter the 4-digit PIN to unlock the vault.</p>
+            </div>
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-12 w-48 rounded-md bg-input flex items-center justify-center">
+                <p className="font-mono text-3xl tracking-widest">{pin.padEnd(4, '•')}</p>
+              </div>
+               {reason && <p className="text-destructive text-sm font-medium">{reason}</p>}
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'Clear', 0, 'Del'].map((item) => (
+                  <Button
+                    key={item}
+                    variant="outline"
+                    className="w-16 h-16 text-2xl font-bold"
+                    onClick={() => {
+                      if (typeof item === 'number') handlePinClick(item.toString());
+                      else if (item === 'Clear') handleClear();
+                      else if (item === 'Del') handleBackspace();
+                    }}
+                  >
+                    {item}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-4">
+              <Button type="button" className="w-full" disabled={isSubmitting || pin.length !== 4} onClick={checkPin}>
+                {isSubmitting ? <Loader2 className="animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                <span>Unlock</span>
+              </Button>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
-};
-
-export default StandaloneVaultDoor;
+}

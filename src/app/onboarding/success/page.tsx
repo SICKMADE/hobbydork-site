@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -9,48 +8,57 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
 export default function OnboardingSuccess() {
-  // --- Auth, router, and toast hooks ---
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [showSpinner, setShowSpinner] = useState(true);
   // --- Only show toast once ---
   const [toastShown, setToastShown] = useState(false);
-
-  // Placeholder for admin notification and analytics logging
-  const notifyAdmin = () => {
-    // TODO: Implement real admin notification (email, dashboard, etc.)
-    // Example: send to webhook or Firestore collection
-    // fetch('/api/admin-notify', { method: 'POST', body: ... })
-  };
-  const logAnalytics = (event: string) => {
-    // TODO: Implement real analytics logging
-    // Example: window.gtag('event', event, ...)
-  };
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // If user is not a seller, redirect to finalize step
-    if (user && !profile?.isSeller) {
-      router.replace("/onboarding/finalize");
+    let tries = 0;
+    const maxTries = 20; // Wait up to 10 seconds
+    async function checkSellerStatus() {
+      while (tries < maxTries) {
+        if (profile?.isSeller) {
+          setChecking(false);
+          return;
+        }
+        if (refreshProfile) await refreshProfile();
+        await new Promise((res) => setTimeout(res, 500));
+        tries++;
+      }
+      setChecking(false);
+      if (!profile?.isSeller) router.replace("/onboarding/finalize");
     }
+    checkSellerStatus();
     // Hide spinner after short delay for better UX
     const t = setTimeout(() => setShowSpinner(false), 600);
     return () => clearTimeout(t);
-  }, [user, profile, router]);
+  }, [user, profile, router, refreshProfile]);
 
   useEffect(() => {
     // Show success toast and log analytics/admin only once
     if (profile?.isSeller && !toastShown) {
       toast({ title: "Welcome, Seller!", description: "Your seller account is now active.", variant: "default" });
-      notifyAdmin();
-      logAnalytics("seller_onboarding_success_page");
       setToastShown(true);
     }
   }, [profile, toast, toastShown]);
 
+  if (checking) {
+    return (
+      <div className="min-h-screen h-screen flex flex-col items-center justify-center p-4 bg-[url('/grid.svg')] bg-[length:300px_300px] bg-center">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-red-500 border-b-4 border-white"></div>
+        </div>
+      </div>
+    );
+  }
+
   // --- Responsive, accessible, and commented UI ---
   return (
-    <div className="min-h-screen h-screen flex flex-col items-center justify-center p-4 bg-[url('/grid.avg')] bg-cover bg-center">
+    <div className="min-h-screen h-screen flex flex-col items-center justify-center p-4 bg-[url('/grid.svg')] bg-[length:300px_300px] bg-center">
       {/* Loading spinner for initial load */}
       {showSpinner && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
