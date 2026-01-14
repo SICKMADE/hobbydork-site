@@ -274,7 +274,7 @@ export default function ListingDetailPage() {
           orderId: orderRef.id,
           amountCents: Math.round(price * quantity * 100),
           listingTitle: activeListing.title,
-          appBaseUrl: window.location.origin,
+          appBaseUrl: process.env.NEXT_PUBLIC_SITE_URL || window.location.origin,
         });
       } else {
         throw new Error("Cloud Functions are not available. Please try again in the browser.");

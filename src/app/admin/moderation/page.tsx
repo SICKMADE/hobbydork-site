@@ -172,9 +172,9 @@ export default function AdminModerationPage() {
 
   return (
     <AppLayout>
-      <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 py-8 space-y-6">
         {/* Listings moderation */}
-        <Card>
+        <Card className="border-2 border-primary bg-card/90 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
           <CardHeader>
             <CardTitle>Listings moderation</CardTitle>
           </CardHeader>
@@ -197,7 +197,7 @@ export default function AdminModerationPage() {
                   return (
                     <div
                       key={id}
-                      className="flex items-start justify-between gap-3 border rounded-md px-3 py-2 text-xs"
+                      className="flex items-start justify-between gap-3 rounded-xl border border-muted bg-card/80 px-4 py-3 text-xs shadow"
                     >
                       <div className="min-w-0">
                         <div className="font-semibold truncate">
@@ -218,11 +218,9 @@ export default function AdminModerationPage() {
                         <div className="flex flex-wrap gap-1 justify-end">
                           <Button
                             size="xs"
-                            variant="destructive"
+                            className="comic-button bg-red-600 border-red-600 text-white hover:bg-red-700"
                             disabled={deletingId === id}
-                            onClick={() =>
-                              handleDeleteDoc('listings', id)
-                            }
+                            onClick={() => handleDeleteDoc('listings', id)}
                           >
                             Delete listing
                           </Button>
@@ -231,7 +229,7 @@ export default function AdminModerationPage() {
                             <>
                               <Button
                                 size="xs"
-                                variant="outline"
+                                className="comic-button bg-blue-600 border-blue-600 text-white hover:bg-blue-700"
                                 disabled={updatingUserId === ownerUid}
                                 onClick={() => suspendUser(ownerUid)}
                               >
@@ -240,7 +238,7 @@ export default function AdminModerationPage() {
                               {isAdmin && (
                                 <Button
                                   size="xs"
-                                  variant="destructive"
+                                  className="comic-button bg-gray-700 border-gray-700 text-white hover:bg-gray-800"
                                   disabled={updatingUserId === ownerUid}
                                   onClick={() => banUser(ownerUid)}
                                 >
@@ -260,7 +258,7 @@ export default function AdminModerationPage() {
         </Card>
 
         {/* ISO24 moderation */}
-        <Card>
+        <Card className="border-2 border-primary bg-card/90 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
           <CardHeader>
             <CardTitle>ISO24 moderation</CardTitle>
           </CardHeader>
@@ -283,7 +281,7 @@ export default function AdminModerationPage() {
                   return (
                     <div
                       key={id}
-                      className="flex items-start justify-between gap-3 border rounded-md px-3 py-2 text-xs"
+                      className="flex items-start justify-between gap-3 rounded-xl border border-muted bg-card/80 px-4 py-3 text-xs shadow"
                     >
                       <div className="min-w-0">
                         <div className="font-semibold truncate">
@@ -294,17 +292,13 @@ export default function AdminModerationPage() {
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        <Badge variant="outline">
-                          {p.status || 'OPEN'}
-                        </Badge>
+                        <Badge variant="outline">{p.status || 'OPEN'}</Badge>
                         <div className="flex flex-wrap gap-1 justify-end">
                           <Button
                             size="xs"
-                            variant="destructive"
+                            className="comic-button bg-red-600 border-red-600 text-white hover:bg-red-700"
                             disabled={deletingId === id}
-                            onClick={() =>
-                              handleDeleteDoc('iso24Posts', id)
-                            }
+                            onClick={() => handleDeleteDoc('iso24Posts', id)}
                           >
                             Delete ISO
                           </Button>
@@ -313,7 +307,7 @@ export default function AdminModerationPage() {
                             <>
                               <Button
                                 size="xs"
-                                variant="outline"
+                                className="comic-button bg-blue-600 border-blue-600 text-white hover:bg-blue-700"
                                 disabled={updatingUserId === ownerUid}
                                 onClick={() => suspendUser(ownerUid)}
                               >
@@ -322,7 +316,7 @@ export default function AdminModerationPage() {
                               {isAdmin && (
                                 <Button
                                   size="xs"
-                                  variant="destructive"
+                                  className="comic-button bg-gray-700 border-gray-700 text-white hover:bg-gray-800"
                                   disabled={updatingUserId === ownerUid}
                                   onClick={() => banUser(ownerUid)}
                                 >
@@ -342,7 +336,7 @@ export default function AdminModerationPage() {
         </Card>
 
         {/* Community chat moderation */}
-        <Card>
+        <Card className="border-2 border-primary bg-card/90 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
           <CardHeader>
             <CardTitle>Community chat moderation</CardTitle>
           </CardHeader>
@@ -365,7 +359,7 @@ export default function AdminModerationPage() {
                   return (
                     <div
                       key={id}
-                      className="flex items-start justify-between gap-3 border rounded-md px-3 py-2 text-xs"
+                      className="flex items-start justify-between gap-3 rounded-xl border border-muted bg-card/80 px-4 py-3 text-xs shadow"
                     >
                       <div className="min-w-0">
                         <div className="font-semibold truncate">
@@ -381,14 +375,9 @@ export default function AdminModerationPage() {
                         <div className="flex flex-wrap gap-1 justify-end">
                           <Button
                             size="xs"
-                            variant="destructive"
+                            className="comic-button bg-red-600 border-red-600 text-white hover:bg-red-700"
                             disabled={deletingId === id}
-                            onClick={() =>
-                              handleDeleteDoc(
-                                'communityMessages',
-                                id,
-                              )
-                            }
+                            onClick={() => handleDeleteDoc('communityMessages', id)}
                           >
                             Delete message
                           </Button>
@@ -397,7 +386,7 @@ export default function AdminModerationPage() {
                             <>
                               <Button
                                 size="xs"
-                                variant="outline"
+                                className="comic-button bg-blue-600 border-blue-600 text-white hover:bg-blue-700"
                                 disabled={updatingUserId === authorUid}
                                 onClick={() => suspendUser(authorUid)}
                               >
@@ -406,7 +395,7 @@ export default function AdminModerationPage() {
                               {isAdmin && (
                                 <Button
                                   size="xs"
-                                  variant="destructive"
+                                  className="comic-button bg-gray-700 border-gray-700 text-white hover:bg-gray-800"
                                   disabled={updatingUserId === authorUid}
                                   onClick={() => banUser(authorUid)}
                                 >

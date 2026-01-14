@@ -364,7 +364,7 @@ function NewListingsSection() {
 function VaultAndGenieSection() {
   return (
     <section className="rounded-2xl border-2 border-black bg-card/80 p-6 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
-      <div className="grid gap-8 lg:grid-cols-2 items-start">
+      <div className="grid gap-8 grid-cols-1 lg:grid-cols-2 items-start">
         {/* VAULT */}
         <div className="flex flex-col items-center gap-4 p-4 rounded-lg border bg-muted">
           <div className="relative w-64 h-32">

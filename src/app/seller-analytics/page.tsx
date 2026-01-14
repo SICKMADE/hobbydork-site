@@ -12,19 +12,14 @@ import { Separator } from "@/components/ui/separator";
 import { BarChart2, TrendingUp, ShoppingBag } from "lucide-react";
 
 export default function SellerAnalyticsPage() {
-  // Get Firestore instance
   const firestore = useFirestore();
   const { user, profile, loading: authLoading } = useAuth();
-  if (authLoading) return null;
-  if (!user) return null;
-  if (profile?.status !== "ACTIVE") return null;
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    //
     profile?.status === "ACTIVE";
-  let orders = null;
-  let isLoading = false;
+
+
   const q = useMemo(() => {
     if (canReadFirestore && firestore && user?.uid) {
       return query(
@@ -35,10 +30,13 @@ export default function SellerAnalyticsPage() {
     }
     return null;
   }, [canReadFirestore, firestore, user?.uid]);
-  const memoizedQ = useMemo(() => q, [q]);
-  const result = useCollection(memoizedQ);
-  orders = result.data;
-  isLoading = result.isLoading;
+  const result = useCollection(q);
+  const orders = result.data;
+  const isLoading = result.isLoading;
+
+  if (authLoading) return null;
+  if (!user) return null;
+  if (profile?.status !== "ACTIVE") return null;
 
   // Example stats (replace with real aggregation logic)
   const totalSales = orders?.length || 0;
@@ -89,3 +87,4 @@ export default function SellerAnalyticsPage() {
     </AppLayout>
   );
 }
+

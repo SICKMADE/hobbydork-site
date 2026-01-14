@@ -51,15 +51,12 @@ type ConversationDoc = {
 
 export default function MessagesPage() {
   const { user, profile, loading: authLoading } = useAuth();
-  if (authLoading) return null;
-  if (!user) return null;
   const firestore = useFirestore();
   const router = useRouter();
   const canReadFirestore =
     !authLoading &&
     !!user &&
     profile?.status === "ACTIVE";
-
   const conversationsQuery = useMemoFirebase(() => {
     if (!canReadFirestore || !firestore || !user?.uid) return null;
     return query(
@@ -67,10 +64,10 @@ export default function MessagesPage() {
       where('participantUids', 'array-contains', user.uid),
     );
   }, [canReadFirestore, firestore, user?.uid]);
-
   const { data: conversations, isLoading } =
     useCollection<ConversationDoc>(canReadFirestore ? conversationsQuery : null);
 
+  // Early returns after hooks
   if (authLoading) {
     return (
       <AppLayout>
@@ -83,7 +80,6 @@ export default function MessagesPage() {
       </AppLayout>
     );
   }
-
   if (!user) {
     return (
       <AppLayout>

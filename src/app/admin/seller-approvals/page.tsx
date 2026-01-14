@@ -92,13 +92,13 @@ export default function SellerApprovalsAdmin() {
         <h1 className="text-2xl font-bold mb-4">New Seller Approvals</h1>
         <div className="flex flex-col sm:flex-row gap-2 mb-4 items-center">
           <input
-            className="border rounded px-2 py-1 w-full sm:w-64"
+            className="border-2 border-primary bg-card/80 rounded px-3 py-2 w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Search email, name, or UID…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <Button variant="outline" onClick={() => setShowAll(v => !v)}>{showAll ? "Hide Reviewed" : "Show All"}</Button>
-          <Button variant="outline" onClick={() => exportCSV(filtered)}>Export CSV</Button>
+          <Button className="comic-button bg-blue-600 border-blue-600 text-white hover:bg-blue-700" onClick={() => setShowAll(v => !v)}>{showAll ? "Hide Reviewed" : "Show All"}</Button>
+          <Button className="comic-button bg-green-600 border-green-600 text-white hover:bg-green-700" onClick={() => exportCSV(filtered)}>Export CSV</Button>
         </div>
         {loading ? (
           <div className="text-muted-foreground">Loading…</div>
@@ -107,7 +107,7 @@ export default function SellerApprovalsAdmin() {
         ) : (
           <div className="space-y-4">
             {paged.map(a => (
-              <Card key={a.id} className="relative">
+              <Card key={a.id} className="rounded-2xl border-2 border-primary bg-card/90 shadow-[3px_3px_0_rgba(0,0,0,0.25)] relative">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     {a.displayName || a.email || a.uid}
@@ -127,15 +127,15 @@ export default function SellerApprovalsAdmin() {
                   <label htmlFor={`admin-note-${a.id}`} className="sr-only">Admin Note</label>
                   <textarea
                     id={`admin-note-${a.id}`}
-                    className="w-full border rounded p-1 text-sm"
+                    className="w-full border-2 border-primary rounded p-1 text-sm bg-card/80 focus:outline-none focus:ring-2 focus:ring-primary"
                     value={noteEdit[a.id] !== undefined ? noteEdit[a.id] : (a.adminNote || "")}
                     onChange={e => setNoteEdit(n => ({ ...n, [a.id]: e.target.value }))}
                     rows={2}
                     placeholder="Enter admin note..."
                   />
                   <div className="flex gap-2 mt-1">
-                    <Button size="sm" variant="outline" onClick={() => saveNote(a.id)}>Save Note</Button>
-                    {!a.reviewed && <Button size="sm" variant="outline" onClick={() => markReviewed(a.id)}>Mark Reviewed</Button>}
+                    <Button size="sm" className="comic-button bg-blue-600 border-blue-600 text-white hover:bg-blue-700" onClick={() => saveNote(a.id)}>Save Note</Button>
+                    {!a.reviewed && <Button size="sm" className="comic-button bg-green-600 border-green-600 text-white hover:bg-green-700" onClick={() => markReviewed(a.id)}>Mark Reviewed</Button>}
                   </div>
                 </CardContent>
               </Card>
@@ -143,9 +143,9 @@ export default function SellerApprovalsAdmin() {
             {/* Pagination controls */}
             {pageCount > 1 && (
               <div className="flex gap-2 justify-center mt-4">
-                <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Prev</Button>
+                <Button size="sm" className="comic-button bg-gray-700 border-gray-700 text-white hover:bg-gray-800" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Prev</Button>
                 <span className="text-sm">Page {page + 1} of {pageCount}</span>
-                <Button size="sm" variant="outline" disabled={page === pageCount - 1} onClick={() => setPage(p => p + 1)}>Next</Button>
+                <Button size="sm" className="comic-button bg-gray-700 border-gray-700 text-white hover:bg-gray-800" disabled={page === pageCount - 1} onClick={() => setPage(p => p + 1)}>Next</Button>
               </div>
             )}
           </div>

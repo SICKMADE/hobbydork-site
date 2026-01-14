@@ -208,133 +208,141 @@ export default function AdminSpotlightPage() {
 
   return (
     <AppLayout>
-      <div className="grid md:grid-cols-3 gap-8">
-        <div className="md:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Create Spotlight Slot</CardTitle>
-              <CardDescription>
-                Add a new store to the homepage spotlight.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-6"
-                >
-                  <FormField
-                    control={form.control}
-                    name="storeId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Store ID</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="startAt"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Start Date</FormLabel>
-                        <DatePicker
-                          date={field.value}
-                          setDate={field.onChange}
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="endAt"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>End Date</FormLabel>
-                        <DatePicker
-                          date={field.value}
-                          setDate={field.onChange}
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full">
-                    Create Slot
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+      <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8 space-y-8">
+        <div className="mb-4">
+          <h1 className="text-3xl font-extrabold tracking-tight text-center">Manage Spotlight Stores</h1>
+          <p className="text-base text-muted-foreground text-center mt-1">Add, schedule, and manage homepage spotlight slots for stores</p>
         </div>
-        <div className="md:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manage Spotlight Slots</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Store ID</TableHead>
-                    <TableHead>Starts</TableHead>
-                    <TableHead>Ends</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Active</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center">
-                        Loading...
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {slots?.map((slot) => {
-                    const now = new Date();
-                    const start = slot.startAt.toDate();
-                    const end = slot.endAt.toDate();
-                    const isActiveNow =
-                      start <= now && end >= now && slot.active;
-                    return (
-                      <TableRow key={slot.slotId}>
-                        <TableCell className="font-mono text-xs">
-                          {slot.storeId}
-                        </TableCell>
-                        <TableCell>{format(start, 'PPp')}</TableCell>
-                        <TableCell>{format(end, 'PPp')}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={isActiveNow ? 'default' : 'outline'}
-                          >
-                            {isActiveNow
-                              ? 'Live'
-                              : end < now
-                              ? 'Expired'
-                              : 'Scheduled'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Switch
-                            checked={slot.active}
-                            onCheckedChange={() =>
-                              handleActiveChange(slot.slotId, slot.active)
-                            }
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="md:col-span-1">
+            <Card className="border-2 border-primary bg-card/90 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+              <CardHeader>
+                <CardTitle>Create Spotlight Slot</CardTitle>
+                <CardDescription>
+                  Add a new store to the homepage spotlight.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(onSubmit)}
+                    className="space-y-6"
+                  >
+                    <FormField
+                      control={form.control}
+                      name="storeId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Store ID</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="startAt"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Start Date</FormLabel>
+                          <DatePicker
+                            date={field.value}
+                            setDate={field.onChange}
                           />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="endAt"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>End Date</FormLabel>
+                          <DatePicker
+                            date={field.value}
+                            setDate={field.onChange}
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full comic-button bg-green-600 border-green-600 text-white hover:bg-green-700" size="lg">
+                      Create Slot
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="md:col-span-2">
+            <Card className="border-2 border-primary bg-card/90 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+              <CardHeader>
+                <CardTitle>Manage Spotlight Slots</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table className="rounded-xl overflow-hidden border-2 border-primary bg-card/80">
+                  <TableHeader className="bg-card/90">
+                    <TableRow>
+                      <TableHead className="font-bold text-card-foreground">Store ID</TableHead>
+                      <TableHead className="font-bold text-card-foreground">Starts</TableHead>
+                      <TableHead className="font-bold text-card-foreground">Ends</TableHead>
+                      <TableHead className="font-bold text-card-foreground">Status</TableHead>
+                      <TableHead className="text-right font-bold text-card-foreground">Active</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center">
+                          Loading...
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                    )}
+                    {slots?.map((slot) => {
+                      const now = new Date();
+                      const start = slot.startAt.toDate();
+                      const end = slot.endAt.toDate();
+                      const isActiveNow =
+                        start <= now && end >= now && slot.active;
+                      return (
+                        <TableRow key={slot.slotId} className={`transition-all bg-card/80 ${!slot.active ? 'opacity-60' : ''}`}>
+                          <TableCell className="font-mono text-xs font-bold text-primary">
+                            {slot.storeId}
+                          </TableCell>
+                          <TableCell className="text-card-foreground">{format(start, 'PPp')}</TableCell>
+                          <TableCell className="text-card-foreground">{format(end, 'PPp')}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={isActiveNow ? 'default' : 'outline'}
+                              className={isActiveNow ? 'bg-red-600 text-white border-red-600' : ''}
+                            >
+                              {isActiveNow
+                                ? 'Live'
+                                : end < now
+                                ? 'Expired'
+                                : 'Scheduled'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Switch
+                              checked={slot.active}
+                              onCheckedChange={() =>
+                                handleActiveChange(slot.slotId, slot.active)
+                              }
+                              className="data-[state=checked]:bg-red-600"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </AppLayout>

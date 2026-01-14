@@ -126,7 +126,7 @@ export default function CartPage() {
         orderId: orderRef.id,
         listingTitle: firstListing.title,
         amountCents: Math.round(subtotal * 100),
-        appBaseUrl: window.location.origin,
+        appBaseUrl: process.env.NEXT_PUBLIC_SITE_URL || window.location.origin,
       }) as { data: { url?: string } };
 
       // eslint-disable-next-line no-console

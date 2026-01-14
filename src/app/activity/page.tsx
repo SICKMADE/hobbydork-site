@@ -26,14 +26,6 @@ type ListingDoc = {
   ownerUid?: string;
   createdAt?: Timestamp;
 };
-
-type Iso24Doc = {
-  id?: string;
-  title?: string;
-  ownerUid?: string;
-  createdAt?: Timestamp;
-};
-
 type OrderDoc = {
   id?: string;
   buyerUid?: string;
@@ -49,10 +41,9 @@ function formatDate(ts?: Timestamp) {
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
 }
 
+
 export default function ActivityPage() {
   const { user, profile, loading: authLoading } = useAuth();
-  if (authLoading) return null;
-  if (!user) return null;
   const firestore = useFirestore();
   const canReadFirestore =
     !authLoading &&
@@ -95,10 +86,11 @@ export default function ActivityPage() {
   const { data: listings, isLoading: loadingListings } =
     useCollection<ListingDoc>(canReadFirestore ? listingsQuery : null);
   const { data: isoPosts, isLoading: loadingIso } =
-    useCollection<Iso24Doc>(canReadFirestore ? isoQuery : null);
+    useCollection<any>(canReadFirestore ? isoQuery : null);
   const { data: orders, isLoading: loadingOrders } =
     useCollection<OrderDoc>(canReadFirestore ? ordersQuery : null);
 
+  if (authLoading) return null;
   if (!user) {
     return (
       <AppLayout>
@@ -259,3 +251,5 @@ export default function ActivityPage() {
     </AppLayout>
   );
 }
+
+

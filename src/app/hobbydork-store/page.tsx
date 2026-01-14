@@ -33,7 +33,7 @@ export default function HobbyDorkStorePage() {
         orderId,
         listingTitle,
         amountCents,
-        appBaseUrl: window.location.origin,
+        appBaseUrl: process.env.NEXT_PUBLIC_SITE_URL || window.location.origin,
       });
       if (data && typeof data === "object" && "url" in data && typeof (data as { url: unknown }).url === "string") {
         window.location.href = (data as { url: string }).url;
@@ -58,15 +58,15 @@ export default function HobbyDorkStorePage() {
   return (
     <AppLayout>
       <div>
-        <Card className="border-2 border-primary shadow-md bg-card/90">
+          <Card className="border-2 border-[rgb(198,0,0)] shadow-[4px_4px_0_rgba(0,0,0,0.35)] bg-[#232428] rounded-2xl mb-8">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Custom Store Theme</CardTitle>
+                <CardTitle className="text-2xl font-extrabold text-white">Custom Store Theme</CardTitle>
               {isAdmin && <Badge variant="outline" className="bg-primary text-white">Admin</Badge>}
             </div>
           </CardHeader>
           <CardContent>
-            <p className="mb-2">Stand out with a unique look for your store. Choose from premium themes or request a custom design.</p>
+            <p className="mb-2 text-muted-foreground">Stand out with a unique look for your store. Choose from premium themes or request a custom design.</p>
             <Button
               onClick={() => handleBuy({
                 orderId: "theme-" + Date.now(),
@@ -86,15 +86,44 @@ export default function HobbyDorkStorePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-primary shadow-md bg-card/90">
+        <Card className="border-2 border-[rgb(198,0,0)] shadow-[4px_4px_0_rgba(0,0,0,0.35)] bg-[#232428] rounded-2xl mb-8">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Custom Store Layout</CardTitle>
+                <CardTitle className="text-2xl font-extrabold text-white">Custom Store Layout</CardTitle>
               {isAdmin && <Badge variant="outline" className="bg-primary text-white">Admin</Badge>}
             </div>
           </CardHeader>
           <CardContent>
-            <p className="mb-2">Upgrade your store layout for better buyer experience and more sales.</p>
+            <p className="mb-2 text-muted-foreground">Upgrade your store layout for better buyer experience and more sales.</p>
+            <Button
+              onClick={() => handleBuy({
+                orderId: "layout-" + Date.now(),
+                listingTitle: "Custom Store Layout",
+                amountCents: 1200,
+              })}
+              disabled={!!loading}
+            >
+              {loading === "layout" ? "Processing..." : "Buy Layout ($12)"}
+            </Button>
+
+            {isAdmin && (
+              <div className="mt-4 flex gap-2">
+                <Button variant="secondary">Manage Layouts</Button>
+                <Button variant="destructive">View Layout Orders</Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-[rgb(198,0,0)] shadow-[4px_4px_0_rgba(0,0,0,0.35)] bg-[#232428] rounded-2xl mb-8">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+                <CardTitle className="text-2xl font-extrabold text-white">Custom Store Layout</CardTitle>
+              {isAdmin && <Badge variant="outline" className="bg-primary text-white">Admin</Badge>}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-2 text-muted-foreground">Upgrade your store layout for better buyer experience and more sales.</p>
             <Button
               onClick={() => handleBuy({
                 orderId: "layout-" + Date.now(),
@@ -114,11 +143,12 @@ export default function HobbyDorkStorePage() {
           </CardContent>
         </Card>
 
+        {/* Admin Controls Section - outside CardContent and Card */}
         {isAdmin && (
           <>
             <Separator className="my-8" />
-            <div className="bg-primary/10 border border-primary rounded-lg p-6 shadow-lg">
-              <h2 className="text-xl font-bold mb-2 text-primary">Admin Controls</h2>
+            <div className="bg-[#232428] border-2 border-[rgb(198,0,0)] rounded-2xl p-6 shadow-[4px_4px_0_rgba(0,0,0,0.35)]">
+              <h2 className="text-xl font-bold mb-2 text-[rgb(198,0,0)]">Admin Controls</h2>
               <p className="mb-4 text-muted-foreground">Manage all HobbyDork Store products, orders, and settings from here.</p>
               <div className="flex flex-wrap gap-3">
                 <Button variant="secondary">Dashboard</Button>

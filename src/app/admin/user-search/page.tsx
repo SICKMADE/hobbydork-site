@@ -65,20 +65,20 @@ export default function AdminUserSearchPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-6">
+    <div className="max-w-3xl mx-auto px-2 sm:px-4 py-8 space-y-6">
       <h1 className="text-2xl font-bold">User Search</h1>
 
       {/* SEARCH BAR */}
       <div className="flex gap-2">
         <input
-          className="border p-2 rounded w-full"
+          className="border-2 border-primary bg-card/80 rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-primary"
           value={term}
           onChange={(e) => setTerm(e.target.value)}
           placeholder="Search email, UID, display name, storeId, Stripe ID…"
         />
         <button
           onClick={runSearch}
-          className="px-4 py-2 bg-blue-600 text-white rounded"
+          className="comic-button bg-blue-600 border-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded"
         >
           Search
         </button>
@@ -91,7 +91,7 @@ export default function AdminUserSearchPage() {
         {results.map((u) => (
           <div
             key={u.id}
-            className="border p-4 bg-white rounded shadow space-y-2"
+            className="rounded-2xl border-2 border-primary bg-card/90 shadow-[3px_3px_0_rgba(0,0,0,0.25)] p-5 space-y-2"
           >
             <p className="font-semibold text-lg">
               {u.role === "ADMIN" && "👑 "}
@@ -106,10 +106,9 @@ export default function AdminUserSearchPage() {
             <p>Status: {u.status}</p>
 
             <div className="flex gap-2 mt-2">
-
               {/* VIEW STORE */}
               <Link href={`/store/${u.storeId}`}>
-                <button className="px-3 py-1 bg-gray-700 text-white rounded">
+                <button className="comic-button bg-gray-700 border-gray-700 text-white hover:bg-gray-800 px-3 py-1 rounded">
                   View Store
                 </button>
               </Link>
@@ -117,7 +116,7 @@ export default function AdminUserSearchPage() {
               {/* GO TO ADMIN USER PAGE (moderation tools) */}
               {isAdmin && (
                 <Link href={`/admin/users`}>
-                  <button className="px-3 py-1 bg-blue-700 text-white rounded">
+                  <button className="comic-button bg-blue-700 border-blue-700 text-white hover:bg-blue-800 px-3 py-1 rounded">
                     Open in User Manager
                   </button>
                 </Link>
@@ -125,9 +124,9 @@ export default function AdminUserSearchPage() {
 
               {/* SEND MESSAGE */}
               <Link
-                href={`/messages/${[u.uid, u.uid].join("_")}`} // replaced by actual function in your app
+                href={`/messages/${[u.uid, u.uid].join("_")}`}
               >
-                <button className="px-3 py-1 bg-green-600 text-white rounded">
+                <button className="comic-button bg-green-600 border-green-600 text-white hover:bg-green-700 px-3 py-1 rounded">
                   Send Message
                 </button>
               </Link>

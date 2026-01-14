@@ -32,30 +32,22 @@ import { DocumentData } from "firebase/firestore";
 export default function ClientConversations() {
   const params = useSearchParams();
   const conversationId = params.get('id') || null;
-
   const firestore = useFirestore();
   const { user, profile, loading: authLoading } = useAuth();
-  if (authLoading) return null;
-  if (!user) return null;
-  //
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    //
     profile?.status === "ACTIVE";
-
   const convoRef = useMemoFirebase(() => {
     if (!canReadFirestore || !firestore || !conversationId) return null;
     return doc(firestore, 'conversations', conversationId);
   }, [canReadFirestore, firestore, conversationId]);
-
   type Conversation = {
     id: string;
     participantUids: string[];
     [key: string]: unknown;
   };
   const { data: conversation } = useDoc<Conversation>(canReadFirestore ? convoRef : null);
-
   const messagesQuery = useMemoFirebase(() => {
     if (!canReadFirestore || !firestore || !conversationId) return null;
     return query(
@@ -63,7 +55,6 @@ export default function ClientConversations() {
       orderBy('createdAt', 'asc')
     );
   }, [canReadFirestore, firestore, conversationId]);
-
   type Message = {
     id: string;
     uid: string;
@@ -77,12 +68,15 @@ export default function ClientConversations() {
     fromFirestore: (snap) => snap.data() as Message,
   }) : null;
   const { data: messages } = useCollection<Message>(messagesQueryWithConverter);
-
   type Profile = {
     displayName?: string;
     [key: string]: unknown;
   };
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
+
+  // Early returns after hooks
+  if (authLoading) return null;
+  if (!user) return null;
 
   useEffect(() => {
     async function loadProfiles() {

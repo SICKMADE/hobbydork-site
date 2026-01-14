@@ -83,91 +83,99 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-2 xs:p-4 md:p-6 space-y-4 xs:space-y-6">
-      <h1 className="text-xl xs:text-2xl font-bold">User Management</h1>
+    <div className="max-w-4xl mx-auto px-2 sm:px-4 py-8 space-y-6">
+      <h1 className="text-2xl font-bold">User Management</h1>
 
       {users.map((u) => (
         <div
           key={u.id}
-          className="border p-2 xs:p-4 bg-white rounded shadow space-y-1 xs:space-y-2"
+          className="rounded-2xl border-2 border-primary bg-card/90 shadow-[3px_3px_0_rgba(0,0,0,0.25)] p-5 space-y-2"
         >
-          <p className="font-semibold text-sm xs:text-base">
+          <p className="font-semibold text-lg">
             {u.role === "ADMIN" && "👑 "}
             {u.role === "MODERATOR" && "🛡️ "}
             {u.displayName}
           </p>
 
-          <p className="text-xs xs:text-sm">Email: {u.email}</p>
-          <p className="text-xs xs:text-sm">Role: {u.role}</p>
-          <p className="text-xs xs:text-sm">Status: {u.status}</p>
+          <p>Email: {u.email}</p>
+          <p>Role: {u.role}</p>
+          <p>Status: {u.status}</p>
 
           {u.suspendUntil && (
-            <p className="text-xs xs:text-sm text-gray-600">
+            <p className="text-sm text-gray-600">
               Suspended Until: {new Date(u.suspendUntil.toDate()).toLocaleString()}
             </p>
           )}
 
-          <div className="flex flex-wrap gap-1 xs:gap-2 mt-2">
+          <div className="flex flex-wrap gap-2 mt-2">
             {/* --- ROLE MANAGEMENT --- */}
             {u.role !== "ADMIN" && u.role !== "MODERATOR" && (
               <Button
-                variant="secondary"
+                className="comic-button bg-blue-600 border-blue-600 text-white hover:bg-blue-700"
                 aria-label="Promote to Moderator"
                 onClick={() => promoteToModerator(u.id)}
+                size="xs"
               >
                 Promote to Moderator
               </Button>
             )}
             {u.role === "MODERATOR" && (
               <Button
-                variant="outline"
+                className="comic-button bg-gray-700 border-gray-700 text-white hover:bg-gray-800"
                 aria-label="Remove Moderator"
                 onClick={() => removeModerator(u.id)}
+                size="xs"
               >
                 Remove Moderator
               </Button>
             )}
             {/* --- SUSPENSIONS --- */}
             <Button
-              variant="outline"
+              className="comic-button bg-orange-500 border-orange-500 text-white hover:bg-orange-600"
               aria-label="Suspend 24 hours"
               onClick={() => suspend(u.id, 24)}
+              size="xs"
             >
               Suspend 24h
             </Button>
             <Button
-              variant="outline"
+              className="comic-button bg-orange-500 border-orange-500 text-white hover:bg-orange-600"
               aria-label="Suspend 3 days"
               onClick={() => suspend(u.id, 72)}
+              size="xs"
             >
               Suspend 3d
             </Button>
             <Button
-              variant="outline"
+              className="comic-button bg-orange-500 border-orange-500 text-white hover:bg-orange-600"
               aria-label="Suspend 7 days"
               onClick={() => suspend(u.id, 168)}
+              size="xs"
             >
               Suspend 7d
             </Button>
             <Button
-              variant="outline"
+              className="comic-button bg-orange-500 border-orange-500 text-white hover:bg-orange-600"
               aria-label="Suspend 30 days"
               onClick={() => suspend(u.id, 720)}
+              size="xs"
             >
               Suspend 30d
             </Button>
             {/* --- BAN / RESTORE --- */}
             <Button
-              variant="destructive"
+              className="comic-button bg-red-600 border-red-600 text-white hover:bg-red-700"
               aria-label="Ban User"
               onClick={() => ban(u.id)}
+              size="xs"
             >
               Ban User
             </Button>
             <Button
-              variant="secondary"
+              className="comic-button bg-green-600 border-green-600 text-white hover:bg-green-700"
               aria-label="Restore User"
               onClick={() => restore(u.id)}
+              size="xs"
             >
               Restore User
             </Button>

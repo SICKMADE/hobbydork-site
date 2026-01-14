@@ -82,7 +82,7 @@ export default function OrderDetail({ params }: any) {
         orderId: order.id,
         listingTitle: order.items?.[0]?.title ?? "Order",
         amountCents,
-        appBaseUrl: window.location.origin,
+        appBaseUrl: process.env.NEXT_PUBLIC_SITE_URL || window.location.origin,
       });
 
       const url = res?.data?.url;

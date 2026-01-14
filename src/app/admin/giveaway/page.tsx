@@ -281,7 +281,7 @@ export default function AdminGiveawayPage() {
           </Button>
         </div>
 
-        <Card className="border border-red-500/40 bg-muted/40">
+        <Card className="border-2 border-primary bg-card/90 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
           <CardHeader>
             <CardTitle>Giveaway Setup</CardTitle>
           </CardHeader>
@@ -355,7 +355,8 @@ export default function AdminGiveawayPage() {
             <Button
               key={s}
               type="button"
-              variant={show === s ? "default" : "outline"}
+              className={`comic-button ${show === s ? 'bg-primary text-white border-primary' : 'bg-card/80 border-muted text-muted-foreground hover:bg-primary/10'}`}
+              size="sm"
               onClick={() => setShow(s)}
             >
               {s}
@@ -365,12 +366,10 @@ export default function AdminGiveawayPage() {
 
         <div className="space-y-4">
           {filtered.map((e) => (
-            <Card key={e.id}>
+            <Card key={e.id} className="rounded-2xl border-2 border-primary bg-card/90 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between gap-2">
-                  <span>
-                    {e.platform.toUpperCase()} • {e.status}
-                  </span>
+                  <span className="font-bold text-base">{e.platform.toUpperCase()} • {e.status}</span>
                   <span className="text-xs text-muted-foreground">
                     {e.createdAt?.toDate?.() ? e.createdAt.toDate().toLocaleString() : ""}
                   </span>
@@ -385,7 +384,7 @@ export default function AdminGiveawayPage() {
                 </div>
                 <div className="text-sm break-all">
                   <span className="font-semibold">Post:</span> {" "}
-                  <a className="underline" href={e.postUrl} target="_blank" rel="noreferrer">
+                  <a className="text-primary underline font-bold" href={e.postUrl} target="_blank" rel="noreferrer">
                     {e.postUrl}
                   </a>
                 </div>
@@ -393,7 +392,8 @@ export default function AdminGiveawayPage() {
                 <div className="flex gap-2 pt-2">
                   <Button
                     type="button"
-                    variant="outline"
+                    className="comic-button bg-green-600 border-green-600 text-white hover:bg-green-700"
+                    size="xs"
                     disabled={e.status === "APPROVED"}
                     onClick={() => setStatus(e.id, "APPROVED")}
                   >
@@ -401,7 +401,8 @@ export default function AdminGiveawayPage() {
                   </Button>
                   <Button
                     type="button"
-                    variant="destructive"
+                    className="comic-button bg-red-600 border-red-600 text-white hover:bg-red-700"
+                    size="xs"
                     disabled={e.status === "REJECTED"}
                     onClick={() => setStatus(e.id, "REJECTED")}
                   >
@@ -409,7 +410,8 @@ export default function AdminGiveawayPage() {
                   </Button>
                   <Button
                     type="button"
-                    variant="secondary"
+                    className="comic-button bg-gray-700 border-gray-700 text-white hover:bg-gray-800"
+                    size="xs"
                     disabled={e.status === "PENDING"}
                     onClick={() => setStatus(e.id, "PENDING")}
                   >

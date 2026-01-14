@@ -31,10 +31,13 @@ export function UserNav() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0" aria-label="Account menu">
-          <Avatar className="h-9 w-9 bg-transparent">
-            <AvatarImage src={avatarUrl} alt={profile.displayName ?? undefined} />
-            <AvatarFallback />
-          </Avatar>
+          <div className="flex flex-col items-center">
+            <Avatar className="h-9 w-9 bg-transparent">
+              <AvatarImage src={avatarUrl} alt={profile.displayName ?? undefined} />
+              <AvatarFallback />
+            </Avatar>
+            <span className="text-xs font-medium mt-1 text-center w-16 truncate">{profile.displayName}</span>
+          </div>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>

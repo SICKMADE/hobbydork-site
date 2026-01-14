@@ -30,7 +30,7 @@ import type { UserStatus } from "@/lib/types";
 import { auth, db } from "@/firebase/client-provider";
 import { getDefaultAvatarUrl } from "@/lib/default-avatar";
 
-type UserDoc = {
+export type UserDoc = {
   uid: string;
   email: string;
   emailVerified: boolean;
@@ -356,7 +356,11 @@ function useProvideAuth(): AuthContextType {
       });
 
       if (cred.user) {
-        await sendEmailVerification(cred.user);
+        const actionCodeSettings = {
+          url: 'https://hobbydork.com/login',
+          handleCodeInApp: false,
+        };
+        await sendEmailVerification(cred.user, actionCodeSettings);
       }
 
       return cred;
@@ -401,7 +405,11 @@ function useProvideAuth(): AuthContextType {
 
 
     try {
-      await sendEmailVerification(current);
+      const actionCodeSettings = {
+        url: 'https://hobbydork.com/login',
+        handleCodeInApp: false,
+      };
+      await sendEmailVerification(current, actionCodeSettings);
     } catch (e: any) {
       const code = String(e?.code ?? '');
 

@@ -38,16 +38,11 @@ function FavoriteStore({ storeId }: { storeId: string }) {
 
 export default function ClientFavorites() {
   const { user, profile, loading: authLoading } = useAuth();
-  if (authLoading) return null;
-  if (!user) return null;
-  //
   const firestore = useFirestore();
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    //
     profile?.status === "ACTIVE";
-
   const favoritesQuery = useMemoFirebase(() => {
     if (!canReadFirestore || !firestore || !profile?.uid) return null;
     return collection(
@@ -55,9 +50,12 @@ export default function ClientFavorites() {
       `users/${profile.uid}/favoriteStores`
     ).withConverter(favoriteStoreConverter);
   }, [canReadFirestore, firestore, profile]);
-
   const { data: favoriteItems, isLoading } =
     useCollection<FavoriteStoreItem>(canReadFirestore ? favoritesQuery : null);
+
+  // Early returns after hooks
+  if (authLoading) return null;
+  if (!user) return null;
 
   return (
     <AppLayout>

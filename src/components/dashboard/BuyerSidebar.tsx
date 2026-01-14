@@ -19,13 +19,19 @@ const RedLineSeparator = () => (
 
 
 import { useAuth } from "@/hooks/use-auth";
+import { resolveAvatarUrl } from '@/lib/default-avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 export default function BuyerSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  if (!profile) return null;
+  const avatarSeed = profile.avatar && profile.avatar.trim() !== '' ? profile.avatar : (profile.uid || profile.email || '');
+  const avatarUrl = resolveAvatarUrl(profile.avatar, avatarSeed);
+  const displayName = profile.displayName || profile.email || 'User';
   const { isMobile, open, setOpen } = useSidebar();
-  if (!user) return null;
+
 
   const buyerLinks = [
     { href: "/", label: "Home", icon: Home },
@@ -46,6 +52,13 @@ export default function BuyerSidebar() {
   const sidebarContent = (
     <SidebarContent className="p-6 bg-sidebar text-sidebar-foreground border-r border-gray-800 flex flex-col" style={{ width: '280px', minWidth: '260px', maxWidth: '320px', boxSizing: 'border-box', flex: '0 0 280px', zIndex: 2 }}>
       <div className="h-full flex flex-col space-y-8 pt-2">
+        <div className="flex flex-col items-center mb-2 mt-2">
+          <Avatar className="h-16 w-16">
+            <AvatarImage src={avatarUrl} alt={displayName} />
+            <AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <span className="mt-2 text-base font-semibold text-center w-32 truncate">{displayName}</span>
+        </div>
         <SidebarMenu>
           <RedLineSeparator />
           <div className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Buyer</div>

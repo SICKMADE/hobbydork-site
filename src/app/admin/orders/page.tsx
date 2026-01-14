@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useEffect, useState } from "react";
 import { db } from "@/firebase/client-provider";
 const dbSafe = db as import("firebase/firestore").Firestore;
@@ -12,6 +13,8 @@ import {
 } from "firebase/firestore";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function AdminOrdersPage() {
   const { userData } = useAuth();
@@ -120,118 +123,91 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Order Moderation</h1>
-      {orders.map((o) => (
-        <div key={o.id} className="border bg-white shadow p-4 rounded space-y-3">
-          {/* Order header */}
-          <div className="flex justify-between items-center">
-            <p className="font-semibold text-lg">Order #{o.id}</p>
-            <p>Status: {o.status}</p>
-          </div>
-          {/* Buyer + Seller */}
-          <div className="text-sm space-y-1">
-            <p>
-              <strong>Buyer:</strong>{" "}
-              <Link href={`/store/${o.buyerStoreId || o.buyerUid}`} className="underline">
-                {o.buyerUid}
-              </Link>
-            </p>
-            <p>
-              <strong>Seller:</strong>{" "}
-              <Link href={`/store/${o.sellerStoreId || o.sellerUid}`} className="underline">
-                {o.sellerUid}
-              </Link>
-            </p>
-            <p>
-              <strong>Listing:</strong>{" "}
-              <Link href={`/listings/${o.listingId}`} className="underline">
-                {o.listingId}
-              </Link>
-            </p>
-          </div>
-          {/* Stripe data */}
-          <div className="text-sm text-gray-700 space-y-1">
-            <p>Checkout Session: {o.stripeSessionId}</p>
-            <p>Payment Intent: {o.stripePaymentIntent}</p>
-            <p>Payout ID: {o.stripePayoutId || "None Yet"}</p>
-          </div>
-          {/* Indicators */}
-          <div className="space-y-1">
-            {o.fraudFlag && (
-              <p className="text-red-600 text-sm">
-                🚨 FRAUD FLAG — {o.fraudReason}
-              </p>
-            )}
-            {o.dispute && (
-              <p className="text-orange-600 text-sm">
-                ⚠️ DISPUTE — {o.disputeNotes}
-              </p>
-            )}
-            {o.adminLocked && (
-              <p className="text-blue-600 text-sm">🔒 Order Locked</p>
-            )}
-          </div>
-          {/* Admin Actions */}
-          <div className="flex flex-wrap gap-2 pt-2">
-            {/* Fraud Controls */}
-            {!o.fraudFlag ? (
-              <button
-                onClick={() => markFraud(o.id)}
-                className="px-3 py-1 bg-red-600 text-white rounded"
-              >
-                Mark Fraud
-              </button>
-            ) : (
-              <button
-                onClick={() => clearFraud(o.id)}
-                className="px-3 py-1 bg-gray-700 text-white rounded"
-              >
-                Clear Fraud
-              </button>
-            )}
-            {/* Dispute Controls */}
-            {!o.dispute ? (
-              <button
-                onClick={() => addDispute(o.id)}
-                className="px-3 py-1 bg-orange-500 text-white rounded"
-              >
-                Add Dispute
-              </button>
-            ) : (
-              <button
-                onClick={() => clearDispute(o.id)}
-                className="px-3 py-1 bg-gray-700 text-white rounded"
-              >
-                Clear Dispute
-              </button>
-            )}
-            {/* Lock controls */}
-            {!o.adminLocked ? (
-              <button
-                onClick={() => lockOrder(o.id)}
-                className="px-3 py-1 bg-blue-600 text-white rounded"
-              >
-                Lock Order
-              </button>
-            ) : (
-              <button
-                onClick={() => unlockOrder(o.id)}
-                className="px-3 py-1 bg-blue-600 text-white rounded"
-              >
-                Unlock Order
-              </button>
-            )}
-            {/* Admin Notes */}
-            <button
-              onClick={() => addNote(o.id)}
-              className="px-3 py-1 bg-green-600 text-white rounded"
-            >
-              Add Note
-            </button>
-          </div>
-        </div>
-      ))}
+    <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8 space-y-8">
+      <div className="mb-4">
+        <h1 className="text-3xl font-extrabold tracking-tight">Order Moderation</h1>
+        <p className="text-base text-muted-foreground mt-1">Review and manage orders flagged for moderation</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {orders.map((o) => (
+          <Card key={o.id} className={`rounded-2xl border-2 border-primary bg-card/90 shadow-[3px_3px_0_rgba(0,0,0,0.25)] flex flex-col gap-2 ${o.fraudFlag ? 'border-red-600' : ''} ${o.dispute ? 'border-orange-500' : ''} ${o.adminLocked ? 'border-blue-600' : ''}`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                Order <span className="text-xs font-mono font-normal text-muted-foreground">#{o.id}</span>
+              </CardTitle>
+              <div className="text-sm font-semibold text-muted-foreground">Status: {o.status}</div>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              {/* Buyer + Seller */}
+              <div className="text-sm space-y-1">
+                <p>
+                  <strong>Buyer:</strong>{' '}
+                  <Link href={`/store/${o.buyerStoreId || o.buyerUid}`} className="text-primary underline font-bold">
+                    {o.buyerUid}
+                  </Link>
+                </p>
+                <p>
+                  <strong>Seller:</strong>{' '}
+                  <Link href={`/store/${o.sellerStoreId || o.sellerUid}`} className="text-primary underline font-bold">
+                    {o.sellerUid}
+                  </Link>
+                </p>
+                <p>
+                  <strong>Listing:</strong>{' '}
+                  <Link href={`/listings/${o.listingId}`} className="text-primary underline font-bold">
+                    {o.listingId}
+                  </Link>
+                </p>
+              </div>
+              {/* Stripe data */}
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>Checkout Session: {o.stripeSessionId}</p>
+                <p>Payment Intent: {o.stripePaymentIntent}</p>
+                <p>Payout ID: {o.stripePayoutId || 'None Yet'}</p>
+              </div>
+              {/* Indicators */}
+              <div className="space-y-1">
+                {o.fraudFlag && (
+                  <p className="text-red-600 text-sm font-bold">
+                    🚨 FRAUD FLAG — {o.fraudReason}
+                  </p>
+                )}
+                {o.dispute && (
+                  <p className="text-orange-600 text-sm font-bold">
+                    ⚠️ DISPUTE — {o.disputeNotes}
+                  </p>
+                )}
+                {o.adminLocked && (
+                  <p className="text-blue-600 text-sm font-bold">🔒 Order Locked</p>
+                )}
+              </div>
+              {/* Admin Actions */}
+              <div className="flex flex-wrap gap-2 pt-2">
+                {/* Fraud Controls */}
+                {!o.fraudFlag ? (
+                  <Button onClick={() => markFraud(o.id)} className="comic-button bg-red-600 border-red-600 text-white hover:bg-red-700" size="xs">Mark Fraud</Button>
+                ) : (
+                  <Button onClick={() => clearFraud(o.id)} className="comic-button bg-gray-700 border-gray-700 text-white hover:bg-gray-800" size="xs">Clear Fraud</Button>
+                )}
+                {/* Dispute Controls */}
+                {!o.dispute ? (
+                  <Button onClick={() => addDispute(o.id)} className="comic-button bg-orange-500 border-orange-500 text-white hover:bg-orange-600" size="xs">Add Dispute</Button>
+                ) : (
+                  <Button onClick={() => clearDispute(o.id)} className="comic-button bg-gray-700 border-gray-700 text-white hover:bg-gray-800" size="xs">Clear Dispute</Button>
+                )}
+                {/* Lock controls */}
+                {!o.adminLocked ? (
+                  <Button onClick={() => lockOrder(o.id)} className="comic-button bg-blue-600 border-blue-600 text-white hover:bg-blue-700" size="xs">Lock Order</Button>
+                ) : (
+                  <Button onClick={() => unlockOrder(o.id)} className="comic-button bg-blue-600 border-blue-600 text-white hover:bg-blue-700" size="xs">Unlock Order</Button>
+                )}
+                {/* Admin Notes */}
+                <Button onClick={() => addNote(o.id)} className="comic-button bg-green-600 border-green-600 text-white hover:bg-green-700" size="xs">Add Note</Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

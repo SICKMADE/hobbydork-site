@@ -410,33 +410,30 @@ function SidebarUserMenu() {
   // Always use resolveAvatarUrl with fallback to uid or email for default avatar
   const avatarSeed = profile?.avatar && profile.avatar.trim() !== '' ? profile.avatar : (profile?.uid || profile?.email || '');
   const avatarUrl = resolveAvatarUrl(profile?.avatar, avatarSeed);
-  // Only show displayName (username), never email
+  // Show displayName, fallback to email, then 'User'
   let displayName = 'User';
   if (profile?.displayName && profile.displayName.trim() !== '') {
     displayName = profile.displayName;
+  } else if (profile?.email && profile.email.trim() !== '') {
+    displayName = profile.email;
   }
 
 
   // Notification logic removed
 
   return (
-    <div className="flex justify-center items-center p-3 pb-1">
+    <div className="flex flex-col items-center p-3 pb-1">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="focus:outline-none relative">
+          <button className="focus:outline-none relative flex flex-col items-center">
             <Avatar className="h-14 w-14">
               <AvatarImage src={avatarUrl} alt={displayName} />
               <AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
-
-              {/* Notification indicator removed */}
             </Avatar>
+            <span className="mt-2 text-base font-semibold text-center w-32 truncate">{displayName}</span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start">
-          <DropdownMenuItem asChild>
-
-            {/* Notifications menu item fully removed */}
-          </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <a href="/profile">Profile</a>
           </DropdownMenuItem>

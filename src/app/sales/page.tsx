@@ -63,16 +63,11 @@ function statusColor(state: OrderState) {
 
 export default function SalesPage() {
   const { user, profile, loading: authLoading } = useAuth();
-  if (authLoading) return null;
-  if (!user) return null;
-  if (profile?.status !== "ACTIVE") return null;
   const firestore = useFirestore();
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    //
     profile?.status === "ACTIVE";
-
   const salesQuery = useMemoFirebase(() => {
     if (!canReadFirestore || !firestore || !user?.uid) return null;
     return query(
@@ -81,19 +76,21 @@ export default function SalesPage() {
       orderBy('createdAt', 'desc'),
     );
   }, [canReadFirestore, firestore, user?.uid]);
-
   const { data: orders, isLoading } =
     useCollection<any>(canReadFirestore ? salesQuery : null);
-
   // Tab state
   const [tab, setTab] = useState<'active' | 'completed'>('active');
-
   // Filter orders by tab
   const activeStates = ['PENDING_PAYMENT', 'PAID', 'SHIPPED'];
   const completedStates = ['COMPLETED', 'CANCELLED'];
   const filteredOrders = tab === 'active'
     ? (orders || []).filter((o: OrderDoc) => activeStates.includes(o.state))
     : (orders || []).filter((o: OrderDoc) => completedStates.includes(o.state));
+
+  // Early returns after hooks
+  if (authLoading) return null;
+  if (!user) return null;
+  if (profile?.status !== "ACTIVE") return null;
 
   if (!profile?.isSeller) {
     return (
@@ -115,7 +112,7 @@ export default function SalesPage() {
       <div className="flex min-h-screen bg-background">
         <SellerSidebar />
         <main className="flex-1 flex flex-col items-center justify-start p-6 bg-background">
-          <img src="/myorders.png" alt="My Sales" className="w-full max-w-2xl h-32 object-contain mx-auto mb-6 drop-shadow-lg" />
+          <img src="/MYSALES.png" alt="My Sales" className="w-full max-w-2xl h-32 object-contain mx-auto mb-6 drop-shadow-lg" />
           {/* Tabs */}
           <div className="flex gap-4 mb-8 justify-center w-full max-w-2xl">
             <div className="flex flex-col items-center">

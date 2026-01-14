@@ -33,26 +33,18 @@ export default function ConversationPage() {
   const params = useParams<{ id: string }>();
   const conversationId = params?.id;
   const { user, profile, loading: authLoading } = useAuth();
-  if (authLoading) return null;
-  if (!user) return null;
-  //
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
-
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    //
     profile?.status === "ACTIVE";
-
   const convoRef = useMemoFirebase(() => {
     if (!canReadFirestore || !firestore || !conversationId) return null;
     return doc(firestore, "conversations", conversationId);
   }, [canReadFirestore, firestore, conversationId]);
-
   const { data: conversation } = useDoc<any>(canReadFirestore ? convoRef : null);
-
   const messagesQuery = useMemoFirebase(() => {
     if (!canReadFirestore || !firestore || !conversationId) return null;
     return query(
@@ -60,16 +52,12 @@ export default function ConversationPage() {
       orderBy("createdAt", "asc")
     );
   }, [canReadFirestore, firestore, conversationId]);
-
   const { data: messages } = useCollection<any>(canReadFirestore ? messagesQuery : null);
-
   const profiles = useMemo(() => {
     const participantArray: string[] =
       conversation?.participantUids || conversation?.participants || [];
-
     const names = conversation?.participantDisplayNames || {};
     const avatars = conversation?.participantAvatarUrls || {};
-
     const map: Record<string, any> = {};
     for (const uid of participantArray) {
       map[uid] = {
@@ -79,13 +67,16 @@ export default function ConversationPage() {
     }
     return map;
   }, [conversation]);
-
   const otherUid = useMemo(() => {
     const participantArray: string[] =
       conversation?.participantUids || conversation?.participants || [];
     if (!participantArray?.length || !user) return null;
     return participantArray.find((x: string) => x !== user.uid);
   }, [conversation, user]);
+
+  // Early returns after hooks
+  if (authLoading) return null;
+  if (!user) return null;
 
   // mark conversation as read
   useEffect(() => {

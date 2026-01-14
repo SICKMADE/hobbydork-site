@@ -73,45 +73,42 @@ export default function AdminListingsPage() {
   if (loading) return <div className="p-6">Loading listings</div>;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto px-2 sm:px-4 py-8 space-y-6">
       <h1 className="text-2xl font-bold">Listing Moderation</h1>
 
-      {items.map((l) => (
-        (() => {
-          const isRemoved = l.status === "REMOVED" || l.state === "HIDDEN";
-          const displayStatus = l.status ?? l.state;
+      {items.map((l) => {
+        const isRemoved = l.status === "REMOVED" || l.state === "HIDDEN";
+        const displayStatus = l.status ?? l.state;
+        return (
+          <div key={l.id} className="rounded-2xl border-2 border-primary bg-card/90 shadow-[3px_3px_0_rgba(0,0,0,0.25)] p-5 space-y-2">
+            <p className="font-semibold text-lg">{l.title}</p>
+            <p className="text-sm text-muted-foreground">Status: {displayStatus}</p>
 
-          return (
-        <div key={l.id} className="border p-4 rounded bg-white shadow space-y-2">
-          <p className="font-semibold">{l.title}</p>
-          <p>Status: {displayStatus}</p>
-
-          {l.removedReason && (
-            <p className="text-sm text-red-600">Reason: {l.removedReason}</p>
-          )}
-
-          <div className="flex gap-2">
-            {!isRemoved && (
-              <button
-                className="px-3 py-1 bg-red-600 text-white rounded"
-                onClick={() => remove(l.id)}
-              >
-                Remove
-              </button>
+            {l.removedReason && (
+              <p className="text-sm text-red-600 font-bold">Reason: {l.removedReason}</p>
             )}
-            {isRemoved && (
-              <button
-                className="px-3 py-1 bg-green-600 text-white rounded"
-                onClick={() => restore(l.id)}
-              >
-                Restore
-              </button>
-            )}
+
+            <div className="flex gap-2 pt-2">
+              {!isRemoved && (
+                <button
+                  className="comic-button bg-red-600 border-red-600 text-white hover:bg-red-700 px-3 py-1 rounded"
+                  onClick={() => remove(l.id)}
+                >
+                  Remove
+                </button>
+              )}
+              {isRemoved && (
+                <button
+                  className="comic-button bg-green-600 border-green-600 text-white hover:bg-green-700 px-3 py-1 rounded"
+                  onClick={() => restore(l.id)}
+                >
+                  Restore
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-          );
-        })()
-      ))}
+        );
+      })}
     </div>
   );
 }

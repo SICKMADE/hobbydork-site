@@ -63,25 +63,17 @@ export default function ClientSearch() {
   const firestore = useFirestore();
   const searchParams = useSearchParams();
   const { user, profile, loading: authLoading } = require('@/hooks/use-auth').useAuth();
-  if (authLoading) return null;
-  if (!user) return null;
-  if (profile?.status !== "ACTIVE") return null;
   const canReadFirestore =
     !authLoading &&
     !!user &&
-    //
     profile?.status === "ACTIVE";
-
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
-
   const q = (searchParams?.get('q') || '').trim().toLowerCase();
-
   const listingsQuery = useMemoFirebase(() => {
     if (!canReadFirestore || !firestore) return null;
-
     // Only ACTIVE listings, newest first
     return query(
       collection(firestore, 'listings').withConverter(listingConverter),
@@ -89,11 +81,15 @@ export default function ClientSearch() {
       orderBy('createdAt', 'desc'),
     );
   }, [canReadFirestore, firestore]);
-
   const {
     data: listings,
     isLoading,
   } = useCollection<Listing>(canReadFirestore ? listingsQuery : null);
+
+  // Early returns after hooks
+  if (authLoading) return null;
+  if (!user) return null;
+  if (profile?.status !== "ACTIVE") return null;
 
   const filteredListings = useMemo(() => {
     let items: any[] = (listings as any[]) || [];

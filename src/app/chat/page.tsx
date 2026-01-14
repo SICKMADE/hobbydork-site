@@ -88,7 +88,6 @@ export default function GroupChatPage() {
   // SEND MESSAGE
   async function send() {
     if (!user || !profile || !text.trim() || !db) return;
-    // Enforce check at call site
     if (profile.status !== "ACTIVE") {
       toast({
         title: "Account restricted",
@@ -106,8 +105,9 @@ export default function GroupChatPage() {
         text,
         createdAt: serverTimestamp(),
       });
-
       setText("");
+      // Always scroll to bottom after sending
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch (e: unknown) {
       toast({
         title: "Could not send",
@@ -244,238 +244,89 @@ export default function GroupChatPage() {
 
   return (
     <AppLayout>
+      {/* App-themed grid background */}
+      <div className="fixed inset-0 -z-10 w-full h-full bg-grid bg-[hsl(var(--background))]" />
       <div className="max-w-6xl mx-auto space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Community Chat</h1>
-            <p className="text-sm text-muted-foreground">
-              Keep it respectful. Read the <Link href="/community-rules" className="underline">community rules</Link>.
-            </p>
-          </div>
-          <Badge variant="outline" className="text-xs">Live</Badge>
-        </div>
-
-        <div className="rounded-2xl border border-destructive/30 bg-muted/40 p-3 md:p-4">
-          <div className="flex flex-col h-[75vh]">
-
-      {/* ACTION MENU */}
-      {actionUser && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-sm border-destructive/30">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">{actionUser.displayName || "User"}</CardTitle>
-              <CardDescription className="text-xs">
-                {roleLabel(actionUser.role) ? `${roleLabel(actionUser.role)} • ` : ""}{actionUser.uid}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-
-            {/* VIEW STORE */}
-            <Button
-              className="w-full justify-start"
-              variant="outline"
-              onClick={() => viewStoreFromMessage(actionUser.uid, actionUser.storeId)}
-            >
-              View Store
-            </Button>
-
-            {/* SEND DM */}
-            <Button
-              className="w-full justify-start"
-              variant="outline"
-              onClick={() => {
-                window.location.href = `/messages/new?recipientUid=${encodeURIComponent(actionUser.uid)}`;
-              }}
-            >
-              Send Message
-            </Button>
-
-            {/* REPORT */}
-            <Button
-              className="w-full justify-start"
-              variant="destructive"
-              onClick={() => {
-                if (db) {
-                  addDoc(collection(db, "reports"), {
-                    reporterUid: user.uid,
-                    targetUid: actionUser.uid,
-                    reason: "Live Chat Report",
-                    createdAt: serverTimestamp(),
-                  });
-                }
-                setActionUser(null);
-              }}
-            >
-              Report User
-            </Button>
-
-            {/* MODERATOR & ADMIN ACTIONS */}
-            {isStaff && (
-              <>
-                {/* Delete message */}
-                <Button
-                  className="w-full justify-start"
-                  variant="destructive"
-                  onClick={() => deleteMessage(actionUser.id)}
-                >
-                  Delete Message
-                </Button>
-
-                {/* Suspend (mod/admin) */}
-                <Button
-                  className="w-full justify-start"
-                  variant="secondary"
-                  onClick={() => suspendUser(actionUser.uid, 24)}
-                >
-                  Suspend 24h
-                </Button>
-                <Button
-                  className="w-full justify-start"
-                  variant="secondary"
-                  onClick={() => suspendUser(actionUser.uid, 72)}
-                >
-                  Suspend 3d
-                </Button>
-              </>
-            )}
-
-            {/* ADMIN ONLY */}
-            {isAdmin && (
-              <>
-                <Button
-                  className="w-full justify-start"
-                  variant="secondary"
-                  onClick={() => suspendUser(actionUser.uid, 168)}
-                >
-                  Suspend 7d
-                </Button>
-
-                <Button
-                  className="w-full justify-start"
-                  variant="secondary"
-                  onClick={() => suspendUser(actionUser.uid, 720)}
-                >
-                  Suspend 30d
-                </Button>
-
-                <Button
-                  className="w-full justify-start"
-                  variant="destructive"
-                  onClick={() => banUser(actionUser.uid)}
-                >
-                  Ban User
-                </Button>
-
-                <Button
-                  className="w-full justify-start"
-                  variant="destructive"
-                  onClick={() => deleteAllMessages(actionUser.uid)}
-                >
-                  Delete ALL Messages
-                </Button>
-              </>
-            )}
-
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setActionUser(null)}
-            >
-              Close
-            </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* CHAT FEED */}
-      <div className="flex-1 overflow-y-auto space-y-3 pb-4 rounded-xl border bg-background/70 p-4">
-        {messages.map((m) => {
-          const isSelf = m.uid === user.uid;
-          const label = roleLabel(m.role);
-          return (
-            <div key={m.id} className={`flex gap-3 items-start ${isSelf ? "justify-end" : ""}`}>
-              {!isSelf && (
-                <button
-                  type="button"
-                  title="View user actions"
-                  onClick={() => setActionUser(m)}
-                  className="shrink-0"
-                >
-                  <Image
-                    src={m.avatar || getDefaultAvatarUrl(m.uid)}
-                    className="w-9 h-9 rounded-full object-cover border"
-                    alt="avatar"
-                    width={36}
-                    height={36}
-                  />
-                </button>
-              )}
-
-              <div className={`max-w-[85%] ${isSelf ? "text-right" : ""}`}>
-                <div className={`flex items-center gap-2 mb-1 ${isSelf ? "justify-end" : ""}`}>
-                  <button
-                    type="button"
-                    title="View user actions"
-                    onClick={() => setActionUser(m)}
-                    className="text-xs font-semibold hover:underline"
-                  >
-                    {m.displayName || "User"}
-                  </button>
-                  {label && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{label}</Badge>}
-                </div>
-                <div
-                  className={`rounded-xl border px-3 py-2 text-sm whitespace-pre-wrap ${
-                    isSelf
-                      ? "bg-muted/30 border-border"
-                      : "bg-muted border-border"
-                  }`}
-                >
-                  {m.text}
-                </div>
-              </div>
-
-              {isSelf && (
-                <button
-                  type="button"
-                  title="View user actions"
-                  onClick={() => setActionUser(m)}
-                  className="shrink-0"
-                >
-                  <Image
-                    src={m.avatar || profile?.avatar || getDefaultAvatarUrl(user.uid)}
-                    className="w-9 h-9 rounded-full object-cover border"
-                    alt="avatar"
-                    width={36}
-                    height={36}
-                  />
-                </button>
-              )}
+        {/* Header - move PNG closer to top */}
+        <div className="flex items-center justify-between gap-4 mt-2 mb-2">
+          <div className="flex items-center gap-2">
+            <div className="relative h-20 w-52 md:h-24 md:w-80 flex-shrink-0">
+              <Image src="/CHAT.png" alt="Chat" fill className="object-contain" priority />
             </div>
-          );
-        })}
+          </div>
+          <Badge variant="outline" className="text-xs bg-[rgb(198,0,0)] text-white border-2 border-[rgb(198,0,0)] shadow">Live</Badge>
+        </div>
 
-        <div ref={bottomRef} />
-      </div>
-
-      {/* INPUT */}
-      <div className="flex gap-2 mt-4 pt-3 border-t">
-        <Input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              void send();
-            }
-          }}
-          placeholder="Type a message…"
-          className="bg-background"
-        />
-        <Button onClick={send} disabled={!text.trim()}>
-          Send
-        </Button>
-      </div>
+        {/* Chat window with app card theme */}
+        <div className="p-0 md:p-2">
+          <div className="flex flex-col h-[75vh] rounded-2xl shadow-[4px_4px_0_rgba(0,0,0,0.35)] border-2 border-[rgb(198,0,0)] bg-[#36383b] overflow-hidden">
+            {/* ACTION MENU */}
+            {actionUser && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                <Card className="w-full max-w-sm border-destructive/30 shadow-xl rounded-xl bg-gradient-to-br from-gray-900/90 via-gray-800/90 to-gray-700/80 backdrop-blur-lg">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">{actionUser.displayName || "User"}</CardTitle>
+                    <CardDescription className="text-xs">
+                      {roleLabel(actionUser.role) ? `${roleLabel(actionUser.role)} • ` : ""}{actionUser.uid}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {/* VIEW STORE */}
+                    <Button className="w-full justify-start" variant="outline" onClick={() => viewStoreFromMessage(actionUser.uid, actionUser.storeId)}>View Store</Button>
+                    {/* SEND DM */}
+                    <Button className="w-full justify-start" variant="outline" onClick={() => {window.location.href = `/messages/new?recipientUid=${encodeURIComponent(actionUser.uid)}`;}}>Send Message</Button>
+                    {/* REPORT */}
+                    <Button className="w-full justify-start" variant="destructive" onClick={() => {if (db) {addDoc(collection(db, "reports"), {reporterUid: user.uid,targetUid: actionUser.uid,reason: "Live Chat Report",});}setActionUser(null);}}>Report User</Button>
+                    {/* MODERATOR & ADMIN ACTIONS */}
+                    {isStaff && (<><Button className="w-full justify-start" variant="destructive" onClick={() => deleteMessage(actionUser.id)}>Delete Message</Button><Button className="w-full justify-start" variant="secondary" onClick={() => suspendUser(actionUser.uid, 24)}>Suspend 24h</Button><Button className="w-full justify-start" variant="secondary" onClick={() => suspendUser(actionUser.uid, 72)}>Suspend 3d</Button></>)}
+                    {/* ADMIN ONLY */}
+                    {isAdmin && (<><Button className="w-full justify-start" variant="secondary" onClick={() => suspendUser(actionUser.uid, 168)}>Suspend 7d</Button><Button className="w-full justify-start" variant="secondary" onClick={() => suspendUser(actionUser.uid, 720)}>Suspend 30d</Button><Button className="w-full justify-start" variant="destructive" onClick={() => banUser(actionUser.uid)}>Ban User</Button><Button className="w-full justify-start" variant="destructive" onClick={() => deleteAllMessages(actionUser.uid)}>Delete ALL Messages</Button></>)}
+                    <Button variant="outline" className="w-full" onClick={() => setActionUser(null)}>Close</Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+            {/* CHAT FEED */}
+            <div className="flex-1 overflow-y-auto space-y-4 pb-6 px-4 md:px-6 rounded-2xl">
+              {messages.map((m) => {
+                const isSelf = m.uid === user.uid;
+                const label = roleLabel(m.role);
+                return (
+                  <div key={m.id} className={`flex gap-3 items-start ${isSelf ? "justify-end" : ""}`}>
+                    {/* Avatar */}
+                    <button type="button" title="View user actions" onClick={() => setActionUser(m)} className={`shrink-0 transition-transform hover:scale-105 comic-avatar-shadow ${isSelf ? "order-2" : ""}`}>
+                      <Image src={m.avatar || getDefaultAvatarUrl(m.uid)} className="w-10 h-10 rounded-full object-cover" alt="avatar" width={40} height={40} />
+                    </button>
+                    {/* Message bubble */}
+                    <div className={`max-w-[80%] ${isSelf ? "text-right order-1" : "order-1"}`}>
+                      <div className={`flex items-center gap-2 mb-1 ${isSelf ? "justify-end flex-row-reverse" : ""}`}>
+                        <span className="font-semibold text-xs text-primary">{m.displayName}</span>
+                        {label && <Badge className="ml-1 text-[10px] px-2 py-0.5 bg-primary text-primary-foreground border border-primary shadow">{label}</Badge>}
+                      </div>
+                      <div className={isSelf ? "comic-bubble-me" : "comic-bubble-them"}>{m.text}</div>
+                      <div className="text-xs text-muted-foreground">{m.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={bottomRef} />
+            </div>
+            {/* INPUT */}
+            <div className="flex items-center gap-2 pt-2 px-4 pb-4 bg-gray-900/60 border-t border-white/10 rounded-b-2xl">
+              <Input className="flex-1 comic-input-field bg-white !text-black placeholder:text-gray-500" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type your message..." maxLength={300} onKeyDown={(e) => {if (e.key === "Enter") send();}} disabled={!user || profile?.status !== "ACTIVE"} />
+              <Button
+                onClick={send}
+                disabled={!user || profile?.status !== "ACTIVE" || !text.trim()}
+                className="font-bold text-base px-6 py-2 rounded-full bg-[rgb(198,0,0)] text-white border-[5px] border-black shadow-[5px_5px_0_rgba(0,0,0,0.45)] active:scale-97 transition-transform comic-button"
+                style={{
+                  boxShadow: '6px 6px 0 #000',
+                  fontFamily: 'Inter, sans-serif',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                <span className="send-btn-label">SEND</span>
+              </Button>
+            </div>
           </div>
         </div>
       </div>

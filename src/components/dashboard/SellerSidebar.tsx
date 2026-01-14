@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils";
 
 
 import { useAuth } from "@/hooks/use-auth";
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { resolveAvatarUrl } from '@/lib/default-avatar';
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/firebase/client-provider";
@@ -25,7 +27,7 @@ import { db } from "@/firebase/client-provider";
 export default function SellerSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, profile } = useAuth();
   const [storeId, setStoreId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,7 +43,14 @@ export default function SellerSidebar() {
     fetchSellerProfile();
   }, [user]);
 
+  // Early return after hooks
   if (!user) return null;
+
+  // Avatar and username at the top (use profile for avatar/displayName)
+  const typedProfile = profile as any;
+  const avatarSeed = typedProfile?.avatar && typedProfile.avatar.trim() !== '' ? typedProfile.avatar : (typedProfile?.uid || typedProfile?.email || '');
+  const avatarUrl = resolveAvatarUrl(typedProfile?.avatar, avatarSeed);
+  const displayName = typedProfile?.displayName || typedProfile?.email || 'User';
 
 
   // Seller section (only seller-related links)
@@ -78,6 +87,13 @@ export default function SellerSidebar() {
   const sidebarContent = (
     <SidebarContent className="p-4 bg-sidebar text-sidebar-foreground border-r border-gray-800 flex flex-col" style={{ width: '240px', minWidth: '240px', maxWidth: '240px', boxSizing: 'border-box', flex: '0 0 240px', zIndex: 2 }}>
       <div className="h-full flex flex-col space-y-6 pt-2">
+        <div className="flex flex-col items-center mb-2 mt-2">
+          <Avatar className="h-16 w-16">
+            <AvatarImage src={avatarUrl} alt={displayName} />
+            <AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <span className="mt-2 text-base font-semibold text-center w-32 truncate">{displayName}</span>
+        </div>
         {/* SELLER Section */}
         <SidebarMenu>
           <RedLineSeparator />

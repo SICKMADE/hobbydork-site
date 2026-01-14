@@ -140,13 +140,12 @@ export const createStripeOnboarding = onCall(
       );
     }
 
-    const baseUrl =
-      process.env["app.base_url"] || "http://localhost:9002";
 
+    // Hardcode production URLs for Stripe onboarding
     const link = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${baseUrl}/onboarding/terms`,
-      return_url: `${baseUrl}/onboarding/success`,
+      refresh_url: "https://hobbydork.com/onboarding/terms",
+      return_url: "https://hobbydork.com/onboarding/success",
       type: "account_onboarding",
     });
 

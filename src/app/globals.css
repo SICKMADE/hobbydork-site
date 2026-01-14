@@ -1,3 +1,9 @@
+@import './riffic-font.css';
+/* Send button label style for chat page */
+.send-btn-label {
+  text-shadow: 0 3px 3px #000a;
+  font-weight: 900;
+}
 .tape-corner.z-10 {
   z-index: 10;
 }
@@ -36,7 +42,7 @@
 }
 /* Chat panel background */
 .bg-chat-panel {
-  background-color: #2f2f2f;
+  background-color: #e3e3e3;
 }
 /* Chat dark background */
 .bg-chat-dark {

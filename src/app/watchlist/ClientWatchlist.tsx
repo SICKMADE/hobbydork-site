@@ -34,16 +34,11 @@ function WatchedListing({ listingId }: { listingId: string }) {
 
 export default function ClientWatchlist() {
   const { user, profile, loading: authLoading } = useAuth();
-  if (authLoading) return null;
-  if (!user) return null;
-    if (profile?.status !== "ACTIVE") return null;
   const firestore = useFirestore();
-    const canReadFirestore =
-      !authLoading &&
-      !!user &&
-      //
-      profile?.status === "ACTIVE";
-
+  const canReadFirestore =
+    !authLoading &&
+    !!user &&
+    profile?.status === "ACTIVE";
   const watchlistQuery = useMemoFirebase(() => {
     if (!canReadFirestore || !firestore || !profile?.uid) return null;
     return collection(
@@ -51,9 +46,13 @@ export default function ClientWatchlist() {
       `users/${profile.uid}/watchlist`
     ).withConverter(watchlistConverter);
   }, [canReadFirestore, firestore, profile]);
-
   const { data: watchlistItems, isLoading } =
     useCollection<WatchlistItem>(canReadFirestore ? watchlistQuery : null);
+
+  // Early returns after hooks
+  if (authLoading) return null;
+  if (!user) return null;
+  if (profile?.status !== "ACTIVE") return null;
 
   return (
     <AppLayout>
