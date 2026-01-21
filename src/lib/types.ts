@@ -1,3 +1,28 @@
+// Blind Bidder Auction Types
+export type BlindBidAuction = {
+    id: string;
+    sellerUid: string;
+    title: string;
+    description: string;
+    imageUrl?: string | null;
+    createdAt: Timestamp;
+    endsAt: Timestamp;
+    status: 'OPEN' | 'CLOSED' | 'REVEALED' | 'CANCELLED';
+    flatFeePaid: boolean;
+    winnerUid?: string;
+    winningBidId?: string;
+    stripePaymentIntentId?: string;
+};
+
+export type BlindBid = {
+    id: string;
+    auctionId: string;
+    bidderUid: string;
+    amount: number;
+    createdAt: Timestamp;
+    status: 'PENDING' | 'WINNER' | 'LOSER' | 'CANCELLED';
+    stripePaymentIntentId?: string;
+};
 export type SellerApplication = {
     applicationId: string;
     ownerUid: string;

@@ -96,6 +96,20 @@ export default function GroupChatPage() {
       });
       return;
     }
+    // Optimistically add message to UI
+    const optimisticMsg = {
+      id: `optimistic-${Date.now()}`,
+      uid: user.uid,
+      displayName: profile.displayName,
+      avatar: profile.avatar || null,
+      role: profile.role || "USER",
+      text,
+      createdAt: { toDate: () => new Date() },
+      storeId: null,
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setText("");
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     try {
       await addDoc(collection(db, "groupChat"), {
         uid: user.uid,
@@ -105,9 +119,6 @@ export default function GroupChatPage() {
         text,
         createdAt: serverTimestamp(),
       });
-      setText("");
-      // Always scroll to bottom after sending
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch (e: unknown) {
       toast({
         title: "Could not send",

@@ -11,6 +11,7 @@ import { formatDistanceToNow } from "date-fns";
 import AppLayout from "@/components/layout/AppLayout";
 import PlaceholderContent from "@/components/PlaceholderContent";
 import { useAuth } from "@/hooks/use-auth";
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import { useToast } from "@/hooks/use-toast";
 
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
@@ -248,7 +249,11 @@ export default function StorePage() {
       }
       toast({ title: "Copied store URL" });
     } catch {
-      toast({ title: "Copy failed", variant: "destructive" });
+      toast({
+        title: "Copy failed",
+        description: getFriendlyErrorMessage(null) || "Could not copy store URL.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -273,7 +278,7 @@ export default function StorePage() {
     if (!storage) {
       toast({
         title: "Uploads unavailable",
-        description: "Storage is not ready yet. Refresh and try again.",
+        description: getFriendlyErrorMessage(null) || "Storage is not ready yet. Refresh and try again.",
         variant: "destructive",
       });
       return;
@@ -292,7 +297,7 @@ export default function StorePage() {
     } catch (e: any) {
       toast({
         title: "Upload failed",
-        description: e?.message ?? "Failed to upload store image.",
+        description: getFriendlyErrorMessage(e) || "Failed to upload store image.",
         variant: "destructive",
       });
     } finally {
@@ -351,7 +356,7 @@ export default function StorePage() {
   // DEBUG: Log store object and storeName
   if (typeof window !== "undefined") {
     // eslint-disable-next-line no-console
-    console.log("[StorePage] store:", store, "storeName:", store?.storeName);
+    // ...existing code...
   }
   // (No duplicate variable declarations below)
   const storeName = store?.storeName || ownerName || "Store";

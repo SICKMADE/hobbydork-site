@@ -70,9 +70,9 @@ export default function NotificationsPage() {
   }, [canReadFirestore, db, user, profile]);
 
   if (loading) return null;
-  if (!user) return <div className="p-6">Sign in required.</div>;
-  //
+  if (!user || !user.emailVerified || profile?.status !== "ACTIVE") {
     return <div className="p-6">Verify your email to view notifications.</div>;
+  }
   if (firestoreError)
     return <div className="p-6 text-red-600">{firestoreError}</div>;
 

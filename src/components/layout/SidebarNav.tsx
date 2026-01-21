@@ -52,6 +52,8 @@ import {
   AvatarFallback,
 } from '@/components/ui/avatar';
 import { resolveAvatarUrl } from '@/lib/default-avatar';
+import MiniAskTV from '@/components/dashboard/MiniAskTV';
+
 
 
 
@@ -279,6 +281,9 @@ export default function SidebarNav({}: SidebarNavProps) {
 
             </SidebarMenu>
           </div>
+        </div>
+        <div className="mt-auto pt-6 flex justify-center opacity-90">
+          <MiniAskTV />
         </div>
       </SidebarContent>
     </>

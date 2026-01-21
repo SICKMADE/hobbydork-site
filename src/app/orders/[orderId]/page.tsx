@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from 'next/image';
 import { db } from "@/firebase/client-provider";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -219,7 +220,14 @@ export default function OrderDetail({ params }: any) {
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-2 xs:p-4 bg-transparent">
       <div className="w-full max-w-3xl border-2 border-destructive bg-card/80 rounded-2xl shadow-lg">
         <div className="flex flex-col items-center gap-4 p-4 md:p-6 border-b border-gray-700 w-full">
-          <img src="/order.png" alt="Order" className="w-full max-w-full h-40 mb-4 object-contain" />
+          <Image
+            src="/order.png"
+            alt="Order"
+            width={800}
+            height={160}
+            className="w-full max-w-full h-40 mb-4 object-contain"
+            priority
+          />
           {/* Order Progress Bar */}
           <div className="w-full flex flex-col items-center mb-4">
             <div className="w-full xs:w-2/3 md:w-1/2 h-3 bg-gray-700 rounded-full overflow-hidden mb-2">

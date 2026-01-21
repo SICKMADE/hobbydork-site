@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from './use-toast';
 import type { Listing } from '@/lib/types';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
 // Define the shape of a single cart item
 export interface CartItem {
@@ -62,94 +63,102 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }, [items, storeId]);
 
     const addToCart = (listing: Listing, quantity: number) => {
-        // Rule: Cart can only contain items from one store
-        if (storeId && storeId !== listing.storeId) {
+        try {
+            // Rule: Cart can only contain items from one store
+            if (storeId && storeId !== listing.storeId) {
+                throw new Error('Your cart can only contain items from one store at a time. Please clear your cart or complete your existing purchase first.');
+            }
+
+            // If cart is empty, set the storeId
+            if (!storeId) {
+                setStoreId(listing.storeId);
+            }
+
+            setItems(prevItems => {
+                const existingItemIndex = prevItems.findIndex(item => item.listingId === listing.listingId);
+                if (existingItemIndex > -1) {
+                    // Update quantity if item already in cart
+                    const newItems = [...prevItems];
+                    const existingItem = newItems[existingItemIndex];
+                    const newQuantity = existingItem.quantity + quantity;
+
+                    if (newQuantity > listing.quantityAvailable) {
+                        throw new Error(`You can't add more than ${listing.quantityAvailable} of this item to your cart.`);
+                    }
+
+                    existingItem.quantity = newQuantity;
+                    toast({
+                        title: "Cart Updated",
+                        description: `${listing.title} quantity increased to ${newQuantity}.`,
+                    });
+                    return newItems;
+                } else {
+                    if (quantity > listing.quantityAvailable) {
+                        throw new Error(`You can't add more than ${listing.quantityAvailable} of this item to your cart.`);
+                    }
+                    // Add new item to cart
+                    const newItem: CartItem = {
+                        listingId: listing.listingId,
+                        title: listing.title,
+                        price: listing.price,
+                        primaryImageUrl: listing.primaryImageUrl,
+                        quantity,
+                        availableQuantity: listing.quantityAvailable
+                    };
+                    toast({
+                        title: "Item Added to Cart",
+                        description: `${listing.title} has been added to your cart.`,
+                    });
+                    return [...prevItems, newItem];
+                }
+            });
+        } catch (err) {
             toast({
                 variant: "destructive",
-                title: "Cannot Mix Stores",
-                description: "Your cart can only contain items from one store at a time. Please clear your cart or complete your existing purchase first.",
+                title: "Cart Error",
+                description: getFriendlyErrorMessage(err),
             });
-            return;
         }
-
-        // If cart is empty, set the storeId
-        if (!storeId) {
-            setStoreId(listing.storeId);
-        }
-
-        setItems(prevItems => {
-            const existingItemIndex = prevItems.findIndex(item => item.listingId === listing.listingId);
-            
-            if (existingItemIndex > -1) {
-                // Update quantity if item already in cart
-                const newItems = [...prevItems];
-                const existingItem = newItems[existingItemIndex];
-                const newQuantity = existingItem.quantity + quantity;
-
-                if (newQuantity > listing.quantityAvailable) {
-                     toast({
-                        variant: "destructive",
-                        title: "Not enough stock",
-                        description: `You can't add more than ${listing.quantityAvailable} of this item to your cart.`,
-                    });
-                    return prevItems; // Return original items without change
-                }
-
-                existingItem.quantity = newQuantity;
-                toast({
-                    title: "Cart Updated",
-                    description: `${listing.title} quantity increased to ${newQuantity}.`,
-                });
-                return newItems;
-            } else {
-                 if (quantity > listing.quantityAvailable) {
-                     toast({
-                        variant: "destructive",
-                        title: "Not enough stock",
-                        description: `You can't add more than ${listing.quantityAvailable} of this item to your cart.`,
-                    });
-                    return prevItems; // Return original items without change
-                }
-                // Add new item to cart
-                const newItem: CartItem = {
-                    listingId: listing.listingId,
-                    title: listing.title,
-                    price: listing.price,
-                    primaryImageUrl: listing.primaryImageUrl,
-                    quantity,
-                    availableQuantity: listing.quantityAvailable
-                };
-                 toast({
-                    title: "Item Added to Cart",
-                    description: `${listing.title} has been added to your cart.`,
-                });
-                return [...prevItems, newItem];
-            }
-        });
     };
 
     const removeFromCart = (listingId: string) => {
-        setItems(prevItems => {
-            const newItems = prevItems.filter(item => item.listingId !== listingId);
-            // If cart becomes empty, clear the storeId
-            if (newItems.length === 0) {
-                setStoreId(null);
-            }
-            toast({
-                title: "Item Removed",
-                description: "The item has been removed from your cart.",
+        try {
+            setItems(prevItems => {
+                const newItems = prevItems.filter(item => item.listingId !== listingId);
+                // If cart becomes empty, clear the storeId
+                if (newItems.length === 0) {
+                    setStoreId(null);
+                }
+                toast({
+                    title: "Item Removed",
+                    description: "The item has been removed from your cart.",
+                });
+                return newItems;
             });
-            return newItems;
-        });
+        } catch (err) {
+            toast({
+                variant: "destructive",
+                title: "Cart Error",
+                description: getFriendlyErrorMessage(err),
+            });
+        }
     };
 
     const clearCart = () => {
-        setItems([]);
-        setStoreId(null);
-        toast({
-            title: "Cart Cleared",
-            description: "Your shopping cart is now empty.",
-        });
+        try {
+            setItems([]);
+            setStoreId(null);
+            toast({
+                title: "Cart Cleared",
+                description: "Your shopping cart is now empty.",
+            });
+        } catch (err) {
+            toast({
+                variant: "destructive",
+                title: "Cart Error",
+                description: getFriendlyErrorMessage(err),
+            });
+        }
     };
 
     const itemCount = items.reduce((total, item) => total + item.quantity, 0);
@@ -172,7 +181,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 export const useCart = () => {
     const context = useContext(CartContext);
     if (context === undefined) {
-        throw new Error('useCart must be used within a CartProvider');
+        // Production: User-friendly error
+        throw new Error('Cart error: This feature must be used within a CartProvider. Please contact support if this persists.');
     }
     return context;
 };

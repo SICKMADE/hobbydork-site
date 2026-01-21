@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from 'next/image';
 import { useParams } from "next/navigation";
 import { db } from "@/firebase/client-provider";
 import { getFirebase } from "@/firebase/client-init";
@@ -157,7 +158,14 @@ export default function ISODetailPage() {
     return (
       <AppLayout>
         <div className="mx-auto w-full max-w-2xl px-4 py-16 flex flex-col items-center justify-center text-center">
-          <img src="/ISO.png" alt="ISO24" width={120} height={48} className="mx-auto mb-4" />
+          <Image
+            src="/ISO.png"
+            alt="ISO24"
+            width={120}
+            height={48}
+            className="mx-auto mb-4"
+            priority
+          />
           <h2 className="text-2xl font-bold mb-2">ISO24</h2>
           <p className="mb-4 text-muted-foreground">Sign in and verify your email to view or interact with ISO24 posts.</p>
           <Button asChild className="comic-button">

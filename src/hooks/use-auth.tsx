@@ -132,7 +132,8 @@ export function AuthProvider({
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    throw new Error("useAuth must be used inside AuthProvider");
+    // Production: User-friendly error
+    throw new Error("Auth error: This feature must be used inside AuthProvider. Please contact support if this persists.");
   }
   return ctx;
 }

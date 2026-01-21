@@ -51,7 +51,8 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
 export const useVault = () => {
   const context = useContext(VaultContext);
   if (!context) {
-    throw new Error('useVault must be used within a VaultProvider');
+    // Production: User-friendly error
+    throw new Error('Vault error: This feature must be used within a VaultProvider. Please contact support if this persists.');
   }
   return context;
 };

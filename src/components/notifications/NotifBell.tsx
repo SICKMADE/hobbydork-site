@@ -14,7 +14,7 @@ export default function NotifBell() {
     if (loading || !user?.uid || !db) return;
 
     const notifPath = `/users/${user.uid}/notifications`;
-    console.log('[NotifBell] Querying notifications for user:', user.uid, 'Path:', notifPath);
+    // ...existing code...
 
     const qNotif = query(
       collection(db, "users", user.uid, "notifications"),

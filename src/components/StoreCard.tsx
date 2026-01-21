@@ -21,41 +21,41 @@ export default function StoreCard({ store, cardImage, layout = 'default' }: Stor
 
   if (layout === 'spotlight') {
     return (
-       <Link href={`/store/${store.storeId}`} passHref>
+      <Link href={`/store/${store.storeId}`} passHref>
         <Card className={cn(
           "relative overflow-hidden group transition-colors bg-card/80 hover:bg-card border-2 border-black aspect-square shadow-[3px_3px_0_rgba(0,0,0,0.25)]",
           store.isSpotlighted ? "" : ""
         )}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={String(displayImage)}
-              alt={`${store.storeName} banner`}
-              className="absolute inset-0 h-full w-full object-contain bg-muted"
-              data-ai-hint="store banner"
-              onError={(e) => {
-                const el = e.currentTarget;
-                if (el.dataset.fallbackApplied === '1') return;
-                el.dataset.fallbackApplied = '1';
-                el.src = fallbackStoreCover;
-              }}
-            />
-            {/* Gradient overlay for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={String(displayImage)}
+            alt={`${store.storeName} banner`}
+            className="absolute inset-0 h-full w-full object-contain bg-muted"
+            data-ai-hint="store banner"
+            onError={(e) => {
+              const el = e.currentTarget;
+              if (el.dataset.fallbackApplied === '1') return;
+              el.dataset.fallbackApplied = '1';
+              el.src = fallbackStoreCover;
+            }}
+          />
+          {/* Gradient overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
-            <div className="absolute inset-0 flex flex-col justify-end p-4 text-white">
-                 {store.isSpotlighted && (
-                    <div className="absolute top-2 right-2 bg-primary text-primary-foreground px-2 py-1 text-xs font-bold rounded-full flex items-center gap-1 z-10">
-                        <Star className="h-3 w-3" />
-                        <span>SPOTLIGHT</span>
-                    </div>
-                 )}
-                <h3 className="text-lg font-bold drop-shadow-md">{store.storeName}</h3>
-                <p className="text-xs text-white/80 drop-shadow-sm line-clamp-2">{store.about}</p>
-                 <Button className="w-full mt-3 comic-button">
-                    <Store className="mr-2 h-4 w-4" />
-                    Visit Store
-                </Button>
+          <div className="absolute inset-0 flex flex-col justify-end p-4 text-white">
+            {store.isSpotlighted && (
+              <div className="absolute top-2 right-2 bg-primary text-primary-foreground px-2 py-1 text-xs font-bold rounded-full flex items-center gap-1 z-10">
+                <Star className="h-3 w-3" />
+                <span>SPOTLIGHT</span>
+              </div>
+            )}
+            <h3 className="text-lg font-bold drop-shadow-md">{store.storeName}</h3>
+            <p className="text-xs text-white/80 drop-shadow-sm line-clamp-2">{store.about}</p>
+            <div className="w-full mt-3 comic-button flex items-center justify-center gap-2 bg-primary text-white rounded px-3 py-2 font-semibold shadow hover:bg-primary/90 transition cursor-pointer select-none">
+              <Store className="mr-2 h-4 w-4" />
+              Visit Store
             </div>
+          </div>
         </Card>
       </Link>
     );

@@ -17,6 +17,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
 import { ToastAction } from "@/components/ui/toast";
 
@@ -75,7 +76,7 @@ export default function SellerOrderDetail({ params }: any) {
     } catch (err: any) {
       toast({
         title: "Error marking as shipped",
-        description: `${err?.message ?? "Could not update order. Please try again."}`,
+        description: getFriendlyErrorMessage(err) || "Could not update order. Please try again.",
         variant: "destructive",
         action: (
           <ToastAction altText="Contact Support" asChild>

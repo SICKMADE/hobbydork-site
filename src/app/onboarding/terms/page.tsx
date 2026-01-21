@@ -51,6 +51,18 @@ type SellerAgreementsFormValues = z.infer<typeof sellerAgreementsSchema>;
 
 export default function SellerOnboardingTermsPage() {
   const { user, profile, loading } = useAuth();
+    // Block unverified or non-ACTIVE users from onboarding
+    if (!user || !user.emailVerified || profile?.status !== "ACTIVE") {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-grid-pattern">
+          <div className="max-w-xl mx-auto p-8 text-center">
+            <h2 className="text-2xl font-bold mb-2">Email Verification Required</h2>
+            <p className="mb-4">You must verify your email and have an active account to apply as a seller.</p>
+            <a href="/verify-email" className="comic-button px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 transition">Verify Email</a>
+          </div>
+        </div>
+      );
+    }
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);

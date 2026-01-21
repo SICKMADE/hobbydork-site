@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Image from 'next/image';
 import SellerOnboardingStepper from "@/components/onboarding/SellerOnboardingStepper";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -160,7 +161,14 @@ export default function BecomeSellerTermsPage() {
       <div className="max-w-2xl w-full flex flex-col items-center gap-8 rounded-2xl shadow-2xl border border-red-500 bg-background/90 backdrop-blur-md p-6 md:p-10">
         <Card className="w-full bg-gray-800 border-2 border-red-500 shadow-xl">
           <div className="flex justify-center pt-4 mb-2">
-            <img src="/done.png" alt="Done" className="w-40 h-40 object-contain" />
+            <Image
+              src="/done.png"
+              alt="Done"
+              width={160}
+              height={160}
+              className="w-40 h-40 object-contain"
+              priority
+            />
           </div>
           <CardHeader>
             <CardTitle className="text-3xl font-extrabold text-red-400 text-center">Seller Terms & Agreement</CardTitle>

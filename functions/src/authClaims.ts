@@ -11,16 +11,10 @@ export const syncUserClaims = onDocumentWritten(
   "users/{uid}",
   async (event) => {
     const uid = event.params.uid;
-
     const after = event.data?.after;
     if (!after) return;
-
-    const data = after.data();
-    if (!data) return;
-
-    const role = data.role ?? "USER";
-    const isSeller = data.isSeller === true;
-
+    const role = after.data()?.role ?? "USER";
+    const isSeller = after.data()?.isSeller === true;
     await admin.auth().setCustomUserClaims(uid, {
       role,
       isSeller,

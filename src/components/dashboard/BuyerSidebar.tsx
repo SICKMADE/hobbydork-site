@@ -33,7 +33,7 @@ export default function BuyerSidebar() {
   const { isMobile, open, setOpen } = useSidebar();
 
 
-  const buyerLinks = [
+  const buyerMenu = [
     { href: "/", label: "Home", icon: Home },
     { href: "/buyer/dashboard", label: "Overview", icon: Home },
     { href: "/orders", label: "My Orders", icon: ShoppingBag },
@@ -43,15 +43,22 @@ export default function BuyerSidebar() {
     { href: "/activity", label: "Activity", icon: History },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
+  const helpMenu = [
+    { href: "/help", label: "Help & FAQ", icon: Settings },
+  ];
 
   const handleNav = (href: string) => {
     if (isMobile) setOpen(false);
     router.push(href);
   };
+  const handleLogout = async () => {
+    // Add your logout logic here
+    router.push("/");
+  };
 
   const sidebarContent = (
-    <SidebarContent className="p-6 bg-sidebar text-sidebar-foreground border-r border-gray-800 flex flex-col" style={{ width: '280px', minWidth: '260px', maxWidth: '320px', boxSizing: 'border-box', flex: '0 0 280px', zIndex: 2 }}>
-      <div className="h-full flex flex-col space-y-8 pt-2">
+    <SidebarContent className="p-4 bg-sidebar text-sidebar-foreground border-r border-gray-800 flex flex-col" style={{ width: '240px', minWidth: '240px', maxWidth: '240px', boxSizing: 'border-box', flex: '0 0 240px', zIndex: 2 }}>
+      <div className="h-full flex flex-col space-y-6 pt-2">
         <div className="flex flex-col items-center mb-2 mt-2">
           <Avatar className="h-16 w-16">
             <AvatarImage src={avatarUrl} alt={displayName} />
@@ -59,27 +66,54 @@ export default function BuyerSidebar() {
           </Avatar>
           <span className="mt-2 text-base font-semibold text-center w-32 truncate">{displayName}</span>
         </div>
+        {/* BUYER Section */}
         <SidebarMenu>
           <RedLineSeparator />
           <div className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Buyer</div>
-          {buyerLinks.map(({ href, label, icon: Icon }) => {
-            const isActive = pathname === href;
-            return (
-              <SidebarMenuItem key={href}>
-                <SidebarMenuButton
-                  isActive={isActive}
-                  onClick={() => handleNav(href)}
-                  className={cn(
-                    "justify-start gap-3 text-base font-semibold tracking-wide w-full px-3 py-3 rounded-lg",
-                    isActive ? "bg-muted text-primary" : "text-muted-foreground"
-                  )}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span>{label}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
+          {buyerMenu.map(({ href, label, icon: Icon }) => (
+            <SidebarMenuItem key={href}>
+              <SidebarMenuButton
+                isActive={pathname === href}
+                onClick={() => handleNav(href)}
+                className={cn(
+                  "justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md",
+                  pathname === href ? "bg-muted text-primary" : "text-muted-foreground"
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                <span>{label}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+        {/* HELP & ACCOUNT Section */}
+        <SidebarMenu>
+          <RedLineSeparator />
+          <div className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Help & Account</div>
+          {helpMenu.map(({ href, label, icon: Icon }) => (
+            <SidebarMenuItem key={href}>
+              <SidebarMenuButton
+                isActive={pathname === href}
+                onClick={() => handleNav(href)}
+                className={cn(
+                  "justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md",
+                  pathname === href ? "bg-muted text-primary" : "text-muted-foreground"
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                <span>{label}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={false}
+              onClick={handleLogout}
+              className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md text-red-600 hover:bg-red-100"
+            >
+              <span>Log out</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </div>
     </SidebarContent>

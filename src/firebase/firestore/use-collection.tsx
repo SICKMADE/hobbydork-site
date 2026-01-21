@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import type {
   Query,
   QuerySnapshot,
@@ -13,7 +14,7 @@ type WithId<T = DocumentData> = T & { id: string };
 type UseCollectionResult<T> = {
   data: WithId<T>[] | null;
   isLoading: boolean;
-  error: Error | null;
+  error: string | null;
 };
 
 export function useCollection<T = DocumentData>(
@@ -22,7 +23,7 @@ export function useCollection<T = DocumentData>(
   const { user, loading: authLoading, profile } = require('@/hooks/use-auth').useAuth();
   const [data, setData] = useState<WithId<T>[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(!!queryRef);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // 🔒 HARD GATES — prevent subscription unless user is verified and active
@@ -63,14 +64,14 @@ export function useCollection<T = DocumentData>(
         (err) => {
           // IMPORTANT: do NOT throw here – just store the error
           console.error('Firestore useCollection error', err);
-          setError(err instanceof Error ? err : new Error(String(err)));
+          setError(getFriendlyErrorMessage(err));
           setIsLoading(false);
         },
       );
     } catch (e: unknown) {
       // onSnapshot can throw synchronously for invalid queries/targets; capture that
       console.error('Firestore onSnapshot failed to subscribe', e);
-      setError(e instanceof Error ? e : new Error(String(e)));
+      setError(getFriendlyErrorMessage(e));
       setIsLoading(false);
       return;
     }

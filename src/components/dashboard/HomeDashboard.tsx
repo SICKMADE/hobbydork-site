@@ -1,7 +1,107 @@
-"use client";
+// ...existing code...
+import { useEffect, useState } from 'react';
+import { getFirestore, collection as fbCollection, query as fbQuery, where as fbWhere, orderBy as fbOrderBy, limit as fbLimit, getDocs, doc as fbDoc, getDoc } from 'firebase/firestore';
+function BlindBidderSection() {
+    // Digital countdown helpers for each auction
+    function getCountdownColor(msLeft: number) {
+      const hours = msLeft / (1000 * 60 * 60);
+      if (hours > 8) return "text-green-500";
+      if (hours > 3) return "text-yellow-500";
+      return "text-red-500";
+    }
+    function formatDigitalClock(msLeft: number) {
+      if (msLeft <= 0) return "00:00:00";
+      const totalSeconds = Math.floor(msLeft / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      return [hours, minutes, seconds].map(n => n.toString().padStart(2, '0')).join(":");
+    }
+    const [now, setNow] = useState(Date.now());
+    useEffect(() => {
+      const interval = setInterval(() => setNow(Date.now()), 1000);
+      return () => clearInterval(interval);
+    }, []);
+  const [enabled, setEnabled] = useState(false);
+  const [auctions, setAuctions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const db = getFirestore();
+    async function fetchConfigAndAuctions() {
+      const configSnap = await getDoc(fbDoc(db, 'config', 'blindBidder'));
+      setEnabled(!!configSnap.data()?.enabled);
+      if (configSnap.data()?.enabled) {
+        const q = fbQuery(
+          fbCollection(db, 'blindBidAuctions'),
+          fbWhere('status', '==', 'OPEN'),
+          fbOrderBy('endsAt', 'asc'),
+          fbLimit(6)
+        );
+        const snap = await getDocs(q);
+        setAuctions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } else {
+        setAuctions([]);
+      }
+      setLoading(false);
+    }
+    fetchConfigAndAuctions();
+  }, []);
+  return (
+    <section className="rounded-2xl border-2 border-black bg-card/80 p-4 sm:p-6 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="relative h-16 w-40 sm:h-20 sm:w-52 flex-shrink-0 rounded-xl border-2 border-black bg-muted overflow-hidden">
+            <Image src="/BLIND.png" alt="Blind Bidder" fill className="object-contain" priority />
+          </div>
+          <h2 className="text-xl font-semibold">Blind Bidder</h2>
+          <span className={`ml-2 px-2 py-1 rounded text-xs font-bold ${enabled ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>{enabled ? 'OPEN' : 'CLOSED'}</span>
+        </div>
+        <Button asChild size="sm" className="comic-button"><Link href="/blind-bidder">Browse Blind Bidder</Link></Button>
+      </div>
+      {loading ? <div>Loading auctions…</div> : !enabled ? <div className="text-center text-muted-foreground">Blind Bidder is currently closed.</div> : auctions.length === 0 ? <div className="text-center text-muted-foreground">No open auctions right now.</div> : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {auctions.map(a => {
+            let endsAtDate = a.endsAt?.toDate ? a.endsAt.toDate() : (typeof a.endsAt === 'string' ? new Date(a.endsAt) : a.endsAt);
+            let msLeft = endsAtDate ? endsAtDate.getTime() - now : 0;
+            return (
+              <Card key={a.id} className="border-2 border-black flex flex-col overflow-hidden p-2 text-[11px] max-w-[170px] min-w-[120px] bg-background/90">
+                <div className="relative w-full aspect-[5/6] bg-muted flex items-center justify-center rounded-md">
+                  {a.imageUrl ? (
+                    <Image src={a.imageUrl} alt={a.title} fill sizes="120px" className="object-contain" />
+                  ) : (
+                    <div className="text-xs text-muted-foreground px-2 text-center">No image</div>
+                  )}
+                </div>
+                <CardContent className="pt-2 pb-2 flex flex-col gap-1 text-[11px]">
+                  <div className="flex items-center gap-1 text-[9px] mb-0.5">
+                    <span className="font-bold uppercase tracking-widest">Blind Bid</span>
+                    <span className="rounded bg-black/10 px-1 py-0.5">24hr</span>
+                  </div>
+                  <div className="font-bold text-[11px] leading-tight line-clamp-2 mb-0.5">{a.title}</div>
+                  <div className="text-muted-foreground line-clamp-2 mb-0.5">{a.description}</div>
+                  <div className="flex items-center gap-1 mb-1">
+                    <span className={`font-mono text-[13px] ${getCountdownColor(msLeft)}`}>{formatDigitalClock(msLeft)}</span>
+                  </div>
+                  {/* Seller info if available */}
+                  {a.sellerName && (
+                    <div className="flex items-center gap-1 mb-1">
+                      <Avatar className="h-5 w-5"><AvatarImage src={a.sellerAvatar || undefined} alt={a.sellerName} /><AvatarFallback>{a.sellerName[0]}</AvatarFallback></Avatar>
+                      <span className="text-[10px] font-medium">{a.sellerName}</span>
+                    </div>
+                  )}
+                  <Button asChild size="sm" className="h-6 px-2 py-0 text-xs"><Link href={`/blind-bidder/${a.id}`}>View & Bid</Link></Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
 
+// ...existing code...
 import { useAuth } from '@/hooks/use-auth';
-import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Bell, Store } from 'lucide-react';
@@ -319,13 +419,13 @@ function NewListingsSection() {
   if (!listings || listings.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border-2 border-black bg-card/80 p-4 sm:p-6 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+    <section className="border-2 border-black bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-6 sm:p-8 shadow-xl rounded-xl">
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-sky-400/80">
             Newly Listed
           </p>
-          <h2 className="text-xl font-semibold">Fresh in the Market</h2>
+          <h2 className="text-2xl font-bold text-white drop-shadow">Fresh in the Market</h2>
         </div>
         <Button
           asChild
@@ -341,12 +441,17 @@ function NewListingsSection() {
         <p className="text-xs text-muted-foreground">Loading listings…</p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
         {listings.map((listing) => (
-          <ListingCard
+          <div
             key={listing.id || listing.listingId}
-            listing={listing}
-          />
+            className="max-w-[180px] min-w-[130px] mx-auto bg-zinc-950 border border-zinc-700 shadow-lg rounded-lg transition-transform hover:-translate-y-1 hover:shadow-2xl"
+          >
+            <ListingCard
+              listing={listing}
+              compact
+            />
+          </div>
         ))}
       </div>
     </section>
@@ -374,19 +479,17 @@ function VaultAndGenieSection() {
             <StandaloneVaultDoor />
           </div>
           <p className="text-center text-sm text-muted-foreground max-w-md">
-            Somewhere on this site is a <b>4-digit pin</b>.  
-            Find it. Enter it. Win something nice.  
-            Clues drop—pay attention.
+
           </p>
         </div>
 
-        {/* ASK HOBBYDORK */}
+        {}
         <div className="flex flex-col items-center gap-4 p-4 rounded-lg border bg-muted">
           <div className="relative w-64 h-32">
             <Image src="/ask.png" alt="ask" fill className="object-contain" />
           </div>
           <AskHobbyDork />
-          <p className="text-center text-sm text-muted-foreground max-w-md ">Can't Make Up Your Mind? Let HobbbyDork Decide.</p>
+          <p className="text-center text-sm text-muted-foreground max-w-md "></p>
         </div>
       </div>
     </section>
@@ -409,6 +512,7 @@ export default function HomeDashboard({ user, profile }: HomeDashboardProps) {
 
   return (
     <div className="space-y-10 lg:space-y-12">
+      <BlindBidderSection />
       {/* Hero header */}
       <header className="rounded-2xl border bg-gradient-to-r from-zinc-900 via-zinc-900 to-black p-6 sm:p-7 shadow-xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

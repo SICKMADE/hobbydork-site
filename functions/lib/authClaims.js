@@ -46,11 +46,8 @@ exports.syncUserClaims = (0, firestore_1.onDocumentWritten)("users/{uid}", async
     const after = event.data?.after;
     if (!after)
         return;
-    const data = after.data();
-    if (!data)
-        return;
-    const role = data.role ?? "USER";
-    const isSeller = data.isSeller === true;
+    const role = after.data()?.role ?? "USER";
+    const isSeller = after.data()?.isSeller === true;
     await admin.auth().setCustomUserClaims(uid, {
         role,
         isSeller,

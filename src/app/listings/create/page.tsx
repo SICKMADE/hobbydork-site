@@ -266,6 +266,21 @@ export default function CreateListingPage() {
     );
   }
 
+  // If user is verified, ACTIVE, but not a seller and no store, prompt to apply to become a seller
+  if (user.emailVerified && userData?.status === "ACTIVE" && !isSeller && !storeId) {
+    return (
+      <AppLayout>
+        <PlaceholderContent title="Become a seller" description="You must apply to become a seller before listing items.">
+          <div className="mt-4 flex justify-center">
+            <Button asChild>
+              <Link href="/become-seller">Apply to become a seller</Link>
+            </Button>
+          </div>
+        </PlaceholderContent>
+      </AppLayout>
+    );
+  }
+
   if (!isSeller || !storeId) {
     return (
       <AppLayout>

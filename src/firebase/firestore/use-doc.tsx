@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import {
   DocumentReference,
   onSnapshot,
@@ -57,17 +58,15 @@ export function useDoc<T = unknown>(
         },
         (err) => {
           console.error('Firestore useDoc permission/error', err);
-          if (err && (err.code === 'permission-denied' || err.message?.includes('Missing or insufficient permissions'))) {
-            setError(new Error('You do not have permission to access this document.'));
-          } else {
-            setError(err);
-          }
+          const friendly = getFriendlyErrorMessage(err);
+          setError(typeof err === 'object' && err instanceof Error ? err : new Error(friendly));
           setIsLoading(false);
         },
       );
     } catch (e) {
       console.error('Firestore useDoc subscribe crash', e);
-      setError(e as Error);
+      const friendly = getFriendlyErrorMessage(e);
+      setError(e instanceof Error ? e : new Error(friendly));
       setIsLoading(false);
     }
 

@@ -55,14 +55,14 @@ export default function SellerSidebar() {
 
   // Seller section (only seller-related links)
   const sellerMenu = [
+    { href: "/", label: "Home", icon: Home },
     { href: "/seller/dashboard", label: "Overview", icon: Store },
     { href: "/seller/listings", label: "Listings", icon: List },
     { href: "/seller/orders", label: "Orders", icon: Package },
     { href: "/sales", label: "Sales", icon: DollarSign },
-    { href: "/seller-analytics", label: "Analytics", icon: BarChart2 },
+    { href: "/seller/analytics", label: "Analytics", icon: BarChart2 },
     { href: "/seller/payouts", label: "Payouts", icon: DollarSign },
     { href: "/seller/settings", label: "Settings", icon: Settings },
-    { href: "/", label: "Home", icon: Home },
     { href: storeId ? `/store/${storeId}` : "/hobbydork-store", label: "My Store", icon: Store },
   ];
 

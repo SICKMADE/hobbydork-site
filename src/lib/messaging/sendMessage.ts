@@ -17,7 +17,9 @@ export async function sendMessage(
   firestore: Firestore
 ): Promise<string | void> {
   if (!conversationId || !senderUid || !firestore) {
-    console.error("sendMessage() missing required args.");
+    // Production: User-friendly error handling and logging
+    // Optionally surface error to UI or monitoring
+    throw new Error("sendMessage() missing required args.");
     return;
   }
 

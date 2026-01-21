@@ -1,4 +1,3 @@
-    // (moved stores rules block inside service cloud.firestore)
 rules_version = '2';
 
 service cloud.firestore {
@@ -140,30 +139,36 @@ service cloud.firestore {
 
 
 
+
     // ------------- storefronts -------------
     match /storefronts/{storeId} {
+      // Anyone (even unauthenticated) can browse storefronts
       allow get, list: if true;
+      // Only verified users can create, update, delete
       allow create, update, delete: if isVerified();
       match /reviews/{reviewId} {
-        allow get, list: if isVerified();
-        allow create, update, delete: if isVerified();
+        // Only verified users can see or write reviews
+        allow get, list, create, update, delete: if isVerified();
       }
     }
 
     // ------------- stores -------------
     match /stores/{storeId} {
+      // Anyone (even unauthenticated) can browse stores
       allow get, list: if true;
+      // Only verified users can create, update, delete
       allow create, update, delete: if isVerified();
       match /reviews/{reviewId} {
-        allow get, list: if isVerified();
-        allow create, update, delete: if isVerified();
+        // Only verified users can see or write reviews
+        allow get, list, create, update, delete: if isVerified();
       }
     }
 
-
     // ------------- listings -------------
     match /listings/{listingId} {
+      // Anyone (even unauthenticated) can browse listings
       allow get, list: if true;
+      // Only verified users can create, update, delete
       allow create, update, delete: if isVerified();
     }
 
@@ -288,6 +293,33 @@ match /orders/{orderId} {
     }
 
 
+
+
+    // ------------- blindBidAuctions -------------
+    // ------------- config -------------
+    match /config/{docId} {
+      allow get, list: if true;
+      allow create, update, delete: if userIsAdmin();
+    }
+    match /blindBidAuctions/{auctionId} {
+      // Anyone can read auctions (or restrict as needed)
+      allow get, list: if true;
+      // Only sellers can create
+      allow create: if userIsSeller();
+      // Only the owner or admin can update/delete
+      allow update, delete: if isVerified() && (resource.data.ownerUid == uid() || userIsAdmin());
+
+      // Bids subcollection
+      match /bids/{bidId} {
+        // Only verified users can place a bid
+        allow create: if isVerified();
+        // Only allow reading bids if auction is CLOSED
+        allow get, list: if isVerified() &&
+          get(/databases/$(database)/documents/blindBidAuctions/$(auctionId)).data.status == "CLOSED";
+        // Admins can update/delete any bid
+        allow update, delete: if userIsAdmin();
+      }
+    }
 
 
     // Fallback: only verified users can write or access private data, but allow user doc creation/update for signed-in users

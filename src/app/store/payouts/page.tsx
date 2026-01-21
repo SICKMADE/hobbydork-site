@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import { httpsCallable } from "firebase/functions";
 import { getFirebase } from "@/firebase/client-init";
 
@@ -28,7 +29,11 @@ export default function PayoutsPage() {
         setBalance(data.balance);
         setPayouts(data.payouts || []);
       } catch (err: any) {
-        toast({ title: "Error", description: err.message });
+        toast({
+          title: "Error",
+          description: getFriendlyErrorMessage(err) || "Could not load payouts.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }

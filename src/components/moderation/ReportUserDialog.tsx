@@ -1,4 +1,6 @@
+
 'use client';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
 import { useState } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -82,12 +84,13 @@ export function ReportUserDialog({
   };
 
   const handleSubmit = async () => {
+
     if (!canReadFirestore || !firestore) {
       toast({
         variant: 'destructive',
-        title: 'Not signed in',
+        title: 'Sign in required',
         description:
-          'You must be signed in with an active, verified account to submit a report.',
+          'Please sign in with an active, verified account to submit a report.',
       });
       return;
     }
@@ -95,9 +98,9 @@ export function ReportUserDialog({
     if (!targetUid) {
       toast({
         variant: 'destructive',
-        title: 'Missing target',
+        title: 'Who are you reporting?',
         description:
-          'Could not determine who you are reporting.',
+          'We could not determine who you are reporting. Please try again or contact support.',
       });
       return;
     }
@@ -107,9 +110,9 @@ export function ReportUserDialog({
     if (!trimmedDetails) {
       toast({
         variant: 'destructive',
-        title: 'Add more detail',
+        title: 'More details needed',
         description:
-          'Please explain what happened so we can review it.',
+          'Please explain what happened so our team can review it.',
       });
       return;
     }
@@ -148,11 +151,11 @@ export function ReportUserDialog({
       onOpenChange(false);
     } catch (err: any) {
       console.error(err);
+      const description = getFriendlyErrorMessage(err);
       toast({
         variant: 'destructive',
-        title: 'Error submitting report',
-        description:
-          err?.message ?? 'Could not submit your report.',
+        title: 'Could not submit report',
+        description,
       });
     } finally {
       setSubmitting(false);

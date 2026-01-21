@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import AppLayout from '@/components/layout/AppLayout';
@@ -89,17 +90,14 @@ export default function SalesPage() {
 
   // Early returns after hooks
   if (authLoading) return null;
-  if (!user) return null;
-  if (profile?.status !== "ACTIVE") return null;
-
-  if (!profile?.isSeller) {
+  if (!user || !profile?.isSeller || profile?.status !== "ACTIVE") {
     return (
       <SidebarProvider>
         <div className="flex min-h-screen bg-background items-center justify-center">
           <SellerSidebar />
           <div className="flex-1 flex items-center justify-center">
             <AppLayout>
-              <PlaceholderContent title="Not a seller" description="You must be a seller to view sales." />
+              <PlaceholderContent title="Seller Access Required" description="You must be an approved seller to view sales. If you believe this is an error, please contact support or refresh your profile." />
             </AppLayout>
           </div>
         </div>
@@ -112,7 +110,14 @@ export default function SalesPage() {
       <div className="flex min-h-screen bg-background">
         <SellerSidebar />
         <main className="flex-1 flex flex-col items-center justify-start p-6 bg-background">
-          <img src="/MYSALES.png" alt="My Sales" className="w-full max-w-2xl h-32 object-contain mx-auto mb-6 drop-shadow-lg" />
+          <Image
+            src="/MYSALES.png"
+            alt="My Sales"
+            width={800}
+            height={128}
+            className="w-full max-w-2xl h-32 object-contain mx-auto mb-6 drop-shadow-lg"
+            priority
+          />
           {/* Tabs */}
           <div className="flex gap-4 mb-8 justify-center w-full max-w-2xl">
             <div className="flex flex-col items-center">

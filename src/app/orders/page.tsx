@@ -1,6 +1,7 @@
 
 "use client";
 import Link from "next/link";
+import Image from 'next/image';
 import BuyerSidebar from "@/components/dashboard/BuyerSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
@@ -11,9 +12,18 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 
 
 export default function BuyerOrdersPage() {
-  const { user } = useAuth();
+  const { user, profile } = require("@/hooks/use-auth").useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [tab, setTab] = useState<'active' | 'completed'>('active');
+  if (!user || !user.emailVerified || profile?.status !== "ACTIVE") {
+    return (
+      <div className="max-w-xl mx-auto p-8 text-center">
+        <h2 className="text-2xl font-bold mb-2">Email Verification Required</h2>
+        <p className="mb-4">You must verify your email and have an active account to view your orders.</p>
+        <a href="/verify-email" className="comic-button px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 transition">Verify Email</a>
+      </div>
+    );
+  }
 
   useEffect(() => {
     // Strict Firestore read gate
@@ -28,7 +38,7 @@ export default function BuyerOrdersPage() {
 
     const unsub = onSnapshot(q, (snap) => {
       const ordersData = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      console.log("[BuyerOrdersPage] Orders fetched:", ordersData);
+      // ...existing code...
       setOrders(ordersData);
     });
 
@@ -47,7 +57,14 @@ export default function BuyerOrdersPage() {
       <div className="flex min-h-screen bg-background">
         <BuyerSidebar />
         <main className="flex-1 flex flex-col items-center justify-start p-6 bg-background">
-          <img src="/myorders.png" alt="My Orders" className="w-full max-w-2xl h-32 object-contain mx-auto mb-6 drop-shadow-lg" />
+          <Image
+            src="/myorders.png"
+            alt="My Orders"
+            width={800}
+            height={128}
+            className="w-full max-w-2xl h-32 object-contain mx-auto mb-6 drop-shadow-lg"
+            priority
+          />
           {/* Tabs */}
           <div className="flex gap-4 mb-8 justify-center w-full max-w-2xl">
             <div className="flex flex-col items-center">

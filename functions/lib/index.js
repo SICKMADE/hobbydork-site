@@ -1,52 +1,62 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.stripeWebhook = exports.updateOrderStatus = exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = void 0;
+exports.stripeWebhook = exports.updateOrderStatus = exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = exports.setBlindBidAuctionImage = exports.submitBlindBid = exports.createBlindBidAuction = exports.getStripeAccount = exports.getStripePayouts = void 0;
+// ================= GET STRIPE ACCOUNT DETAILS =================
 const https_1 = require("firebase-functions/v2/https");
-const admin = __importStar(require("firebase-admin"));
+const firebaseAdmin_1 = require("./firebaseAdmin");
 const stripe_1 = __importDefault(require("stripe"));
-admin.initializeApp();
-const db = admin.firestore();
+var getStripePayouts_1 = require("./getStripePayouts");
+Object.defineProperty(exports, "getStripePayouts", { enumerable: true, get: function () { return getStripePayouts_1.getStripePayouts; } });
+// ================= GET STRIPE ACCOUNT DETAILS =================
+exports.getStripeAccount = (0, https_1.onCall)(async (request) => {
+    const stripeSecret = process.env.STRIPE_SECRET;
+    if (!stripeSecret) {
+        throw new https_1.HttpsError("internal", "Stripe secret not set in environment");
+    }
+    const stripe = new stripe_1.default(stripeSecret, { apiVersion: "2023-10-16" });
+    const { accountId } = request.data || {};
+    if (!accountId) {
+        throw new https_1.HttpsError("invalid-argument", "Missing accountId");
+    }
+    try {
+        const account = await stripe.accounts.retrieve(accountId);
+        // Optionally, create a dashboard login link
+        let dashboardUrl = undefined;
+        try {
+            const loginLink = await stripe.accounts.createLoginLink(accountId);
+            dashboardUrl = loginLink.url;
+        }
+        catch (err) {
+            dashboardUrl = undefined;
+        }
+        return {
+            email: account.email,
+            details_submitted: account.details_submitted,
+            charges_enabled: account.charges_enabled,
+            dashboardUrl,
+        };
+    }
+    catch (err) {
+        throw new https_1.HttpsError("internal", err.message || "Failed to fetch Stripe account");
+    }
+});
+var blindBidder_1 = require("./blindBidder");
+Object.defineProperty(exports, "createBlindBidAuction", { enumerable: true, get: function () { return blindBidder_1.createBlindBidAuction; } });
+Object.defineProperty(exports, "submitBlindBid", { enumerable: true, get: function () { return blindBidder_1.submitBlindBid; } });
+var blindBidder_2 = require("./blindBidder");
+Object.defineProperty(exports, "setBlindBidAuctionImage", { enumerable: true, get: function () { return blindBidder_2.setBlindBidAuctionImage; } });
+// admin.initializeApp(); // Removed initialization
+// const db = admin.firestore(); // Removed initialization
 /* ================= CREATE STRIPE CHECKOUT SESSION ================= */
-exports.createCheckoutSession = (0, https_1.onCall)({
-    region: "us-central1",
-    secrets: ["STRIPE_SECRET", "APP_BASE_URL"],
-}, async (request) => {
+exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
+    const stripeSecret = process.env.STRIPE_SECRET;
+    if (!stripeSecret) {
+        throw new https_1.HttpsError("internal", "Stripe secret not set in environment");
+    }
+    const stripe = new stripe_1.default(stripeSecret, { apiVersion: "2023-10-16" });
     const uid = request.auth?.uid;
     if (!uid)
         throw new https_1.HttpsError("unauthenticated", "Auth required");
@@ -74,7 +84,6 @@ exports.createCheckoutSession = (0, https_1.onCall)({
             },
         ],
         success_url: `${appBaseUrl}/cart/success?orderId=${orderId}`,
-        cancel_url: `${appBaseUrl}/cart/cancel?orderId=${orderId}`,
         metadata: {
             orderId,
             buyerUid: uid,
@@ -87,34 +96,34 @@ exports.createCheckoutSession = (0, https_1.onCall)({
  * Audit log helper for sensitive actions
  */
 async function logAudit(action, context) {
-    await db.collection("auditLogs").add({
+    await firebaseAdmin_1.db.collection("auditLogs").add({
         action,
         ...context,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        timestamp: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
     });
 }
 /**
  * Helper to send notification to user
  */
 async function sendNotification(uid, type, title, body, relatedId) {
-    await db.collection("users").doc(uid).collection("notifications").add({
+    await firebaseAdmin_1.db.collection("users").doc(uid).collection("notifications").add({
         type,
         title,
         body,
         relatedId,
         read: false,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
     });
 }
 /**
  * Error monitoring: log backend errors to Firestore for alerting
  */
 async function logError(error, context = {}) {
-    await db.collection("errorLogs").add({
+    await firebaseAdmin_1.db.collection("errorLogs").add({
         error: typeof error === "string" ? error : error.message,
         stack: typeof error === "string" ? undefined : error.stack,
         ...context,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        timestamp: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
     });
 }
 /* ================= STRIPE ================= */
@@ -122,17 +131,19 @@ const stripe = new stripe_1.default(process.env.STRIPE_SECRET, {
     apiVersion: "2023-10-16",
 });
 /* ================= CREATE STRIPE ONBOARDING ================= */
-exports.createStripeOnboarding = (0, https_1.onCall)({
-    region: "us-central1",
-    secrets: ["STRIPE_SECRET", "APP_BASE_URL"],
-}, async (request) => {
+exports.createStripeOnboarding = (0, https_1.onCall)(async (request) => {
+    const stripeSecret = process.env.STRIPE_SECRET;
+    if (!stripeSecret) {
+        throw new https_1.HttpsError("internal", "Stripe secret not set in environment");
+    }
+    const stripe = new stripe_1.default(stripeSecret, { apiVersion: "2023-10-16" });
     const uid = request.auth?.uid;
     if (!uid)
         throw new https_1.HttpsError("unauthenticated", "Auth required");
     if (!request.auth || request.auth.token.email_verified !== true) {
         throw new https_1.HttpsError("failed-precondition", "Email verification required");
     }
-    const userRef = db.collection("users").doc(uid);
+    const userRef = firebaseAdmin_1.db.collection("users").doc(uid);
     const snap = await userRef.get();
     const user = snap.data();
     let accountId = user?.stripeAccountId;
@@ -150,7 +161,7 @@ exports.createStripeOnboarding = (0, https_1.onCall)({
             stripeAccountId: accountId,
             sellerStatus: "PENDING",
             isSeller: false,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
     }
     // Hardcode production URLs for Stripe onboarding
@@ -163,17 +174,19 @@ exports.createStripeOnboarding = (0, https_1.onCall)({
     return { url: link.url };
 });
 /* ================= FINALIZE SELLER ================= */
-exports.finalizeSeller = (0, https_1.onCall)({
-    region: "us-central1",
-    secrets: ["STRIPE_SECRET"],
-}, async (request) => {
+exports.finalizeSeller = (0, https_1.onCall)(async (request) => {
+    const stripeSecret = process.env.STRIPE_SECRET;
+    if (!stripeSecret) {
+        throw new https_1.HttpsError("internal", "Stripe secret not set in environment");
+    }
+    const stripe = new stripe_1.default(stripeSecret, { apiVersion: "2023-10-16" });
     const uid = request.auth?.uid;
     if (!uid)
         throw new https_1.HttpsError("unauthenticated", "Auth required");
     if (!request.auth || request.auth.token.email_verified !== true) {
         throw new https_1.HttpsError("failed-precondition", "Email verification required");
     }
-    const userRef = db.collection("users").doc(uid);
+    const userRef = firebaseAdmin_1.db.collection("users").doc(uid);
     const snap = await userRef.get();
     const user = snap.data();
     if (!user?.stripeAccountId) {
@@ -190,14 +203,14 @@ exports.finalizeSeller = (0, https_1.onCall)({
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "");
     // Create store document
-    const storeRef = db.collection("stores").doc(storeId);
+    const storeRef = firebaseAdmin_1.db.collection("stores").doc(storeId);
     const storeSnap = await storeRef.get();
     if (!storeSnap.exists) {
         await storeRef.set({
             id: storeId,
             ownerId: uid,
             displayName,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
             avatar: user.photoURL || "/hobbydork-head.png",
             status: "ACTIVE",
         });
@@ -209,22 +222,20 @@ exports.finalizeSeller = (0, https_1.onCall)({
         stripeOnboarded: true,
         stripeTermsAgreed: true,
         storeId,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
     });
     // Log new seller approval for admin monitoring
-    await db.collection("sellerApprovals").add({
+    await firebaseAdmin_1.db.collection("sellerApprovals").add({
         uid,
         email: user.email,
         displayName,
-        approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+        approvedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
         stripeAccountId: user.stripeAccountId,
     });
     return { ok: true, storeId };
 });
 /* ================= SECURE ORDER STATUS UPDATE ================= */
-exports.updateOrderStatus = (0, https_1.onCall)({
-    region: "us-central1",
-}, async (request) => {
+exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
     try {
         const uid = request.auth?.uid;
         if (!uid)
@@ -250,7 +261,7 @@ exports.updateOrderStatus = (0, https_1.onCall)({
             throw new https_1.HttpsError("permission-denied", "Attempt to update forbidden fields");
         }
         // Fetch order
-        const orderRef = db.collection("orders").doc(orderId);
+        const orderRef = firebaseAdmin_1.db.collection("orders").doc(orderId);
         const orderSnap = await orderRef.get();
         if (!orderSnap.exists) {
             throw new https_1.HttpsError("not-found", "Order not found");

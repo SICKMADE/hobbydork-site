@@ -14,6 +14,7 @@ import * as z from "zod";
 import { useFirestore } from "@/firebase";
 import { doc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 
@@ -70,7 +71,7 @@ export default function SettingsPage() {
             toast({
                 variant: 'destructive',
                 title: "Update Failed",
-                description: error.message || "Could not save your settings.",
+                description: getFriendlyErrorMessage(error) || "Could not save your settings.",
             });
         } finally {
             setIsSubmitting(false);

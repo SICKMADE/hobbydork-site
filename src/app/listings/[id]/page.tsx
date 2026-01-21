@@ -2,6 +2,7 @@
 import { DocumentData } from "firebase/firestore";
 
 import { ToastAction } from "@/components/ui/toast";
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
 import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -295,9 +296,10 @@ export default function ListingDetailPage() {
       // Use ToastAction for the action button
       // Import ToastAction at the top if not already
       // import { ToastAction } from "@/components/ui/toast";
+      const description = getFriendlyErrorMessage(err);
       toast({
         title: 'Payment could not be processed',
-        description: `${err?.message ?? "An unexpected error occurred. Please try again."}`,
+        description,
         variant: 'destructive',
         action: (
           <ToastAction altText="Report a problem" asChild>

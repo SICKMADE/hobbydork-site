@@ -35,7 +35,19 @@ const shippingSchema = z.object({
 
 export default function CartPage() {
   const { items, removeFromCart, subtotal, storeId, clearCart } = useCart();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
+    // Block unverified or non-ACTIVE users from checkout
+    if (!user || !user.emailVerified || profile?.status !== "ACTIVE") {
+      return (
+        <AppLayout>
+          <div className="max-w-xl mx-auto p-8 text-center">
+            <h2 className="text-2xl font-bold mb-2">Email Verification Required</h2>
+            <p className="mb-4">You must verify your email and have an active account to use the cart and checkout.</p>
+            <a href="/verify-email" className="comic-button px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 transition">Verify Email</a>
+          </div>
+        </AppLayout>
+      );
+    }
   const firestore = useFirestore();
   const { toast } = useToast();
 

@@ -11,7 +11,7 @@ export default function GlobalError({ error, reset }: { error: Error; reset: () 
     if (error) {
       setDetails(`${error?.name}: ${error?.message}\n\n${error?.stack}`);
       // eslint-disable-next-line no-console
-      console.error('GlobalError caught:', error);
+      // ...existing code...
     }
   }, [error]);
 

@@ -1,26 +1,18 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import type { Listing } from '@/lib/types';
 import { db } from "@/firebase/client-provider";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
-
+import { collection, query, where, getDocs } from "firebase/firestore";
 import AppLayout from "@/components/layout/AppLayout";
-import { Input } from "@/components/ui/input";
+import SellerSidebar from "@/components/dashboard/SellerSidebar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Spinner from "@/components/ui/spinner";
 import ListingCard from "@/components/ListingCard";
 
-export default function ListingsSearchPage() {
+export default function ListingsPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // filters
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [minPrice, setMinPrice] = useState("");
@@ -28,22 +20,11 @@ export default function ListingsSearchPage() {
   const [sortBy, setSortBy] = useState("newest");
 
   async function loadListings() {
-    setLoading(true);
-
-    // Strict Firestore read gate
-    // TODO: Replace with your actual canReadFirestore logic
-    const canReadFirestore = true; // Set to false if not allowed
-    if (!canReadFirestore) {
-      setLoading(false);
-      return;
-    }
-
     if (!db) {
       setLoading(false);
       return;
     }
-    const q = query(collection(db!, "listings"), where("state", "==", "ACTIVE"));
-
+    const q = query(collection(db, "listings"), where("state", "==", "ACTIVE"));
     const allSnap = await getDocs(q);
     let data = allSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as Listing[];
 
@@ -61,7 +42,6 @@ export default function ListingsSearchPage() {
     // price min/max
     const min = Number(minPrice) || 0;
     const max = Number(maxPrice) || Infinity;
-
     data = data.filter((l) => l.price >= min && l.price <= max);
 
     // sort
@@ -82,7 +62,7 @@ export default function ListingsSearchPage() {
   }, []);
 
   return (
-    <AppLayout>
+    <AppLayout sidebarComponent={<SellerSidebar />}> 
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-extrabold tracking-tight">Marketplace</h1>
@@ -99,14 +79,12 @@ export default function ListingsSearchPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="comic-input-field"
           />
-
           <Input
             placeholder="Category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="comic-input-field"
           />
-
           <Input
             placeholder="Min Price"
             value={minPrice}
@@ -114,7 +92,6 @@ export default function ListingsSearchPage() {
             type="number"
             className="comic-input-field"
           />
-
           <Input
             placeholder="Max Price"
             value={maxPrice}
@@ -122,7 +99,6 @@ export default function ListingsSearchPage() {
             type="number"
             className="comic-input-field"
           />
-
           <label htmlFor="sortBy" className="sr-only">Sort by</label>
           <select
             id="sortBy"
@@ -136,7 +112,6 @@ export default function ListingsSearchPage() {
             <option value="high">Price: High → Low</option>
           </select>
         </div>
-
         {/* LISTINGS */}
         {loading ? (
           <div className="flex flex-col items-center justify-center min-h-[300px]">

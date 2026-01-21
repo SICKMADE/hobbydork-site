@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
@@ -49,7 +50,7 @@ export default function VerifyEmailPage() {
                 setResendStatus('success');
               } catch (e: any) {
                 setResendStatus('error');
-                setErrorMsg(e?.message || 'Could not resend verification email.');
+                setErrorMsg(getFriendlyErrorMessage(e) || 'Could not resend verification email.');
               }
             }}
             disabled={resendStatus === 'loading'}

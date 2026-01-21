@@ -34,13 +34,13 @@ function MobileSidebar() {
 }
 
 
-function MainContent({ children }: { children: React.ReactNode }) {
+function MainContent({ children, hideSidebar }: { children: React.ReactNode, hideSidebar?: boolean }) {
   const { isMobile } = useSidebar();
   return (
     <div
       className={cn(
         'flex flex-col min-h-screen',
-        'md:ml-64'
+        !hideSidebar && 'md:ml-64'
       )}
     >
       <Header />
@@ -51,14 +51,26 @@ function MainContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+import { usePathname } from 'next/navigation';
+
+type AppLayoutProps = {
+  children: React.ReactNode;
+  sidebarComponent?: React.ReactNode;
+};
+
+export default function AppLayout({ children, sidebarComponent }: AppLayoutProps) {
+  const pathname = usePathname();
+  // Only hide sidebar if no custom sidebarComponent is provided and on buyer/seller dashboard routes
+  const hideSidebar = !sidebarComponent && (pathname?.startsWith('/buyer/dashboard') || pathname?.startsWith('/seller'));
   return (
     <SidebarProvider>
       <div className="relative min-h-svh bg-background">
-        <Sidebar>
-          <SidebarNav />
-        </Sidebar>
-        <MainContent>{children}</MainContent>
+        {!hideSidebar && (
+          <Sidebar>
+            {sidebarComponent ? sidebarComponent : <SidebarNav />}
+          </Sidebar>
+        )}
+        <MainContent hideSidebar={hideSidebar}>{children}</MainContent>
       </div>
     </SidebarProvider>
   );

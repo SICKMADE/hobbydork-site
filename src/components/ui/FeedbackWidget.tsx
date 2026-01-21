@@ -1,3 +1,4 @@
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import { useState } from "react";
 
 export default function FeedbackWidget() {
@@ -17,7 +18,7 @@ export default function FeedbackWidget() {
       // await sendFeedbackToBackend(message);
       setSubmitted(true);
     } catch (err: any) {
-      setError("Could not submit feedback. Please try again later.");
+      setError(getFriendlyErrorMessage(err) || "Could not submit feedback. Please try again later.");
     }
   }
 

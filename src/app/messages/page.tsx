@@ -56,6 +56,7 @@ export default function MessagesPage() {
   const canReadFirestore =
     !authLoading &&
     !!user &&
+    user.emailVerified === true &&
     profile?.status === "ACTIVE";
   const conversationsQuery = useMemoFirebase(() => {
     if (!canReadFirestore || !firestore || !user?.uid) return null;
@@ -80,16 +81,16 @@ export default function MessagesPage() {
       </AppLayout>
     );
   }
-  if (!user) {
+  if (!user || !user.emailVerified || profile?.status !== "ACTIVE") {
     return (
       <AppLayout>
         <PlaceholderContent
-          title="Sign in to view messages"
-          description="You need to be logged in to see your conversations."
+          title="Email Verification Required"
+          description="You must verify your email and have an active account to access messages."
         >
           <div className="mt-4 flex justify-center gap-3">
             <Button asChild>
-              <Link href="/login">Sign in</Link>
+              <Link href="/verify-email">Verify Email</Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/">Back to home</Link>

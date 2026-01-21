@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import BlindBidderToggle from "./BlindBidderToggle";
 
 export default function AdminDashboard() {
   const { profile, loading } = useAuth();
@@ -69,6 +70,19 @@ export default function AdminDashboard() {
                 <Button asChild className="comic-button" size="lg"><Link href="/admin/orders">Order Moderation</Link></Button>
                 <Button asChild className="comic-button" size="lg"><Link href="/admin/seller-approvals">New Seller Approvals</Link></Button>
                 <Button asChild className="comic-button" size="lg"><Link href="/admin/spotlight">Manage Spotlight Slots</Link></Button>
+                <Button asChild className="comic-button" size="lg"><Link href="/admin/blind-bidder">Blind Bidder Admin</Link></Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Blind Bidder Controls Card */}
+          {isAdmin && (
+            <Card className="border-2 border-primary bg-card/90 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+              <CardHeader>
+                <CardTitle className="text-lg font-bold">Blind Bidder Controls</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <BlindBidderToggle />
               </CardContent>
             </Card>
           )}

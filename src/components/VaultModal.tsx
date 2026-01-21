@@ -12,6 +12,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import { Mail, KeyRound, Sparkles } from 'lucide-react';
 import Confetti from 'react-confetti';
 
@@ -26,12 +27,16 @@ export function VaultModal({ open, onOpenChange }: VaultModalProps) {
   const { toast } = useToast();
 
   const handleUnlock = () => {
-    if (unlockVault(enteredPin)) {
-      // The state will change to isVaultUnlocked, and the component will re-render
-    } else {
+    try {
+      if (unlockVault(enteredPin)) {
+        // The state will change to isVaultUnlocked, and the component will re-render
+      } else {
+        throw new Error('Incorrect PIN');
+      }
+    } catch (err) {
       toast({
-        title: 'Incorrect PIN',
-        description: 'The vault remains sealed. Try again.',
+        title: 'Could not unlock vault',
+        description: getFriendlyErrorMessage(err) || 'The vault remains sealed. Try again.',
         variant: 'destructive',
       });
       setEnteredPin('');

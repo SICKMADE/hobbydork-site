@@ -51,7 +51,15 @@ export default function CreateISO() {
   async function makeIso() {
     if (!user) return;
     if (!title.trim()) return;
-    // ...existing code...
+    // Enforce email verification and active status
+    if (!user.emailVerified) {
+      toast({
+        title: "Email not verified",
+        description: "You must verify your email to post in ISO24.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (profile?.status && profile.status !== "ACTIVE") {
       toast({
         title: "Account restricted",
