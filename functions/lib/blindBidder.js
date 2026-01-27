@@ -75,8 +75,17 @@ exports.processEndedBlindBidAuctions = (0, scheduler_1.onSchedule)("every 5 minu
     // ...existing code...
     // No changes needed for context/auth or HttpsError in scheduled function
 });
-// Flat fee for listing
-const BLIND_BIDDER_LISTING_FEE_CENTS = 499;
+// Tier-based auction fee logic (example values, update as needed)
+function getAuctionFeeCentsForTier(tier) {
+    switch (tier) {
+        case 'GOLD':
+            return 299; // $2.99
+        case 'SILVER':
+            return 499; // $4.99
+        default:
+            return 99999; // prohibitively high for Bronze (should be blocked)
+    }
+}
 exports.createBlindBidAuction = (0, https_1.onCall)({ secrets: [stripeSecret] }, async (request) => {
     if (!stripeSecret.value()) {
         throw new https_1.HttpsError("internal", "Stripe secret not set in environment");
@@ -88,11 +97,14 @@ exports.createBlindBidAuction = (0, https_1.onCall)({ secrets: [stripeSecret] },
     if (!request.auth || request.auth.token.email_verified !== true) {
         throw new https_1.HttpsError("failed-precondition", "Email verification required");
     }
-    // Only sellers can create auctions
+    // Only Silver/Gold sellers can create auctions
     const userSnap = await firebaseAdmin_1.db.collection("users").doc(uid).get();
     const user = userSnap.data();
     if (!user?.isSeller || user.status !== "ACTIVE") {
         throw new https_1.HttpsError("permission-denied", "Only active sellers can create blind auctions");
+    }
+    if (user.sellerTier !== 'SILVER' && user.sellerTier !== 'GOLD') {
+        throw new https_1.HttpsError("permission-denied", "Only Silver and Gold sellers can create auctions");
     }
     const title = request.data.title;
     const description = request.data.description;
@@ -100,12 +112,14 @@ exports.createBlindBidAuction = (0, https_1.onCall)({ secrets: [stripeSecret] },
     if (!title || !description) {
         throw new https_1.HttpsError("invalid-argument", "Missing required fields");
     }
-    // Charge flat fee via Stripe
+    // Calculate tier-based fee
+    const auctionFeeCents = getAuctionFeeCentsForTier(user.sellerTier);
+    // Charge fee via Stripe
     const paymentIntent = await stripe.paymentIntents.create({
-        amount: BLIND_BIDDER_LISTING_FEE_CENTS,
+        amount: auctionFeeCents,
         currency: "usd",
         payment_method_types: ["card"],
-        metadata: { type: "blind_bidder_listing", sellerUid: uid },
+        metadata: { type: "blind_bidder_listing", sellerUid: uid, sellerTier: user.sellerTier },
     });
     // Create auction doc with status OPEN, endsAt 24hr from now
     const now = firebaseAdmin_1.admin.firestore.Timestamp.now();
@@ -120,6 +134,8 @@ exports.createBlindBidAuction = (0, https_1.onCall)({ secrets: [stripeSecret] },
         status: "OPEN",
         flatFeePaid: false,
         stripePaymentIntentId: paymentIntent.id,
+        sellerTier: user.sellerTier,
+        auctionFeeCents,
     });
     return { auctionId: auctionRef.id, paymentIntentClientSecret: paymentIntent.client_secret };
 });

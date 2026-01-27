@@ -37,20 +37,36 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.stripeWebhook = void 0;
-const functions = __importStar(require("firebase-functions"));
+const https_1 = require("firebase-functions/v2/https");
+const params_1 = require("firebase-functions/params");
 const admin = __importStar(require("firebase-admin"));
 const stripe_1 = __importDefault(require("stripe"));
 const db = admin.firestore();
-const stripe = new stripe_1.default(process.env.STRIPE_SECRET, {
-    apiVersion: "2023-10-16",
-});
-// Stripe webhook handler for checkout.session.completed
-exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
+const STRIPE_SECRET = (0, params_1.defineSecret)("STRIPE_SECRET");
+const STRIPE_WEBHOOK_SECRET = (0, params_1.defineSecret)("STRIPE_WEBHOOK_SECRET");
+let stripe;
+exports.stripeWebhook = (0, https_1.onRequest)({ secrets: [STRIPE_SECRET, STRIPE_WEBHOOK_SECRET] }, async (req, res) => {
+    const stripeSecret = process.env.STRIPE_SECRET;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!stripeSecret) {
+        console.error("Stripe secret not set in environment variables or Firebase config");
+        res.status(500).send("Stripe secret not set in environment variables or Firebase config");
+        return;
+    }
+    if (!webhookSecret) {
+        console.error("Stripe webhook secret not set in environment variables or Firebase config");
+        res.status(500).send("Stripe webhook secret not set in environment variables or Firebase config");
+        return;
+    }
+    if (!stripe) {
+        stripe = new stripe_1.default(stripeSecret, {
+            apiVersion: "2023-10-16",
+        });
+    }
     const sig = req.headers["stripe-signature"];
-    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
     let event;
     try {
-        event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+        event = stripe.webhooks.constructEvent(req.rawBody, sig, webhookSecret);
     }
     catch (err) {
         console.error("Webhook signature verification failed.", err);
@@ -59,52 +75,80 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
     }
     if (event.type === "checkout.session.completed") {
         const session = event.data.object;
-        const orderId = session.metadata?.orderId;
-        const buyerUid = session.metadata?.buyerUid;
-        if (!orderId || !buyerUid) {
-            console.error("Missing orderId or buyerUid in session metadata");
-            res.status(400).send("Missing orderId or buyerUid");
+        // Spotlight purchase automation
+        const spotlightStoreId = session.metadata?.spotlightStoreId;
+        if (spotlightStoreId) {
+            // Get the store doc
+            const storeSnap = await db.collection("stores").where("storeId", "==", spotlightStoreId).limit(1).get();
+            if (storeSnap.empty) {
+                console.error("Store not found for spotlight", spotlightStoreId);
+                res.status(404).send("Store not found");
+                return;
+            }
+            const storeDoc = storeSnap.docs[0];
+            const storeData = storeDoc.data();
+            const ownerUid = storeData.ownerUid;
+            // Calculate spotlight period (7 days from now)
+            const now = admin.firestore.Timestamp.now();
+            const endAt = admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+            // Create spotlight slot
+            const slotRef = db.collection("spotlightSlots").doc();
+            await slotRef.set({
+                slotId: slotRef.id,
+                storeId: spotlightStoreId,
+                ownerUid,
+                startAt: now,
+                endAt,
+                active: true,
+                createdAt: now,
+            });
+            // Update store doc
+            await storeDoc.ref.update({
+                isSpotlighted: true,
+                spotlightUntil: endAt,
+                updatedAt: now,
+            });
+            // Notify store owner
+            await db.collection("users").doc(ownerUid).collection("notifications").add({
+                type: "SPOTLIGHT",
+                title: "Your store is in the spotlight!",
+                body: `Congratulations! Your store is now featured in the Store Spotlight for 7 days.`,
+                relatedId: spotlightStoreId,
+                read: false,
+                createdAt: now,
+            });
+            res.status(200).send("Spotlight slot created");
             return;
         }
-        // Fetch order from Firestore
-        const orderRef = db.collection("orders").doc(orderId);
-        const orderSnap = await orderRef.get();
-        if (!orderSnap.exists) {
-            console.error("Order not found", orderId);
-            res.status(404).send("Order not found");
-            return;
-        }
-        const order = orderSnap.data();
-        const sellerUid = order?.sellerUid;
-        // Update order status
-        await orderRef.update({
-            status: "PAID",
-            paymentIntentId: session.payment_intent,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        // Send notification to buyer
-        await db.collection("users").doc(buyerUid).collection("notifications").add({
-            type: "ORDER",
-            title: "Thank you for your purchase!",
-            body: order?.listingTitle
-                ? `Your payment for "${order.listingTitle}" was successful. Your order #${orderId} is now being processed.`
-                : `Your payment was successful. Your order #${orderId} is now being processed.`,
-            relatedId: orderId,
-            read: false,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        // Send notification to seller
-        if (sellerUid) {
+        // Auction fee payment
+        const auctionId = session.metadata?.auctionId;
+        const sellerUid = session.metadata?.sellerUid;
+        if (auctionId && sellerUid) {
             await db.collection("users").doc(sellerUid).collection("notifications").add({
-                type: "ORDER",
-                title: "New sale!",
-                body: order?.listingTitle
-                    ? `You sold "${order.listingTitle}" (Order #${orderId}). Please fulfill this order promptly.`
-                    : `You have received a new order (#${orderId}). Please fulfill this order promptly.`,
-                relatedId: orderId,
+                type: "AUCTION",
+                title: "Auction is now live!",
+                body: `Your auction is now open to bidders.`,
+                relatedId: auctionId,
                 read: false,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
             });
+            res.status(200).send("Auction payment processed");
+            return;
+        }
+        // Order payment (existing logic)
+        const orderId = session.metadata?.orderId;
+        const buyerUid = session.metadata?.buyerUid;
+        if (orderId && buyerUid) {
+            // Mark order as paid in Firestore
+            await db.collection("orders").doc(orderId).update({
+                status: "PAID",
+                state: "PAID",
+                paidAt: admin.firestore.FieldValue.serverTimestamp(),
+                paymentIntentId: session.payment_intent,
+            });
+            // Optionally notify buyer/seller here
+            res.status(200).send("Order payment processed");
+            return;
         }
     }
     res.status(200).send("Received");

@@ -4,20 +4,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStripePayouts = void 0;
-const { yearsToDays } = require("date-fns");
 const https_1 = require("firebase-functions/v2/https");
-const stripe_1 = __importDefault(require("stripe"));yearsToDays
+const stripe_1 = __importDefault(require("stripe"));
+const params_1 = require("firebase-functions/params");
 /**
  * Callable function to get Stripe payouts and balance for a connected account.
  * Expects: { accountId: string }
  * Returns: { balance, payouts }
  */
-exports.getStripePayouts = (0, https_1.onCall)(async (request) => {
-    const stripeSecret = functions.config().stripe.secret;
-    if (!stripeSecret) {
+const stripeSecret = (0, params_1.defineSecret)("STRIPE_SECRET");
+exports.getStripePayouts = (0, https_1.onCall)({ secrets: [stripeSecret] }, async (request) => {
+    if (!stripeSecret.value()) {
         throw new https_1.HttpsError("internal", "Stripe secret not set in environment");
     }
-    const stripe = new stripe_1.default(stripeSecret, { apiVersion: "2023-10-16" });
+    const stripe = new stripe_1.default(stripeSecret.value(), { apiVersion: "2023-10-16" });
     const { accountId } = request.data || {};
     if (!accountId) {
         throw new https_1.HttpsError("invalid-argument", "Missing accountId");

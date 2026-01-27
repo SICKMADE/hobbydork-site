@@ -1,97 +1,73 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.stripeWebhook = exports.updateOrderStatus = exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = exports.setBlindBidAuctionImage = exports.submitBlindBid = exports.createBlindBidAuction = exports.getStripeAccount = exports.getStripePayouts = void 0;
-// ================= GET STRIPE ACCOUNT DETAILS =================
+exports.updateOrderStatus = exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = exports.createAuctionFeeCheckoutSession = exports.getStripeAccount = exports.stripeWebhook = exports.setBlindBidAuctionImage = exports.submitBlindBid = exports.createBlindBidAuction = exports.getStripePayouts = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const firebaseAdmin_1 = require("./firebaseAdmin");
 const stripe_1 = __importDefault(require("stripe"));
 var getStripePayouts_1 = require("./getStripePayouts");
 Object.defineProperty(exports, "getStripePayouts", { enumerable: true, get: function () { return getStripePayouts_1.getStripePayouts; } });
-// ================= GET STRIPE ACCOUNT DETAILS =================
-exports.getStripeAccount = (0, https_1.onCall)(async (request) => {
-    const stripeSecret = process.env.STRIPE_SECRET;
-    if (!stripeSecret) {
-        throw new https_1.HttpsError("internal", "Stripe secret not set in environment");
-    }
-    const stripe = new stripe_1.default(stripeSecret, { apiVersion: "2023-10-16" });
-    const { accountId } = request.data || {};
-    if (!accountId) {
-        throw new https_1.HttpsError("invalid-argument", "Missing accountId");
-    }
-    try {
-        const account = await stripe.accounts.retrieve(accountId);
-        // Optionally, create a dashboard login link
-        let dashboardUrl = undefined;
-        try {
-            const loginLink = await stripe.accounts.createLoginLink(accountId);
-            dashboardUrl = loginLink.url;
-        }
-        catch (err) {
-            dashboardUrl = undefined;
-        }
-        return {
-            email: account.email,
-            details_submitted: account.details_submitted,
-            charges_enabled: account.charges_enabled,
-            dashboardUrl,
-        };
-    }
-    catch (err) {
-        throw new https_1.HttpsError("internal", err.message || "Failed to fetch Stripe account");
-    }
-});
 var blindBidder_1 = require("./blindBidder");
 Object.defineProperty(exports, "createBlindBidAuction", { enumerable: true, get: function () { return blindBidder_1.createBlindBidAuction; } });
 Object.defineProperty(exports, "submitBlindBid", { enumerable: true, get: function () { return blindBidder_1.submitBlindBid; } });
 var blindBidder_2 = require("./blindBidder");
 Object.defineProperty(exports, "setBlindBidAuctionImage", { enumerable: true, get: function () { return blindBidder_2.setBlindBidAuctionImage; } });
-// admin.initializeApp(); // Removed initialization
-// const db = admin.firestore(); // Removed initialization
-/* ================= CREATE STRIPE CHECKOUT SESSION ================= */
-exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
-    const stripeSecret = process.env.STRIPE_SECRET;
+var stripeWebhook_1 = require("./stripeWebhook");
+Object.defineProperty(exports, "stripeWebhook", { enumerable: true, get: function () { return stripeWebhook_1.stripeWebhook; } });
+const functions = __importStar(require("firebase-functions"));
+// Use environment variable for Stripe secret, fallback to functions.config for legacy support
+const config = typeof functions.config === "object" ? functions.config : {};
+const stripeSecret = process.env.STRIPE_SECRET || (config.stripe && config.stripe.secret); /* ================= HELPERS ================= */
+function getStripeInstance() {
     if (!stripeSecret) {
-        throw new https_1.HttpsError("internal", "Stripe secret not set in environment");
+        throw new https_1.HttpsError("internal", "Stripe secret not set in Firebase config");
     }
-    const stripe = new stripe_1.default(stripeSecret, { apiVersion: "2023-10-16" });
+    return new stripe_1.default(stripeSecret, { apiVersion: "2023-10-16" });
+}
+function requireAuth(request) {
     const uid = request.auth?.uid;
     if (!uid)
         throw new https_1.HttpsError("unauthenticated", "Auth required");
     if (!request.auth || request.auth.token.email_verified !== true) {
         throw new https_1.HttpsError("failed-precondition", "Email verification required");
     }
-    const { orderId, listingTitle, amountCents, appBaseUrl } = request.data || {};
-    if (!orderId || !listingTitle || !amountCents || !appBaseUrl) {
-        throw new https_1.HttpsError("invalid-argument", "Missing required parameters");
-    }
-    // Optionally: validate order in Firestore here
-    const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        mode: "payment",
-        line_items: [
-            {
-                price_data: {
-                    currency: "usd",
-                    product_data: {
-                        name: listingTitle,
-                    },
-                    unit_amount: amountCents,
-                },
-                quantity: 1,
-            },
-        ],
-        success_url: `${appBaseUrl}/cart/success?orderId=${orderId}`,
-        metadata: {
-            orderId,
-            buyerUid: uid,
-        },
-    });
-    return { url: session.url };
-});
-/* ================= HELPERS ================= */
+    return uid;
+}
 /**
  * Audit log helper for sensitive actions
  */
@@ -126,23 +102,107 @@ async function logError(error, context = {}) {
         timestamp: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
     });
 }
-/* ================= STRIPE ================= */
-const stripe = new stripe_1.default(process.env.STRIPE_SECRET, {
-    apiVersion: "2023-10-16",
+/* ================= GET STRIPE ACCOUNT DETAILS ================= */
+exports.getStripeAccount = (0, https_1.onCall)(async (request) => {
+    const stripe = getStripeInstance();
+    const { accountId } = request.data || {};
+    if (!accountId) {
+        throw new https_1.HttpsError("invalid-argument", "Missing accountId");
+    }
+    try {
+        const account = await stripe.accounts.retrieve(accountId);
+        let dashboardUrl = undefined;
+        try {
+            const loginLink = await stripe.accounts.createLoginLink(accountId);
+            dashboardUrl = loginLink.url;
+        }
+        catch (err) {
+            dashboardUrl = undefined;
+        }
+        return {
+            email: account.email,
+            details_submitted: account.details_submitted,
+            charges_enabled: account.charges_enabled,
+            dashboardUrl,
+        };
+    }
+    catch (err) {
+        throw new https_1.HttpsError("internal", err.message || "Failed to fetch Stripe account");
+    }
+});
+/* ========== CREATE AUCTION FEE CHECKOUT SESSION ========== */
+exports.createAuctionFeeCheckoutSession = (0, https_1.onCall)(async (request) => {
+    const stripe = getStripeInstance();
+    const uid = requireAuth(request);
+    const { auctionId, auctionTitle, amountCents, appBaseUrl } = request.data || {};
+    if (!auctionId || !auctionTitle || !amountCents || !appBaseUrl) {
+        throw new https_1.HttpsError("invalid-argument", "Missing required parameters");
+    }
+    const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        mode: "payment",
+        line_items: [
+            {
+                price_data: {
+                    currency: "usd",
+                    product_data: {
+                        name: `Auction Fee: ${auctionTitle}`,
+                    },
+                    unit_amount: amountCents,
+                },
+                quantity: 1,
+            },
+        ],
+        success_url: `${appBaseUrl}/seller/auctions/success?auctionId=${auctionId}`,
+        metadata: {
+            auctionId,
+            sellerUid: uid,
+        },
+    });
+    return { sessionId: session.id, url: session.url };
+});
+/* ================= CREATE STRIPE CHECKOUT SESSION ================= */
+exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
+    const stripe = getStripeInstance();
+    const uid = requireAuth(request);
+    const { orderId, listingTitle, amountCents, appBaseUrl } = request.data || {};
+    if (!orderId || !listingTitle || !amountCents || !appBaseUrl) {
+        throw new https_1.HttpsError("invalid-argument", "Missing required parameters");
+    }
+    const userSnap = await firebaseAdmin_1.db.collection("users").doc(uid).get();
+    const userData = userSnap.data();
+    const shippingAddress = userData?.shippingAddress || {};
+    if (Object.keys(shippingAddress).length > 0) {
+        await firebaseAdmin_1.db.collection("orders").doc(orderId).set({ shippingAddress }, { merge: true });
+    }
+    const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        mode: "payment",
+        line_items: [
+            {
+                price_data: {
+                    currency: "usd",
+                    product_data: {
+                        name: listingTitle,
+                    },
+                    unit_amount: amountCents,
+                },
+                quantity: 1,
+            },
+        ],
+        success_url: `${appBaseUrl}/cart/success?orderId=${orderId}`,
+        metadata: {
+            orderId,
+            buyerUid: uid,
+            shippingAddress: JSON.stringify(shippingAddress),
+        },
+    });
+    return { url: session.url };
 });
 /* ================= CREATE STRIPE ONBOARDING ================= */
 exports.createStripeOnboarding = (0, https_1.onCall)(async (request) => {
-    const stripeSecret = process.env.STRIPE_SECRET;
-    if (!stripeSecret) {
-        throw new https_1.HttpsError("internal", "Stripe secret not set in environment");
-    }
-    const stripe = new stripe_1.default(stripeSecret, { apiVersion: "2023-10-16" });
-    const uid = request.auth?.uid;
-    if (!uid)
-        throw new https_1.HttpsError("unauthenticated", "Auth required");
-    if (!request.auth || request.auth.token.email_verified !== true) {
-        throw new https_1.HttpsError("failed-precondition", "Email verification required");
-    }
+    const stripe = getStripeInstance();
+    const uid = requireAuth(request);
     const userRef = firebaseAdmin_1.db.collection("users").doc(uid);
     const snap = await userRef.get();
     const user = snap.data();
@@ -164,7 +224,6 @@ exports.createStripeOnboarding = (0, https_1.onCall)(async (request) => {
             updatedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
     }
-    // Hardcode production URLs for Stripe onboarding
     const link = await stripe.accountLinks.create({
         account: accountId,
         refresh_url: "https://hobbydork.com/onboarding/terms",
@@ -175,17 +234,8 @@ exports.createStripeOnboarding = (0, https_1.onCall)(async (request) => {
 });
 /* ================= FINALIZE SELLER ================= */
 exports.finalizeSeller = (0, https_1.onCall)(async (request) => {
-    const stripeSecret = process.env.STRIPE_SECRET;
-    if (!stripeSecret) {
-        throw new https_1.HttpsError("internal", "Stripe secret not set in environment");
-    }
-    const stripe = new stripe_1.default(stripeSecret, { apiVersion: "2023-10-16" });
-    const uid = request.auth?.uid;
-    if (!uid)
-        throw new https_1.HttpsError("unauthenticated", "Auth required");
-    if (!request.auth || request.auth.token.email_verified !== true) {
-        throw new https_1.HttpsError("failed-precondition", "Email verification required");
-    }
+    const stripe = getStripeInstance();
+    const uid = requireAuth(request);
     const userRef = firebaseAdmin_1.db.collection("users").doc(uid);
     const snap = await userRef.get();
     const user = snap.data();
@@ -196,13 +246,11 @@ exports.finalizeSeller = (0, https_1.onCall)(async (request) => {
     if (!account.details_submitted || !account.charges_enabled) {
         throw new https_1.HttpsError("failed-precondition", "Stripe onboarding incomplete");
     }
-    // Generate storeId from displayName (slugify)
     const displayName = user.ownerDisplayName || user.displayName || "";
     const storeId = displayName
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "");
-    // Create store document
     const storeRef = firebaseAdmin_1.db.collection("stores").doc(storeId);
     const storeSnap = await storeRef.get();
     if (!storeSnap.exists) {
@@ -215,7 +263,6 @@ exports.finalizeSeller = (0, https_1.onCall)(async (request) => {
             status: "ACTIVE",
         });
     }
-    // Update user doc with storeId and seller flags
     await userRef.update({
         isSeller: true,
         sellerStatus: "APPROVED",
@@ -224,7 +271,6 @@ exports.finalizeSeller = (0, https_1.onCall)(async (request) => {
         storeId,
         updatedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
     });
-    // Log new seller approval for admin monitoring
     await firebaseAdmin_1.db.collection("sellerApprovals").add({
         uid,
         email: user.email,
@@ -237,17 +283,11 @@ exports.finalizeSeller = (0, https_1.onCall)(async (request) => {
 /* ================= SECURE ORDER STATUS UPDATE ================= */
 exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
     try {
-        const uid = request.auth?.uid;
-        if (!uid)
-            throw new https_1.HttpsError("unauthenticated", "Auth required");
-        if (!request.auth || request.auth.token.email_verified !== true) {
-            throw new https_1.HttpsError("failed-precondition", "Email verification required");
-        }
+        const uid = requireAuth(request);
         const { orderId, updates } = request.data || {};
         if (!orderId || !updates || typeof updates !== "object") {
             throw new https_1.HttpsError("invalid-argument", "Missing orderId or updates");
         }
-        // Only allow specific fields
         const allowedFields = [
             "status",
             "trackingNumber",
@@ -260,7 +300,6 @@ exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
         if (!updateKeys.every((k) => allowedFields.includes(k))) {
             throw new https_1.HttpsError("permission-denied", "Attempt to update forbidden fields");
         }
-        // Fetch order
         const orderRef = firebaseAdmin_1.db.collection("orders").doc(orderId);
         const orderSnap = await orderRef.get();
         if (!orderSnap.exists) {
@@ -270,34 +309,27 @@ exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
         if (!order) {
             throw new https_1.HttpsError("not-found", "Order data missing");
         }
-        // Only buyer or seller can update
         if (order.buyerUid !== uid && order.sellerUid !== uid) {
             throw new https_1.HttpsError("permission-denied", "Not authorized to update this order");
         }
-        // Validate status transitions (example: only allow certain transitions)
         if (updates.status) {
             const validStatuses = ["PAID", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED", "DISPUTED"];
             if (!validStatuses.includes(updates.status)) {
                 throw new https_1.HttpsError("invalid-argument", "Invalid status value");
             }
-            // Example: only seller can mark as SHIPPED
             if (updates.status === "SHIPPED" && order.sellerUid !== uid) {
                 throw new https_1.HttpsError("permission-denied", "Only seller can mark as shipped");
             }
-            // Only buyer can mark as DELIVERED
             if (updates.status === "DELIVERED" && order.buyerUid !== uid) {
                 throw new https_1.HttpsError("permission-denied", "Only buyer can mark as delivered");
             }
         }
-        // Validate feedback (if present)
         if (updates.feedback && typeof updates.feedback !== "string") {
             throw new https_1.HttpsError("invalid-argument", "Feedback must be a string");
         }
-        // Validate shippingLabelUrl (if present)
         if (updates.shippingLabelUrl && typeof updates.shippingLabelUrl !== "string") {
             throw new https_1.HttpsError("invalid-argument", "Shipping label URL must be a string");
         }
-        // Perform update
         await orderRef.update(updates);
         await logAudit("order-status-update", {
             orderId: orderId,
@@ -305,7 +337,6 @@ exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
             updates,
             role: order.buyerUid === uid ? "buyer" : order.sellerUid === uid ? "seller" : "unknown",
         });
-        // Send notifications based on status change
         if (updates.status) {
             if (updates.status === "SHIPPED") {
                 await sendNotification(order.buyerUid, "ORDER", "Order shipped", `Your order #${orderId} has shipped.`, orderId);
@@ -332,5 +363,3 @@ exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
         throw error;
     }
 });
-var stripeWebhook_1 = require("./stripeWebhook");
-Object.defineProperty(exports, "stripeWebhook", { enumerable: true, get: function () { return stripeWebhook_1.stripeWebhook; } });

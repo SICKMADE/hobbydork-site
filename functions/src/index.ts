@@ -1,89 +1,30 @@
-// ================= GET STRIPE ACCOUNT DETAILS =================
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, admin } from "./firebaseAdmin";
 import Stripe from "stripe";
 export { getStripePayouts } from "./getStripePayouts";
-
-// ================= GET STRIPE ACCOUNT DETAILS =================
-export const getStripeAccount = onCall(async (request) => {
-  const stripeSecret = process.env.STRIPE_SECRET;
-  if (!stripeSecret) {
-    throw new HttpsError("internal", "Stripe secret not set in environment");
-  }
-  const stripe = new Stripe(stripeSecret, { apiVersion: "2023-10-16" });
-  const { accountId } = request.data || {};
-  if (!accountId) {
-    throw new HttpsError("invalid-argument", "Missing accountId");
-  }
-  try {
-    const account = await stripe.accounts.retrieve(accountId);
-    // Optionally, create a dashboard login link
-    let dashboardUrl: string | undefined = undefined;
-    try {
-      const loginLink = await stripe.accounts.createLoginLink(accountId);
-      dashboardUrl = loginLink.url;
-    } catch (err) {
-      dashboardUrl = undefined;
-    }
-    return {
-      email: account.email,
-      details_submitted: account.details_submitted,
-      charges_enabled: account.charges_enabled,
-      dashboardUrl,
-    };
-  } catch (err: any) {
-    throw new HttpsError("internal", err.message || "Failed to fetch Stripe account");
-  }
-});
 export { createBlindBidAuction, submitBlindBid } from "./blindBidder";
 export { setBlindBidAuctionImage } from "./blindBidder";
+export { stripeWebhook } from "./stripeWebhook";
+import * as functions from "firebase-functions";
 
-// admin.initializeApp(); // Removed initialization
-// const db = admin.firestore(); // Removed initialization
+// Use environment variable for Stripe secret, fallback to functions.config for legacy support
+const config = typeof functions.config === "object" ? functions.config as { stripe?: { secret?: string } } : {};
+const stripeSecret = process.env.STRIPE_SECRET || (config.stripe && config.stripe.secret);/* ================= HELPERS ================= */
 
-/* ================= CREATE STRIPE CHECKOUT SESSION ================= */
-
-export const createCheckoutSession = onCall(async (request) => {
-  const stripeSecret = process.env.STRIPE_SECRET;
+function getStripeInstance() {
   if (!stripeSecret) {
-    throw new HttpsError("internal", "Stripe secret not set in environment");
+    throw new HttpsError("internal", "Stripe secret not set in Firebase config");
   }
-  const stripe = new Stripe(stripeSecret, { apiVersion: "2023-10-16" });
+  return new Stripe(stripeSecret, { apiVersion: "2023-10-16" });
+}
+function requireAuth(request: any) {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Auth required");
   if (!request.auth || request.auth.token.email_verified !== true) {
     throw new HttpsError("failed-precondition", "Email verification required");
   }
-  const { orderId, listingTitle, amountCents, appBaseUrl } = request.data || {};
-  if (!orderId || !listingTitle || !amountCents || !appBaseUrl) {
-    throw new HttpsError("invalid-argument", "Missing required parameters");
-  }
-  // Optionally: validate order in Firestore here
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-    mode: "payment",
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: listingTitle,
-          },
-          unit_amount: amountCents,
-        },
-        quantity: 1,
-      },
-    ],
-    success_url: `${appBaseUrl}/cart/success?orderId=${orderId}`,
-    metadata: {
-      orderId,
-      buyerUid: uid,
-    },
-  });
-  return { url: session.url };
-});
-
-/* ================= HELPERS ================= */
+  return uid;
+}
 
 /**
  * Audit log helper for sensitive actions
@@ -122,25 +63,111 @@ async function logError(error: Error | string, context: Record<string, any> = {}
   });
 }
 
-/* ================= STRIPE ================= */
+/* ================= GET STRIPE ACCOUNT DETAILS ================= */
 
-const stripe = new Stripe(process.env.STRIPE_SECRET!, {
-  apiVersion: "2023-10-16",
+export const getStripeAccount = onCall(async (request) => {
+  const stripe = getStripeInstance();
+  const { accountId } = request.data || {};
+  if (!accountId) {
+    throw new HttpsError("invalid-argument", "Missing accountId");
+  }
+  try {
+    const account = await stripe.accounts.retrieve(accountId);
+    let dashboardUrl: string | undefined = undefined;
+    try {
+      const loginLink = await stripe.accounts.createLoginLink(accountId);
+      dashboardUrl = loginLink.url;
+    } catch (err) {
+      dashboardUrl = undefined;
+    }
+    return {
+      email: account.email,
+      details_submitted: account.details_submitted,
+      charges_enabled: account.charges_enabled,
+      dashboardUrl,
+    };
+  } catch (err: any) {
+    throw new HttpsError("internal", err.message || "Failed to fetch Stripe account");
+  }
+});
+
+/* ========== CREATE AUCTION FEE CHECKOUT SESSION ========== */
+export const createAuctionFeeCheckoutSession = onCall(async (request) => {
+  const stripe = getStripeInstance();
+  const uid = requireAuth(request);
+  const { auctionId, auctionTitle, amountCents, appBaseUrl } = request.data || {};
+  if (!auctionId || !auctionTitle || !amountCents || !appBaseUrl) {
+    throw new HttpsError("invalid-argument", "Missing required parameters");
+  }
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    mode: "payment",
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: `Auction Fee: ${auctionTitle}`,
+          },
+          unit_amount: amountCents,
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: `${appBaseUrl}/seller/auctions/success?auctionId=${auctionId}`,
+    metadata: {
+      auctionId,
+      sellerUid: uid,
+    },
+  });
+  return { sessionId: session.id, url: session.url };
+});
+
+/* ================= CREATE STRIPE CHECKOUT SESSION ================= */
+
+export const createCheckoutSession = onCall(async (request) => {
+  const stripe = getStripeInstance();
+  const uid = requireAuth(request);
+  const { orderId, listingTitle, amountCents, appBaseUrl } = request.data || {};
+  if (!orderId || !listingTitle || !amountCents || !appBaseUrl) {
+    throw new HttpsError("invalid-argument", "Missing required parameters");
+  }
+  const userSnap = await db.collection("users").doc(uid).get();
+  const userData = userSnap.data();
+  const shippingAddress = userData?.shippingAddress || {};
+  if (Object.keys(shippingAddress).length > 0) {
+    await db.collection("orders").doc(orderId).set({ shippingAddress }, { merge: true });
+  }
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    mode: "payment",
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: listingTitle,
+          },
+          unit_amount: amountCents,
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: `${appBaseUrl}/cart/success?orderId=${orderId}`,
+    metadata: {
+      orderId,
+      buyerUid: uid,
+      shippingAddress: JSON.stringify(shippingAddress),
+    },
+  });
+  return { url: session.url };
 });
 
 /* ================= CREATE STRIPE ONBOARDING ================= */
 
 export const createStripeOnboarding = onCall(async (request) => {
-  const stripeSecret = process.env.STRIPE_SECRET;
-  if (!stripeSecret) {
-    throw new HttpsError("internal", "Stripe secret not set in environment");
-  }
-  const stripe = new Stripe(stripeSecret, { apiVersion: "2023-10-16" });
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Auth required");
-  if (!request.auth || request.auth.token.email_verified !== true) {
-    throw new HttpsError("failed-precondition", "Email verification required");
-  }
+  const stripe = getStripeInstance();
+  const uid = requireAuth(request);
   const userRef = db.collection("users").doc(uid);
   const snap = await userRef.get();
   const user = snap.data();
@@ -165,7 +192,6 @@ export const createStripeOnboarding = onCall(async (request) => {
       { merge: true }
     );
   }
-  // Hardcode production URLs for Stripe onboarding
   const link = await stripe.accountLinks.create({
     account: accountId,
     refresh_url: "https://hobbydork.com/onboarding/terms",
@@ -178,16 +204,8 @@ export const createStripeOnboarding = onCall(async (request) => {
 /* ================= FINALIZE SELLER ================= */
 
 export const finalizeSeller = onCall(async (request) => {
-  const stripeSecret = process.env.STRIPE_SECRET;
-  if (!stripeSecret) {
-    throw new HttpsError("internal", "Stripe secret not set in environment");
-  }
-  const stripe = new Stripe(stripeSecret, { apiVersion: "2023-10-16" });
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Auth required");
-  if (!request.auth || request.auth.token.email_verified !== true) {
-    throw new HttpsError("failed-precondition", "Email verification required");
-  }
+  const stripe = getStripeInstance();
+  const uid = requireAuth(request);
   const userRef = db.collection("users").doc(uid);
   const snap = await userRef.get();
   const user = snap.data();
@@ -198,13 +216,11 @@ export const finalizeSeller = onCall(async (request) => {
   if (!account.details_submitted || !account.charges_enabled) {
     throw new HttpsError("failed-precondition", "Stripe onboarding incomplete");
   }
-  // Generate storeId from displayName (slugify)
   const displayName = user.ownerDisplayName || user.displayName || "";
   const storeId = displayName
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  // Create store document
   const storeRef = db.collection("stores").doc(storeId);
   const storeSnap = await storeRef.get();
   if (!storeSnap.exists) {
@@ -217,7 +233,6 @@ export const finalizeSeller = onCall(async (request) => {
       status: "ACTIVE",
     });
   }
-  // Update user doc with storeId and seller flags
   await userRef.update({
     isSeller: true,
     sellerStatus: "APPROVED",
@@ -226,7 +241,6 @@ export const finalizeSeller = onCall(async (request) => {
     storeId,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
-  // Log new seller approval for admin monitoring
   await db.collection("sellerApprovals").add({
     uid,
     email: user.email,
@@ -241,16 +255,11 @@ export const finalizeSeller = onCall(async (request) => {
 
 export const updateOrderStatus = onCall(async (request) => {
   try {
-    const uid = request.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "Auth required");
-    if (!request.auth || request.auth.token.email_verified !== true) {
-      throw new HttpsError("failed-precondition", "Email verification required");
-    }
+    const uid = requireAuth(request);
     const { orderId, updates } = request.data || {};
     if (!orderId || !updates || typeof updates !== "object") {
       throw new HttpsError("invalid-argument", "Missing orderId or updates");
     }
-    // Only allow specific fields
     const allowedFields = [
       "status",
       "trackingNumber",
@@ -263,7 +272,6 @@ export const updateOrderStatus = onCall(async (request) => {
     if (!updateKeys.every((k) => allowedFields.includes(k))) {
       throw new HttpsError("permission-denied", "Attempt to update forbidden fields");
     }
-    // Fetch order
     const orderRef = db.collection("orders").doc(orderId);
     const orderSnap = await orderRef.get();
     if (!orderSnap.exists) {
@@ -273,34 +281,27 @@ export const updateOrderStatus = onCall(async (request) => {
     if (!order) {
       throw new HttpsError("not-found", "Order data missing");
     }
-    // Only buyer or seller can update
     if (order.buyerUid !== uid && order.sellerUid !== uid) {
       throw new HttpsError("permission-denied", "Not authorized to update this order");
     }
-    // Validate status transitions (example: only allow certain transitions)
     if (updates.status) {
       const validStatuses = ["PAID", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED", "DISPUTED"];
       if (!validStatuses.includes(updates.status)) {
         throw new HttpsError("invalid-argument", "Invalid status value");
       }
-      // Example: only seller can mark as SHIPPED
       if (updates.status === "SHIPPED" && order.sellerUid !== uid) {
         throw new HttpsError("permission-denied", "Only seller can mark as shipped");
       }
-      // Only buyer can mark as DELIVERED
       if (updates.status === "DELIVERED" && order.buyerUid !== uid) {
         throw new HttpsError("permission-denied", "Only buyer can mark as delivered");
       }
     }
-    // Validate feedback (if present)
     if (updates.feedback && typeof updates.feedback !== "string") {
       throw new HttpsError("invalid-argument", "Feedback must be a string");
     }
-    // Validate shippingLabelUrl (if present)
     if (updates.shippingLabelUrl && typeof updates.shippingLabelUrl !== "string") {
       throw new HttpsError("invalid-argument", "Shipping label URL must be a string");
     }
-    // Perform update
     await orderRef.update(updates);
     await logAudit("order-status-update", {
       orderId: orderId,
@@ -308,7 +309,6 @@ export const updateOrderStatus = onCall(async (request) => {
       updates,
       role: order.buyerUid === uid ? "buyer" : order.sellerUid === uid ? "seller" : "unknown",
     });
-    // Send notifications based on status change
     if (updates.status) {
       if (updates.status === "SHIPPED") {
         await sendNotification(order.buyerUid, "ORDER", "Order shipped", `Your order #${orderId} has shipped.`, orderId);
@@ -334,5 +334,3 @@ export const updateOrderStatus = onCall(async (request) => {
     throw error;
   }
 });
-
-export { stripeWebhook } from "./stripeWebhook";
