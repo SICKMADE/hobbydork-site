@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { SellerWarningIcon } from '@/components/SellerWarningIcon';
+import { SellerWarningIcon } from '../SellerWarningIcon';
 import { collection, query, orderBy, limit, where, doc } from 'firebase/firestore';
 import { useMemoFirebase, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
