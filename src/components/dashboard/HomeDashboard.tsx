@@ -1,110 +1,7 @@
-// ...existing code...
-import { useEffect, useState } from 'react';
-import { getFirestore, collection as fbCollection, query as fbQuery, where as fbWhere, orderBy as fbOrderBy, limit as fbLimit, getDocs, doc as fbDoc, getDoc } from 'firebase/firestore';
-function BlindBidderSection() {
-    // Digital countdown helpers for each auction
-    function getCountdownColor(msLeft: number) {
-      const hours = msLeft / (1000 * 60 * 60);
-      if (hours > 8) return "text-green-500";
-      if (hours > 3) return "text-yellow-500";
-      return "text-red-500";
-    }
-    function formatDigitalClock(msLeft: number) {
-      if (msLeft <= 0) return "00:00:00";
-      const totalSeconds = Math.floor(msLeft / 1000);
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-      return [hours, minutes, seconds].map(n => n.toString().padStart(2, '0')).join(":");
-    }
-    const [now, setNow] = useState(Date.now());
-    useEffect(() => {
-      const interval = setInterval(() => setNow(Date.now()), 1000);
-      return () => clearInterval(interval);
-    }, []);
-  const [enabled, setEnabled] = useState(false);
-  const [auctions, setAuctions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    const db = getFirestore();
-    async function fetchConfigAndAuctions() {
-      const configSnap = await getDoc(fbDoc(db, 'config', 'blindBidder'));
-      setEnabled(!!configSnap.data()?.enabled);
-      if (configSnap.data()?.enabled) {
-        const q = fbQuery(
-          fbCollection(db, 'blindBidAuctions'),
-          fbWhere('status', '==', 'OPEN'),
-          fbOrderBy('endsAt', 'asc'),
-          fbLimit(6)
-        );
-        const snap = await getDocs(q);
-        setAuctions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      } else {
-        setAuctions([]);
-      }
-      setLoading(false);
-    }
-    fetchConfigAndAuctions();
-  }, []);
-  return (
-    <section className="rounded-2xl border-2 border-black bg-card/80 p-4 sm:p-6 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="relative h-16 w-40 sm:h-20 sm:w-52 flex-shrink-0 rounded-xl border-2 border-black bg-muted overflow-hidden">
-            <Image src="/BLIND.png" alt="Blind Bidder" fill className="object-contain" priority />
-          </div>
-          <h2 className="text-xl font-semibold">Blind Bidder</h2>
-          <span className={`ml-2 px-2 py-1 rounded text-xs font-bold ${enabled ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>{enabled ? 'OPEN' : 'CLOSED'}</span>
-        </div>
-        <Button asChild size="sm" className="comic-button"><Link href="/blind-bidder">Browse Blind Bidder</Link></Button>
-      </div>
-      {loading ? <div>Loading auctions…</div> : !enabled ? <div className="text-center text-muted-foreground">Blind Bidder is currently closed.</div> : auctions.length === 0 ? <div className="text-center text-muted-foreground">No open auctions right now.</div> : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {auctions.map(a => {
-            let endsAtDate = a.endsAt?.toDate ? a.endsAt.toDate() : (typeof a.endsAt === 'string' ? new Date(a.endsAt) : a.endsAt);
-            let msLeft = endsAtDate ? endsAtDate.getTime() - now : 0;
-            return (
-              <Card key={a.id} className="border-2 border-black flex flex-col overflow-hidden p-2 text-[11px] max-w-[170px] min-w-[120px] bg-background/90">
-                <div className="relative w-full aspect-[5/6] bg-muted flex items-center justify-center rounded-md">
-                  {a.imageUrl ? (
-                    <Image src={a.imageUrl} alt={a.title} fill sizes="120px" className="object-contain" />
-                  ) : (
-                    <div className="text-xs text-muted-foreground px-2 text-center">No image</div>
-                  )}
-                </div>
-                <CardContent className="pt-2 pb-2 flex flex-col gap-1 text-[11px]">
-                  <div className="flex items-center gap-1 text-[9px] mb-0.5">
-                    <span className="font-bold uppercase tracking-widest">Blind Bid</span>
-                    <span className="rounded bg-black/10 px-1 py-0.5">24hr</span>
-                  </div>
-                  <div className="font-bold text-[11px] leading-tight line-clamp-2 mb-0.5">{a.title}</div>
-                  <div className="text-muted-foreground line-clamp-2 mb-0.5">{a.description}</div>
-                  <div className="flex items-center gap-1 mb-1">
-                    <span className={`font-mono text-[13px] ${getCountdownColor(msLeft)}`}>{formatDigitalClock(msLeft)}</span>
-                  </div>
-                  {/* Seller info if available */}
-                  {a.sellerName && (
-                    <div className="flex items-center gap-1 mb-1">
-                      <Avatar className="h-5 w-5"><AvatarImage src={a.sellerAvatar || undefined} alt={a.sellerName} /><AvatarFallback>{a.sellerName[0]}</AvatarFallback></Avatar>
-                      <span className="text-[10px] font-medium">{a.sellerName}</span>
-                    </div>
-                  )}
-                  <Button asChild size="sm" className="h-6 px-2 py-0 text-xs"><Link href={`/blind-bidder/${a.id}`}>View & Bid</Link></Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
-}
-
-// ...existing code...
-import { useAuth } from '@/hooks/use-auth';
+import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Bell, Store } from 'lucide-react';
+import { SellerWarningIcon } from '@/components/SellerWarningIcon';
 import { collection, query, orderBy, limit, where, doc } from 'firebase/firestore';
 import { useMemoFirebase, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
@@ -116,6 +13,9 @@ import { StandaloneVaultDoor } from './StandaloneVaultDoor';
 import AskHobbyDork from './AskHobbyDork';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import ListingCard from '../ListingCard';
 import { resolveAvatarUrl } from '@/lib/default-avatar';
 
@@ -228,6 +128,10 @@ function SpotlightStoresSection() {
           <div className="flex items-start gap-3">
             <div className="relative h-16 w-40 sm:h-20 sm:w-52 flex-shrink-0 rounded-xl border-2 border-black bg-muted overflow-hidden">
               <Image src="/SPOTLIGHT.png" alt="Store Spotlight" fill className="object-contain" priority />
+            {/* Spotlight badge overlay */}
+            <span className="absolute top-2 left-2 z-10 rounded bg-amber-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black shadow">
+              Spotlight
+            </span>
             </div>
 
             <div>
@@ -296,31 +200,59 @@ function SpotlightStoresSection() {
 function NewStoreCard({ store }: { store: StoreType }) {
     const firestore = useFirestore();
     const ownerRef = useMemoFirebase(() => {
-        if (!firestore || !store.ownerUid) return null;
-        return doc(firestore, 'users', store.ownerUid);
+      if (!firestore || !store.ownerUid) return null;
+      return doc(firestore, 'users', store.ownerUid);
     }, [firestore, store.ownerUid]);
     const { data: owner } = useDoc<User>(ownerRef);
     const cardImage = resolveAvatarUrl(owner?.avatar, store.ownerUid);
     const username = owner?.displayName || owner?.email || "New Seller";
+    const sellerTier = owner?.sellerTier || 'BRONZE';
+
+    function renderTierBadge(tier: string) {
+      tier = (tier || 'BRONZE').toUpperCase();
+      let style = {};
+      let className = 'ml-2 px-2 py-1 rounded-full text-[11px] font-semibold tracking-wider uppercase border shadow-inner';
+      if (tier === 'GOLD') {
+        style = {
+          background: 'linear-gradient(90deg, #fffbe6 0%, #ffe066 40%, #ffd700 60%, #fffbe6 100%)',
+          color: '#a67c00',
+          borderColor: '#ffd700',
+          boxShadow: '0 1px 4px 0 #ffe06688, 0 0.5px 0 #fff inset',
+        };
+        className += ' border-yellow-400';
+      } else if (tier === 'SILVER') {
+        style = {
+          background: 'linear-gradient(90deg, #f8f9fa 0%, #d1d5db 40%, #b0b4ba 60%, #f8f9fa 100%)',
+          color: '#555',
+          borderColor: '#b0b4ba',
+          boxShadow: '0 1px 4px 0 #b0b4ba88, 0 0.5px 0 #fff inset',
+        };
+        className += ' border-gray-400';
+      } else {
+        style = {};
+          className += ' border-orange-400 bg-orange-100 text-orange-700';
+      }
+      return <span className={className}>{tier} SELLER</span>;
+    }
 
     return (
        <div className="relative flex flex-col items-center gap-2 text-center">
-            <Link href={`/store/${store.storeId}`} className="block">
-                <Avatar className="h-24 w-24 border-2 border-primary/50 transition-transform hover:scale-105">
-                    <AvatarImage src={cardImage} alt={store.storeName} />
-                  <AvatarFallback />
-                </Avatar>
-            </Link>
-            <div className="text-xs mt-2">
-                <p className="font-semibold truncate">{store.storeName}</p>
-                <p className="text-muted-foreground font-normal truncate">{username}</p>
-                <Button asChild variant="link" className="h-auto p-0 text-xs">
-                    <Link href={`/store/${store.storeId}`}>Visit Store</Link>
-                </Button>
-            </div>
+        <Link href={`/store/${store.storeId}`} className="block">
+          <Avatar className="h-24 w-24 border-2 border-primary/50 transition-transform hover:scale-105">
+            <AvatarImage src={cardImage} alt={store.storeName} />
+            <AvatarFallback />
+          </Avatar>
+        </Link>
+        <div className="text-xs mt-2">
+          <p className="font-semibold truncate flex items-center justify-center">{store.storeName} {renderTierBadge(sellerTier)}</p>
+          <p className="text-muted-foreground font-normal truncate">{username}</p>
+          <Button asChild variant="link" className="h-auto p-0 text-xs">
+            <Link href={`/store/${store.storeId}`}>Visit Store</Link>
+          </Button>
         </div>
+      </div>
     );
-}
+  }
 
 
 /* =======================
@@ -419,13 +351,13 @@ function NewListingsSection() {
   if (!listings || listings.length === 0) return null;
 
   return (
-    <section className="border-2 border-black bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-6 sm:p-8 shadow-xl rounded-xl">
+    <section className="rounded-2xl border-2 border-black bg-card/80 p-4 sm:p-6 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-sky-400/80">
             Newly Listed
           </p>
-          <h2 className="text-2xl font-bold text-white drop-shadow">Fresh in the Market</h2>
+          <h2 className="text-xl font-semibold">Fresh in the Market</h2>
         </div>
         <Button
           asChild
@@ -441,12 +373,9 @@ function NewListingsSection() {
         <p className="text-xs text-muted-foreground">Loading listings…</p>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
         {listings.map((listing) => (
-          <div
-            key={listing.id || listing.listingId}
-            className="max-w-[180px] min-w-[130px] mx-auto bg-zinc-950 border border-zinc-700 shadow-lg rounded-lg transition-transform hover:-translate-y-1 hover:shadow-2xl"
-          >
+          <div key={listing.id || listing.listingId} className="max-w-[170px] min-w-[120px] mx-auto">
             <ListingCard
               listing={listing}
               compact
@@ -483,7 +412,7 @@ function VaultAndGenieSection() {
           </p>
         </div>
 
-        {}
+        {/* ASK HOBBYDORK */}
         <div className="flex flex-col items-center gap-4 p-4 rounded-lg border bg-muted">
           <div className="relative w-64 h-32">
             <Image src="/ask.png" alt="ask" fill className="object-contain" />
@@ -510,13 +439,28 @@ export default function HomeDashboard({ user, profile }: HomeDashboardProps) {
   const isSeller = profile?.isSeller;
   const loading = false; // Set this if you have a loading state
 
+  // Dashboard search bar state/logic
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const router = useRouter();
+  const runSearch = () => {
+    const trimmed = searchTerm.trim();
+    if (!trimmed) return;
+    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+  };
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      runSearch();
+    }
+  };
+
   return (
     <div className="space-y-10 lg:space-y-12">
-      <BlindBidderSection />
+      {/* <BlindBidderSection /> */}
       {/* Hero header */}
       <header className="rounded-2xl border bg-gradient-to-r from-zinc-900 via-zinc-900 to-black p-6 sm:p-7 shadow-xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-400/80">
               HobbyDork Dashboard
             </p>
@@ -528,27 +472,51 @@ export default function HomeDashboard({ user, profile }: HomeDashboardProps) {
               Along the way don't forget keep your eyes peeled for HobbyDork's hidden 4 digit pin. 
             </p>
           </div>
-          <div className="flex gap-3">
-            {!isSeller ? (
+          {/* Dashboard search bar */}
+          <div className="flex flex-col gap-2 sm:gap-3 sm:items-center sm:justify-end w-full sm:w-auto mt-4 sm:mt-0">
+            <div className="flex w-full sm:w-80 items-center gap-2">
+              <span className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search listings, ISO posts, or stores..."
+                  className="h-10 w-full rounded-full bg-white text-black placeholder:text-zinc-500 border-2 border-red-500 pl-9 pr-4 text-sm shadow-[2px_2px_0_rgba(0,0,0,0.35)] focus-visible:ring-0 focus-visible:ring-offset-0"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={onKeyDown}
+                />
+              </span>
               <Button
-                asChild
-                variant="outline"
-                className="hidden sm:inline-flex border-2 border-black bg-muted/40 hover:bg-muted/60 text-green-600"
+                type="button"
+                aria-label="Search"
+                onClick={runSearch}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white shadow-[0_6px_0_#7f1010] active:translate-y-1 active:shadow-[0_0px_0_#7f1010] transition-all"
               >
-                <Link href="/store/setup">Apply to Become a Seller</Link>
+                <Search className="h-4 w-4" />
               </Button>
-            ) : (
-              <Button
-                asChild
-                variant="outline"
-                className="hidden sm:inline-flex border-2 border-black bg-muted/40 hover:bg-muted/60"
-              >
-                <Link href="/search">Browse listings</Link>
+            </div>
+            <div className="flex gap-3 w-full sm:w-auto">
+              {!isSeller ? (
+                <Button
+                  asChild
+                  variant="outline"
+                  className="hidden sm:inline-flex border-2 border-black bg-muted/40 hover:bg-muted/60 text-green-600"
+                >
+                  <Link href="/store/setup">Apply to Become a Seller</Link>
+                </Button>
+              ) : (
+                <Button
+                  asChild
+                  variant="outline"
+                  className="hidden sm:inline-flex border-2 border-black bg-muted/40 hover:bg-muted/60"
+                >
+                  <Link href="/search">Browse listings</Link>
+                </Button>
+              )}
+              <Button asChild className="comic-button">
+                <Link href="/listings/create">Create listing</Link>
               </Button>
-            )}
-            <Button asChild className="comic-button">
-              <Link href="/listings/create">Create listing</Link>
-            </Button>
+            </div>
           </div>
         </div>
       </header>
