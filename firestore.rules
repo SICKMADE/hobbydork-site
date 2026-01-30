@@ -322,6 +322,22 @@ match /orders/{orderId} {
     }
 
 
+    // ------------- giveaways -------------
+    match /giveaways/{giveawayId} {
+      allow get, list: if true;
+      // Allow verified sellers to create giveaways
+      allow create: if isVerified() && userIsSeller();
+      // Only staff can update or delete giveaways
+      allow update, delete: if userIsStaff();
+    }
+
+    // ------------- giveawayEntries -------------
+    match /giveawayEntries/{entryId} {
+      allow get, list: if userIsStaff() || resource.data.uid == uid();
+      allow create: if isVerified() && request.resource.data.uid == uid();
+      allow update, delete: if userIsStaff();
+    }
+
     // Fallback: only verified users can write or access private data, but allow user doc creation/update for signed-in users
     match /{path=**} {
       allow read: if false;

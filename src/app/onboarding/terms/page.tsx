@@ -36,12 +36,15 @@ import { useToast } from "@/hooks/use-toast";
 
 /* ================= SCHEMA ================= */
 
+
 const sellerAgreementsSchema = z.object({
   agreeTerms: z.literal(true),
   agreeAge: z.literal(true),
   agreeOneAccount: z.literal(true),
   agreeSellerTerms: z.literal(true),
   agreeShip2Days: z.literal(true),
+  agreeSellerTiers: z.literal(true),
+  agreeAuctionRules: z.literal(true),
   sellerIntent: z.string().min(10),
 });
 
@@ -76,6 +79,8 @@ export default function SellerOnboardingTermsPage() {
       agreeOneAccount: true,
       agreeSellerTerms: true,
       agreeShip2Days: true,
+      agreeSellerTiers: true,
+      agreeAuctionRules: true,
       sellerIntent: "",
     },
   });
@@ -145,9 +150,10 @@ export default function SellerOnboardingTermsPage() {
 
   /* ================= UI (UNCHANGED) ================= */
 
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-grid-pattern">
-      <SellerOnboardingStepper step={2} />
+      <SellerOnboardingStepper step={3} />
 
       <div className="max-w-2xl w-full flex flex-col items-center gap-8 rounded-2xl shadow-2xl border border-red-500 bg-background/90 backdrop-blur-md p-6 md:p-10">
         <Card className="w-full bg-gray-800 border-2 border-red-500 shadow-xl">
@@ -188,6 +194,8 @@ export default function SellerOnboardingTermsPage() {
                     ["agreeOneAccount", "Only one account allowed"],
                     ["agreeSellerTerms", "I agree to Seller Terms"],
                     ["agreeShip2Days", "Ship items within 2 days"],
+                    ["agreeSellerTiers", "I understand the seller tier system (Bronze, Silver, Gold) and how it affects my fees and auction access."],
+                    ["agreeAuctionRules", "I understand that only Silver and Gold sellers can create auctions, and that auction fees are charged upfront according to my tier."],
                   ].map(([name, label]) => (
                     <FormField
                       key={name}

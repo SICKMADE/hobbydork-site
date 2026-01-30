@@ -4,14 +4,14 @@ import ThemeSelector from "./ThemeSelector";
 
 import SellerSidebar from "@/components/dashboard/SellerSidebar";
 import Header from "@/components/layout/Header";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 
 export default function SellerSettings() {
   const { user, profile } = require("@/hooks/use-auth").useAuth();
   if (!user || !user.emailVerified || profile?.status !== "ACTIVE" || !profile?.isSeller) {
     return (
-      <SidebarProvider>
+      <AppLayout sidebarComponent={<SellerSidebar />}>
         <div className="flex min-h-screen items-center justify-center">
           <Card className="p-8 max-w-lg mx-auto">
             <CardHeader>
@@ -25,31 +25,33 @@ export default function SellerSettings() {
             </CardContent>
           </Card>
         </div>
-      </SidebarProvider>
+      </AppLayout>
     );
   }
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen bg-background">
-        <SellerSidebar />
-        <main className="flex-1 p-6 max-w-3xl mx-auto">
-          <Header />
-          <Card className="border-2 border-black bg-card/80 shadow">
-            <CardHeader>
-              <CardTitle>Seller Settings</CardTitle>
-              <CardDescription>
-                HobbyDork is committed to safety, transparency, and minimal seller fees.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-gray-600 text-sm mb-4">
-                Choose your store theme below. Only themes you own are available.
-              </div>
-              <ThemeSelector userId={user.uid} />
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    </SidebarProvider>
+    <AppLayout sidebarComponent={<SellerSidebar />}>
+      <main className="flex-1 p-6 max-w-3xl mx-auto">
+        <Header />
+        <Card className="border-2 border-black bg-card/80 shadow">
+          <CardHeader>
+            <CardTitle>Seller Settings</CardTitle>
+            <CardDescription>
+              HobbyDork is committed to safety, transparency, and minimal seller fees.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-gray-600 text-sm mb-4">
+              {/* Theme selection moved to App Store. */}
+            </div>
+            {/* Shipping address form for seller origin address */}
+            <div className="mt-8">
+              {typeof window !== 'undefined' && (
+                require('./ShippingAddressForm').default ? require('./ShippingAddressForm').default() : null
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+    </AppLayout>
   );
 }

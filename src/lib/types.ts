@@ -99,6 +99,15 @@ export type User = {
         zip?: string;
         country?: string;
     };
+    // Seller Tier System
+    sellerTier?: "BRONZE" | "SILVER" | "GOLD";
+    onTimeShippingRate?: number;
+    completedOrders?: number;
+    disputesLast30d?: number;
+    disputesLast60d?: number;
+    lateShipmentsLast30d?: number;
+    lateShipmentsLast60d?: number;
+    lastTierChange?: Timestamp;
 };
 
 export type Store = {
@@ -125,23 +134,30 @@ export type ListingState = "DRAFT" | "ACTIVE" | "HIDDEN" | "SOLD";
 
 
 export type Listing = {
-  id: string; // Document ID
-  listingId: string;
-  storeId: string;
-  ownerUid: string;
-  title: string;
-  category: string;
-  description: string;
-  price: number;
-  condition: Condition;
-  quantityTotal: number;
-  quantityAvailable: number;
-  state: ListingState;
-  tags: string[];
-  imageUrls: string[];
-  primaryImageUrl: string | null;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+    sellerTier: string;
+    sellerUid: any;
+    id: string; // Document ID
+    listingId: string;
+    storeId: string;
+    ownerUid: string;
+    title: string;
+    category: string;
+    description: string;
+    price: number;
+    condition: Condition;
+    quantityTotal: number;
+    quantityAvailable: number;
+    state: ListingState;
+    tags: string[];
+    imageUrls: string[];
+    primaryImageUrl: string | null;
+    createdAt: Timestamp;
+    updatedAt: Timestamp;
+    featured?: boolean; // Whether this listing is featured/promoted
+    sellerName?: string; // Seller display name
+    sellerAvatar?: string; // Seller avatar URL
+    rating?: number; // Seller/store rating (1-5)
+    views?: number; // Optional: number of views for popularity sorting
 };
 
 export type OrderState = "PENDING_PAYMENT" | "PAYMENT_SENT" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "CANCELLED";

@@ -2,7 +2,8 @@
 
 import SellerSidebar from "@/components/dashboard/SellerSidebar";
 import Header from "@/components/layout/Header";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import "@/styles/grid-bg-dark.css";
+import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { BarChart2, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -43,20 +44,18 @@ export default function SellerAnalyticsPage() {
   if (profile?.status !== "ACTIVE") return null;
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen bg-background">
-        <SellerSidebar />
-        <main className="flex-1 p-6 max-w-5xl mx-auto">
-          <Header />
-          <div className="max-w-3xl mx-auto p-6 space-y-8">
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <BarChart2 className="w-7 h-7 text-primary" /> Sales Analytics
-            </h1>
-            <p className="text-muted-foreground mb-6">
-              Track your store's performance and sales trends. (Demo data shown)
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
+    <AppLayout sidebarComponent={<SellerSidebar />}>
+      <main className="flex-1 p-6 max-w-5xl mx-auto bg-grid-dark">
+        <Header />
+        <div className="max-w-3xl mx-auto p-6 space-y-8">
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <BarChart2 className="w-7 h-7 text-primary" /> Sales Analytics
+          </h1>
+          <p className="text-muted-foreground mb-6">
+            Track your store's performance and sales trends. (Demo data shown)
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
                 <CardHeader>
                   <CardTitle>Total Sales</CardTitle>
                 </CardHeader>
@@ -86,7 +85,6 @@ export default function SellerAnalyticsPage() {
             <SellerSalesCharts sellerUid={user.uid} />
           </div>
         </main>
-      </div>
-    </SidebarProvider>
+      </AppLayout>
   );
 }

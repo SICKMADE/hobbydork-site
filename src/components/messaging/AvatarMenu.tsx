@@ -13,6 +13,7 @@ import { MessageCircle, Store, User as UserIcon, Flag } from "lucide-react";
 import { getAvatarUrl } from "./avatar-utils";
 import { ReportUserDialog } from "@/components/moderation/ReportUserDialog";
 import { useState } from "react";
+import FollowButton from "@/components/FollowButton";
 
 export default function AvatarMenu({
   targetUid,
@@ -57,6 +58,11 @@ export default function AvatarMenu({
             <UserIcon className="w-3 h-3 mr-2" />
             View Profile
           </DropdownMenuItem>
+
+          {/* Follow/Unfollow */}
+          <div className="px-2 py-1 flex justify-center">
+            <FollowButton targetUid={targetUid} />
+          </div>
 
           {/* View Store */}
           {isSeller && storeId && (

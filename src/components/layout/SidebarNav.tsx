@@ -100,13 +100,18 @@ export default function SidebarNav({}: SidebarNavProps) {
     { href: '/giveaway', label: 'Giveaway', icon: Star, protected: false },
   ];
 
+
   // Only show dashboard links if user is present
   const personalMenuItems = user
     ? [{ href: '/buyer/dashboard', label: 'Buyer Dashboard', icon: Home, protected: true }]
     : [];
 
+  // Seller menu: show both My Store and Seller Dashboard if seller
   const sellerMenuItems = user && profile?.isSeller
-    ? [{ href: '/seller/dashboard', label: 'Seller Dashboard', icon: Store, protected: true }]
+    ? [
+        ...(profile?.storeId ? [{ href: `/store/${profile.storeId}`, label: 'My Store', icon: Store, protected: true }] : []),
+        { href: '/seller/dashboard', label: 'Seller Dashboard', icon: Store, protected: true }
+      ]
     : [];
 
   const adminMenuItems = isVerified && profile?.role === 'ADMIN'
@@ -281,9 +286,6 @@ export default function SidebarNav({}: SidebarNavProps) {
 
             </SidebarMenu>
           </div>
-        </div>
-        <div className="mt-auto pt-6 flex justify-center opacity-90">
-          <MiniAskTV />
         </div>
       </SidebarContent>
     </>

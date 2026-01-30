@@ -9,7 +9,8 @@ import * as functions from "firebase-functions";
 
 // Use environment variable for Stripe secret, fallback to functions.config for legacy support
 const config = typeof functions.config === "object" ? functions.config as { stripe?: { secret?: string } } : {};
-const stripeSecret = process.env.STRIPE_SECRET || (config.stripe && config.stripe.secret);/* ================= HELPERS ================= */
+const stripeSecret = process.env.STRIPE_SECRET || (config.stripe && config.stripe.secret);
+/* ================= HELPERS ================= */
 
 function getStripeInstance() {
   if (!stripeSecret) {
@@ -221,12 +222,12 @@ export const finalizeSeller = onCall(async (request) => {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  const storeRef = db.collection("stores").doc(storeId);
+  const storeRef = db.collection("storefronts").doc(storeId);
   const storeSnap = await storeRef.get();
   if (!storeSnap.exists) {
     await storeRef.set({
       id: storeId,
-      ownerId: uid,
+      ownerUid: uid,
       displayName,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       avatar: user.photoURL || "/hobbydork-head.png",

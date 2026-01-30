@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useMemo } from 'react';
@@ -28,6 +27,7 @@ import {
 import MessageList from '@/components/messaging/MessageList';
 import MessageComposer from '@/components/messaging/MessageComposer';
 import AvatarMenu from '@/components/messaging/AvatarMenu';
+import styles from './chat.module.css';
 
 export default function ConversationPage() {
   const params = useParams<{ id: string }>();
@@ -123,14 +123,16 @@ export default function ConversationPage() {
   return (
     <AppLayout>
       <div
-        className="flex flex-col w-full h-[calc(100vh-4rem)] p-4 md:p-6 bg-chat-dark"
+        className={`flex flex-col w-full h-[calc(100vh-4rem)] p-4 md:p-6 ${styles.chatDark}`}
       >
         {/* HEADER */}
-        <div className="flex justify-between items-center pb-4 border-b border-black/40">
+        <div
+          className={`flex justify-between items-center pb-4 border-b border-black/40 ${styles.chatHeader}`}
+        >
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push('/messages')}
-              className="text-sm font-bold border-2 border-black px-3 py-1 rounded-lg bg-[#ffd84d]"
+              className="text-sm font-bold border-2 border-black px-3 py-1 rounded-lg bg-[#ffd84d] text-black"
             >
               ‹ Back
             </button>
@@ -139,10 +141,7 @@ export default function ConversationPage() {
               <h1 className="text-xl font-extrabold">Chat</h1>
               {otherUid && (
                 <p className="text-xs opacity-70">
-                  With{" "}
-                  <span className="font-bold">
-                    {profiles[otherUid]?.displayName || otherUid}
-                  </span>
+                  With <span className="font-bold text-white">{profiles[otherUid]?.displayName && profiles[otherUid]?.displayName !== otherUid ? profiles[otherUid].displayName : "Unknown"}</span>
                 </p>
               )}
             </div>
@@ -158,7 +157,7 @@ export default function ConversationPage() {
 
         {/* FULL WIDTH CHAT PANEL */}
         <div
-          className="flex-1 overflow-y-auto w-full p-4 md:p-6 rounded-xl border-2 border-black bg-chat-panel"
+          className={`flex-1 overflow-y-auto w-full p-4 md:p-6 rounded-xl border-2 border-black ${styles.chatPanel}`}
         >
           <MessageList
             messages={messages || []}
@@ -168,12 +167,14 @@ export default function ConversationPage() {
         </div>
 
         {/* COMPOSER */}
-        <MessageComposer
-          onSend={handleSend}
-          conversationId={conversationId}
-          user={user}
-          firestore={firestore}
-        />
+        <div className={styles.chatComposer}>
+          <MessageComposer
+            onSend={handleSend}
+            conversationId={conversationId ?? ""}
+            user={user}
+            firestore={firestore}
+          />
+        </div>
       </div>
     </AppLayout>
   );

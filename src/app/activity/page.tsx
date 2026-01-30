@@ -43,15 +43,11 @@ function formatDate(ts?: Timestamp) {
 
 
 export default function ActivityPage() {
-  const { user, profile, loading: authLoading } = useAuth();
   const firestore = useFirestore();
-  const canReadFirestore =
-    !authLoading &&
-    !!user &&
-    profile?.status === "ACTIVE";
+  const { user, loading } = useAuth();
 
   const listingsQuery = useMemoFirebase(() => {
-    if (!canReadFirestore || !firestore || !user?.uid) return null;
+    if (!firestore || !user?.uid) return null;
     const ref = collection(firestore, 'listings');
     return query(
       ref,
@@ -59,10 +55,10 @@ export default function ActivityPage() {
       orderBy('createdAt', 'desc'),
       limit(10),
     );
-  }, [canReadFirestore, firestore, user?.uid]);
+  }, [firestore, user?.uid]);
 
   const isoQuery = useMemoFirebase(() => {
-    if (!canReadFirestore || !firestore || !user?.uid) return null;
+    if (!firestore || !user?.uid) return null;
     const ref = collection(firestore, 'iso24Posts');
     return query(
       ref,
@@ -70,10 +66,10 @@ export default function ActivityPage() {
       orderBy('createdAt', 'desc'),
       limit(10),
     );
-  }, [canReadFirestore, firestore, user?.uid]);
+  }, [firestore, user?.uid]);
 
   const ordersQuery = useMemoFirebase(() => {
-    if (!canReadFirestore || !firestore || !user?.uid) return null;
+    if (!firestore || !user?.uid) return null;
     const ref = collection(firestore, 'orders');
     return query(
       ref,
@@ -81,16 +77,16 @@ export default function ActivityPage() {
       orderBy('createdAt', 'desc'),
       limit(10),
     );
-  }, [canReadFirestore, firestore, user?.uid]);
+  }, [firestore, user?.uid]);
 
   const { data: listings, isLoading: loadingListings } =
-    useCollection<ListingDoc>(canReadFirestore ? listingsQuery : null);
+    useCollection<ListingDoc>(listingsQuery);
   const { data: isoPosts, isLoading: loadingIso } =
-    useCollection<any>(canReadFirestore ? isoQuery : null);
+    useCollection<any>(isoQuery);
   const { data: orders, isLoading: loadingOrders } =
-    useCollection<OrderDoc>(canReadFirestore ? ordersQuery : null);
+    useCollection<OrderDoc>(ordersQuery);
 
-  if (authLoading) return null;
+  if (loading) return null;
   if (!user) {
     return (
       <AppLayout>
@@ -110,7 +106,6 @@ export default function ActivityPage() {
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
           My Activity
         </h1>
-
         {/* Listings */}
         <Card>
           <CardHeader>
@@ -159,7 +154,6 @@ export default function ActivityPage() {
             ))}
           </CardContent>
         </Card>
-
         {/* ISO24 */}
         <Card>
           <CardHeader>
@@ -196,7 +190,6 @@ export default function ActivityPage() {
             ))}
           </CardContent>
         </Card>
-
         {/* Orders */}
         <Card>
           <CardHeader>
@@ -251,5 +244,6 @@ export default function ActivityPage() {
     </AppLayout>
   );
 }
+
 
 

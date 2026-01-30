@@ -66,7 +66,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         try {
             // Rule: Cart can only contain items from one store
             if (storeId && storeId !== listing.storeId) {
-                throw new Error('Your cart can only contain items from one store at a time. Please clear your cart or complete your existing purchase first.');
+                throw new Error('You can only add items from one store at a time. Please finish or clear your current cart before shopping from another store.');
             }
 
             // If cart is empty, set the storeId
@@ -83,7 +83,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     const newQuantity = existingItem.quantity + quantity;
 
                     if (newQuantity > listing.quantityAvailable) {
-                        throw new Error(`You can't add more than ${listing.quantityAvailable} of this item to your cart.`);
+                        throw new Error(`You can only add up to ${listing.quantityAvailable} of this item to your cart.`);
                     }
 
                     existingItem.quantity = newQuantity;
@@ -94,7 +94,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     return newItems;
                 } else {
                     if (quantity > listing.quantityAvailable) {
-                        throw new Error(`You can't add more than ${listing.quantityAvailable} of this item to your cart.`);
+                        throw new Error(`You can only add up to ${listing.quantityAvailable} of this item to your cart.`);
                     }
                     // Add new item to cart
                     const newItem: CartItem = {
@@ -182,7 +182,7 @@ export const useCart = () => {
     const context = useContext(CartContext);
     if (context === undefined) {
         // Production: User-friendly error
-        throw new Error('Cart error: This feature must be used within a CartProvider. Please contact support if this persists.');
+        throw new Error('Cart error: Something went wrong with your cart. Please refresh the page or contact support if this keeps happening.');
     }
     return context;
 };

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { SidebarTrigger } from '../ui/sidebar';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { Search } from 'lucide-react';
+import { Search, MessageSquare } from 'lucide-react';
 
 import { useAuth } from '@/hooks/use-auth';
 import {
@@ -56,40 +56,33 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-30 border-b bg-muted">
-      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2 md:flex-row md:items-center md:justify-between md:px-6 lg:px-8">
-        {/* Row 1: menu + logo (mobile stacks, desktop just left side) */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            {/* MOBILE: red menu button for sidebar */}
-            <SidebarTrigger
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white shadow-[0_6px_0_#7f1010] active:translate-y-1 active:shadow-[0_0px_0_#7f1010] transition-all md:hidden"
-            >
-              <span className="flex flex-col gap-1">
-                <span className="h-0.5 w-5 rounded-full bg-white" />
-                <span className="h-0.5 w-5 rounded-full bg-white" />
-                <span className="h-0.5 w-5 rounded-full bg-white" />
-              </span>
-            </SidebarTrigger>
-
-            {/* Logo */}
-            <Link href="/" className="flex items-center">
-              <span className="mr-1 md:hidden">
-                <Logo iconOnly />
-              </span>
-              <span className="mr-1 hidden md:block">
-                <Logo />
-              </span>
-            </Link>
-          </div>
-          {/* Notification Bell */}
-          <div className="ml-2 flex items-center">
-            <NotifBell />
-          </div>
+      {/* Messages Icon - fixed very top right of viewport */}
+      <Link
+        href="/messages"
+        aria-label="Messages"
+        className="fixed right-4 top-4 z-50"
+      >
+        <span
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow-[0_4px_0_#7f1010] active:translate-y-1 active:shadow-[0_0px_0_#7f1010] transition-all hover:bg-red-600 focus:outline-none"
+        >
+          <MessageSquare className="h-4 w-4" />
+        </span>
+      </Link>
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2 md:px-6 lg:px-8">
+        {/* Logo and Search Bar: tightly grouped */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <Link href="/" className="flex items-center">
+            <span className="md:hidden">
+              <Logo iconOnly />
+            </span>
+            <span className="hidden md:block">
+              <Logo />
+            </span>
+          </Link>
         </div>
-
-        {/* Row 2: full-width search bar (on md+ this sits to the right) */}
-        <div className="flex w-full items-center gap-3">
-          <div className="relative flex-1">
+        {/* Center: Search Bar */}
+        <div className="flex-1 flex items-center justify-center gap-1">
+          <div className="relative w-full max-w-xl">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
@@ -100,16 +93,18 @@ export default function Header() {
               onKeyDown={onKeyDown}
             />
           </div>
-
-          {/* Red Nintendo search button */}
           <Button
             type="button"
             aria-label="Search"
             onClick={runSearch}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white shadow-[0_6px_0_#7f1010] active:translate-y-1 active:shadow-[0_0px_0_#7f1010] transition-all"
+            className="ml-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white shadow-[0_6px_0_#7f1010] active:translate-y-1 active:shadow-[0_0px_0_#7f1010] transition-all"
           >
             <Search className="h-4 w-4" />
           </Button>
+        </div>
+        {/* Right: Notification Bell */}
+        <div className="flex items-center ml-4">
+          <NotifBell />
         </div>
       </div>
     </header>

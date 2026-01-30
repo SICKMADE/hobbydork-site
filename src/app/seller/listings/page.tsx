@@ -1,6 +1,7 @@
 
 "use client";
 import Header from "@/components/layout/Header";
+import "@/styles/grid-bg-dark.css";
 
 import { useEffect, useState } from "react";
 import type { Listing } from "@/lib/types";
@@ -16,10 +17,12 @@ import {
 } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import AppLayout from "@/components/layout/AppLayout";
 import SellerSidebar from "@/components/dashboard/SellerSidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
+import { Eye, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
@@ -59,7 +62,7 @@ export default function SellerListings() {
       toast({
         title: "Update failed",
         description: getFriendlyErrorMessage(e) || "Could not update listing visibility.",
-        variant: "destructive",
+        variant: "default",
       });
     }
   };
@@ -75,7 +78,7 @@ export default function SellerListings() {
       toast({
         title: "This listing is sold",
         description: getFriendlyErrorMessage(null) || "Sold listings can't be unpublished.",
-        variant: "destructive",
+        variant: "default",
       });
       return;
     }
@@ -85,39 +88,56 @@ export default function SellerListings() {
   };
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen bg-background">
-        <SellerSidebar />
-        <main className="flex-1 p-6 max-w-5xl mx-auto">
-          <Header />
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="text-2xl font-extrabold tracking-tight">Your Listings</h1>
-            <Button asChild size="sm" className="comic-button">
+    <AppLayout sidebarComponent={<SellerSidebar />}>
+      <main className="flex-1 p-6 max-w-6xl mx-auto bg-grid-dark">
+        <Header />
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-extrabold tracking-tight">Your Listings</h1>
+          <Button asChild size="sm" className="comic-button">
+            <Link href="/listings/create">Create Listing</Link>
+          </Button>
+        </div>
+        <div className="text-sm text-muted-foreground mb-4">
+          Click a listing card to toggle Publish / Private.
+        </div>
+        {listings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="text-2xl font-bold mb-2">No listings yet</div>
+            <div className="text-muted-foreground mb-4">Create your first listing to start selling!</div>
+            <Button asChild size="lg" className="comic-button">
               <Link href="/listings/create">Create Listing</Link>
             </Button>
           </div>
-          <div className="text-sm text-muted-foreground mb-4">
-            Click a listing card to toggle Publish / Private.
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {listings.map((l) => {
               const state = String((l as any).state || (l as any).status || "");
               const upper = state.toUpperCase();
               const isPublic = upper === "ACTIVE";
+              const imageUrl = l.primaryImageUrl || l.imageUrls?.[0] || "/default-avatar/storefront.png";
               return (
                 <button
                   key={String(l.id)}
                   type="button"
                   onClick={() => togglePublish(l)}
-                  className="text-left rounded-xl border-2 border-black bg-card/80 hover:bg-card transition-colors shadow-[3px_3px_0_rgba(0,0,0,0.25)]"
+                  className="text-left rounded-2xl border-2 border-black bg-card/80 hover:bg-blue-100/10 transition-colors shadow-[4px_4px_0_rgba(0,0,0,0.18)] group overflow-hidden"
                 >
-                  <div className="p-4 space-y-2">
+                  <div className="flex flex-col gap-2">
+                    <div className="relative w-full h-40 bg-muted rounded-xl overflow-hidden mb-2">
+                      <Image
+                        src={imageUrl}
+                        alt={l.title || "Listing image"}
+                        fill
+                        className="object-cover object-center group-hover:scale-105 transition-transform duration-200"
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                      />
+                    </div>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="font-extrabold leading-snug line-clamp-2">
                           {l.title || "Untitled listing"}
                         </div>
-                        <div className="mt-1 text-sm font-bold text-primary">
+                        <div className="mt-1 text-xl font-extrabold text-blue-400">
                           ${Number((l as any).price || 0).toFixed(2)}
                         </div>
                       </div>
@@ -125,31 +145,31 @@ export default function SellerListings() {
                         variant="outline"
                         className={
                           isPublic
-                            ? "border-green-500/40 bg-muted/40"
-                            : "border-red-500/40 bg-muted/40"
+                            ? "border-green-500/60 bg-green-100/30 text-green-700"
+                            : "border-blue-500/60 bg-blue-100/30 text-blue-700"
                         }
                       >
                         {isPublic ? "Published" : "Private"}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mt-2">
                       <Button
                         asChild
                         size="sm"
                         variant="outline"
-                        className="border-2 border-black bg-muted/40 hover:bg-muted/60"
+                        className="border-2 border-black bg-muted/40 hover:bg-muted/60 flex items-center gap-1"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Link href={`/listings/${l.id}`}>View</Link>
+                        <Link href={`/listings/${l.id}`}><Eye className="w-4 h-4 mr-1" />View</Link>
                       </Button>
                       <Button
                         asChild
                         size="sm"
                         variant="outline"
-                        className="border-2 border-black bg-muted/40 hover:bg-muted/60"
+                        className="border-2 border-black bg-muted/40 hover:bg-muted/60 flex items-center gap-1"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Link href={`/listings/${l.id}/edit`}>Edit</Link>
+                        <Link href={`/listings/${l.id}/edit`}><Pencil className="w-4 h-4 mr-1" />Edit</Link>
                       </Button>
                       <Button
                         size="sm"
@@ -168,8 +188,8 @@ export default function SellerListings() {
               );
             })}
           </div>
-        </main>
-      </div>
-    </SidebarProvider>
+        )}
+      </main>
+    </AppLayout>
   );
 }

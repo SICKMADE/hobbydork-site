@@ -1,0 +1,6 @@
+.bronze-seller-badge {
+  background: linear-gradient(90deg, #fff4e6 0%, #ffb347 40%, #b87333 60%, #fff4e6 100%);
+  color: #7c4700;
+  border-color: #b87333;
+  box-shadow: 0 1px 4px 0 #b8733388, 0 0.5px 0 #fff inset;
+}

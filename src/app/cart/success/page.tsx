@@ -1,13 +1,19 @@
 "use client";
 
-import AppLayout from "@/components/layout/AppLayout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+import { useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
 import Image from "next/image";
+import AppLayout from "@/components/layout/AppLayout";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function CartSuccessPage() {
+  const { refreshProfile } = useAuth();
+  useEffect(() => {
+    refreshProfile();
+  }, [refreshProfile]);
   return (
     <AppLayout>
       <div

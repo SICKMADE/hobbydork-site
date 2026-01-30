@@ -1,11 +1,10 @@
-
 'use client';
 import AppLayout from "@/components/layout/AppLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Form } from "@/components/ui/form";
+import BuyerAddressForm from "@/components/dashboard/BuyerAddressForm";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
@@ -17,11 +16,16 @@ import { useToast } from "@/hooks/use-toast";
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
+import { FormField } from "@/components/ui/form";
+import { FormItem } from "@/components/ui/form";
+import { FormLabel } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { FormMessage } from "@/components/ui/form";
+import { FormControl } from "@/components/ui/form";
 
 const shippingAddressSchema = z.object({
     name: z.string().min(1, "Name required"),
     address1: z.string().min(1, "Address required"),
-    address2: z.string().optional(),
     city: z.string().min(1, "City required"),
     state: z.string().min(1, "State required"),
     zip: z.string().min(1, "ZIP required"),
@@ -62,7 +66,24 @@ export default function SettingsPage() {
         setIsSubmitting(true);
         try {
             const userRef = doc(firestore, 'users', user.uid);
-            await updateDoc(userRef, values);
+            // Deep sanitize: remove undefined at top level and inside shippingAddress
+            const sanitizedValues = Object.fromEntries(
+                Object.entries(values).filter(([k, v]) => v !== undefined || k !== 'shippingAddress')
+            );
+            if ('shippingAddress' in sanitizedValues && sanitizedValues.shippingAddress === undefined) {
+                delete sanitizedValues.shippingAddress;
+            } else if (sanitizedValues.shippingAddress) {
+                const filtered = Object.fromEntries(
+                    Object.entries(sanitizedValues.shippingAddress).filter(([_, v]) => v !== undefined)
+                );
+                if (typeof sanitizedValues.shippingAddress === 'object' && sanitizedValues.shippingAddress !== null) {
+                    sanitizedValues.shippingAddress = {
+                        ...sanitizedValues.shippingAddress,
+                        ...filtered,
+                    } as z.infer<typeof shippingAddressSchema>;
+                }
+            }
+            await updateDoc(userRef, sanitizedValues);
             toast({
                 title: "Settings Saved",
                 description: "Your settings have been updated successfully.",
@@ -119,68 +140,7 @@ export default function SettingsPage() {
                                 <FormField control={form.control} name="notifySpotlight" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4"><div className="space-y-0.5"><FormLabel className="text-base">Store Spotlight</FormLabel><FormMessage /></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
                             </CardContent>
                         </Card>
-                        <Card>
-                            <CardHeader>
-                        // ...existing code...
-                                <CardTitle>Shipping Address</CardTitle>
-                                <CardDescription>Your default shipping address will be used for purchases and order fulfillment. You can update it anytime.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <FormField control={form.control} name="shippingAddress.name" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Name</FormLabel>
-                                        <FormControl><Input {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={form.control} name="shippingAddress.address1" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Address</FormLabel>
-                                        <FormControl><Input {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={form.control} name="shippingAddress.address2" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Address 2</FormLabel>
-                                        <FormControl><Input {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormField control={form.control} name="shippingAddress.city" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>City</FormLabel>
-                                            <FormControl><Input {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="shippingAddress.state" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>State</FormLabel>
-                                            <FormControl><Input {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormField control={form.control} name="shippingAddress.zip" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>ZIP</FormLabel>
-                                            <FormControl><Input {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="shippingAddress.country" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Country</FormLabel>
-                                            <FormControl><Input {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} />
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <BuyerAddressForm />
                         <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting ? 'Saving...' : 'Save All Settings'}
                         </Button>

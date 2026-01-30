@@ -78,11 +78,11 @@ exports.stripeWebhook = (0, https_1.onRequest)({ secrets: [STRIPE_SECRET, STRIPE
         // Spotlight purchase automation
         const spotlightStoreId = session.metadata?.spotlightStoreId;
         if (spotlightStoreId) {
-            // Get the store doc
-            const storeSnap = await db.collection("stores").where("storeId", "==", spotlightStoreId).limit(1).get();
+            // Get the storefront doc
+            const storeSnap = await db.collection("storefronts").where("id", "==", spotlightStoreId).limit(1).get();
             if (storeSnap.empty) {
-                console.error("Store not found for spotlight", spotlightStoreId);
-                res.status(404).send("Store not found");
+                console.error("Storefront not found for spotlight", spotlightStoreId);
+                res.status(404).send("Storefront not found");
                 return;
             }
             const storeDoc = storeSnap.docs[0];
@@ -102,7 +102,7 @@ exports.stripeWebhook = (0, https_1.onRequest)({ secrets: [STRIPE_SECRET, STRIPE
                 active: true,
                 createdAt: now,
             });
-            // Update store doc
+            // Update storefront doc
             await storeDoc.ref.update({
                 isSpotlighted: true,
                 spotlightUntil: endAt,

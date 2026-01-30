@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -24,6 +23,11 @@ import {
   setDoc,
   updateDoc,
   serverTimestamp,
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import type { UserStatus } from "@/lib/types";
 
@@ -472,4 +476,30 @@ function useProvideAuth(): AuthContextType {
     resendVerification,
     refreshProfile,
   };
+}
+
+// Utility: Check all sellers for overdue unshipped orders and flag their profile
+export async function flagOverdueSellers() {
+  const db = getFirestore();
+  // Find all orders that are PAID and overdue (older than 2 business days)
+  const ordersRef = collection(db, 'orders');
+  const now = Date.now();
+  const twoBusinessDaysMs = 2 * 24 * 60 * 60 * 1000;
+  const q = query(ordersRef, where('state', '==', 'PAID'));
+  const snap = await getDocs(q);
+  const overdueSellers = new Set();
+  snap.forEach(docSnap => {
+    const data = docSnap.data();
+    const created = data.createdAt?.seconds ? data.createdAt.seconds * 1000 : new Date(data.createdAt).getTime();
+    if (now - created > twoBusinessDaysMs) {
+      overdueSellers.add(data.sellerUid);
+    }
+  });
+  // Flag each seller profile
+  for (const sellerUid of overdueSellers) {
+    if (typeof sellerUid === 'string') {
+      const userRef = doc(db, 'users', sellerUid);
+      await updateDoc(userRef, { hasOverdueShipments: true });
+    }
+  }
 }

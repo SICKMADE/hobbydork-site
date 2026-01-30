@@ -1,0 +1,55 @@
+.retroBannerWrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.retroBanner {
+  display: inline-block;
+  padding: 0.5rem 1.5rem;
+  background: #fbbf24;
+  color: #78350f;
+  font-family: Riffic, cursive;
+  letter-spacing: 0.05em;
+  border: 8px ridge #deb887;
+  border-radius: 0.75rem;
+  box-shadow: 0 6px 24px 0 rgba(160,82,45,0.18), 0 2px 8px 0 #deb887;
+  position: relative;
+  min-width: 220px;
+  max-width: 100%;
+  text-align: center;
+  animation: retroPulse 1.5s infinite alternate;
+}
+
+@keyframes retroPulse {
+  0% { box-shadow: 0 6px 24px 0 rgba(160,82,45,0.18), 0 2px 8px 0 #deb887; }
+  100% { box-shadow: 0 12px 32px 0 rgba(160,82,45,0.28), 0 4px 16px 0 #deb887; }
+}
+
+.darkBanner {
+  width: 100%;
+  text-align: center;
+  padding: 0.25rem 0;
+  margin-bottom: 0.25rem;
+  background: #0ea5e9;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  box-shadow: 0 0 16px #0ea5e9;
+  border-radius: 0.5rem;
+}
+
+.hobbyshopBanner {
+  width: 100%;
+  text-align: center;
+  padding: 0.25rem 0;
+  margin-bottom: 0.25rem;
+  background: #ffe066;
+  color: #e11d48;
+  font-family: 'Comic Sans MS', 'Comic Sans', Riffic, cursive, sans-serif;
+  font-weight: 700;
+  border: 3px dashed #e11d48;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 12px #ffe066;
+}

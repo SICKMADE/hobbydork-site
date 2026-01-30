@@ -104,7 +104,7 @@ function isLikelyPostUrl(platform: Platform, url: string) {
 }
 
 export default function GiveawayPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, profile } = useAuth();
   const { toast } = useToast();
 
   const [config, setConfig] = React.useState<GiveawayConfig | null>(null);
@@ -330,67 +330,65 @@ export default function GiveawayPage() {
             <CardTitle>Submit an entry</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Platform</Label>
-              <Select value={platform} onValueChange={(v) => setPlatform(v as Platform)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a platform" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PLATFORM_OPTIONS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">{platformMeta?.help}</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>AOPO link to share</Label>
-              <div className="flex gap-2">
-                <Input readOnly value={targetUrl} />
-                <Button type="button" variant="outline" onClick={copyLink}>
-                  Copy
-                </Button>
-                <Button type="button" onClick={openShare}>
-                  Share
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Tip: include a quick note about why you like the app.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Link to your post</Label>
-              <Input
-                value={postUrl}
-                onChange={(e) => setPostUrl(e.target.value)}
-                placeholder="https://..."
-              />
-              <p className="text-xs text-muted-foreground">
-                One entry per platform for this giveaway.
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <Button type="button" onClick={submitEntry} disabled={submitting || !isOpen}>
-                {submitting ? "Submitting…" : "Submit Entry"}
-              </Button>
-            </div>
-
-            {!isOpen && (
+            {(!user || !profile || !profile.emailVerified || profile.status !== "ACTIVE") ? (
               <div className="text-sm text-muted-foreground">
-                Entries are currently closed.
+                You must verify your email and have an active account to enter giveaways.
               </div>
-            )}
-
-            {!user && (
-              <div className="text-sm text-muted-foreground">
-                You’ll need to sign in to submit.
-              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label>Platform</Label>
+                  <Select value={platform} onValueChange={(v) => setPlatform(v as Platform)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a platform" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PLATFORM_OPTIONS.map((p) => (
+                        <SelectItem key={p.value} value={p.value}>
+                          {p.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">{platformMeta?.help}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>AOPO link to share</Label>
+                  <div className="flex gap-2">
+                    <Input readOnly value={targetUrl} />
+                    <Button type="button" variant="outline" onClick={copyLink}>
+                      Copy
+                    </Button>
+                    <Button type="button" onClick={openShare}>
+                      Share
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Tip: include a quick note about why you like the app.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Link to your post</Label>
+                  <Input
+                    value={postUrl}
+                    onChange={(e) => setPostUrl(e.target.value)}
+                    placeholder="https://..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    One entry per platform for this giveaway.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" onClick={submitEntry} disabled={submitting || !isOpen}>
+                    {submitting ? "Submitting…" : "Submit Entry"}
+                  </Button>
+                </div>
+                {!isOpen && (
+                  <div className="text-sm text-muted-foreground">
+                    Entries are currently closed.
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

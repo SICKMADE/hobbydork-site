@@ -28,9 +28,18 @@ export function useCollection<T = DocumentData>(
   useEffect(() => {
     // 🔒 HARD GATES — prevent subscription unless user is verified and active
     if (authLoading) return;
-    if (!user) return;
-    //
-    if (profile?.status !== 'ACTIVE') return;
+    if (!user) {
+      setData(null);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+    if (profile?.status !== 'ACTIVE') {
+      setData(null);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
     if (!queryRef) {
       if (process.env.NODE_ENV !== 'production') {
         // eslint-disable-next-line no-console

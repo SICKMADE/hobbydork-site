@@ -52,6 +52,14 @@ export default function LayoutsPage() {
     <AppLayout>
       <div className="max-w-xl mx-auto p-6 space-y-8">
         <h1 className="text-2xl font-bold mb-2">Custom Store Layouts</h1>
+        <p className="mb-4 text-base text-muted-foreground">
+          <b>Layouts</b> change the structure and arrangement of your store (such as grid, showcase, minimal, etc). To change the colors, fonts, and style, visit the <a href="/hobbydork-store/themes" className="underline text-primary font-semibold">Store Themes</a> page.
+        </p>
+        <div className="mb-6">
+          <a href="/hobbydork-store/themes">
+            <Button variant="secondary" className="w-full font-bold">Go to Store Themes</Button>
+          </a>
+        </div>
         {layoutOptions.map(layout => (
           <Card key={layout.id} className="mb-4">
             <CardHeader>

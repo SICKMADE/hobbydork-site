@@ -52,7 +52,8 @@ Object.defineProperty(exports, "stripeWebhook", { enumerable: true, get: functio
 const functions = __importStar(require("firebase-functions"));
 // Use environment variable for Stripe secret, fallback to functions.config for legacy support
 const config = typeof functions.config === "object" ? functions.config : {};
-const stripeSecret = process.env.STRIPE_SECRET || (config.stripe && config.stripe.secret); /* ================= HELPERS ================= */
+const stripeSecret = process.env.STRIPE_SECRET || (config.stripe && config.stripe.secret);
+/* ================= HELPERS ================= */
 function getStripeInstance() {
     if (!stripeSecret) {
         throw new https_1.HttpsError("internal", "Stripe secret not set in Firebase config");
@@ -251,12 +252,12 @@ exports.finalizeSeller = (0, https_1.onCall)(async (request) => {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "");
-    const storeRef = firebaseAdmin_1.db.collection("stores").doc(storeId);
+    const storeRef = firebaseAdmin_1.db.collection("storefronts").doc(storeId);
     const storeSnap = await storeRef.get();
     if (!storeSnap.exists) {
         await storeRef.set({
             id: storeId,
-            ownerId: uid,
+            ownerUid: uid,
             displayName,
             createdAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
             avatar: user.photoURL || "/hobbydork-head.png",

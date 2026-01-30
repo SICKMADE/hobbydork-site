@@ -8,6 +8,7 @@ import EmailVerificationGate from '@/components/auth/EmailVerificationGate';
 import { CartProvider } from '@/hooks/use-cart';
 import { VaultProvider } from '@/lib/vault';
 import { Toaster } from '@/components/ui/toaster';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 export const metadata: Metadata = {
   title: 'HobbyDork',
@@ -28,7 +29,9 @@ export default function RootLayout({
             <EmailVerificationGate>
               <CartProvider>
                 <VaultProvider>
-                  {children}
+                  <SidebarProvider>
+                    {children}
+                  </SidebarProvider>
                   <Toaster />
                 </VaultProvider>
               </CartProvider>

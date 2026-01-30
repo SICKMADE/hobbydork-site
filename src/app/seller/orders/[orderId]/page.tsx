@@ -1,3 +1,4 @@
+  // (Moved inside SellerOrderDetail component)
 
 "use client";
 // Add type declaration for window.__orderData
@@ -17,6 +18,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { sendNotification } from "@/lib/notify";
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
 import { ToastAction } from "@/components/ui/toast";
@@ -26,6 +28,24 @@ export default function SellerOrderDetail({ params }: any) {
   const { id: orderId } = params;
   const { toast } = useToast();
   const [order, setOrder] = useState<any>(null);
+
+  // Remind seller to ship if not shipped within 2 business days
+  useEffect(() => {
+    if (order && order.state === "PAID" && user && user.uid === order.sellerUid && order.createdAt) {
+      const created = order.createdAt.seconds ? order.createdAt.seconds * 1000 : new Date(order.createdAt).getTime();
+      const now = Date.now();
+      const twoBusinessDaysMs = 2 * 24 * 60 * 60 * 1000;
+      if (now - created > twoBusinessDaysMs && !order._remindedSellerToShip) {
+        sendNotification(order.sellerUid, {
+          type: 'ORDER',
+          title: 'Reminder: Ship Your Item',
+          body: `Please ship your sold item (${order.items?.[0]?.title ?? 'an item'}) within 2 business days!`,
+          relatedId: order.id,
+        });
+        // Optionally: set a flag in Firestore to avoid duplicate reminders
+      }
+    }
+  }, [order, user]);
 
   useEffect(() => {
     if (!user || !db) return;
@@ -58,6 +78,20 @@ export default function SellerOrderDetail({ params }: any) {
 
   const isSeller = order.sellerUid === user.uid;
 
+  // Notify seller on sale (order PAID)
+  useEffect(() => {
+    if (order && order.state === "PAID" && user && user.uid === order.sellerUid && !order._notifiedSellerOnSale) {
+      sendNotification(order.sellerUid, {
+        type: 'ORDER',
+        title: 'New Sale!',
+        body: `You sold: ${order.items?.[0]?.title ?? 'an item'}. Please ship it!`,
+        relatedId: order.id,
+      });
+      // Optionally: set a flag in Firestore to avoid duplicate notifications
+    }
+  }, [order, user]);
+
+  // Notify buyer on shipped
   async function markShipped(trackingNumber: string, carrier: string) {
     if (!db) return;
     try {
@@ -68,6 +102,15 @@ export default function SellerOrderDetail({ params }: any) {
         shippedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      // Notify buyer
+      if (order && order.buyerUid) {
+        await sendNotification(order.buyerUid, {
+          type: 'ORDER',
+          title: 'Your order has shipped!',
+          body: `Order ${order.items?.[0]?.title ?? order.id} has shipped. Track your package!`,
+          relatedId: order.id,
+        });
+      }
       toast({
         title: "Order marked as shipped",
         description: `Tracking number ${trackingNumber} (${carrier}) sent to buyer.`,
@@ -138,32 +181,9 @@ export default function SellerOrderDetail({ params }: any) {
             <div className="mt-2 flex flex-col items-center">
               <span className="font-semibold text-base text-blue-700">Tracking:</span>
               <span className="text-sm text-muted-foreground mb-1">{order.carrier}</span>
-              {(() => {
-                const carrier = order.carrier?.toLowerCase();
-                const tracking = order.trackingNumber;
-                let url = null;
-                if (carrier === "usps") {
-                  url = `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tracking}`;
-                } else if (carrier === "ups") {
-                  url = `https://www.ups.com/track?tracknum=${tracking}`;
-                } else if (carrier === "fedex") {
-                  url = `https://www.fedex.com/fedextrack/?tracknumbers=${tracking}`;
-                }
-                return url ? (
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener"
-                    className="block w-full xs:w-auto px-4 py-2 rounded bg-blue-600 text-white font-bold shadow hover:bg-blue-700 transition-all text-base xs:text-lg border-2 border-blue-800 text-center mt-1 tracking-wide"
-                  >
-                    {tracking}
-                  </a>
-                ) : (
-                  <span className="inline-block px-4 py-2 rounded bg-gray-200 text-gray-700 font-bold text-lg border-2 border-gray-400 mt-1 tracking-wide">
-                    {tracking}
-                  </span>
-                );
-              })()}
+              <span className="inline-block px-4 py-2 rounded bg-gray-200 text-gray-700 font-bold text-lg border-2 border-gray-400 mt-1 tracking-wide">
+                {order.trackingNumber}
+              </span>
             </div>
           )}
           {/* Shipping Address (always show) */}
@@ -207,7 +227,7 @@ export default function SellerOrderDetail({ params }: any) {
           </div>
           {/* SELLER FULFILLMENT */}
           {isSeller && order.state === "PAID" && (
-            <SellerFulfillForm onSubmit={markShipped} />
+            <SellerFulfillForm onSubmit={markShipped} params={params} />
           )}
         </div>
       </div>
@@ -215,46 +235,104 @@ export default function SellerOrderDetail({ params }: any) {
   );
 }
 
-function SellerFulfillForm({ onSubmit }: any) {
+
+
+function SellerFulfillForm({ onSubmit, params }: any) {
   // Prefill from order data if available
   const order = typeof window !== "undefined" ? (window.__orderData || {}) : {};
   const [tracking, setTracking] = useState("");
   const [carrier, setCarrier] = useState("");
-  const [labelPurchased, setLabelPurchased] = useState(false);
   const [length, setLength] = useState(order.items?.[0]?.packageLength || "");
   const [width, setWidth] = useState(order.items?.[0]?.packageWidth || "");
   const [height, setHeight] = useState(order.items?.[0]?.packageHeight || "");
   const [weight, setWeight] = useState(order.items?.[0]?.packageWeight || "");
-  const [labelFile, setLabelFile] = useState<File|null>(null);
+  const [rates, setRates] = useState<any[]>([]);
+  const [loadingRates, setLoadingRates] = useState(false);
+  const [selectedRate, setSelectedRate] = useState<any>(null);
   const [labelUrl, setLabelUrl] = useState<string>("");
+  const [labelPurchased, setLabelPurchased] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [purchasing, setPurchasing] = useState(false);
 
-  function handlePurchaseLabel() {
-    // Redirect to carrier shipping site with package info
-    let url = "";
-    const pkgDims = `Length: ${length} in, Width: ${width} in, Height: ${height} in, Weight: ${weight} oz`;
-    let address = "";
-    if (order.shippingAddress) {
-      address = `${order.shippingAddress.name || ""}, ${order.shippingAddress.line1 || ""}, ${order.shippingAddress.line2 || ""}, ${order.shippingAddress.city || ""}, ${order.shippingAddress.state || ""} ${order.shippingAddress.postalCode || ""}, ${order.shippingAddress.country || ""}`;
-    }
-    if (carrier.toLowerCase() === "usps") {
-      url = "https://www.usps.com/ship/";
-    } else if (carrier.toLowerCase() === "ups") {
-      url = "https://www.ups.com/ship/";
-    } else if (carrier.toLowerCase() === "fedex") {
-      url = "https://www.fedex.com/en-us/shipping.html";
-    }
-    if (url) {
-      window.open(url, "_blank");
-      setLabelPurchased(true);
+  async function fetchRates() {
+    setLoadingRates(true);
+    setError("");
+    setRates([]);
+    setSelectedRate(null);
+    setLabelUrl("");
+    setLabelPurchased(false);
+    try {
+      // Build Shippo shipment request
+      const toAddress = {
+        name: order.shippingAddress?.name || "",
+        street1: order.shippingAddress?.line1 || "",
+        city: order.shippingAddress?.city || "",
+        state: order.shippingAddress?.state || "",
+        zip: order.shippingAddress?.postalCode || "",
+        country: order.shippingAddress?.country || "US",
+      };
+      const fromAddress = {
+        name: order.sellerName || "Seller",
+        street1: order.sellerAddress?.line1 || "123 Main St",
+        city: order.sellerAddress?.city || "",
+        state: order.sellerAddress?.state || "",
+        zip: order.sellerAddress?.postalCode || "",
+        country: order.sellerAddress?.country || "US",
+      };
+      const parcel = {
+        length: length,
+        width: width,
+        height: height,
+        distance_unit: "in",
+        weight: weight,
+        mass_unit: "oz",
+      };
+      const res = await fetch("/api/shippo-create-shipment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toAddress, fromAddress, parcel }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to fetch rates");
+      setRates(data.rates || []);
+    } catch (e: any) {
+      setError(e.message || "Error fetching rates");
+    } finally {
+      setLoadingRates(false);
     }
   }
 
-  function handleLabelUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] || null;
-    if (file) {
-      setLabelFile(file);
-      const url = URL.createObjectURL(file);
-      setLabelUrl(url);
+  async function purchaseLabel() {
+    if (!selectedRate) return;
+    setError("");
+    setPurchasing(true);
+    try {
+      // Purchase label from Shippo
+      const res = await fetch("/api/shippo-purchase-label", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rateObjectId: selectedRate.object_id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to purchase label");
+      setLabelUrl(data.labelUrl);
+      setTracking(data.trackingNumber);
+      setCarrier(data.carrier);
+      setLabelPurchased(true);
+      // Save label/tracking to Firestore order
+      if (db && params?.orderId) {
+        await updateDoc(doc(db, "orders", params.orderId), {
+          labelUrl: data.labelUrl,
+          trackingNumber: data.trackingNumber,
+          carrier: data.carrier,
+          shippedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+    } catch (e: any) {
+      setError(e.message || "Error purchasing label");
+    } finally {
+      setPurchasing(false);
     }
   }
 
@@ -311,58 +389,51 @@ function SellerFulfillForm({ onSubmit }: any) {
           placeholder="Shipping Address"
         />
       </div>
-      <label htmlFor="carrier" className="block text-xs text-muted-foreground mb-1">Shipping Carrier:</label>
-      <select
-        id="carrier"
-        className="border p-2 rounded w-full text-sm xs:text-base mb-2"
-        value={carrier}
-        onChange={(e) => setCarrier(e.target.value)}
-        disabled={labelPurchased}
-        aria-label="Shipping Carrier"
-        title="Shipping Carrier"
-      >
-        <option value="">Choose Carrier</option>
-        <option value="USPS">USPS</option>
-        <option value="UPS">UPS</option>
-        <option value="FedEx">FedEx</option>
-      </select>
-      <button
-        className={`w-full sm:w-auto px-4 py-2 rounded text-sm xs:text-base ${labelPurchased ? 'bg-green-600 text-white' : 'bg-indigo-600 text-white'}`}
-        onClick={handlePurchaseLabel}
-        disabled={labelPurchased || !carrier || !length || !width || !height || !weight}
-        type="button"
-      >
-        {labelPurchased ? 'Shipping Label Purchased' : 'Purchase Shipping Label'}
-      </button>
-      {/* Shipping Label Upload/Download */}
-      {labelPurchased && (
-        <div className="mt-4">
-          <label className="block text-xs text-muted-foreground mb-1">Upload Shipping Label (PDF or Image):</label>
-          <input type="file" accept="application/pdf,image/*" onChange={handleLabelUpload} aria-label="Upload Shipping Label" title="Upload Shipping Label" />
-          {labelUrl && (
-            <div className="mt-2">
-              <a href={labelUrl} download className="text-blue-600 underline">Download Shipping Label</a>
-            </div>
-          )}
-        </div>
-      )}
-      <input
-        className="border p-2 rounded w-full mt-2 text-sm xs:text-base"
-        placeholder="Tracking Number"
-        value={tracking}
-        onChange={(e) => setTracking(e.target.value)}
-        disabled={!labelPurchased}
-      />
-      <button
-        onClick={() => onSubmit(tracking, carrier)}
-        className={`w-full sm:w-auto px-4 py-2 rounded text-sm xs:text-base ${canMarkShipped ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-500'}`}
-        disabled={!canMarkShipped}
-        type="button"
-      >
-        Mark as Shipped
-      </button>
+      {/* Shippo rates fetch */}
       {!labelPurchased && (
-        <p className="text-xs text-muted-foreground mt-1">Enter package details and purchase a shipping label before entering tracking info.</p>
+        <button
+          className="w-full sm:w-auto px-4 py-2 rounded text-sm xs:text-base bg-indigo-600 text-white"
+          onClick={fetchRates}
+          disabled={loadingRates || !length || !width || !height || !weight}
+          type="button"
+        >
+          {loadingRates ? 'Fetching Rates…' : 'Get Shipping Rates'}
+        </button>
+      )}
+      {/* Show rates if available */}
+      {!labelPurchased && rates.length > 0 && (
+        <div className="mt-2">
+          <label className="block text-xs text-muted-foreground mb-1">Select Shipping Rate:</label>
+          <select
+            id="shipping-rate-select"
+            className="border p-2 rounded w-full text-sm xs:text-base mb-2"
+            value={selectedRate?.object_id || ''}
+            onChange={e => {
+              const rate = rates.find(r => r.object_id === e.target.value);
+              setSelectedRate(rate);
+              setCarrier(rate?.provider || '');
+            }}
+            aria-label="Select Shipping Rate"
+            title="Select Shipping Rate"
+          >
+            <option value="">Choose Rate</option>
+            {rates.map(rate => (
+              <option key={rate.object_id} value={rate.object_id}>
+                {rate.provider} {rate.servicelevel?.name} - ${rate.amount} ({rate.estimated_days || '?'} days)
+              </option>
+            ))}
+          </select>
+          <button
+            className="w-full sm:w-auto px-4 py-2 rounded text-sm xs:text-base bg-green-600 text-white"
+            onClick={purchaseLabel}
+            disabled={purchasing || !selectedRate}
+            type="button"
+          >
+            {purchasing ? 'Purchasing Label…' : 'Purchase Label'}
+          </button>
+          {error && <div className="text-xs text-red-600 mt-2 font-semibold">{error}</div>}
+          <p className="text-xs text-muted-foreground mt-1">Enter package details and get rates to purchase a shipping label before entering tracking info.</p>
+        </div>
       )}
     </div>
   );

@@ -1,0 +1,97 @@
+
+.marqueeBannerWrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+
+.marqueeBillboardPosts {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 120px;
+  height: 48px;
+  display: flex;
+  justify-content: space-between;
+  transform: translateX(-50%);
+  z-index: 0;
+}
+.marqueeBillboardPost {
+  width: 18px;
+  height: 100%;
+  background: linear-gradient(180deg, #b0b0b0 0%, #444 100%);
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 2px 8px #2228;
+}
+
+.marqueeBanner {
+  position: relative;
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(180deg, #fffbe9 80%, #f7e6b0 100%);
+  border-radius: 1.25rem;
+  border: 10px solid #b0b0b0;
+  box-shadow:
+    0 8px 32px 0 rgba(215,38,61,0.18),
+    0 2px 8px 0 #ffb400,
+    0 0 0 8px #d7263d,
+    0 0 0 18px #ffb400;
+  min-width: 220px;
+  max-width: 100%;
+  text-align: center;
+  font-family: Oswald, Impact, Arial Black, sans-serif;
+  color: #d7263d;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  z-index: 1;
+}
+/* Billboard effect: posts below the banner */
+
+.marqueeBulbsTop,
+.marqueeBulbsBottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 18px;
+  pointer-events: none;
+}
+
+.marqueeBulbsTop {
+  top: -24px;
+}
+
+.marqueeBulbsBottom {
+  bottom: -24px;
+}
+
+.marqueeBulb {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px 2px #ffb400;
+  opacity: 0.85;
+  animation: marquee-bulb 1.2s linear infinite;
+}
+
+/* Support for data-delay attribute */
+.marqueeBulb[data-delay] {
+  animation-delay: attr(data-delay s);
+}
+
+.marqueeBulbYellow {
+  background: #ffb400;
+}
+
+.marqueeBulbWhite {
+  background: #fff;
+}
+
+@keyframes marquee-bulb {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(2.2); }
+}

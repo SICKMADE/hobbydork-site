@@ -43,7 +43,6 @@ function MainContent({ children, hideSidebar }: { children: React.ReactNode, hid
         !hideSidebar && 'md:ml-64'
       )}
     >
-      <Header />
       <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
         {children}
       </main>
@@ -65,6 +64,8 @@ export default function AppLayout({ children, sidebarComponent }: AppLayoutProps
   return (
     <SidebarProvider>
       <div className="relative min-h-svh bg-background">
+        {/* Always show the global header with search bar */}
+        <Header />
         {!hideSidebar && (
           <Sidebar>
             {sidebarComponent ? sidebarComponent : <SidebarNav />}

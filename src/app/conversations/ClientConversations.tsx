@@ -31,7 +31,7 @@ import { DocumentData } from "firebase/firestore";
 
 export default function ClientConversations() {
   const params = useSearchParams();
-  const conversationId = params.get('id') || null;
+  const conversationId = params ? params.get('id') || null : null;
   const firestore = useFirestore();
   const { user, profile, loading: authLoading } = useAuth();
   const canReadFirestore =

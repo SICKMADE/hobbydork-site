@@ -1,6 +1,7 @@
 'use client';
 
 import AppLayout from "@/components/layout/AppLayout";
+import BuyerSidebar from "@/components/dashboard/BuyerSidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
@@ -55,7 +56,7 @@ export default function ClientWatchlist() {
   if (profile?.status !== "ACTIVE") return null;
 
   return (
-    <AppLayout>
+    <AppLayout sidebarComponent={<BuyerSidebar />}> 
       <div className="space-y-8">
         <h1 className="text-3xl font-bold">My Watchlist</h1>
         {isLoading && <p>Loading your watchlist...</p>}

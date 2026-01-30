@@ -5,7 +5,11 @@ interface SellerOnboardingStepperProps {
   steps?: string[];
 }
 
-export default function SellerOnboardingStepper({ step, steps = ["Welcome", "Terms & Agreement"] }: SellerOnboardingStepperProps) {
+export default function SellerOnboardingStepper({ step, steps = [
+  "Welcome",
+  "Seller Tiers & Auctions",
+  "Terms & Agreement"
+] }: SellerOnboardingStepperProps) {
   return (
     <div className="w-full max-w-2xl mx-auto flex items-center justify-center gap-4 py-4">
       {steps.map((label, i) => {

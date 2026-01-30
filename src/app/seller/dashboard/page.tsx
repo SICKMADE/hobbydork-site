@@ -14,6 +14,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import SellerSidebar from "@/components/dashboard/SellerSidebar";
 import Header from "@/components/layout/Header";
+import "@/styles/grid-bg-dark.css";
 // SidebarProvider already imported above if present; remove duplicate import
 import SellerSalesCharts from "@/components/dashboard/SellerSalesCharts";
 import SellerNotifications from "@/components/dashboard/SellerNotifications";
@@ -130,11 +131,32 @@ export default function SellerDashboardPage() {
   // RENDER
   // -------------------------------
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen bg-background">
-        <SellerSidebar />
-        <main className="flex-1 p-6 max-w-6xl mx-auto">
-          <Header />
+    <AppLayout sidebarComponent={<SellerSidebar />}>
+      <div className="flex flex-col items-center mb-8">
+        <img
+          src="/SELLERDASHBOARD.png"
+          alt="Seller Dashboard"
+          width={412}
+          height={212}
+          className="w-78 h-28 object-contain mb-2 drop-shadow-lg"
+          loading="eager"
+        />
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-lg font-extrabold">{profile?.displayName || user.email || 'Seller'}</span>
+          {(() => {
+            const tier = (typeof profile?.sellerTier === 'string' ? profile.sellerTier : 'BRONZE').toUpperCase();
+            let className = 'ml-1 px-2 py-0.5 rounded-full text-[12px] font-semibold tracking-wider uppercase border shadow-inner';
+            if (tier === 'GOLD') {
+              className += ' border-yellow-400 seller-tier-gold';
+            } else if (tier === 'SILVER') {
+              className += ' border-gray-400 seller-tier-silver';
+            } else {
+              className += ' border-orange-400 seller-tier-bronze';
+            }
+            return <span className={className}>{tier} SELLER</span>;
+          })()}
+            </div>
+          </div>
           {/* Render main dashboard content here, navigation is now handled by SellerSidebar */}
           {/* Example: Default to overview/dashboard content, or use router to switch sections */}
           <Card className="mb-6 border-2 border-black bg-card/80 shadow">
@@ -214,8 +236,8 @@ export default function SellerDashboardPage() {
             </CardContent>
           </Card>
           {/* Add more dashboard content as needed, navigation is now sidebar-driven */}
-          </main>
-        </div>
-      </SidebarProvider>
+          {/* End main dashboard content */}
+        {/* Add more dashboard content as needed, navigation is now sidebar-driven */}
+    </AppLayout>
   );
 }

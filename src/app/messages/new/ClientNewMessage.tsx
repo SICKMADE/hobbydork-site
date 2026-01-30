@@ -73,10 +73,10 @@ export default function ClientNewMessage() {
   const [targetProfile, setTargetProfile] = useState<UserDoc | null>(null);
   const [loadingTarget, setLoadingTarget] = useState(false);
 
-  const recipientUidParam = searchParams.get('recipientUid');
-  const sellerUidParam = searchParams.get('sellerUid');
-  const listingId = searchParams.get('listingId');
-  const storeIdParam = searchParams.get('storeId');
+  const recipientUidParam = searchParams ? searchParams.get('recipientUid') : null;
+  const sellerUidParam = searchParams ? searchParams.get('sellerUid') : null;
+  const listingId = searchParams ? searchParams.get('listingId') : null;
+  const storeIdParam = searchParams ? searchParams.get('storeId') : null;
 
   // Decide who we are messaging
   useEffect(() => {

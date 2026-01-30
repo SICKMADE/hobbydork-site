@@ -2,7 +2,7 @@
 
 
 import { usePathname, useRouter } from "next/navigation";
-import { Home, ShoppingBag, Heart, MessageSquare, User, History, Settings } from "lucide-react";
+import { Home, ShoppingBag, Heart, MessageSquare, User, History, Settings, Search, Users, Store, Newspaper, Star, HelpCircle, LayoutDashboard } from "lucide-react";
 import {
   SidebarContent,
   SidebarMenu,
@@ -23,88 +23,92 @@ import { resolveAvatarUrl } from '@/lib/default-avatar';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 export default function BuyerSidebar() {
-  const pathname = usePathname();
+  const { user, profile, logout } = useAuth();
+  const { isMobile, setOpen } = useSidebar();
   const router = useRouter();
-  const { profile } = useAuth();
+  const pathname = usePathname();
   if (!profile) return null;
-  const avatarSeed = profile.avatar && profile.avatar.trim() !== '' ? profile.avatar : (profile.uid || profile.email || '');
-  const avatarUrl = resolveAvatarUrl(profile.avatar, avatarSeed);
-  const displayName = profile.displayName || profile.email || 'User';
-  const { isMobile, open, setOpen } = useSidebar();
+  const displayName = profile.displayName || user?.email || 'My account';
+  const avatarUrl = resolveAvatarUrl(profile.avatar, profile.uid || profile.email || displayName);
 
-
-  const buyerMenu = [
-    { href: "/", label: "Home", icon: Home },
-    { href: "/buyer/dashboard", label: "Overview", icon: Home },
-    { href: "/orders", label: "My Orders", icon: ShoppingBag },
-    { href: "/watchlist", label: "Watchlist", icon: Heart },
-    { href: "/messages", label: "Messages", icon: MessageSquare },
-    { href: "/profile", label: "Profile", icon: User },
-    { href: "/activity", label: "Activity", icon: History },
-    { href: "/settings", label: "Settings", icon: Settings },
-  ];
-  const helpMenu = [
-    { href: "/help", label: "Help & FAQ", icon: Settings },
-  ];
-
-  const handleNav = (href: string) => {
+  const navigate = (href: string) => {
     if (isMobile) setOpen(false);
     router.push(href);
   };
+
   const handleLogout = async () => {
-    // Add your logout logic here
-    router.push("/");
+    await logout?.();
+    if (isMobile) setOpen(false);
+    router.push('/');
   };
 
+  // Buyer-specific menu items
+  const mainMenuItems = [
+    { href: '/', label: 'Home', icon: Home },
+    { href: '/buyer/dashboard', label: 'Buyer Dashboard', icon: LayoutDashboard },
+    { href: '/orders', label: 'My Orders', icon: ShoppingBag },
+    { href: '/watchlist', label: 'Watchlist', icon: Heart },
+    { href: '/messages', label: 'Messages', icon: MessageSquare },
+  ];
+  const myStuffMenuItems = [
+    { href: '/profile', label: 'Profile', icon: User },
+    { href: '/followers', label: 'Followers', icon: Users },
+    { href: '/following', label: 'Following', icon: Users },
+    { href: '/activity', label: 'Activity', icon: History },
+    { href: '/settings', label: 'Settings', icon: Settings },
+  ];
+  const helpMenuItems = [
+    { href: '/help', label: 'Help & FAQ', icon: HelpCircle },
+  ];
+
+  const renderMenuSection = (title: string, items: any[]) => (
+    <SidebarMenu>
+      <RedLineSeparator />
+      <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">{title}</p>
+      {items.map((item) => {
+        const Icon = item.icon;
+        const isActive = pathname === item.href;
+        return (
+          <SidebarMenuItem key={item.href}>
+            <SidebarMenuButton
+              isActive={isActive}
+              onClick={() => navigate(item.href)}
+              className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
+            >
+              <Icon className="h-5 w-5" />
+              <span className="truncate">{item.label}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        );
+      })}
+    </SidebarMenu>
+  );
+
   const sidebarContent = (
-    <SidebarContent className="p-4 bg-sidebar text-sidebar-foreground border-r border-gray-800 flex flex-col" style={{ width: '240px', minWidth: '240px', maxWidth: '240px', boxSizing: 'border-box', flex: '0 0 240px', zIndex: 2 }}>
-      <div className="h-full flex flex-col space-y-6 pt-2">
-        <div className="flex flex-col items-center mb-2 mt-2">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={avatarUrl} alt={displayName} />
-            <AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <span className="mt-2 text-base font-semibold text-center w-32 truncate">{displayName}</span>
-        </div>
-        {/* BUYER Section */}
+    <SidebarContent className="p-4 bg-sidebar text-sidebar-foreground border-r border-gray-800">
+      <div className="h-full flex flex-col space-y-4 pt-2">
+        {/* Only menu sections, avatar handled by SidebarUserMenu */}
+        {renderMenuSection('Main', mainMenuItems)}
+        {renderMenuSection('My Stuff', myStuffMenuItems)}
         <SidebarMenu>
           <RedLineSeparator />
-          <div className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Buyer</div>
-          {buyerMenu.map(({ href, label, icon: Icon }) => (
-            <SidebarMenuItem key={href}>
-              <SidebarMenuButton
-                isActive={pathname === href}
-                onClick={() => handleNav(href)}
-                className={cn(
-                  "justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md",
-                  pathname === href ? "bg-muted text-primary" : "text-muted-foreground"
-                )}
-              >
-                <Icon className="h-5 w-5" />
-                <span>{label}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-        {/* HELP & ACCOUNT Section */}
-        <SidebarMenu>
-          <RedLineSeparator />
-          <div className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Help & Account</div>
-          {helpMenu.map(({ href, label, icon: Icon }) => (
-            <SidebarMenuItem key={href}>
-              <SidebarMenuButton
-                isActive={pathname === href}
-                onClick={() => handleNav(href)}
-                className={cn(
-                  "justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md",
-                  pathname === href ? "bg-muted text-primary" : "text-muted-foreground"
-                )}
-              >
-                <Icon className="h-5 w-5" />
-                <span>{label}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          <p className="px-2 mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Help & Account</p>
+          {helpMenuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+            return (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  isActive={isActive}
+                  onClick={() => navigate(item.href)}
+                  className="justify-start gap-3 text-base font-semibold tracking-wide w-full px-2 py-2 rounded-md"
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="truncate">{item.label}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
           <SidebarMenuItem>
             <SidebarMenuButton
               isActive={false}
@@ -120,8 +124,7 @@ export default function BuyerSidebar() {
   );
 
   if (isMobile) {
-    // The open button is handled globally, so just render the sheet content if open
-    return open ? sidebarContent : null;
+    return isMobile ? sidebarContent : null;
   }
   return sidebarContent;
 }

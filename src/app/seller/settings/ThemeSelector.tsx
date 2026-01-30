@@ -14,6 +14,8 @@ const demoListing: Listing = {
   listingId: "demo",
   storeId: "demoStore",
   ownerUid: "demoUser",
+  sellerUid: "demoUser",
+  sellerTier: "BRONZE",
   title: "Sample Listing",
   description: "This is a sample listing for theme preview.",
   price: 19.99,

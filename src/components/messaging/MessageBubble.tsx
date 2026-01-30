@@ -37,12 +37,14 @@ export default function MessageBubble({
       <div
         className={`max-w-[75%] px-3 py-2 rounded-2xl border-2 text-sm leading-snug shadow-md ${
           isMe
-            ? "comic-bubble-me"
-            : "comic-bubble-them"
+            ? "comic-bubble-me text-black"
+            : "comic-bubble-them text-black"
         }`}
       >
+        {!isMe && senderProfile?.displayName && (
+          <div className="font-bold text-xs mb-1 text-black">{senderProfile.displayName}</div>
+        )}
         <div>{message.text}</div>
-
         {isMe && (
           <div className="text-[10px] text-right mt-1 opacity-70">
             {isRead ? "✔✔ Read" : "✔ Sent"}

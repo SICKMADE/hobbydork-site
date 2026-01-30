@@ -1,0 +1,11 @@
+
+
+.previewModal {
+  /* Modal border only, no forced background */
+  border-width: 2px;
+  border-style: solid;
+}
+
+.previewBorder {
+  /* No forced border color, allow theme to set */
+}

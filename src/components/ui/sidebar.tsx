@@ -156,7 +156,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
                 )}
                 {...props}
             >
-                <div className="flex flex-col h-full">
+                <div className="flex flex-col h-full pt-20"> {/* Add pt-20 for header offset */}
                   <SidebarUserMenu />
                     {children}
                 </div>

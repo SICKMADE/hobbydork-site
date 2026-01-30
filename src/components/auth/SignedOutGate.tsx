@@ -17,7 +17,7 @@ export default function SignedOutGate() {
   useEffect(() => {
     if (loading) return;
 
-    if (!user && !ALLOWED_WHEN_SIGNED_OUT.has(pathname)) {
+    if (!user && pathname && !ALLOWED_WHEN_SIGNED_OUT.has(pathname)) {
       router.replace('/login');
     }
   }, [user, loading, pathname, router]);

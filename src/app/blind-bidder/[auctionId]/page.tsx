@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React from "react";
 
 function getCountdownColor(msLeft: number) {
   const hours = msLeft / (1000 * 60 * 60);
@@ -61,9 +62,9 @@ async function fetchAuction(auctionId: string) {
 const functions = getFunctions();
 const submitBlindBid = httpsCallable(functions, "submitBlindBid");
 
-export default function BlindBidderAuctionPage() {
+export default function BlindBidderAuctionPage({ params }: { params: any }) {
   const [seller, setSeller] = useState<any>(null);
-  const { auctionId } = useParams();
+  const { auctionId } = typeof params?.then === 'function' ? React.use(params) : params;
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [auction, setAuction] = useState<any>(null);

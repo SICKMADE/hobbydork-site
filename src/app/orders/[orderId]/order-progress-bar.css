@@ -1,0 +1,33 @@
+/* Order Progress Bar Styles */
+.order-progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.order-progress-bar .step {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  border: 2px solid #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+.order-progress-bar .step.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+.order-progress-bar .bar {
+  flex: 1;
+  height: 4px;
+  background: #d1d5db;
+  border-radius: 2px;
+}
+.order-progress-bar .bar.active {
+  background: #2563eb;
+}
