@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { getRandomAvatar } from '@/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function MessagesInbox() {
+function MessagesInboxContent() {
   const { user, isUserLoading: authLoading } = useUser();
   const db = useFirestore();
   const router = useRouter();
@@ -197,5 +197,19 @@ export default function MessagesInbox() {
         </Card>
       </main>
     </div>
+  );
+}
+
+export default function MessagesInbox() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-accent" />
+        </div>
+      }
+    >
+      <MessagesInboxContent />
+    </Suspense>
   );
 }
