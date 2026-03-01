@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { useUser, useDoc, useFirestore } from '@/firebase';
@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { httpsCallable } from 'firebase/functions';
 import { getFunctions } from 'firebase/functions';
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useUser();
@@ -153,5 +153,17 @@ export default function CheckoutPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   );
 }
