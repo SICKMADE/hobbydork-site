@@ -2,13 +2,14 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' }) 
+const stripeApiKey = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET;
+const stripe = stripeApiKey
+  ? new Stripe(stripeApiKey, { apiVersion: '2023-10-16' }) 
   : null;
 
 /**
  * Stripe Checkout API Route.
- * Uses real Stripe if STRIPE_SECRET_KEY is present in .env, otherwise mocks.
+ * Uses real Stripe if STRIPE_SECRET_KEY or STRIPE_SECRET is present in env, otherwise mocks.
  */
 export async function POST(request: Request) {
   try {

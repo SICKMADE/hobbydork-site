@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, admin } from "./firebaseAdmin";
 import Stripe from "stripe";
+import { defineSecret } from "firebase-functions/params";
 export { getStripePayouts } from "./getStripePayouts";
 export { createBlindBidAuction, submitBlindBid } from "./blindBidder";
 export { setBlindBidAuctionImage } from "./blindBidder";
@@ -14,8 +15,9 @@ import * as functions from "firebase-functions";
 // ...existing code...
 
 // Use environment variable for Stripe secret, fallback to functions.config for legacy support
+const stripeSecretParam = defineSecret("STRIPE_SECRET");
 const config = typeof functions.config === "object" ? functions.config as { stripe?: { secret?: string } } : {};
-const stripeSecret = process.env.STRIPE_SECRET || (config.stripe && config.stripe.secret);
+const stripeSecret = stripeSecretParam.value() || process.env.STRIPE_SECRET || process.env.STRIPE_SECRET_KEY || (config.stripe && config.stripe.secret);
 /* ================= HELPERS ================= */
 
 function getStripeInstance() {
@@ -72,7 +74,7 @@ async function logError(error: Error | string, context: Record<string, any> = {}
 
 /* ================= GET STRIPE ACCOUNT DETAILS ================= */
 
-export const getStripeAccount = onCall(async (request) => {
+export const getStripeAccount = onCall({ secrets: [stripeSecretParam] }, async (request) => {
   const stripe = getStripeInstance();
   const { accountId } = request.data || {};
   if (!accountId) {
@@ -99,7 +101,7 @@ export const getStripeAccount = onCall(async (request) => {
 });
 
 /* ========== CREATE AUCTION FEE CHECKOUT SESSION ========== */
-export const createAuctionFeeCheckoutSession = onCall(async (request) => {
+export const createAuctionFeeCheckoutSession = onCall({ secrets: [stripeSecretParam] }, async (request) => {
   const stripe = getStripeInstance();
   const uid = requireAuth(request);
   const { auctionId, auctionTitle, amountCents, appBaseUrl } = request.data || {};
@@ -132,7 +134,7 @@ export const createAuctionFeeCheckoutSession = onCall(async (request) => {
 
 /* ================= CREATE STRIPE CHECKOUT SESSION ================= */
 
-export const createCheckoutSession = onCall(async (request) => {
+export const createCheckoutSession = onCall({ secrets: [stripeSecretParam] }, async (request) => {
   const stripe = getStripeInstance();
   const uid = requireAuth(request);
   const { orderId, listingId, listingTitle, amountCents, appBaseUrl } = request.data || {};
@@ -195,7 +197,7 @@ export const createCheckoutSession = onCall(async (request) => {
 
 /* ================= CREATE STRIPE ONBOARDING ================= */
 
-export const createStripeOnboarding = onCall(async (request) => {
+export const createStripeOnboarding = onCall({ secrets: [stripeSecretParam] }, async (request) => {
   const stripe = getStripeInstance();
   const uid = requireAuth(request);
   const userRef = db.collection("users").doc(uid);
@@ -234,7 +236,7 @@ export const createStripeOnboarding = onCall(async (request) => {
 
 /* ================= FINALIZE SELLER ================= */
 
-export const finalizeSeller = onCall(async (request) => {
+export const finalizeSeller = onCall({ secrets: [stripeSecretParam] }, async (request) => {
   const stripe = getStripeInstance();
   const uid = requireAuth(request);
   const userRef = db.collection("users").doc(uid);
@@ -370,7 +372,7 @@ export const updateOrderStatus = onCall(async (request) => {
  * Process refund for an order
  * Called when seller confirms return receipt and initiates refund
  */
-export const processRefund = onCall({ secrets: ["STRIPE_SECRET"] }, async (request) => {
+export const processRefund = onCall({ secrets: [stripeSecretParam] }, async (request) => {
   try {
     const uid = requireAuth(request);
     const { orderId } = request.data;
@@ -461,7 +463,7 @@ export const processRefund = onCall({ secrets: ["STRIPE_SECRET"] }, async (reque
 
 /* ================= APPROVE WITHDRAWAL ================= */
 
-export const approveWithdrawal = onCall({ secrets: ["STRIPE_SECRET"] }, async (request) => {
+export const approveWithdrawal = onCall({ secrets: [stripeSecretParam] }, async (request) => {
   try {
     const uid = requireAuth(request);
     const { payoutRequestId } = request.data;
