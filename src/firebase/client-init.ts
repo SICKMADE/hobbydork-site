@@ -59,4 +59,4 @@ export function getFirebase() {
 }
 
 
-// Remove legacy exports. Always use getFirebase() or initializeFirebase() at runtime in your components/hooks.
+// Cleaned: removed legacy exports note

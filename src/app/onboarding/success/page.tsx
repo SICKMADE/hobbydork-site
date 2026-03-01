@@ -1,92 +1,50 @@
 "use client";
-
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
-// Placeholder for toast (success feedback)
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUser, useFirestore, useDoc } from "@/firebase";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/firebase/client";
 
 export default function OnboardingSuccess() {
-  const { user, profile, refreshProfile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const [showSpinner, setShowSpinner] = useState(true);
-  // --- Only show toast once ---
-  const [toastShown, setToastShown] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const { user, isUserLoading } = useUser();
+  const db = useFirestore();
+  const [finalizing, setFinalizing] = useState(true);
 
   useEffect(() => {
-    let tries = 0;
-    const maxTries = 20; // Wait up to 10 seconds
-    async function checkSellerStatus() {
-      while (tries < maxTries) {
-        if (profile?.isSeller) {
-          setChecking(false);
-          return;
-        }
-        if (refreshProfile) await refreshProfile();
-        await new Promise((res) => setTimeout(res, 500));
-        tries++;
+    async function finalize() {
+      if (!user || !functions) return;
+      try {
+        const finalizeSeller = httpsCallable(functions, "finalizeSeller");
+        await finalizeSeller({});
+        toast({ title: "Onboarding Complete!", description: "Your shop is now live." });
+        router.replace("/dashboard");
+      } catch (err) {
+        toast({ variant: "destructive", title: "Onboarding failed" });
+        setFinalizing(false);
       }
-      setChecking(false);
-      if (!profile?.isSeller) router.replace("/onboarding/finalize");
     }
-    checkSellerStatus();
-    // Hide spinner after short delay for better UX
-    const t = setTimeout(() => setShowSpinner(false), 600);
-    return () => clearTimeout(t);
-  }, [user, profile, router, refreshProfile]);
+    finalize();
+  }, [user, functions, router, toast]);
 
-  useEffect(() => {
-    // Show success toast and log analytics/admin only once
-    if (profile?.isSeller && !toastShown) {
-      toast({ title: "Welcome, Seller!", description: "Your seller account is now active.", variant: "default" });
-      setToastShown(true);
-    }
-  }, [profile, toast, toastShown]);
-
-  if (checking) {
-    return (
-      <div className="min-h-screen h-screen flex flex-col items-center justify-center p-4 bg-[url('/grid.svg')] bg-[length:300px_300px] bg-center">
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-red-500 border-b-4 border-white"></div>
-        </div>
-      </div>
-    );
-  }
-
-  // --- Responsive, accessible, and commented UI ---
   return (
-    <div className="min-h-screen h-screen flex flex-col items-center justify-center p-4 bg-[url('/grid.svg')] bg-[length:300px_300px] bg-center">
-      {/* Loading spinner for initial load */}
-      {showSpinner && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-red-500 border-b-4 border-white"></div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
+      {finalizing ? (
+        <div className="flex flex-col items-center gap-6">
+          <Loader2 className="w-12 h-12 animate-spin text-accent" />
+          <h1 className="text-2xl font-black">Finalizing your onboarding...</h1>
+          <p className="text-muted-foreground">Please wait while we set up your shop.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-6">
+          <CheckCircle2 className="w-12 h-12 text-green-600" />
+          <h1 className="text-2xl font-black">Onboarding failed</h1>
+          <p className="text-muted-foreground">Please try again or contact support.</p>
         </div>
       )}
-      <div className="max-w-lg w-full flex flex-col items-center gap-8 rounded-2xl shadow-2xl border border-red-500 bg-background/90 backdrop-blur-md p-6 md:p-10 sm:p-4">
-        <img
-          src="/landing.png"
-          alt="Welcome"
-          className="w-32 h-32 object-contain mb-4 drop-shadow-lg"
-        />
-        <h1 className="text-4xl font-extrabold text-red-400 text-center mb-2">
-          Onboarding Complete!
-        </h1>
-        <p className="text-lg text-gray-100 text-center mb-4">
-          Your seller onboarding is finished.<br />
-          You now have access to all seller features.<br />
-          Welcome to the Hobbydork marketplace!
-        </p>
-            <Link
-              href="/seller/dashboard"
-              className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-lg px-8 py-3 font-bold rounded-full shadow-lg border-4 border-b-8 border-r-8 border-gray-700 active:border-b-4 active:border-r-4 active:translate-y-1 transition-all duration-100 select-none focus:outline-none focus:ring-2 focus:ring-red-400 w-full sm:w-auto"
-              aria-label="Go to Seller Dashboard"
-            >
-              Go to Seller Dashboard
-            </Link>
-      </div>
     </div>
   );
 }

@@ -1,43 +1,73 @@
-import type { Metadata } from 'next';
+import type {Metadata} from 'next';
 import './globals.css';
-
-import { FirebaseClientProvider } from '@/firebase/client-provider';
-import { AuthProvider } from '@/hooks/use-auth';
-import SignedOutGate from '@/components/auth/SignedOutGate';
-import EmailVerificationGate from '@/components/auth/EmailVerificationGate';
-import { CartProvider } from '@/hooks/use-cart';
-import { VaultProvider } from '@/lib/vault';
-import { Toaster } from '@/components/ui/toaster';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { Toaster } from "@/components/ui/toaster"
+import { FirebaseClientProvider } from "@/firebase"
+import { ThemeHandler } from "@/components/ThemeHandler"
+import { MainLayoutWrapper } from "@/components/MainLayoutWrapper"
 
 export const metadata: Metadata = {
-  title: 'HobbyDork',
-  description: 'Your personal vault for amazing collectibles.',
+  title: {
+    default: 'hobbydork | Built for Collectors',
+    template: '%s | hobbydork'
+  },
+  description: 'The community-driven destination for serious collectors. Trade, track, and talk shop with the most passionate collectors on the planet.',
+  keywords: ['collectibles', 'trading cards', 'vintage watches', 'auctions', 'rare toys', 'collector community', 'hobby shop'],
+  authors: [{ name: 'hobbydork' }],
+  creator: 'hobbydork',
+  publisher: 'hobbydork',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://hobbydork.com',
+    siteName: 'hobbydork',
+    title: 'hobbydork | Built for Collectors',
+    description: 'A safe, transparent social marketplace for high-end collectibles.',
+    images: [
+      {
+        url: '/hobbydork-main.png',
+        width: 1200,
+        height: 630,
+        alt: 'hobbydork - Where Collectors Connect',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'hobbydork | Built for Collectors',
+    description: 'A safe, transparent social marketplace for high-end collectibles.',
+    images: ['/hobbydork-main.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" className="dark">
-      <body className="font-body antialiased">
+    <html lang="en" className="scroll-smooth">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@700;900&display=swap" rel="stylesheet" />
+      </head>
+      <body className="font-body antialiased min-h-screen overflow-x-hidden">
+        <ThemeHandler />
         <FirebaseClientProvider>
-          <AuthProvider>
-            <SignedOutGate />
-            <EmailVerificationGate>
-              <CartProvider>
-                <VaultProvider>
-                  <SidebarProvider>
-                    {children}
-                  </SidebarProvider>
-                  <Toaster />
-                </VaultProvider>
-              </CartProvider>
-            </EmailVerificationGate>
-          </AuthProvider>
+          <MainLayoutWrapper>
+            {children}
+          </MainLayoutWrapper>
         </FirebaseClientProvider>
+        <Toaster />
       </body>
     </html>
   );

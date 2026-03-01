@@ -1,180 +1,171 @@
+'use client';
 
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import { Star, Heart, ShoppingCart } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
+import { Clock, Tag, Zap, Package, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import type { Listing } from '@/lib/types';
-import FollowButton from '@/components/FollowButton';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Listing } from '@/lib/mock-data';
+import { cn } from '@/lib/utils';
 
 interface ListingCardProps {
   listing: Listing;
-  compact?: boolean;
+  theme?: string;
 }
 
-export default function ListingCard({ listing, compact = false }: ListingCardProps) {
-  // Animation: fade/slide in on mount
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  // Some older queries may use listingId instead of id
-  const listingId: string | undefined = listing.id || listing.listingId;
+export default function ListingCard({ listing, theme }: ListingCardProps) {
+  if (!listing) return null;
 
-  if (!listingId) return null;
+  const isAuction = listing.type === 'Auction';
+  const isComicBook = theme === 'Comic Book Theme';
+  const isNeonSyndicate = theme === 'Neon Syndicate Theme';
+  const isUrban = theme === 'Urban Theme';
+  const isHobbyShop = theme === 'Hobby Shop Theme';
 
-  const title: string = listing.title ?? 'Untitled listing';
-  const price: number = Number(listing.price ?? 0);
-  const category: string = listing.category ?? 'OTHER';
-  const condition: string = listing.condition ?? 'UNKNOWN';
-  const quantityAvailable: number = Number(
-    listing.quantityAvailable ?? 0,
-  );
-  const state: string = listing.state ?? 'ACTIVE';
-  const primaryImageUrl: string | undefined = listing.primaryImageUrl ?? undefined;
+  const [timeLeft, setTimeLeft] = useState('');
+  const [isEnded, setIsEnded] = useState(false);
 
-  const isActive = state === 'ACTIVE';
-  const isSoldOut = state === 'SOLD_OUT' || quantityAvailable <= 0;
+  useEffect(() => {
+    if (!isAuction || !listing.endsAt) return;
 
-  let stateLabel = 'Inventory';
-  let stateVariant: 'default' | 'secondary' | 'outline' =
-    'outline';
+    const calculateTime = () => {
+      const now = new Date();
+      // Handle endsAt being either a Date or a Firestore Timestamp
+      const endsAt = listing.endsAt.toDate ? listing.endsAt.toDate() : new Date(listing.endsAt);
+      const diff = endsAt.getTime() - now.getTime();
 
-  if (isActive) {
-    stateLabel = 'For sale';
-    stateVariant = 'default';
-  } else if (isSoldOut) {
-    stateLabel = 'Sold out';
-    stateVariant = 'secondary';
-  } else if (state) {
-    stateLabel = state.replace('_', ' ').toLowerCase();
-  }
+      if (diff <= 0) {
+        setIsEnded(true);
+        setTimeLeft('ENDED');
+        return;
+      }
 
-  const categoryIcons: Record<string, string> = {
-    COMIC_BOOKS: '📚',
-    SPORTS_CARDS: '🏅',
-    POKEMON_CARDS: '⚡',
-    VIDEO_GAMES: '🎮',
-    TOYS: '🧸',
-    OTHER: '✨',
-    '': '🌐',
-  };
-  const categoryLabel = category.replace('_', ' ');
-  const categoryIcon = categoryIcons[category] || '🌐';
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
+      if (days > 0) setTimeLeft(`${days}d ${hours}h`);
+      else if (hours > 0) setTimeLeft(`${hours}h ${mins}m`);
+      else setTimeLeft(`${mins}m remaining`);
+    };
+
+    calculateTime();
+    const interval = setInterval(calculateTime, 60000);
+    return () => clearInterval(interval);
+  }, [isAuction, listing.endsAt]);
+
+  const price = (listing.currentBid || listing.price || 0).toLocaleString();
+  const seller = listing.sellerName || listing.seller || 'Collector';
+  
   return (
-    <div className={compact ? "w-full flex justify-center" : undefined}>
-      <Link href={`/listings/${listingId}`} className="block w-full">
-        <Card
-          className={
-            `h-full flex flex-col overflow-hidden transition-colors border-2 border-black bg-card/80 hover:bg-card shadow-sm relative ` +
-            (compact ? 'p-2 text-xs w-full max-w-[170px] min-w-[120px] mx-auto' : '') +
-            ` transition-transform duration-500 ease-out will-change-transform opacity-0 translate-y-6` +
-            (mounted ? ' opacity-100 translate-y-0' : '')
-          }
-        >
-          {/* Featured badge */}
-          {listing.featured && (
-            <span className="absolute top-2 left-2 z-10 bg-yellow-300 text-black font-bold px-3 py-1 rounded-full border-2 border-yellow-500 shadow text-xs animate-pulse">★ Featured</span>
-          )}
-          {/* Image section – fill container, smaller for compact */}
-          <div className={compact ? "relative w-full aspect-[1/1] bg-muted flex items-center justify-center rounded" : "relative w-full aspect-[3/4] bg-muted flex items-center justify-center rounded"}>
-            {primaryImageUrl ? (
-              <Image
-                src={primaryImageUrl}
-                alt={title}
-                fill
-                sizes={compact ? "120px" : "(min-width: 1024px) 250px, 50vw"}
-                className="object-contain"
-              />
-            ) : (
-              <div className="text-xs text-muted-foreground px-4 text-center">
-                No image
-              </div>
-            )}
-          </div>
-
-          <CardHeader className={compact ? "space-y-1 pb-1" : "space-y-2 pb-2"}>
-            <div className="flex items-center gap-2 text-[10px]">
-              <Badge variant="outline" className="rounded-md px-2 py-1 bg-zinc-800 text-white border-zinc-600 font-semibold tracking-wide shadow-sm">
-                <span className="mr-1">{categoryIcon}</span>{categoryLabel}
-              </Badge>
-              <Badge variant={stateVariant} className={`rounded-md px-2 py-1 font-semibold tracking-wide shadow-sm ${stateVariant === 'default' ? 'bg-yellow-400 text-black border-yellow-400' : 'bg-zinc-700 text-white border-zinc-600'}`}>{stateLabel}</Badge>
-              {/* Show views if >= 100 */}
-              {typeof listing.views === 'number' && listing.views >= 100 && (
-                <span className="ml-2 text-gray-500 flex items-center gap-1" title="Views">
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 4C5 4 1.73 8.11 1.13 8.93a1.5 1.5 0 0 0 0 2.14C1.73 11.89 5 16 10 16s8.27-4.11 8.87-4.93a1.5 1.5 0 0 0 0-2.14C18.27 8.11 15 4 10 4Zm0 10c-3.87 0-7.19-3.44-7.82-4.22a.5.5 0 0 1 0-.56C2.81 8.44 6.13 5 10 5s7.19 3.44 7.82 4.22a.5.5 0 0 1 0 .56C17.19 10.56 13.87 14 10 14Zm0-7a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm0 5a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z" fill="currentColor"/></svg>
-                  {listing.views}
-                </span>
-              )}
+    <Link href={`/listings/${listing.id}`}>
+      <Card className={cn(
+        "group overflow-hidden transition-all duration-500 border-none h-full flex flex-col",
+        isComicBook && "bg-white border-[4px] border-black rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] text-black",
+        isNeonSyndicate && "bg-zinc-900 border border-cyan-500/20 rounded-none shadow-[0_0_20px_rgba(34,211,238,0.05)] hover:border-cyan-500/50 hover:shadow-[0_0_30px_rgba(34,211,238,0.15)] text-white",
+        isUrban && "bg-slate-100 border-[3px] border-slate-900 rounded-none shadow-[6px_6px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none text-slate-950",
+        isHobbyShop && "bg-white rounded-[1.8rem] shadow-2xl p-0 border-none ring-4 ring-white/20 overflow-hidden",
+        (!isComicBook && !isNeonSyndicate && !isUrban && !isHobbyShop) && "bg-card rounded-2xl shadow-md hover:shadow-xl",
+        (isEnded || listing.status === 'Sold') && "opacity-80 grayscale-[0.5]"
+      )}>
+        {isHobbyShop && (
+          <div className="bg-zinc-100 border-b border-zinc-200 p-3 flex justify-between items-center h-14">
+            <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.15em] truncate pr-2">
+              @{seller}
+            </span>
+            <div className="bg-white border-2 border-blue-600 px-3 py-1 rounded-lg text-blue-600 font-black text-xs shadow-sm">
+              ${price}
             </div>
-            <CardTitle className={compact ? "text-xs leading-tight line-clamp-2" : "text-sm sm:text-base leading-tight line-clamp-2"}>
-              {title}
-            </CardTitle>
-          </CardHeader>
+          </div>
+        )}
 
-          <CardContent className={compact ? "pt-0 pb-2 flex flex-col gap-1 text-xs" : "pt-0 pb-3 flex flex-col gap-1 text-xs"}>
-            <CardDescription className={compact ? "text-primary font-bold text-base" : "text-primary font-bold text-lg"}>
-              ${price.toFixed(2)}
-            </CardDescription>
-            <div className="flex justify-between items-center text-[11px] text-muted-foreground">
-              <span>{condition.replace('_', ' ')}</span>
-              <span>{quantityAvailable} available</span>
+        <div className="relative aspect-[4/5] overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+          {listing.imageUrl ? (
+            <Image 
+              src={listing.imageUrl} 
+              alt={listing.title || 'Collectible'}
+              fill
+              className={cn(
+                "object-cover transition-transform duration-1000",
+                isNeonSyndicate ? "group-hover:scale-110 saturate-[0.8]" : "scale-100 group-hover:scale-110"
+              )}
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-2 opacity-20">
+              <Package className="w-12 h-12" />
+              <span className="text-[8px] font-black uppercase tracking-[0.2em]">No Image</span>
+            </div>
+          )}
+          {!isHobbyShop && (
+            <Badge className={cn(
+              "absolute top-4 left-4 border-none font-black px-3 py-1 shadow-2xl text-[9px] uppercase tracking-widest z-10",
+              isComicBook ? "bg-black text-white rounded-none border-2 border-white" : 
+              isNeonSyndicate ? "bg-cyan-500 text-zinc-950 rounded-none italic" : 
+              isUrban ? "bg-orange-600 text-white rounded-none skew-x-[-10deg]" : 
+              "bg-background/90 text-foreground"
+            )}>{listing.category || 'Collectible'}</Badge>
+          )}
+          {isAuction && !isHobbyShop && (
+            <Badge className={cn(
+              "absolute top-4 right-4 border-none font-black px-3 py-1 shadow-2xl text-[9px] uppercase tracking-widest z-10",
+              isEnded ? "bg-zinc-500 text-white" : (isComicBook ? "bg-white text-black rounded-none border-2 border-black" : isNeonSyndicate ? "bg-zinc-100 text-zinc-950 rounded-none italic" : isUrban ? "bg-slate-900 text-white rounded-none" : "bg-primary text-white animate-pulse")
+            )}>
+              {isEnded ? <AlertCircle className="w-3 h-3 mr-1.5" /> : <Zap className="w-3 h-3 mr-1.5" />}
+              {isEnded ? "ENDED" : "AUCTION"}
+            </Badge>
+          )}
+          {isNeonSyndicate && <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/60 to-transparent" />}
+          
+          {(isEnded || listing.status === 'Sold') && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[2px]">
+              <Badge className="bg-white text-black font-black px-6 py-2 rounded-none text-xl uppercase tracking-widest shadow-2xl scale-110">
+                {listing.status === 'Sold' ? 'SOLD' : 'ENDED'}
+              </Badge>
+            </div>
+          )}
+        </div>
+        
+        {!isHobbyShop && (
+          <CardContent className="p-4 flex-1 flex flex-col overflow-hidden">
+            <div className="mb-2">
+              <h3 className={cn(
+                "font-headline text-lg font-black line-clamp-1 leading-tight uppercase px-4 py-2 block w-fit transition-all",
+                isComicBook && "text-black bg-yellow-400 border-4 border-black skew-x-[-6deg] drop-shadow-[4px_4px_0px_#ddd]",
+                isNeonSyndicate && "text-white tracking-[0.2em] italic border-b border-cyan-500/30 pb-1 mb-2 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]",
+                isUrban && "text-slate-950 bg-slate-200 border-2 border-slate-900 font-mono p-2 skew-y-1",
+                (!isComicBook && !isNeonSyndicate && !isUrban) && "text-primary"
+              )}>{listing.title || 'Untitled Item'}</h3>
+            </div>
+            
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4 font-bold">
+              <Tag className={cn("w-3.5 h-3.5", isComicBook ? "text-black" : isNeonSyndicate ? "text-cyan-400" : isUrban ? "text-orange-600" : "text-primary")} />
+              <span className={cn(isComicBook && "text-black font-black uppercase tracking-tighter", isNeonSyndicate && "text-cyan-400/60 italic tracking-wider", isUrban && "text-slate-600 font-mono uppercase")}>{seller}</span>
+            </div>
+            <div className="flex justify-between items-end mt-auto">
+              <div className="space-y-1">
+                <p className={cn("text-[9px] uppercase font-black tracking-widest", isComicBook ? "text-black" : isNeonSyndicate ? "text-cyan-400/40" : isUrban ? "text-slate-500" : "text-zinc-500")}>{isAuction ? 'Current Bid' : 'Price'}</p>
+                <p className={cn("text-2xl md:text-3xl font-black transition-all", isComicBook && "text-black text-3xl skew-x-[-3deg] drop-shadow-[2px_2px_0px_#ddd]", isNeonSyndicate && "text-white text-4xl italic tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]", isUrban && "text-slate-950 font-mono text-3xl", (!isComicBook && !isNeonSyndicate && !isUrban) && "text-primary")}>${price}</p>
+              </div>
+              {isAuction && (
+                <div className={cn(
+                  "flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 uppercase tracking-widest transition-all",
+                  isEnded ? "bg-zinc-100 text-zinc-400 border-zinc-200" : (isComicBook ? "bg-black text-white rounded-none border-2 border-white" : isNeonSyndicate ? "bg-cyan-500 text-zinc-950 rounded-none italic shadow-[0_0_15px_rgba(34,211,238,0.4)]" : isUrban ? "bg-orange-600 text-white rounded-none shadow-[4px_4px_0px_#000]" : "bg-primary/10 text-primary rounded-full")
+                )}>
+                  <Clock className="w-3.5 h-3.5" /><span>{timeLeft}</span>
+                </div>
+              )}
             </div>
           </CardContent>
-            {/* Seller info and ratings */}
-            <div className="flex items-center gap-2 mt-2">
-              {listing.sellerAvatar ? (
-                <Image src={listing.sellerAvatar} alt={listing.sellerName ?? 'Unknown Seller'} width={24} height={24} className="rounded-full border border-black" />
-              ) : (
-                <div className="w-6 h-6 rounded-full bg-gray-300 border border-black flex items-center justify-center text-xs">?</div>
-              )}
-              <span className="text-xs font-semibold flex items-center gap-1">
-                {listing.sellerName ?? 'Unknown Seller'}
-                {(() => {
-                  const tier = (listing.sellerTier || 'BRONZE').toUpperCase();
-                  let className = 'ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase border shadow-inner';
-                  let styleObj: React.CSSProperties | undefined = undefined;
-                  if (tier === 'GOLD') {
-                    styleObj = {
-                      background: 'linear-gradient(90deg, #fffbe6 0%, #ffe066 40%, #ffd700 60%, #fffbe6 100%)',
-                      color: '#a67c00',
-                      borderColor: '#ffd700',
-                      boxShadow: '0 1px 4px 0 #ffe06688, 0 0.5px 0 #fff inset',
-                    };
-                    className += ' border-yellow-400';
-                  } else if (tier === 'SILVER') {
-                    styleObj = {
-                      background: 'linear-gradient(90deg, #f8f9fa 0%, #d1d5db 40%, #b0b4ba 60%, #f8f9fa 100%)',
-                      color: '#555',
-                      borderColor: '#b0b4ba',
-                      boxShadow: '0 1px 4px 0 #b0b4ba88, 0 0.5px 0 #fff inset',
-                    };
-                    className += ' border-gray-400';
-                  } else {
-                    className += ' border-orange-400';
-                    styleObj = undefined;
-                  }
-                  return <span className={className}>{tier} SELLER</span>;
-                })()}
-                {/* Follow button next to seller name */}
-                {listing.sellerUid && (
-                  <FollowButton targetUid={listing.sellerUid} className="ml-2" />
-                )}
-              </span>
-              <span className="flex items-center gap-1 ml-2">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={12} className={i < Math.round(listing.rating ?? 0) ? 'text-yellow-400' : 'text-gray-300'} fill={i < Math.round(listing.rating ?? 0) ? 'currentColor' : 'none'} />
-                ))}
-              </span>
-            </div>
-        </Card>
-      </Link>
-    </div>
+        )}
+        {!isHobbyShop && (
+          <CardFooter className="px-6 pb-6 pt-0 gap-3 flex-wrap mt-auto">
+            {listing.tags?.slice(0, 2).map(tag => (
+              <span key={tag} className={cn("text-[9px] px-3 py-1 rounded-none font-black uppercase tracking-widest transition-all", isComicBook ? "bg-black text-white skew-x-[-8deg]" : isNeonSyndicate ? "bg-cyan-500/5 text-cyan-400/50 border border-cyan-500/20 hover:bg-cyan-500/10 italic" : isUrban ? "bg-slate-900 text-white font-mono skew-x-3" : "bg-secondary text-secondary-foreground rounded-full")}>#{tag}</span>
+            ))}
+          </CardFooter>
+        )}
+      </Card>
+    </Link>
   );
 }

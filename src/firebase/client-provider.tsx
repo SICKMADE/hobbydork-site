@@ -10,7 +10,9 @@ export const functions: Functions | undefined = (() => {
   }
 })();
 
-import React, { useMemo, type ReactNode } from 'react';
+import * as React from 'react';
+import type { ReactNode } from 'react';
+const { useMemo } = React;
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeFirebase } from './client-init';
 import { getStorage } from 'firebase/storage';
@@ -40,13 +42,13 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
   );
 }
 
-// Convenience client-side exports to match older imports in the codebase.
+// Cleaned: removed convenience client-side exports note
 // These are safe to import in modules because they guard for server usage.
 let _clientSdks: ReturnType<typeof initializeFirebase> | null = null;
 function clientSdks() {
   if (_clientSdks) return _clientSdks;
   if (typeof window === 'undefined') {
-    // Accessing client SDKs on the server is invalid; return a noop placeholder.
+    // Cleaned: removed server SDK access note
     return undefined as unknown as ReturnType<typeof initializeFirebase>;
   }
   _clientSdks = initializeFirebase();

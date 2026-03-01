@@ -207,7 +207,7 @@ export type CommunityMessage = {
 
 export type ISO24 = {
     id: string;
-    // Back-compat: older code may use creatorUid/userUid; current docs use ownerUid.
+    // Cleaned: removed back-compat note
     ownerUid?: string;
     creatorUid?: string;
     userUid?: string;
@@ -217,12 +217,12 @@ export type ISO24 = {
     imageUrl?: string | null;
     createdAt?: Timestamp;
     expiresAt?: Timestamp;
-    // Current ISO24 uses OPEN/CLOSED; keep flexible for older values.
+    // Cleaned: removed ISO24 note
     status?: 'OPEN' | 'CLOSED' | 'ACTIVE' | 'EXPIRED' | string;
 }
 
 
-// Notification types removed
+// Cleaned: removed notification types note
 
 export type Review = {
     reviewId: string;

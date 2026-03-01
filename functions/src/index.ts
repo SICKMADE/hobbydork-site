@@ -5,7 +5,11 @@ export { getStripePayouts } from "./getStripePayouts";
 export { createBlindBidAuction, submitBlindBid } from "./blindBidder";
 export { setBlindBidAuctionImage } from "./blindBidder";
 export { stripeWebhook } from "./stripeWebhook";
+export { dailySellerEnforcement } from "./dailySellerEnforcement";
+export { createAuction, placeBid, closeAuction } from "./auctions";
 import * as functions from "firebase-functions";
+
+// ...existing code...
 
 // Use environment variable for Stripe secret, fallback to functions.config for legacy support
 const config = typeof functions.config === "object" ? functions.config as { stripe?: { secret?: string } } : {};
@@ -135,8 +139,19 @@ export const createCheckoutSession = onCall(async (request) => {
   }
   const userSnap = await db.collection("users").doc(uid).get();
   const userData = userSnap.data();
-  const shippingAddress = userData?.shippingAddress || {};
-  if (Object.keys(shippingAddress).length > 0) {
+  const userAddress = userData?.shippingAddress || {};
+  // Map user address fields to order address fields
+  const shippingAddress = {
+    name: userAddress.name || "",
+    line1: userAddress.address1 || "",
+    line2: userAddress.address2 || "",
+    city: userAddress.city || "",
+    state: userAddress.state || "",
+    postalCode: userAddress.zip || "",
+    country: userAddress.country || "",
+  };
+  // Only set if at least line1 and city/state/zip are present
+  if (shippingAddress.line1 && shippingAddress.city && shippingAddress.state && shippingAddress.postalCode) {
     await db.collection("orders").doc(orderId).set({ shippingAddress }, { merge: true });
   }
   const session = await stripe.checkout.sessions.create({
@@ -193,10 +208,11 @@ export const createStripeOnboarding = onCall(async (request) => {
       { merge: true }
     );
   }
+  const appBaseUrl = request.data?.appBaseUrl || "https://hobbydork.com";
   const link = await stripe.accountLinks.create({
     account: accountId,
-    refresh_url: "https://hobbydork.com/onboarding/terms",
-    return_url: "https://hobbydork.com/onboarding/success",
+    refresh_url: `${appBaseUrl}/onboarding/terms`,
+    return_url: `${appBaseUrl}/seller/onboarding?step=5`,
     type: "account_onboarding",
   });
   return { url: link.url };

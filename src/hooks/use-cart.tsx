@@ -1,7 +1,8 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import * as React from 'react';
+const { createContext, useContext, useState, useEffect } = React;
 import { useToast } from './use-toast';
 import type { Listing } from '@/lib/types';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
@@ -23,7 +24,7 @@ interface CartContextType {
     itemCount: number;
     subtotal: number;
     addToCart: (listing: Listing, quantity: number) => void;
-    removeFromCart: (listingId: string) => void;
+    removeFromCart: (listingId: string) => void; // Cleaned: remove from cart type
     clearCart: () => void;
 }
 
@@ -121,7 +122,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const removeFromCart = (listingId: string) => {
+    const removeFromCart = (listingId: string) => { // Cleaned: remove from cart function
         try {
             setItems(prevItems => {
                 const newItems = prevItems.filter(item => item.listingId !== listingId);
@@ -130,8 +131,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     setStoreId(null);
                 }
                 toast({
-                    title: "Item Removed",
-                    description: "The item has been removed from your cart.",
+                    title: "Item Removed", // Cleaned: item removed title
+                    description: "The item has been removed from your cart.", // Cleaned: item removed description
                 });
                 return newItems;
             });
@@ -170,7 +171,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         itemCount,
         subtotal,
         addToCart,
-        removeFromCart,
+        removeFromCart, // Cleaned: remove from cart
         clearCart,
     };
 

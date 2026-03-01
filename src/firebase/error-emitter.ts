@@ -38,7 +38,7 @@ function createEventEmitter<T extends Record<string, unknown>>() {
     /**
      * Unsubscribe from an event.
      * @param eventName The name of the event to unsubscribe from.
-     * @param callback The specific callback to remove.
+    * Cleaned: removed callback removal note
      */
     off<K extends keyof T>(eventName: K, callback: Callback<T[K]>) {
       if (!events[eventName]) {

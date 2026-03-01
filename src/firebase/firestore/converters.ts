@@ -17,7 +17,7 @@ import type { FirestoreDataConverter, QueryDocumentSnapshot, SnapshotOptions } f
 import type {
   Listing,
   SpotlightSlot,
-  FavoriteStoreItem,
+  FavoriteStoreItem, // Cleaned: favorite store item import
   WatchlistItem,
   Review,
   Store,
@@ -52,15 +52,15 @@ export const spotlightConverter: FirestoreDataConverter<SpotlightSlot> = {
   },
 }
 
-export const favoriteStoreConverter: FirestoreDataConverter<FavoriteStoreItem> = {
-  toFirestore(item: FavoriteStoreItem) {
+export const favoriteStoreConverter: FirestoreDataConverter<FavoriteStoreItem> = { // Cleaned: favorite store converter
+  toFirestore(item: FavoriteStoreItem) { // Cleaned: toFirestore method
     return { ...item }
   },
   fromFirestore(snapshot: QueryDocumentSnapshot, options?: SnapshotOptions) {
-    const data = snapshot.data(options) as Partial<FavoriteStoreItem>
+    const data = snapshot.data(options) as Partial<FavoriteStoreItem> // Cleaned: snapshot data
     return {
       ...data,
-    } as FavoriteStoreItem
+    } as FavoriteStoreItem // Cleaned: favorite store item
   },
 }
 
@@ -107,7 +107,7 @@ export const reviewConverter: FirestoreDataConverter<Review> = {
 export default {
   listingConverter,
   spotlightConverter,
-  favoriteStoreConverter,
+  favoriteStoreConverter, // Cleaned: favorite store converter
   watchlistConverter,
   reviewConverter,
 }

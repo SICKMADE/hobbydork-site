@@ -34,18 +34,16 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.dailySellerEnforcement = void 0;
+// Firebase Cloud Function: Daily Seller Tier & Late Shipment Enforcement
 const functionsV1 = __importStar(require("firebase-functions/v1"));
-const admin = __importStar(require("firebase-admin"));
-admin.initializeApp();
-const db = admin.firestore();
+const firebaseAdmin_1 = require("./firebaseAdmin");
 // Helper: Update seller stats and tier
 const updateSellerTier_1 = require("./updateSellerTier");
-// TODO: Ensure updateSellerTier exists at the correct path, e.g. './lib/updateSellerTier.ts'
 exports.dailySellerEnforcement = functionsV1.pubsub.schedule('every 24 hours').onRun(async (context) => {
     const now = Date.now();
     const ms48h = 48 * 60 * 60 * 1000;
     const ms72h = 72 * 60 * 60 * 1000;
-    const ordersRef = db.collection('orders');
+    const ordersRef = firebaseAdmin_1.db.collection('orders');
     const ordersSnap = await ordersRef.where('state', 'in', ['PAID', 'AWAITING_FULFILLMENT', 'SHIPPED']).get();
     const lateSellers = new Set();
     for (const doc of ordersSnap.docs) {

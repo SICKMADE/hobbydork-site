@@ -1,0 +1,37 @@
+[
+  {
+    "id": "theme-neon",
+    "name": "Neon Syndicate Theme",
+    "description": "A futuristic neon look for your storefront. Stand out with glowing accents and bold style.",
+    "price": 19,
+    "category": "Utility"
+  },
+  {
+    "id": "theme-comic",
+    "name": "Comic Book Theme",
+    "description": "Classic comic book style with bold colors and halftone dots. Perfect for collectors and pop culture fans.",
+    "price": 19,
+    "category": "Utility"
+  },
+  {
+    "id": "theme-urban",
+    "name": "Urban Theme",
+    "description": "A modern city-inspired look for your shop. Clean lines and cool blues.",
+    "price": 19,
+    "category": "Utility"
+  },
+  {
+    "id": "theme-hobbyshop",
+    "name": "Hobby Shop Theme",
+    "description": "Classic hobby shop vibes with green accents and warm backgrounds.",
+    "price": 19,
+    "category": "Utility"
+  },
+  {
+    "id": "spotlight-weekly",
+    "name": "Weekly Spotlight",
+    "description": "Feature your store on the homepage and global search for 7 days. Get maximum exposure and trust.",
+    "price": 49,
+    "category": "Spotlight"
+  }
+]

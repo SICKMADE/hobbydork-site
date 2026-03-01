@@ -1,0 +1,11 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "default-banner",
+      "description": "The standard community banner for new storefronts.",
+      "imageUrl": "/hobbydork-banner-default.png",
+      "imageHint": "store banner"
+    }
+  ]
+}

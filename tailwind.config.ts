@@ -11,9 +11,8 @@ export default {
     extend: {
       fontFamily: {
         body: ['Inter', 'sans-serif'],
-        headline: ['"Press Start 2P"', 'monospace'],
+        headline: ['Space Grotesk', 'sans-serif'],
         code: ['monospace'],
-        nintendo: ['Nunito', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',

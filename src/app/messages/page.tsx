@@ -1,234 +1,125 @@
-
 'use client';
 
+import { useState, useEffect } from 'react';
+import Navbar from '@/components/Navbar';
+import { Card } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { MessageSquare, Search, Loader2 } from 'lucide-react';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { query, collection, orderBy, limit, where, doc } from 'firebase/firestore';
 import Link from 'next/link';
+import { Input } from '@/components/ui/input';
+import { getRandomAvatar } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { formatDistanceToNow } from 'date-fns';
 
-import AppLayout from '@/components/layout/AppLayout';
-import PlaceholderContent from '@/components/PlaceholderContent';
-import { useAuth } from '@/hooks/use-auth';
-
-import {
-  useFirestore,
-  useCollection,
-  useMemoFirebase,
-} from '@/firebase';
-
-import {
-  collection,
-  query,
-  where,
-} from 'firebase/firestore';
-
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-} from '@/components/ui/avatar';
-import { MessageCircle } from 'lucide-react';
-import { resolveAvatarUrl } from '@/lib/default-avatar';
-
-type ConversationDoc = {
-  id?: string;
-  participants?: string[];
-  participantUids?: string[];
-  participantDisplayNames?: Record<string, string>;
-  participantAvatarUrls?: Record<string, string>;
-  lastMessageText?: string;
-  lastMessageSenderUid?: string;
-  lastMessageAt?: any;
-  createdAt?: any;
-};
-
-export default function MessagesPage() {
-  const { user, profile, loading: authLoading } = useAuth();
-  const firestore = useFirestore();
+export default function MessagesInbox() {
+  const { user, isUserLoading: authLoading } = useUser();
+  const db = useFirestore();
   const router = useRouter();
-  const canReadFirestore =
-    !authLoading &&
-    !!user &&
-    user.emailVerified === true &&
-    profile?.status === "ACTIVE";
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const profileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
+  const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
+
+  const isVerificationComplete = !authLoading && !profileLoading;
+  const isActive = profile?.status === 'ACTIVE';
+
+  useEffect(() => {
+    if (isVerificationComplete) {
+      if (!user) router.push('/login');
+      else if (!user.emailVerified) router.push('/verify-email');
+      else if (!profile) router.push('/onboarding');
+    }
+  }, [user, profile, isVerificationComplete]);
+
+  // Security Rule Alignment: Must be ACTIVE to list conversations
   const conversationsQuery = useMemoFirebase(() => {
-    if (!canReadFirestore || !firestore || !user?.uid) return null;
+    if (!db || !user || !isActive) return null;
     return query(
-      collection(firestore, 'conversations'),
+      collection(db, 'conversations'),
       where('participantUids', 'array-contains', user.uid),
+      orderBy('lastTimestamp', 'desc'),
+      limit(50)
     );
-  }, [canReadFirestore, firestore, user?.uid]);
-  const { data: conversations, isLoading } =
-    useCollection<ConversationDoc>(canReadFirestore ? conversationsQuery : null);
+  }, [db, user?.uid, isActive]);
 
-  // Early returns after hooks
-  if (authLoading) {
-    return (
-      <AppLayout>
-        <div className="p-4 md:p-6 space-y-3">
-          <Skeleton className="h-8 w-48" />
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
-      </AppLayout>
-    );
-  }
-  if (!user || !user.emailVerified || profile?.status !== "ACTIVE") {
-    return (
-      <AppLayout>
-        <PlaceholderContent
-          title="Email Verification Required"
-          description="You must verify your email and have an active account to access messages."
-        >
-          <div className="mt-4 flex justify-center gap-3">
-            <Button asChild>
-              <Link href="/verify-email">Verify Email</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/">Back to home</Link>
-            </Button>
-          </div>
-        </PlaceholderContent>
-      </AppLayout>
-    );
+  const { data: conversations, isLoading: chatsLoading } = useCollection(conversationsQuery);
+
+  if (!isVerificationComplete) {
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>;
   }
 
-  const items =
-    (conversations || [])
-      .map((c: any) => {
-        const conv = c as ConversationDoc & { id: string };
-        const participantArray =
-          conv.participants || conv.participantUids || [];
-        const otherUid =
-          participantArray.find((p) => p !== user.uid) || '';
-        const otherName =
-          conv.participantDisplayNames?.[otherUid] || 'User';
-        const otherAvatar =
-          conv.participantAvatarUrls?.[otherUid] || '';
-
-        const lastAt = conv.lastMessageAt?.toDate
-          ? conv.lastMessageAt.toDate()
-          : null;
-        const lastAtText =
-          lastAt &&
-          formatDistanceToNow(lastAt, { addSuffix: true });
-
-        const tsForSort = lastAt
-          ? lastAt.getTime()
-          : conv.createdAt?.toDate
-          ? conv.createdAt.toDate().getTime()
-          : 0;
-
-        return {
-          id: conv.id!,
-          otherUid,
-          otherName,
-          otherAvatar: resolveAvatarUrl(otherAvatar, otherUid),
-          lastMessageText:
-            conv.lastMessageText || 'Tap to view conversation',
-          lastAtText,
-          sortKey: tsForSort,
-        };
-      })
-      .sort((a, b) => b.sortKey - a.sortKey);
+  if (!user || !isActive) return null;
 
   return (
-    <AppLayout>
-      <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-4">
-
-        {/* PERMISSIONS BANNER */}
-        {profile?.status !== 'ACTIVE' && (
-          <div className="border-2 border-red-600 bg-red-900/20 text-red-300 p-4 rounded-lg text-sm font-semibold">
-            Your account is currently restricted. Messaging is disabled.
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
+      <main className="flex-1 container mx-auto px-4 py-4 md:py-8 max-w-5xl flex flex-col min-h-0">
+        <header className="mb-6 space-y-1">
+          <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase">
+            <MessageSquare className="w-3 h-3" /> Secure Inbox
           </div>
-        )}
+          <h1 className="text-2xl md:text-4xl font-headline font-black">Private Messages</h1>
+        </header>
 
-        <div className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-primary" />
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Messages
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Private conversations with other collectors.
-            </p>
-          </div>
-        </div>
-
-        {isLoading && (
-          <div className="space-y-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full" />
-            ))}
-          </div>
-        )}
-
-        {!isLoading && items.length === 0 && (
-          <PlaceholderContent
-            title="No messages yet"
-            description="Start a conversation from a listing, store page, or user profile."
-          >
-            <div className="mt-4 flex justify-center">
-              <Button asChild>
-                <Link href="/search">Browse listings</Link>
-              </Button>
+        <Card className="flex-1 border-none shadow-2xl bg-card overflow-hidden rounded-[2rem] min-h-0">
+          <div className="grid md:grid-cols-[350px_1fr] h-[650px]">
+            <div className="border-r flex flex-col min-h-0">
+              <div className="p-4 border-b">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+                  <Input 
+                    placeholder="Search chats..." 
+                    className="pl-9 rounded-full h-10 text-xs"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="divide-y">
+                  {chatsLoading ? (
+                    <div className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-accent" /></div>
+                  ) : conversations?.length === 0 ? (
+                    <div className="p-8 text-center font-bold text-muted-foreground uppercase text-xs">No chats yet</div>
+                  ) : conversations?.map((chat) => {
+                    const otherId = chat.participantUids.find((id: string) => id !== user?.uid);
+                    const otherName = chat.participantNames?.[otherId || ''] || 'Collector';
+                    const otherAvatar = chat.participantAvatars?.[otherId || ''] || getRandomAvatar(otherId);
+                    
+                    return (
+                      <Link 
+                        key={chat.id} 
+                        href={`/messages/${chat.id}`}
+                        className="flex items-center gap-4 p-4 hover:bg-zinc-50 transition-colors"
+                      >
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={otherAvatar} />
+                          <AvatarFallback className="font-black text-xs">{otherName[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-baseline">
+                            <h4 className="font-bold text-sm truncate">@{otherName}</h4>
+                            <span className="text-[8px] text-muted-foreground uppercase font-black">2h ago</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{chat.lastMessage || 'Starting negotiation...'}</p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             </div>
-          </PlaceholderContent>
-        )}
 
-        {!isLoading && items.length > 0 && (
-          <div className="space-y-2">
-            {items.map((conv) => (
-              <Card
-                key={conv.id}
-                className={`cursor-pointer hover:bg-muted/70 transition-colors ${
-                  profile?.status !== 'ACTIVE'
-                    ? 'opacity-40 pointer-events-none'
-                    : ''
-                }`}
-                onClick={() => router.push(`/messages/${conv.id}`)}
-              >
-                <CardHeader className="py-3 flex flex-row items-center gap-3">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={conv.otherAvatar} />
-                    <AvatarFallback>
-                      {conv.otherName.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-sm truncate">
-                      {conv.otherName}
-                    </CardTitle>
-
-                    {/* RED PREVIEW BUBBLE */}
-                    <CardDescription className="text-xs">
-                      <span className="message-preview-red">
-                        {conv.lastMessageText}
-                      </span>
-                    </CardDescription>
-                  </div>
-
-                  {conv.lastAtText && (
-                    <span className="text-[11px] text-muted-foreground">
-                      {conv.lastAtText}
-                    </span>
-                  )}
-                </CardHeader>
-              </Card>
-            ))}
+            <div className="hidden md:flex flex-col items-center justify-center bg-zinc-50/50 p-12 text-center">
+              <MessageSquare className="w-12 h-12 text-accent mb-4 opacity-20" />
+              <h3 className="text-xl font-headline font-black mb-2">Select a Thread</h3>
+              <p className="text-muted-foreground text-sm max-w-xs font-medium italic">Communicate securely with other collectors to finalize your trades.</p>
+            </div>
           </div>
-        )}
-
-      </div>
-    </AppLayout>
+        </Card>
+      </main>
+    </div>
   );
 }

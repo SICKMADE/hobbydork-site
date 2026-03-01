@@ -1,6 +1,8 @@
 'use client';
 
-import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
+import * as React from 'react';
+import { ReactNode, DependencyList } from 'react';
+const { createContext, useContext, useMemo, useState, useEffect } = React;
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
@@ -128,14 +130,14 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     throw new Error('Firebase error: Core services not available. Please check your configuration or contact support.');
   }
 
-  return {
-    firebaseApp: context.firebaseApp,
-    firestore: context.firestore,
-    auth: context.auth,
+  return useMemo(() => ({
+    firebaseApp: context.firebaseApp!,
+    firestore: context.firestore!,
+    auth: context.auth!,
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
-  };
+  }), [context.firebaseApp, context.firestore, context.auth, context.user, context.isUserLoading, context.userError]);
 };
 
 /** Hook to access Firebase Auth instance. */

@@ -1,21 +1,21 @@
-# **App Name**: HobbyDork VaultVerse
+# **App Name**: hobbydork
 
 ## Core Features:
 
-- User Authentication and Status: Secure user authentication with ACTIVE, LIMITED, and SUSPENDED statuses, controlling access to app features. Each status determines which features a given user has access to. All features gated behind authentication.
-- Storefront Creation and Management: Allow users to create and customize their own storefronts with a unique URL, store name, logo, 'About Me' section and Stripe payments. Store names/URLs must be unique. Payment is mandatory before any listing or sale is created
-- Listing Creation and Management: Enable users to create, edit, and manage collectible listings with detailed information, including title, category, description, price, condition, quantity, images, and optional tags. Only e-mail verified users can list Active items
-- Search and Filtering: Implement global search functionality with filters for category, price range, and condition. Also provide search functionality specific to individual storefronts with a toggle. Provide result ordering by newest, price low->high, price high->low.
-- Order Management and Tracking: Allow users to manage orders with various states (Pending Payment, Payment Sent, Shipped, Delivered, Completed, Cancelled) and enable tracking with tracking numbers and carrier info. User prompted to provide shipping address after hitting "I've sent payment"
-- Community Chat with Moderation: Create a real-time community chat room with features like messaging, username/store name display, timestamping, and basic rate limiting. Abuse controls include user muting/hiding and blocking for DMs.
-- Vault Unlock Easter Egg: Implement an Easter egg where typing "HOBBYDORK" in the search bar reveals a 4-digit PIN. This PIN unlocks a vault door button that appears on the homepage, rewarding the user for opening an e-mail.
+- Collectible Listing Creation: Users can create detailed listings for their collectibles, including multiple photos, description, category, and choose between 'Buy It Now' fixed price or auction format with start/end times and bidding increments.
+- AI-Powered Listing Assistant: Utilizes a generative AI tool to suggest descriptive tags and initial descriptions for collectibles based on uploaded images, streamlining the listing process for sellers.
+- Browse and Search Functionality: Buyers can browse collectibles by category, search by keywords, and filter listings by price range, auction status, or 'Buy It Now' availability.
+- Auction Bidding System: Enables users to place bids on auction listings, view current bids, and receive notifications for outbid status and auction end.
+- 'Buy It Now' Purchase Flow: Allows buyers to instantly purchase items available at a fixed price.
+- User Dashboard: Personalized dashboard for users to manage their active listings, bids, purchases, and sales history.
+- stripe payment integration: Secure integration with a payment provider (e.g., Stripe sandbox) to handle transactions for purchases and auction winnings.
 
 ## Style Guidelines:
 
-- Primary color: Violet (#C64BE9) for a vibrant, collector-focused theme.
-- Background color: Dark gray (#747474) to create a secure and muted backdrop.
-- Accent color: Muted violet (#9575CD) for subtle highlights.
-- Font: 'Inter' (sans-serif) for all text, with varying weights and comfortable line-heights to ensure readability.
-- Use standard, clear icons for navigation and actions (Categories, Search as a 3D Nintendo button, Cart, Profile, Notifications, Settings).
-- Grid-based layouts for listings, storefronts, and spotlight sections to maintain a structured and organized appearance.
-- Micro-interactions: smooth transitions when loading lists and opening modals, looping light/glow animation on Spotlight store cards, explosion animation on easter egg PIN reveal.
+- Primary color: A sophisticated, reliable blue-grey (#525F7A) to convey trust and value appropriate for a collectibles marketplace.
+- Background color: A very light, desaturated grey-blue (#F0F2F4) provides a clean and expansive canvas that allows collectibles to stand out.
+- Accent color: A vibrant cyan (#3CC3DD) to draw attention to call-to-action buttons, key links, and highlight important information without being overly playful, complementing the primary palette with a sense of action and clarity.
+- Headline font: 'Playfair', a modern serif font, brings an elegant and high-end feel, suitable for showcasing valuable collectibles. Body font: 'PT Sans', a humanist sans-serif, provides excellent readability for detailed descriptions and general text, balancing professionalism with approachability.
+- Utilize minimalist line icons that subtly reference aspects of collecting, such as magnifying glasses, treasure chests, or distinct collectible item categories, maintaining a sophisticated yet functional aesthetic.
+- Implement a clean, grid-based layout for displaying collectible listings, emphasizing high-quality product images and concise information. Ensure a responsive design for seamless experience across various devices.
+- Subtle and refined hover animations for listings and interactive elements. Smooth transitions for page navigation and bidding feedback to enhance the user experience without distractions.

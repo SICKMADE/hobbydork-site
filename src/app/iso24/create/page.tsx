@@ -1,222 +1,171 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { db } from "@/firebase/client-provider";
-import { storage } from "@/firebase/client-provider";
-import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
-import { collection, addDoc, serverTimestamp, Timestamp, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import AppLayout from "@/components/layout/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ISO24_CATEGORY_OPTIONS, type Iso24Category } from "@/lib/iso24";
+import Navbar from '@/components/Navbar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CATEGORIES } from '@/lib/mock-data';
+import { Search, Sparkles, ArrowLeft, Info, Loader2, Clock } from 'lucide-react';
+import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
-export default function CreateISO() {
-  const { user, profile } = useAuth();
+export default function CreateISORequest() {
   const { toast } = useToast();
   const router = useRouter();
+  const db = useFirestore();
+  const { user } = useUser();
+  const [loading, setLoading] = useState(false);
 
-  const [title, setTitle] = useState("");
-  const [desc, setDesc] = useState("");
-  const [category, setCategory] = useState<Iso24Category>("OTHER");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  // Form State
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState('');
+  const [budget, setBudget] = useState('');
+  const [description, setDescription] = useState('');
 
-  function onPickImage(file: File | null) {
-    setImageFile(file);
-
-    if (imagePreviewUrl) {
-      URL.revokeObjectURL(imagePreviewUrl);
-      setImagePreviewUrl(null);
-    }
-
-    if (file) {
-      setImagePreviewUrl(URL.createObjectURL(file));
-    }
-  }
-
-  async function makeIso() {
-    if (!user) return;
-    if (!title.trim()) return;
-    // Enforce email verification and active status
-    if (!user.emailVerified) {
-      toast({
-        title: "Email not verified",
-        description: "You must verify your email to post in ISO24.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (profile?.status && profile.status !== "ACTIVE") {
-      toast({
-        title: "Account restricted",
-        description: "Your account is not active.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (imageFile && !storage) {
-      toast({
-        title: "Uploads unavailable",
-        description: "Storage is not ready yet. Refresh and try again.",
-        variant: "destructive",
-      });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db || !user) {
+      toast({ variant: 'destructive', title: 'Auth Required', description: 'Sign in to post requests.' });
       return;
     }
 
-    setSubmitting(true);
+    setLoading(loading);
 
-    const expiresAt = Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
-
-    if (!db) return;
-    const docRef = await addDoc(collection(db, "iso24Posts"), {
-      ownerUid: user.uid,
+    const isoData = {
       title,
+      userId: user.uid,
+      userName: user.displayName || 'Anonymous Collector',
+      postedAt: serverTimestamp(),
       category,
-      description: desc,
-      imageUrl: null,
-      status: "OPEN",
-      createdAt: serverTimestamp(),
-      expiresAt,
-    });
+      budget: parseFloat(budget),
+      description,
+      status: 'Searching'
+    };
 
-    try {
-      if (imageFile) {
-        if (!storage) throw new Error("Storage unavailable. Please try again later.");
-        const safeName = imageFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const path = `iso24Images/${user.uid}/${docRef.id}/${Date.now()}-${safeName}`;
-        const storageRef = ref(storage, path);
-        await uploadBytes(storageRef, imageFile);
-        const url = await getDownloadURL(storageRef);
-        await updateDoc(docRef, { imageUrl: url, updatedAt: serverTimestamp() });
-      }
-    } catch (e: any) {
-      // ISO is created; image is optional.
-      toast({
-        title: "Image upload failed",
-        description: e?.message ?? "Your ISO was created, but the image failed to upload.",
-        variant: "destructive",
+    setLoading(true);
+
+    addDoc(collection(db, 'iso24Posts'), isoData)
+      .then(() => {
+        toast({ title: "Request Posted!", description: "Your hunt is now live in the ISO24 feed for the next 24 hours." });
+        router.push('/iso24');
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: 'iso24Posts',
+          operation: 'create',
+          requestResourceData: isoData,
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+        setLoading(false);
       });
-    }
-
-    toast({ title: "ISO Created" });
-    router.push("/iso24");
-  }
-
-  if (!user)
-    return (
-      <AppLayout>
-        <div className="p-6">Sign in required.</div>
-      </AppLayout>
-    );
+  };
 
   return (
-    <AppLayout>
-      <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-extrabold tracking-tight">Create ISO24</h1>
-          <p className="text-sm text-muted-foreground">
-            Post what you’re looking for. The community has 24 hours to help you find it.
-          </p>
-        </div>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <main className="container mx-auto px-4 py-12">
+        <div className="max-w-2xl mx-auto">
+          <Link href="/iso24" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 font-black uppercase tracking-widest">
+            <ArrowLeft className="w-4 h-4" /> Back to Feed
+          </Link>
 
-        <Card className="border-2 border-black bg-card/80 shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
-          <CardHeader>
-            <CardTitle>Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              className="space-y-6"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void makeIso();
-              }}
-            >
+          <header className="mb-10 space-y-2">
+            <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase mb-2">
+              <Clock className="w-3 h-3" /> 24-Hour Active Search
+            </div>
+            <h1 className="text-4xl font-headline font-black italic tracking-tighter uppercase leading-none">Post ISO Request</h1>
+            <p className="text-muted-foreground font-medium">What item are you hunting for today?</p>
+          </header>
+
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="space-y-6">
               <div className="space-y-2">
-                <Label>What are you looking for?</Label>
-                <Input
-                  placeholder="Example: Amazing Spider-Man #300 (9.8)"
+                <Label htmlFor="title" className="text-[10px] font-black uppercase tracking-widest">Item Name</Label>
+                <Input 
+                  id="title" 
+                  placeholder="e.g. 1978 Luke Skywalker Orange Hair Variant" 
+                  required 
+                  className="h-14 rounded-2xl border-2 font-bold"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Category</Label>
-                  <Select value={category} onValueChange={(v) => setCategory(v as Iso24Category)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
+                  <Label htmlFor="category" className="text-[10px] font-black uppercase tracking-widest">Category</Label>
+                  <Select onValueChange={setCategory} value={category} required>
+                    <SelectTrigger className="h-14 rounded-2xl border-2 font-bold">
+                      <SelectValue placeholder="Select Category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {ISO24_CATEGORY_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
+                      {CATEGORIES.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="budget" className="text-[10px] font-black uppercase tracking-widest">Max Budget</Label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black">$</span>
+                    <Input 
+                      id="budget" 
+                      type="number" 
+                      className="pl-8 h-14 rounded-2xl border-2 font-bold" 
+                      placeholder="0.00" 
+                      required 
+                      value={budget}
+                      onChange={(e) => setBudget(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea
-                  rows={5}
-                  placeholder="Condition, budget, variants, trade/buy, etc."
-                  value={desc}
-                  onChange={(e) => setDesc(e.target.value)}
+                <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-widest">Specific Requirements</Label>
+                <Textarea 
+                  id="description" 
+                  placeholder="Detail the condition, grading, or specific provenance you need..."
+                  className="min-h-[150px] rounded-2xl border-2 font-medium"
+                  required
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label>Image (optional)</Label>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => onPickImage(e.target.files?.[0] ?? null)}
-                />
-                {imagePreviewUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={imagePreviewUrl}
-                    alt="Selected ISO image"
-                    className="w-full max-h-[360px] object-contain rounded-md border bg-muted"
-                  />
-                )}
+            <div className="bg-accent/5 border-2 border-dashed border-accent/20 p-8 rounded-[2.5rem] flex gap-4">
+              <Info className="w-6 h-6 text-accent shrink-0 mt-1" />
+              <div className="text-xs space-y-2 leading-relaxed font-bold">
+                <p className="font-black text-accent uppercase tracking-widest">How it works</p>
+                <p className="text-muted-foreground italic">Your request will be live for <span className="text-primary font-black">24 hours</span>. Sellers and other collectors will contact you directly via secure messaging. If you haven't found your item after a day, you can always repost your search.</p>
               </div>
+            </div>
 
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-2 border-black bg-muted/40 hover:bg-muted/60"
-                  onClick={() => router.push("/iso24")}
-                  disabled={submitting}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={submitting} className="comic-button">
-                  {submitting ? "Submitting…" : "Post ISO"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </AppLayout>
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full h-20 bg-primary text-white font-black text-2xl rounded-2xl shadow-2xl transition-all active:scale-95 uppercase italic tracking-tighter"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center gap-3">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  Posting Search...
+                </div>
+              ) : "Post Request to ISO24 Feed"}
+            </button>
+          </form>
+        </div>
+      </main>
+    </div>
   );
 }

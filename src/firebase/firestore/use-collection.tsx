@@ -8,6 +8,7 @@ import type {
   DocumentData,
 } from 'firebase/firestore';
 import { onSnapshot } from 'firebase/firestore';
+import { useUser } from '@/firebase/provider';
 
 type WithId<T = DocumentData> = T & { id: string };
 
@@ -20,32 +21,32 @@ type UseCollectionResult<T> = {
 export function useCollection<T = DocumentData>(
   queryRef: Query<T> | null | undefined,
 ): UseCollectionResult<T> {
-  const { user, loading: authLoading, profile } = require('@/hooks/use-auth').useAuth();
+  const { user, isUserLoading: authLoading } = useUser();
   const [data, setData] = useState<WithId<T>[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(!!queryRef);
   const [error, setError] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  // Delay subscription until auth is settled
+  useEffect(() => {
+    if (authLoading) {
+      setAuthReady(false);
+      return;
+    }
+    const timer = setTimeout(() => setAuthReady(true), 100);
+    return () => clearTimeout(timer);
+  }, [authLoading]);
 
   useEffect(() => {
-    // 🔒 HARD GATES — prevent subscription unless user is verified and active
-    if (authLoading) return;
+    // 🔒 HARD GATES — prevent subscription unless ready
+    if (!authReady) return;
     if (!user) {
       setData(null);
       setIsLoading(false);
       setError(null);
       return;
     }
-    if (profile?.status !== 'ACTIVE') {
-      setData(null);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
     if (!queryRef) {
-      if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.warn('useCollection called with null/undefined ref. Skipping Firestore subscription.');
-        console.trace('useCollection null ref stack');
-      }
       setData(null);
       setIsLoading(false);
       setError(null);
@@ -57,9 +58,6 @@ export function useCollection<T = DocumentData>(
 
     let unsub = null;
     try {
-      // Emit a stack trace so we can locate which component/query started this subscription
-      // (helps diagnose unexpected Watch stream state from the backend)
-      console.trace('Firestore useCollection subscribing', queryRef);
       unsub = onSnapshot(
         queryRef as Query<T>,
         (snap: QuerySnapshot<T>) => {
@@ -88,12 +86,10 @@ export function useCollection<T = DocumentData>(
       if (unsub) {
         try {
           unsub();
-        } catch (e) {
-          console.warn('Error unsubscribing Firestore snapshot', e);
-        }
+        } catch {}
       }
     };
-  }, [queryRef, user, authLoading, profile?.status]);
+  }, [queryRef, user, authReady]);
 
   return { data, isLoading, error };
 }

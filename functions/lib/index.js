@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateOrderStatus = exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = exports.createAuctionFeeCheckoutSession = exports.getStripeAccount = exports.stripeWebhook = exports.setBlindBidAuctionImage = exports.submitBlindBid = exports.createBlindBidAuction = exports.getStripePayouts = void 0;
+exports.updateOrderStatus = exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = exports.createAuctionFeeCheckoutSession = exports.getStripeAccount = exports.closeAuction = exports.placeBid = exports.createAuction = exports.dailySellerEnforcement = exports.stripeWebhook = exports.setBlindBidAuctionImage = exports.submitBlindBid = exports.createBlindBidAuction = exports.getStripePayouts = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const firebaseAdmin_1 = require("./firebaseAdmin");
 const stripe_1 = __importDefault(require("stripe"));
@@ -49,7 +49,14 @@ var blindBidder_2 = require("./blindBidder");
 Object.defineProperty(exports, "setBlindBidAuctionImage", { enumerable: true, get: function () { return blindBidder_2.setBlindBidAuctionImage; } });
 var stripeWebhook_1 = require("./stripeWebhook");
 Object.defineProperty(exports, "stripeWebhook", { enumerable: true, get: function () { return stripeWebhook_1.stripeWebhook; } });
+var dailySellerEnforcement_1 = require("./dailySellerEnforcement");
+Object.defineProperty(exports, "dailySellerEnforcement", { enumerable: true, get: function () { return dailySellerEnforcement_1.dailySellerEnforcement; } });
+var auctions_1 = require("./auctions");
+Object.defineProperty(exports, "createAuction", { enumerable: true, get: function () { return auctions_1.createAuction; } });
+Object.defineProperty(exports, "placeBid", { enumerable: true, get: function () { return auctions_1.placeBid; } });
+Object.defineProperty(exports, "closeAuction", { enumerable: true, get: function () { return auctions_1.closeAuction; } });
 const functions = __importStar(require("firebase-functions"));
+// ...existing code...
 // Use environment variable for Stripe secret, fallback to functions.config for legacy support
 const config = typeof functions.config === "object" ? functions.config : {};
 const stripeSecret = process.env.STRIPE_SECRET || (config.stripe && config.stripe.secret);
@@ -172,8 +179,19 @@ exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
     }
     const userSnap = await firebaseAdmin_1.db.collection("users").doc(uid).get();
     const userData = userSnap.data();
-    const shippingAddress = userData?.shippingAddress || {};
-    if (Object.keys(shippingAddress).length > 0) {
+    const userAddress = userData?.shippingAddress || {};
+    // Map user address fields to order address fields
+    const shippingAddress = {
+        name: userAddress.name || "",
+        line1: userAddress.address1 || "",
+        line2: userAddress.address2 || "",
+        city: userAddress.city || "",
+        state: userAddress.state || "",
+        postalCode: userAddress.zip || "",
+        country: userAddress.country || "",
+    };
+    // Only set if at least line1 and city/state/zip are present
+    if (shippingAddress.line1 && shippingAddress.city && shippingAddress.state && shippingAddress.postalCode) {
         await firebaseAdmin_1.db.collection("orders").doc(orderId).set({ shippingAddress }, { merge: true });
     }
     const session = await stripe.checkout.sessions.create({
@@ -225,10 +243,11 @@ exports.createStripeOnboarding = (0, https_1.onCall)(async (request) => {
             updatedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
     }
+    const appBaseUrl = request.data?.appBaseUrl || "https://hobbydork.com";
     const link = await stripe.accountLinks.create({
         account: accountId,
-        refresh_url: "https://hobbydork.com/onboarding/terms",
-        return_url: "https://hobbydork.com/onboarding/success",
+        refresh_url: `${appBaseUrl}/onboarding/terms`,
+        return_url: `${appBaseUrl}/seller/onboarding?step=5`,
         type: "account_onboarding",
     });
     return { url: link.url };

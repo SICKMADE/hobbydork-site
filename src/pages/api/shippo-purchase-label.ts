@@ -1,10 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 
-const SHIPPO_API_KEY = process.env.SHIPPO_API_KEY || 'shippo_test_1234567890abcdef1234567890abcdef'; // Replace with your real key or use env
+const SHIPPO_API_KEY = process.env.SHIPPO_API_KEY;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+  if (!SHIPPO_API_KEY) {
+    return res.status(500).json({ error: 'SHIPPO_API_KEY is not configured' });
   }
   const { rateObjectId } = req.body;
   if (!rateObjectId) {

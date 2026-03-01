@@ -1,4 +1,5 @@
-import data from './placeholder-images.json';
+
+import data from '@/app/lib/placeholder-images.json';
 
 export type ImagePlaceholder = {
   id: string;
@@ -7,8 +8,4 @@ export type ImagePlaceholder = {
   imageHint: string;
 };
 
-export const placeholderImages: Record<string, ImagePlaceholder> = 
-  data.placeholderImages.reduce((acc, img) => {
-    acc[img.id] = img;
-    return acc;
-  }, {} as Record<string, ImagePlaceholder>);
+export const PlaceHolderImages: ImagePlaceholder[] = data.placeholderImages;

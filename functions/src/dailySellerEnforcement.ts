@@ -1,14 +1,9 @@
 // Firebase Cloud Function: Daily Seller Tier & Late Shipment Enforcement
-import * as functions from 'firebase-functions';
 import * as functionsV1 from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
-admin.initializeApp();
-
-const db = admin.firestore();
+import { admin, db } from './firebaseAdmin';
 
 // Helper: Update seller stats and tier
 import { updateSellerTier } from './updateSellerTier';
-// TODO: Ensure updateSellerTier exists at the correct path, e.g. './lib/updateSellerTier.ts'
 
 export const dailySellerEnforcement = functionsV1.pubsub.schedule('every 24 hours').onRun(async (context: any) => {
   const now = Date.now();

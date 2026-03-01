@@ -12,7 +12,9 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 
 /** Utility type to add an 'id' field to a given type T. */
-type WithId<T> = T & { id: string };
+type WithId<T> = T & {
+  [x: string]: any; id: string 
+};
 
 export interface UseDocResult<T> {
   data: WithId<T> | null;
@@ -23,15 +25,44 @@ export interface UseDocResult<T> {
 export function useDoc<T = unknown>(
   memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
 ): UseDocResult<T> {
-  const { user, loading: authLoading, profile } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [data, setData] = useState<WithId<T> | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(!!memoizedDocRef);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  // Delay subscription until auth is settled
+  useEffect(() => {
+    if (authLoading) {
+      setAuthReady(false);
+      return;
+    }
+    const timer = setTimeout(() => setAuthReady(true), 100);
+    return () => clearTimeout(timer);
+  }, [authLoading]);
 
   useEffect(() => {
-    // 🔒 HARD GATES — THIS IS THE FIX
-    if (authLoading) return;
+    if (authLoading) {
+      setIsLoading(!!memoizedDocRef);
+      return;
+    }
+
+    if (!user || !memoizedDocRef) {
+      setData(null);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    if (!authReady) {
+      setIsLoading(true);
+    }
+  }, [authLoading, user?.uid, memoizedDocRef, authReady]);
+
+  useEffect(() => {
+    // 🔒 HARD GATES — WAIT FOR AUTH TO BE READY
+    if (!authReady) return;
     if (!user) return;
     //
     if (!memoizedDocRef) return;
@@ -42,10 +73,6 @@ export function useDoc<T = unknown>(
     let unsub: (() => void) | null = null;
 
     try {
-      if (process.env.NODE_ENV !== 'production') {
-        console.trace('Firestore useDoc subscribing:', memoizedDocRef.path);
-      }
-
       unsub = onSnapshot(
         memoizedDocRef as DocumentReference<T>,
         (snap: DocumentSnapshot<T>) => {
@@ -78,7 +105,7 @@ export function useDoc<T = unknown>(
   }, [
     memoizedDocRef,
     user?.uid,
-    authLoading,
+    authReady,
     //
   ]);
 

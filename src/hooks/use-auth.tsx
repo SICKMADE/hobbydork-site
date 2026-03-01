@@ -1,37 +1,10 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
-import {
-  onAuthStateChanged,
-  onIdTokenChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  sendEmailVerification,
-  updateProfile,
-  User,
-  UserCredential,
-} from "firebase/auth";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  serverTimestamp,
-  getFirestore,
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
+import { useCallback, useRef } from "react";
+import { useUser, useFirebase } from "@/firebase/provider";
+import { User, UserCredential, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendEmailVerification, updateProfile } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp, getFirestore, collection, query, where, getDocs, updateDoc } from "firebase/firestore";
 import type { UserStatus } from "@/lib/types";
-
-import { auth, db } from "@/firebase/client-provider";
 import { getDefaultAvatarUrl } from "@/lib/default-avatar";
 
 export type UserDoc = {
@@ -115,209 +88,37 @@ type AuthContextType = {
   ) => Promise<UserCredential>;
   logout: () => Promise<void>;
   resendVerification: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
+  refreshProfile: () => Promise<UserDoc | void>;
 };
 
-const AuthContext = createContext<AuthContextType | null>(null);
+/**
+ * useAuth is a wrapper around the Firebase provider's useUser hook.
+ * It provides a familiar interface while using the centralized auth system.
+ */
+export function useAuth(): AuthContextType {
+  const { user, isUserLoading } = useUser();
+  const { auth, firestore: db } = useFirebase();
 
-export function AuthProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const authState = useProvideAuth();
-  return (
-    <AuthContext.Provider value={authState}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    // Production: User-friendly error
-    throw new Error("Auth error: This feature must be used inside AuthProvider. Please contact support if this persists.");
-  }
-  return ctx;
-}
-
-function useProvideAuth(): AuthContextType {
-    // Reload user profile from Firestore and update state
-    const refreshProfile = async () => {
-      if (!user || !db) return;
-      try {
-        const ref = doc(db, "users", user.uid);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          const existing = snap.data() as UserDoc;
-          setUserData({ ...EMPTY_USERDOC, ...existing, emailVerified: user.emailVerified });
-        }
-      } catch (e) {
-        setError(e);
+  const refreshProfile = useCallback(async () => {
+    if (!user || !db) return;
+    try {
+      const ref = doc(db, "users", user.uid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const existing = snap.data() as UserDoc;
+        return { ...EMPTY_USERDOC, ...existing, emailVerified: user.emailVerified };
       }
-    };
-  const [user, setUser] = useState<User | null>(null);
-  const [userData, setUserData] = useState<UserDoc>(EMPTY_USERDOC);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<unknown | null>(null);
-  useEffect(() => {
-    if (!user) return;
-
-    if (user.emailVerified && userData?.emailVerified !== true && db) {
-      setDoc(
-        doc(db, 'users', user.uid),
-        {
-          emailVerified: true,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+    } catch (e) {
+      console.error('Failed to refresh profile:', e);
     }
-  }, [user, userData]);
-  // Sync Firestore emailVerified after login (no manual code logic)
-  useEffect(() => {
-    if (!user) return;
-    if (user.emailVerified && db) {
-      setDoc(
-        doc(db, 'users', user.uid),
-        {
-          emailVerified: true,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      ).catch(() => {});
-    }
-  }, [user?.uid, user?.emailVerified]);
+  }, [user, db]);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    // Defensive: if client SDKs aren't available yet, fail gracefully.
-    if (!auth) {
-      setError(new Error("Firebase auth SDK not initialized."));
-      setLoading(false);
-      return;
-    }
-    if (!db) {
-      setError(new Error("Firebase Firestore SDK not initialized."));
-      setLoading(false);
-      return;
-    }
-
-    // NOTE: email verification changes do NOT trigger onAuthStateChanged.
-    // onIdTokenChanged fires when tokens refresh (e.g. after getIdToken(true)),
-    // so it keeps Firestore's users/{uid}.emailVerified in sync.
-    const unsub = onIdTokenChanged(auth, (firebaseUser) => {
-      (async () => {
-        try {
-          if (!isMounted) return;
-          setError(null);
-
-          if (!firebaseUser) {
-            setUser(null);
-            setUserData(EMPTY_USERDOC);
-            return;
-          }
-
-          setUser(firebaseUser);
-
-          // Ensure db is defined before using
-          if (!db) {
-            setError(new Error("Firestore SDK not initialized."));
-            setUserData(EMPTY_USERDOC);
-            return;
-          }
-
-          const ref = doc(db, "users", firebaseUser.uid);
-          const snap = await getDoc(ref);
-
-          if (snap.exists()) {
-            const existing = snap.data() as UserDoc;
-            // Keep Firestore doc in sync with Auth verification state.
-            if (existing.emailVerified !== firebaseUser.emailVerified) {
-              try {
-                await updateDoc(ref, {
-                  emailVerified: firebaseUser.emailVerified,
-                  updatedAt: serverTimestamp(),
-                });
-              } catch (_e) {
-                // ignore permissions/offline; UI gating uses Auth state
-              }
-            }
-
-            setUserData({
-              ...EMPTY_USERDOC,
-              ...existing,
-              emailVerified: firebaseUser.emailVerified,
-            });
-          } else {
-            // Create user doc if missing (first signup)
-            const newUserData: UserDoc = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email ?? "",
-              emailVerified: firebaseUser.emailVerified,
-              displayName: firebaseUser.displayName ?? "",
-              role: "USER",
-              status: "ACTIVE",
-              isSeller: false,
-              sellerStatus: "NONE",
-              storeId: "",
-              avatar: getDefaultAvatarUrl(firebaseUser.uid),
-              about: "",
-              notifyMessages: true,
-              notifyOrders: true,
-              notifyISO24: true,
-              notifySpotlight: true,
-              stripeOnboarded: false,
-              stripeAccountId: null,
-              stripeTermsAgreed: false,
-              paymentMethod: null,
-              paymentIdentifier: null,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-              oneAccountAcknowledged: false,
-              blockedUsers: [],
-            };
-            try {
-              await setDoc(ref, newUserData);
-            } catch (e) {
-              console.error('Firestore setDoc failed:', e);
-            }
-            setUserData({
-              ...EMPTY_USERDOC,
-              ...newUserData,
-              // avoid leaking FieldValue into UI state; keep minimal fields
-              createdAt: undefined as any,
-              updatedAt: undefined as any,
-            });
-          }
-        } catch (e) {
-          if (!isMounted) return;
-          setError(e);
-          // If something fails (e.g. Firestore permissions/offline), avoid leaving UI stuck.
-          setUserData(EMPTY_USERDOC);
-        } finally {
-          if (!isMounted) return;
-          setLoading(false);
-        }
-      })();
-    });
-
-    return () => {
-      isMounted = false;
-      unsub();
-    };
-  }, []);
-
-  /* ---------- AUTH ACTIONS ---------- */
-
-  const signInUser = (email: string, password: string) => {
+  const signInUser = useCallback((email: string, password: string) => {
     if (!auth) throw new Error("Firebase auth SDK not initialized.");
     return signInWithEmailAndPassword(auth, email, password);
-  };
+  }, [auth]);
 
-  const signUpUser = async (
+  const signUpUser = useCallback(async (
     email: string,
     password: string,
     displayName: string
@@ -331,7 +132,6 @@ function useProvideAuth(): AuthContextType {
         await updateProfile(cred.user, { displayName });
       }
 
-      // Always create Firestore user doc immediately after signup
       const ref = doc(db, 'users', cred.user.uid);
       await setDoc(ref, {
         uid: cred.user.uid,
@@ -370,44 +170,35 @@ function useProvideAuth(): AuthContextType {
 
       return cred;
     } catch (e) {
-      setError(e);
       throw e;
     }
-  };
+  }, [auth, db]);
 
-  const logoutUser = async () => {
+  const logoutUser = useCallback(async () => {
     if (!auth) throw new Error("Firebase auth SDK not initialized.");
     try {
       await signOut(auth);
-      setUser(null);
-      setUserData(EMPTY_USERDOC);
     } catch (e) {
-      setError(e);
-      // log for easier local debugging
-      // eslint-disable-next-line no-console
-      // ...existing code...
       throw e;
     }
-  };
+  }, [auth]);
 
-  const resendVerification = async () => {
+  const resendVerification = useCallback(async () => {
     if (!auth) throw new Error("Firebase auth SDK not initialized.");
     const current = auth.currentUser;
     if (!current) {
       throw new Error('Not signed in.');
     }
 
-    // Ensure we have the latest emailVerified state.
     try {
       await (current.reload?.() ?? Promise.resolve());
     } catch {
-      // ignore reload errors; still attempt send below
+      // ignore reload errors
     }
 
     if (current.emailVerified) {
       return;
     }
-
 
     try {
       const actionCodeSettings = {
@@ -417,9 +208,6 @@ function useProvideAuth(): AuthContextType {
       await sendEmailVerification(current, actionCodeSettings);
     } catch (e: any) {
       const code = String(e?.code ?? '');
-
-
-      // Always use production URL for continueUrl
       const continueUrl = 'https://hobbydork.com/verify-email';
 
       const domainHelpMessage =
@@ -428,7 +216,6 @@ function useProvideAuth(): AuthContextType {
         `Then set Vercel env NEXT_PUBLIC_SITE_URL=https://hobbydork.com and redeploy.` +
         (continueUrl ? ` (Continue URL: ${continueUrl})` : '');
 
-      // If the domain/continue URL isn't whitelisted in Firebase, retry without settings.
       if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri') {
         try {
           await sendEmailVerification(current);
@@ -457,49 +244,55 @@ function useProvideAuth(): AuthContextType {
 
       throw new Error(e?.message ?? 'Could not resend verification email.');
     }
-  };
+  }, [auth]);
 
-  return {
-    user,
-    userData,
-    // backward-compatible alias expected by callers
-    profile: userData,
-    loading,
-    error,
-    // alias names
-    login: signInUser,
-    signup: signUpUser,
-    // original names (keep both)
-    signIn: signInUser,
-    signUp: signUpUser,
-    logout: logoutUser,
-    resendVerification,
-    refreshProfile,
-  };
+  // Use ref to memoize the return object - only create new object if dependencies change
+  const authRef = useRef<AuthContextType | null>(null);
+  
+  if (!authRef.current ||
+      authRef.current.user !== user ||
+      authRef.current.loading !== isUserLoading ||
+      authRef.current.login !== signInUser ||
+      authRef.current.logout !== logoutUser) {
+    authRef.current = {
+      user,
+      userData: EMPTY_USERDOC,
+      profile: EMPTY_USERDOC,
+      loading: isUserLoading,
+      error: null,
+      login: signInUser,
+      signup: signUpUser,
+      signIn: signInUser,
+      signUp: signUpUser,
+      logout: logoutUser,
+      resendVerification,
+      refreshProfile,
+    };
+  }
+
+  return authRef.current as AuthContextType;
 }
 
 // Utility: Check all sellers for overdue unshipped orders and flag their profile
 export async function flagOverdueSellers() {
   const db = getFirestore();
-  // Find all orders that are PAID and overdue (older than 2 business days)
+  // Cleaned: find overdue paid orders
   const ordersRef = collection(db, 'orders');
   const now = Date.now();
   const twoBusinessDaysMs = 2 * 24 * 60 * 60 * 1000;
   const q = query(ordersRef, where('state', '==', 'PAID'));
   const snap = await getDocs(q);
-  const overdueSellers = new Set();
+  const overdueSellers = new Set<string>();
   snap.forEach(docSnap => {
     const data = docSnap.data();
     const created = data.createdAt?.seconds ? data.createdAt.seconds * 1000 : new Date(data.createdAt).getTime();
-    if (now - created > twoBusinessDaysMs) {
+    if (now - created > twoBusinessDaysMs && typeof data.sellerUid === 'string') {
       overdueSellers.add(data.sellerUid);
     }
   });
   // Flag each seller profile
   for (const sellerUid of overdueSellers) {
-    if (typeof sellerUid === 'string') {
-      const userRef = doc(db, 'users', sellerUid);
-      await updateDoc(userRef, { hasOverdueShipments: true });
-    }
+    const userRef = doc(db, 'users', sellerUid);
+    await updateDoc(userRef, { hasOverdueShipments: true });
   }
 }

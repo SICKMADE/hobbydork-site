@@ -7,8 +7,9 @@ const DEFAULT_AVATAR_FILES = [
   'hobbydork-head7.png',
 ] as const;
 
-const DEFAULT_AVATAR_DIR = (process.env.NEXT_PUBLIC_DEFAULT_AVATAR_DIR || 'default-avatar').replace(/^\/+|\/+$/g, '');
-const FALLBACK_AVATAR_DIR = 'default-avatar';
+// Always use the avatars directory in public
+const DEFAULT_AVATAR_DIR = 'avatars';
+const FALLBACK_AVATAR_DIR = 'avatars';
 
 function hashString(input: string): number {
   // djb2
@@ -22,14 +23,25 @@ function hashString(input: string): number {
 
 export function getDefaultAvatarUrl(seed?: string | null): string {
   const value = (seed ?? '').trim();
-  const index = value ? hashString(value) % DEFAULT_AVATAR_FILES.length : 0;
+  let index: number;
+  if (value) {
+    index = hashString(value) % DEFAULT_AVATAR_FILES.length;
+  } else {
+    // Randomize if no seed provided
+    index = Math.floor(Math.random() * DEFAULT_AVATAR_FILES.length);
+  }
   const file = DEFAULT_AVATAR_FILES[index] ?? DEFAULT_AVATAR_FILES[0];
   return `/${DEFAULT_AVATAR_DIR}/${file}`;
 }
 
 export function getFallbackDefaultAvatarUrl(seed?: string | null): string {
   const value = (seed ?? '').trim();
-  const index = value ? hashString(value) % DEFAULT_AVATAR_FILES.length : 0;
+  let index: number;
+  if (value) {
+    index = hashString(value) % DEFAULT_AVATAR_FILES.length;
+  } else {
+    index = Math.floor(Math.random() * DEFAULT_AVATAR_FILES.length);
+  }
   const file = DEFAULT_AVATAR_FILES[index] ?? DEFAULT_AVATAR_FILES[0];
   return `/${FALLBACK_AVATAR_DIR}/${file}`;
 }

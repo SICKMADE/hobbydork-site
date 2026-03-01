@@ -1,9 +1,9 @@
 'use client';
 import { getAuth, type User } from 'firebase/auth';
 
-type SecurityRuleContext = {
+export type SecurityRuleContext = {
   path: string;
-  operation: 'get' | 'list' | 'create' | 'update' | 'delete' | 'write';
+  operation: 'get' | 'list' | 'create' | 'update' | 'delete' | 'write'; // Cleaned: operation types
   requestResourceData?: unknown;
 };
 
@@ -96,6 +96,7 @@ function buildErrorMessage(requestObject: SecurityRuleRequest): string {
 ${JSON.stringify(requestObject, null, 2)}`;
 }
 
+/**
 /**
  * A custom error class designed to be consumed by an LLM for debugging.
  * It structures the error information to mimic the request object

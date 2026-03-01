@@ -8,6 +8,13 @@ const STRIPE_SECRET = defineSecret("STRIPE_SECRET");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 let stripe: Stripe | undefined;
 
+const THEME_PRODUCT_TO_NAME: Record<string, string> = {
+  p2: "Neon Syndicate Theme",
+  p3: "Urban Theme",
+  p4: "Comic Book Theme",
+  p5: "Hobby Shop Theme",
+};
+
 export const stripeWebhook = onRequest(
   { secrets: [STRIPE_SECRET, STRIPE_WEBHOOK_SECRET] },
   async (req, res) => {
@@ -40,49 +47,205 @@ export const stripeWebhook = onRequest(
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-      // Spotlight purchase automation
-      const spotlightStoreId = session.metadata?.spotlightStoreId;
-      if (spotlightStoreId) {
-        // Get the storefront doc
-        const storeSnap = await db.collection("storefronts").where("id", "==", spotlightStoreId).limit(1).get();
-        if (storeSnap.empty) {
-          console.error("Storefront not found for spotlight", spotlightStoreId);
-          res.status(404).send("Storefront not found");
+      const productId = session.metadata?.productId;
+      const buyerId = session.metadata?.buyerId;
+
+      // Premium product purchase automation (current flow)
+      if (productId && buyerId) {
+        const userRef = db.collection("users").doc(buyerId);
+        await userRef.set(
+          {
+            ownedPremiumProducts: admin.firestore.FieldValue.arrayUnion(productId),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        // Spotlight purchase: p1
+        if (productId === "p1") {
+          const storeSnap = await db.collection("storefronts").where("ownerUid", "==", buyerId).limit(1).get();
+          if (!storeSnap.empty) {
+            const storeDoc = storeSnap.docs[0];
+            const storeData = storeDoc.data() as any;
+            const spotlightStoreId = storeData?.id || storeDoc.id;
+            const now = admin.firestore.Timestamp.now();
+            const endAt = admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+
+            const slotRef = db.collection("spotlightSlots").doc();
+            await slotRef.set({
+              slotId: slotRef.id,
+              storeId: spotlightStoreId,
+              ownerUid: buyerId,
+              startAt: now,
+              endAt,
+              active: true,
+              createdAt: now,
+            });
+
+            await storeDoc.ref.set(
+              {
+                isSpotlighted: true,
+                spotlightUntil: endAt,
+                updatedAt: now,
+              },
+              { merge: true }
+            );
+
+            await userRef.collection("notifications").add({
+              type: "SPOTLIGHT",
+              title: "Your store is in the spotlight!",
+              body: "Your store has been featured for 7 days.",
+              relatedId: spotlightStoreId,
+              read: false,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+          } else {
+            await userRef.collection("notifications").add({
+              type: "SPOTLIGHT",
+              title: "Spotlight purchase received",
+              body: "We received your spotlight purchase, but no storefront was found yet. Create your storefront and contact support to apply it.",
+              relatedId: productId,
+              read: false,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+          }
+
+          res.status(200).send("Spotlight purchase processed");
           return;
         }
-        const storeDoc = storeSnap.docs[0];
-        const storeData = storeDoc.data();
-        const ownerUid = storeData.ownerUid;
-        // Calculate spotlight period (7 days from now)
+
+        // Theme purchase: p2-p5
+        const selectedTheme = THEME_PRODUCT_TO_NAME[productId];
+        if (selectedTheme) {
+          const storeSnap = await db.collection("storefronts").where("ownerUid", "==", buyerId).limit(1).get();
+          if (!storeSnap.empty) {
+            const storeDoc = storeSnap.docs[0];
+            await storeDoc.ref.set(
+              {
+                selectedTheme,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              },
+              { merge: true }
+            );
+          }
+
+          await userRef.set(
+            {
+              ownedThemes: admin.firestore.FieldValue.arrayUnion(selectedTheme),
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+
+          await userRef.collection("notifications").add({
+            type: "THEME_PURCHASE",
+            title: "Theme Unlocked!",
+            body: `Your ${selectedTheme} is now available.`,
+            relatedId: selectedTheme,
+            read: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          res.status(200).send("Theme purchase processed");
+          return;
+        }
+
+        // Utility product: p6 (Verified Dealer Pro)
+        if (productId === "p6") {
+          await userRef.set(
+            {
+              verifiedDealerPro: true,
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+
+          await userRef.collection("notifications").add({
+            type: "UTILITY_PURCHASE",
+            title: "Upgrade Activated",
+            body: "Verified Dealer Pro has been applied to your account.",
+            relatedId: productId,
+            read: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          res.status(200).send("Utility purchase processed");
+          return;
+        }
+      }
+
+      // Legacy theme metadata compatibility
+      const themeId = session.metadata?.themeId;
+      if (themeId && buyerId) {
+        // Grant the purchased theme to the user (add to ownedThemes array)
+        const userRef = db.collection("users").doc(buyerId);
+        await userRef.set({
+          ownedThemes: admin.firestore.FieldValue.arrayUnion(themeId),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        // Optionally notify user
+        await userRef.collection("notifications").add({
+          type: "THEME_PURCHASE",
+          title: "Theme Unlocked!",
+          body: `You have unlocked a new store theme!` ,
+          relatedId: themeId,
+          read: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        res.status(200).send("Theme purchase processed");
+        return;
+      }
+
+      // Legacy spotlight metadata compatibility
+      const spotlightStoreId = session.metadata?.spotlightStoreId;
+      if (spotlightStoreId) {
         const now = admin.firestore.Timestamp.now();
         const endAt = admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
-        // Create spotlight slot
-        const slotRef = db.collection("spotlightSlots").doc();
-        await slotRef.set({
-          slotId: slotRef.id,
-          storeId: spotlightStoreId,
-          ownerUid,
-          startAt: now,
-          endAt,
-          active: true,
-          createdAt: now,
-        });
-        // Update storefront doc
-        await storeDoc.ref.update({
-          isSpotlighted: true,
-          spotlightUntil: endAt,
-          updatedAt: now,
-        });
-        // Notify store owner
-        await db.collection("users").doc(ownerUid).collection("notifications").add({
-          type: "SPOTLIGHT",
-          title: "Your store is in the spotlight!",
-          body: `Congratulations! Your store is now featured in the Store Spotlight for 7 days.`,
-          relatedId: spotlightStoreId,
-          read: false,
-          createdAt: now,
-        });
-        res.status(200).send("Spotlight slot created");
+
+        const storeSnap = await db
+          .collection("storefronts")
+          .where("id", "==", spotlightStoreId)
+          .limit(1)
+          .get();
+
+        if (!storeSnap.empty) {
+          const storeDoc = storeSnap.docs[0];
+          const storeData = storeDoc.data() as any;
+          const ownerUid = storeData?.ownerUid;
+
+          const slotRef = db.collection("spotlightSlots").doc();
+          await slotRef.set({
+            slotId: slotRef.id,
+            storeId: spotlightStoreId,
+            ownerUid,
+            startAt: now,
+            endAt,
+            active: true,
+            createdAt: now,
+          });
+
+          await storeDoc.ref.set(
+            {
+              isSpotlighted: true,
+              spotlightUntil: endAt,
+              updatedAt: now,
+            },
+            { merge: true }
+          );
+
+          if (ownerUid) {
+            await db.collection("users").doc(ownerUid).collection("notifications").add({
+              type: "SPOTLIGHT",
+              title: "Your store is in the spotlight!",
+              body: "Your store has been featured for 7 days.",
+              relatedId: spotlightStoreId,
+              read: false,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+          }
+        }
+
+        res.status(200).send("Spotlight purchase processed");
         return;
       }
       // Auction fee payment
