@@ -127,8 +127,8 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader className="h-16 flex items-center justify-center border-b">
         {user ? (
-          <Link href="/dashboard" className="flex items-center justify-center">
-            <Avatar className="w-12 h-12 border-2 border-primary/10 hover:border-accent transition-colors">
+          <Link href="/dashboard" className="flex items-center justify-center cursor-pointer">
+            <Avatar className="w-12 h-12 border-2 border-primary/10 hover:border-accent hover:scale-110 transition-all duration-200">
               <AvatarImage src={userAvatar} />
               <AvatarFallback><User className="w-6 h-6" /></AvatarFallback>
             </Avatar>
