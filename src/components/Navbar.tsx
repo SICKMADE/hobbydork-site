@@ -1,20 +1,36 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, ShoppingBag, Menu, X, LogIn } from 'lucide-react';
+import { Search, ShoppingBag, LogIn, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import Image from 'next/image';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 export default function Navbar() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
   const [searchValue, setSearchValue] = useState('');
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   
   const { user } = useUser();
+  const db = useFirestore();
+
+  // Fetch unread notifications count
+  const notificationsQuery = useMemoFirebase(() => 
+    user && db ? query(
+      collection(db, 'users', user.uid, 'notifications'),
+      where('read', '==', false),
+      orderBy('createdAt', 'desc')
+    ) : null,
+    [db, user?.uid]
+  );
+
+  const { data: notifications } = useCollection(notificationsQuery);
+  const unreadCount = notifications?.length || 0;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -34,9 +50,11 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-background/80 dark:bg-[#202020] backdrop-blur-xl border-b sticky top-0 z-50 h-16 md:h-24 flex items-center shadow-sm">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between gap-4 md:gap-8 lg:gap-12">
+    <nav className="bg-background/80 dark:bg-[#202020] backdrop-blur-xl border-b sticky top-0 z-50 flex flex-col shadow-sm">
+      <div className="container mx-auto px-4 w-full">
+        {/* Main Navbar Row */}
+        <div className="flex items-center justify-between gap-2 md:gap-4 lg:gap-12 h-16 md:h-24">
+          {/* Logo */}
           <div className="flex items-center gap-4 lg:gap-8 shrink-0">
             <Link href="/" className="shrink-0">
               <Image 
@@ -50,6 +68,7 @@ export default function Navbar() {
             </Link>
           </div>
 
+          {/* Desktop Search Bar */}
           <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-2xl relative">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground dark:text-zinc-500 w-5 h-5 z-10" />
             <Input 
@@ -60,7 +79,22 @@ export default function Navbar() {
             />
           </form>
 
-          <div className="hidden md:flex items-center gap-4">
+          {/* Desktop Actions (right side) */}
+          <div className="hidden md:flex items-center gap-2 lg:gap-4 shrink-0">
+            {/* Notification Bell */}
+            {user && (
+              <Button asChild variant="ghost" size="icon" className="rounded-full relative w-12 h-12" title="Notifications">
+                <Link href="/notifications">
+                  <Bell className="w-6 h-6" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black rounded-full w-5 h-5 flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+              </Button>
+            )}
+
             {!user && (
               <Button asChild className="bg-accent text-accent-foreground font-black px-6 h-12 rounded-full flex items-center gap-2">
                 <Link href="/login"><LogIn className="w-4 h-4" /> Sign In</Link>
@@ -72,33 +106,50 @@ export default function Navbar() {
             </Button>
           </div>
 
-          <div className="md:hidden flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {/* Mobile Actions (right side) */}
+          <div className="md:hidden flex items-center gap-2 shrink-0">
+            {/* Mobile Notification Bell */}
+            {user && (
+              <Button asChild variant="ghost" size="icon" className="rounded-full relative w-10 h-10" title="Notifications">
+                <Link href="/notifications">
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-black rounded-full w-4 h-4 flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+              </Button>
+            )}
+
+            {/* Mobile Search Toggle */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full w-10 h-10"
+              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+            >
+              <Search className="w-5 h-5" />
             </Button>
+
+            {/* Mobile Sidebar Trigger */}
+            <SidebarTrigger />
           </div>
         </div>
 
-        {isMenuOpen && (
-          <div className="md:hidden py-6 border-t mt-4 flex flex-col gap-3 animate-in slide-in-from-top duration-300 bg-card shadow-2xl p-6 rounded-b-[2rem]">
-            <form onSubmit={handleSearch} className="relative mb-6">
+        {/* Mobile Search Bar (Expandable) */}
+        {isMobileSearchOpen && (
+          <div className="md:hidden pb-4 animate-in slide-in-from-top duration-300">
+            <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground dark:text-zinc-500 w-5 h-5 z-10" />
               <Input 
-                placeholder="Search..." 
+                placeholder="Search listings..." 
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                className="pl-12 rounded-full bg-card text-foreground dark:bg-white dark:text-zinc-900 dark:border-accent dark:border-4 border-border h-12 text-base" 
+                className="pl-12 bg-card text-foreground dark:bg-white dark:text-zinc-900 dark:border-accent dark:border-2 border-border rounded-full h-12 text-base shadow-lg"
+                autoFocus
               />
             </form>
-            {user ? (
-              <Button variant="ghost" asChild className="justify-start font-black text-lg py-6 h-14">
-                <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
-              </Button>
-            ) : (
-              <Button asChild className="justify-start font-black text-lg py-6 h-14 bg-accent text-accent-foreground">
-                <Link href="/login" onClick={() => setIsMenuOpen(false)}>Sign In</Link>
-              </Button>
-            )}
           </div>
         )}
       </div>

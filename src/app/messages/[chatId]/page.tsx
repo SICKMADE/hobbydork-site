@@ -78,13 +78,13 @@ export default function PrivateChatThread({ params }: { params: Promise<{ chatId
         </Link>
 
         <Card className="flex-1 flex flex-col shadow-2xl rounded-3xl overflow-hidden min-h-[600px]">
-          <CardHeader className="bg-primary text-white p-6 flex flex-row items-center justify-between">
+          <CardHeader className="bg-primary dark:bg-accent text-white dark:text-zinc-900 p-6 flex flex-row items-center justify-between">
             <div className="flex items-center gap-4">
               <Avatar>
                 <AvatarImage src={partnerAvatar} />
                 <AvatarFallback>{partnerName[0]}</AvatarFallback>
               </Avatar>
-              <div><h3 className="font-bold uppercase tracking-tight">@{partnerName}</h3><p className="text-[9px] text-accent font-black uppercase"><ShieldCheck className="inline w-3 h-3 mr-1" />Verified Negotiation</p></div>
+              <div><h3 className="font-bold uppercase tracking-tight">@{partnerName}</h3><p className="text-[9px] text-white/70 dark:text-zinc-700 font-black uppercase"><ShieldCheck className="inline w-3 h-3 mr-1" />Verified Negotiation</p></div>
             </div>
           </CardHeader>
 

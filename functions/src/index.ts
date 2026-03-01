@@ -8,6 +8,7 @@ export { stripeWebhook } from "./stripeWebhook";
 export { shippoWebhook } from "./shippoWebhook";
 export { dailySellerEnforcement } from "./dailySellerEnforcement";
 export { createAuction, placeBid, closeAuction } from "./auctions";
+export { endExpiredGiveaways, onCreateGiveaway, drawGiveawayWinner } from "./giveaway";
 import * as functions from "firebase-functions";
 
 // ...existing code...

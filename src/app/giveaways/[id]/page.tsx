@@ -19,12 +19,14 @@ import {
   Store,
   CheckCircle2,
   Loader2,
-  UserPlus
+  UserPlus,
+  Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirestore, useUser, useMemoFirebase, useFunctions } from '@/firebase';
 import { doc, updateDoc, increment, collection, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
@@ -33,11 +35,13 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
   const { id } = use(params);
   const { toast } = useToast();
   const db = useFirestore();
+  const functions = useFunctions();
   const { user } = useUser();
   const [isEntering, setIsEntering] = useState(false);
   const [hasEntered, setHasEntered] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [checkingFollow, setCheckingFollow] = useState(true);
+  const [isDrawingWinner, setIsDrawingWinner] = useState(false);
 
   const giveawayRef = useMemoFirebase(() => {
     if (!db || !id) return null;
@@ -125,6 +129,38 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
       });
   };
 
+  const handleDrawWinner = async () => {
+    if (!user || !functions) return;
+    
+    setIsDrawingWinner(true);
+    try {
+      const drawWinner = httpsCallable(functions, 'drawGiveawayWinner');
+      const result: any = await drawWinner({ giveawayId: id });
+      
+      if (result.data.winner) {
+        toast({ 
+          title: '🎉 Winner Drawn!', 
+          description: `Congratulations to ${result.data.winner.userName}!` 
+        });
+      } else {
+        toast({ 
+          title: 'Giveaway Ended', 
+          description: 'No entries were submitted for this giveaway.' 
+        });
+      }
+    } catch (error: any) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Error', 
+        description: error.message || 'Failed to draw winner' 
+      });
+    } finally {
+      setIsDrawingWinner(false);
+    }
+  };
+
+  const isSeller = user && giveaway && (user.uid === giveaway.seller || user.displayName === giveaway.sellerName);
+
   return (
     <>
       <Navbar />
@@ -159,7 +195,23 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
                   <div className="bg-zinc-100 p-8 rounded-2xl text-center border-2 border-dashed">
                     <Trophy className="w-12 h-12 text-zinc-400 mx-auto mb-3" />
                     <h3 className="font-black text-xl uppercase text-zinc-500">Drop Concluded</h3>
+                    {giveaway.winnerName && (
+                      <p className="text-sm font-bold text-muted-foreground mt-2">Winner: {giveaway.winnerName}</p>
+                    )}
                   </div>
+                ) : isSeller ? (
+                  <Button 
+                    onClick={handleDrawWinner} 
+                    disabled={isDrawingWinner}
+                    className="w-full h-20 text-2xl font-black rounded-2xl shadow-2xl active:scale-95 transition-all uppercase italic tracking-tighter bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                  >
+                    {isDrawingWinner ? <Loader2 className="w-6 h-6 animate-spin" /> : (
+                      <>
+                        <Sparkles className="w-6 h-6 mr-2" />
+                        Draw Winner Now
+                      </>
+                    )}
+                  </Button>
                 ) : !hasEntered ? (
                   <Button 
                     onClick={handleEnter} 

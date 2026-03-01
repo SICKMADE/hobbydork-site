@@ -245,7 +245,7 @@ function HomeContent() {
             Trade rare items with <span className="text-accent italic">community power.</span>
           </h1>
           <p className="text-sm md:text-xl text-white/80 mb-8 md:mb-12 max-w-2xl mx-auto font-medium leading-relaxed italic">
-            Follow verified dealers, track live shop feeds, and join the conversation. It's more than a market—it's the home for collectors.
+            Follow featured stores, track live shop feeds, and join the conversation. It's more than a market—it's the home for collectors.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4 px-6 md:px-0">
             <Button size="lg" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-12 md:h-14 px-10 text-lg rounded-full shadow-lg w-full sm:w-auto">
@@ -296,8 +296,8 @@ function HomeContent() {
               <Users className="w-6 h-6 md:w-8 md:h-8 text-accent" />
             </div>
             <div>
-              <h2 className="text-2xl md:text-4xl lg:text-5xl font-headline font-black tracking-tighter uppercase">Verified Dealers</h2>
-              <p className="text-xs md:text-lg text-muted-foreground font-bold italic">Follow stores to see their latest updates and drops.</p>
+              <h2 className="text-2xl md:text-4xl lg:text-5xl font-headline font-black tracking-tighter uppercase">Store Spotlight</h2>
+              <p className="text-xs md:text-lg text-muted-foreground font-bold italic">Weekly paid feature spots. Available in hobbydork Store.</p>
             </div>
           </div>
           

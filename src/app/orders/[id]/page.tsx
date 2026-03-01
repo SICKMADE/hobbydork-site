@@ -813,12 +813,12 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
       </main>
 
       <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-white">
-          <div className="bg-primary p-8 text-white">
+        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-white dark:bg-zinc-900">
+          <div className="bg-primary dark:bg-accent p-8 text-white dark:text-zinc-900">
              <h2 className="text-3xl font-headline font-black uppercase tracking-tight">Review Seller</h2>
-             <p className="text-white/60 text-sm font-medium">Rate your experience with this transaction.</p>
+             <p className="text-white/60 dark:text-zinc-700 text-sm font-medium">Rate your experience with this transaction.</p>
           </div>
-          <div className="p-8 space-y-8">
+          <div className="p-8 space-y-8 dark:bg-zinc-900">
             <div className="flex justify-center gap-4">
               {[1, 2, 3, 4, 5].map((s) => (
                 <button key={s} type="button" title={`Rate ${s} star${s > 1 ? 's' : ''}`} aria-label={`Rate ${s} star${s > 1 ? 's' : ''}`} onClick={() => setRating(s)} className="transition-transform active:scale-90">
@@ -830,13 +830,13 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
               <Label className="text-[10px] font-black uppercase tracking-widest">Feedback</Label>
               <Textarea 
                 placeholder="Was the item as described? Was the seller reliable?" 
-                className="min-h-[120px] rounded-xl border-2"
+                className="min-h-[120px] rounded-xl border-2 dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
               />
             </div>
             <div className="flex gap-4">
-              <Button variant="outline" onClick={() => setIsReviewOpen(false)} className="flex-1 rounded-xl h-14 font-black">Cancel</Button>
+              <Button variant="outline" onClick={() => setIsReviewOpen(false)} className="flex-1 rounded-xl h-14 font-black dark:border-zinc-700 dark:hover:bg-zinc-800">Cancel</Button>
               <Button 
                 onClick={handleReviewSubmit} 
                 disabled={isSubmittingReview}
@@ -850,29 +850,29 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
       </Dialog>
 
       <Dialog open={isDisputeOpen} onOpenChange={setIsDisputeOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-white">
+        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-white dark:bg-zinc-900">
           <div className="bg-red-600 p-8 text-white">
              <h2 className="text-3xl font-headline font-black uppercase tracking-tight">Open Dispute</h2>
              <p className="text-white/70 text-sm font-medium">This will alert the platform staff to mediate.</p>
           </div>
-          <div className="p-8 space-y-6">
+          <div className="p-8 space-y-6 dark:bg-zinc-900">
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest">Reason for Dispute</Label>
               <Textarea 
                 placeholder="Describe the issue in detail. If the item was not received or arrived damaged, provide specific information..." 
-                className="min-h-[150px] rounded-xl border-2"
+                className="min-h-[150px] rounded-xl border-2 dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700"
                 value={disputeReason}
                 onChange={(e) => setDisputeReason(e.target.value)}
               />
             </div>
-            <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-[10px] text-amber-900 leading-relaxed font-medium">
+            <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-xl border border-amber-100 dark:border-amber-900/50 flex gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-[10px] text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
                 The transaction funds will be placed on hold until a moderator resolves the case. Ensure you provide all necessary proof if contacted.
               </p>
             </div>
             <div className="flex gap-4">
-              <Button variant="outline" onClick={() => setIsDisputeOpen(false)} className="flex-1 rounded-xl h-14 font-black">Cancel</Button>
+              <Button variant="outline" onClick={() => setIsDisputeOpen(false)} className="flex-1 rounded-xl h-14 font-black dark:border-zinc-700 dark:hover:bg-zinc-800">Cancel</Button>
               <Button 
                 onClick={handleOpenDispute} 
                 disabled={isProcessingAction || !disputeReason}
@@ -886,7 +886,7 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
       </Dialog>
 
       <Dialog open={isReturnDialogOpen} onOpenChange={setIsReturnDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-white">
+        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-white dark:bg-zinc-900">
           <div className="bg-orange-600 p-8 text-white">
              <h2 className="text-3xl font-headline font-black uppercase tracking-tight">
                {order.status === 'Return Approved' ? 'Ship Return' : 'Request Return'}
@@ -895,26 +895,26 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
                {order.status === 'Return Approved' ? 'Provide tracking info for the returned item.' : 'Let the seller know why you want to return this item.'}
              </p>
           </div>
-          <div className="p-8 space-y-6">
+          <div className="p-8 space-y-6 dark:bg-zinc-900">
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest">
                 {order.status === 'Return Approved' ? 'Tracking Number' : 'Return Reason'}
               </Label>
               <Textarea 
                 placeholder={order.status === 'Return Approved' ? 'Enter your return shipping tracking number...' : 'Tell the seller why you need to return this item. Examples: Item not as described, item damaged, wrong item received, changed mind...'} 
-                className="min-h-[120px] rounded-xl border-2"
+                className="min-h-[120px] rounded-xl border-2 dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700"
                 value={returnReason}
                 onChange={(e) => setReturnReason(e.target.value)}
               />
             </div>
-            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 flex gap-3">
-              <RotateCcw className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-              <p className="text-[10px] text-orange-900 leading-relaxed font-medium">
+            <div className="bg-orange-50 dark:bg-orange-950/30 p-4 rounded-xl border border-orange-100 dark:border-orange-900/50 flex gap-3">
+              <RotateCcw className="w-5 h-5 text-orange-600 dark:text-orange-500 shrink-0 mt-0.5" />
+              <p className="text-[10px] text-orange-900 dark:text-orange-200 leading-relaxed font-medium">
                 {order.status === 'Return Approved' ? 'Once received by the seller, they\'ll verify the item and process your refund.' : 'Once submitted, the seller has 48 hours to approve or deny your return request. Approved returns must be shipped within 14 days.'}
               </p>
             </div>
             <div className="flex gap-4">
-              <Button variant="outline" onClick={() => { setIsReturnDialogOpen(false); setReturnReason(''); }} className="flex-1 rounded-xl h-14 font-black">Cancel</Button>
+              <Button variant="outline" onClick={() => { setIsReturnDialogOpen(false); setReturnReason(''); }} className="flex-1 rounded-xl h-14 font-black dark:border-zinc-700 dark:hover:bg-zinc-800">Cancel</Button>
               <Button 
                 onClick={handleReturnSubmit} 
                 disabled={isProcessingReturn || !returnReason.trim()}

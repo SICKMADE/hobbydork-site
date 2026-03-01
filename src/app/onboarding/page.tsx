@@ -175,7 +175,7 @@ export default function Onboarding() {
         </div>
 
         <Card className="border-none shadow-2xl rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden">
-          <CardHeader className="bg-primary text-white p-5 sm:p-6 md:p-8">
+          <CardHeader className="bg-primary dark:bg-accent text-white dark:text-zinc-900 p-5 sm:p-6 md:p-8">
             <div className="flex justify-between items-center">
               <CardTitle className="text-lg md:text-xl font-black italic uppercase tracking-tight">Identity Setup</CardTitle>
               <ShieldCheck className="w-5 h-5 text-accent" />

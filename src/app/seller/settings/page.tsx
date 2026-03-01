@@ -195,7 +195,7 @@ export default function StoreSettings() {
                       <div className="w-full h-full flex items-center justify-center opacity-20"><Store className="w-12 h-12" /></div>
                     )}
                     <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                      <Camera className="w-6 h-6 text-white" />
+                      <Camera className="w-6 h-6 text-white dark:text-accent" />
                       <input type="file" accept="image/*" aria-label="Upload shop avatar" title="Upload shop avatar" className="hidden" onChange={(e) => handleFilePicker(e, 'avatarUrl')} />
                     </label>
                   </div>

@@ -411,22 +411,22 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
                   <p className="font-black uppercase text-xs md:text-sm">No reviews yet</p>
                 </div>
               ) : reviews.map(review => (
-                <Card key={review.id} className="p-6 md:p-8 space-y-4 border-none shadow-lg rounded-[1.5rem] md:rounded-[2rem] bg-white">
+                <Card key={review.id} className="p-6 md:p-8 space-y-4 border-none shadow-lg rounded-[1.5rem] md:rounded-[2rem] bg-white dark:bg-zinc-900">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 md:gap-4">
-                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl overflow-hidden shadow-sm relative bg-zinc-100">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl overflow-hidden shadow-sm relative bg-zinc-100 dark:bg-zinc-800">
                         <Image src={getRandomAvatar(review.buyerId)} alt="Buyer" fill className="object-cover" />
                       </div>
                       <div>
-                        <p className="font-black uppercase text-[10px] md:text-xs">@{review.buyerName || review.buyerId}</p>
-                        <p className="text-[8px] md:text-[9px] font-black uppercase text-zinc-400">Verified Collector</p>
+                        <p className="font-black uppercase text-[10px] md:text-xs dark:text-zinc-200">@{review.buyerName || review.buyerId}</p>
+                        <p className="text-[8px] md:text-[9px] font-black uppercase text-zinc-400 dark:text-zinc-500">Verified Collector</p>
                       </div>
                     </div>
                     <div className="flex gap-0.5 text-yellow-500">{Array.from({ length: 5 }).map((_, s) => <Star key={s} className="w-3 md:w-4 h-3 md:h-4 fill-current" />)}</div>
                   </div>
-                  <p className="italic font-medium text-base md:text-lg leading-relaxed text-zinc-700">"{review.comment}"</p>
-                  <div className="flex items-center gap-3 pt-4 border-t border-zinc-100">
-                    <Badge variant="secondary" className="text-[7px] md:text-[8px] font-black uppercase tracking-widest h-5 px-2">{review.listingTitle}</Badge>
+                  <p className="italic font-medium text-base md:text-lg leading-relaxed text-zinc-700 dark:text-zinc-300">"{review.comment}"</p>
+                  <div className="flex items-center gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <Badge variant="secondary" className="text-[7px] md:text-[8px] font-black uppercase tracking-widest h-5 px-2 dark:bg-zinc-800 dark:text-zinc-200">{review.listingTitle}</Badge>
                   </div>
                 </Card>
               ))}

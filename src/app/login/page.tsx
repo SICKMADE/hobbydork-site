@@ -119,11 +119,11 @@ export default function LoginPage() {
         </div>
 
         <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-card">
-          <CardHeader className="bg-primary text-white p-5 sm:p-8 pb-10 sm:pb-12">
+          <CardHeader className="bg-primary dark:bg-accent text-white dark:text-zinc-900 p-5 sm:p-8 pb-10 sm:pb-12">
             <CardTitle className="text-xl sm:text-2xl font-headline font-black italic uppercase tracking-tight">
               Community Access
             </CardTitle>
-            <CardDescription className="text-white/60 font-medium">
+            <CardDescription className="text-white/60 dark:text-zinc-700 font-medium">
               Join 500k collectors in the definitive trade hub.
             </CardDescription>
           </CardHeader>

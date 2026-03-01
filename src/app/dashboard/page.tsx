@@ -241,29 +241,29 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
               <Card className="p-4 sm:p-6 rounded-xl border bg-gradient-to-br from-accent/5 to-transparent">
                 <div className="flex items-start justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
                   <div>
-                    <p className="text-[9px] font-black uppercase text-muted-foreground tracking-wider mb-1">Current Tier</p>
-                    <p className="text-2xl sm:text-3xl font-headline font-black italic">{profile?.sellerTier || 'Bronze'}</p>
+                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-1">Current Tier</p>
+                    <p className="text-3xl sm:text-4xl font-headline font-black italic">{profile?.sellerTier || 'Bronze'}</p>
                   </div>
                   <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-accent/20" />
                 </div>
                 
                 <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
                   <div>
-                    <p className="text-[9px] font-black uppercase text-muted-foreground tracking-wider mb-1">Sales</p>
-                    <p className="text-base sm:text-lg font-black">{profile?.tierMetrics?.completedSales || 0}</p>
+                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Sales</p>
+                    <p className="text-xl sm:text-2xl font-black">{profile?.tierMetrics?.completedSales || 0}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] font-black uppercase text-muted-foreground tracking-wider mb-1">Returns</p>
-                    <p className="text-base sm:text-lg font-black">{profile?.tierMetrics?.returnRate || 0}%</p>
+                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Returns</p>
+                    <p className="text-xl sm:text-2xl font-black">{profile?.tierMetrics?.returnRate || 0}%</p>
                   </div>
                   <div>
-                    <p className="text-[9px] font-black uppercase text-muted-foreground tracking-wider mb-1">Refunds</p>
-                    <p className="text-base sm:text-lg font-black">{profile?.tierMetrics?.refundRate || 0}%</p>
+                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Refunds</p>
+                    <p className="text-xl sm:text-2xl font-black">{profile?.tierMetrics?.refundRate || 0}%</p>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t">
-                  <p className="text-[9px] font-black uppercase text-muted-foreground tracking-wider mb-3">Tier Levels</p>
+                  <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-3">Tier Levels</p>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {[
                       { tier: 'Bronze', desc: 'New' },
@@ -271,11 +271,11 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
                       { tier: 'Gold', desc: '200+ sales' },
                       { tier: 'Platinum', desc: 'Elite' }
                     ].map(benefit => (
-                      <div key={benefit.tier} className={`p-2.5 rounded-lg border ${
+                      <div key={benefit.tier} className={`p-3 rounded-lg border ${
                         profile?.sellerTier === benefit.tier ? 'bg-accent/10 border-accent' : 'bg-muted/30 border-muted'
                       }`}>
-                        <p className="font-bold text-[10px] mb-0.5">{benefit.tier}</p>
-                        <p className="text-[8px] text-muted-foreground font-medium">{benefit.desc}</p>
+                        <p className="font-bold text-sm mb-1">{benefit.tier}</p>
+                        <p className="text-xs text-muted-foreground font-medium">{benefit.desc}</p>
                       </div>
                     ))}
                   </div>
@@ -337,60 +337,60 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
                 <h2 className="text-lg font-black uppercase tracking-tight">Earnings</h2>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
-                <Card className="p-5 rounded-xl border bg-gradient-to-br from-card to-card/50">
+                <Card className="p-6 rounded-xl border bg-gradient-to-br from-card to-card/50">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <p className="text-[9px] font-black uppercase text-muted-foreground tracking-wider mb-1">Lifetime</p>
-                      <p className="text-2xl font-black text-accent">${lifetimeEarnings.toFixed(2)}</p>
+                      <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Lifetime</p>
+                      <p className="text-3xl font-black text-accent">${lifetimeEarnings.toFixed(2)}</p>
                     </div>
-                    <div className="bg-accent/10 p-3 rounded-xl"><Wallet className="w-5 h-5 text-accent" /></div>
+                    <div className="bg-accent/10 p-3 rounded-xl"><Wallet className="w-6 h-6 text-accent" /></div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground font-medium">Total from completed sales</p>
+                  <p className="text-sm text-muted-foreground font-medium">Total from completed sales</p>
                 </Card>
 
-                <Card className="p-5 rounded-xl border bg-gradient-to-br from-card to-card/50">
+                <Card className="p-6 rounded-xl border bg-gradient-to-br from-card to-card/50">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <p className="text-[9px] font-black uppercase text-muted-foreground tracking-wider mb-1">Pending</p>
-                      <p className="text-2xl font-black text-accent">${pendingPayout.toFixed(2)}</p>
+                      <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Pending</p>
+                      <p className="text-3xl font-black text-accent">${pendingPayout.toFixed(2)}</p>
                     </div>
-                    <div className="bg-accent/10 p-3 rounded-xl"><Package className="w-5 h-5 text-accent" /></div>
+                    <div className="bg-accent/10 p-3 rounded-xl"><Package className="w-6 h-6 text-accent" /></div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground font-medium">3-day hold for protection</p>
+                  <p className="text-sm text-muted-foreground font-medium">3-day hold for protection</p>
                 </Card>
               </div>
 
-              <Card className="p-5 rounded-xl border space-y-4">
+              <Card className="p-6 rounded-xl border space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-black uppercase text-xs tracking-wider text-primary mb-0.5">Stripe Connect</h3>
-                    <p className="text-[10px] text-muted-foreground font-medium">Manage payouts & withdrawals</p>
+                    <h3 className="font-black uppercase text-base tracking-wider text-primary mb-1">Stripe Connect</h3>
+                    <p className="text-sm text-muted-foreground font-medium">Manage payouts & withdrawals</p>
                   </div>
-                  <Badge className="bg-green-100 text-green-700 font-black uppercase text-[8px] px-2 py-0.5">Connected</Badge>
+                  <Badge className="bg-green-100 text-green-700 font-black uppercase text-xs px-3 py-1">Connected</Badge>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1 rounded-lg h-8 font-bold uppercase text-[10px]" onClick={handleOpenPayoutHistory}>
+                <div className="flex gap-3">
+                  <Button variant="outline" size="default" className="flex-1 rounded-lg h-11 font-bold uppercase text-sm" onClick={handleOpenPayoutHistory}>
                     History
                   </Button>
-                  <Button size="sm" className="flex-1 rounded-lg h-8 font-bold uppercase text-[10px]" onClick={() => setIsWithdrawalOpen(true)}>
+                  <Button size="default" className="flex-1 rounded-lg h-11 font-bold uppercase text-sm" onClick={() => setIsWithdrawalOpen(true)}>
                     Withdraw
                   </Button>
                 </div>
               </Card>
 
               <div className="space-y-3">
-                <h3 className="font-black uppercase text-[9px] tracking-wider text-muted-foreground">Recent Transactions</h3>
+                <h3 className="font-black uppercase text-xs tracking-wider text-muted-foreground">Recent Transactions</h3>
                 {completedSales && completedSales.length > 0 ? (
                   <div className="space-y-2">
                     {completedSales.slice(0, 8).map(tx => (
-                      <Card key={tx.id} className="p-3 rounded-xl border hover:border-accent/50 transition-colors">
+                      <Card key={tx.id} className="p-4 rounded-xl border hover:border-accent/50 transition-colors">
                         <div className="flex items-center gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <code className="text-[9px] font-mono font-bold text-muted-foreground">#{tx.id.substring(0, 8).toUpperCase()}</code>
+                              <code className="text-xs font-mono font-bold text-muted-foreground">#{tx.id.substring(0, 8).toUpperCase()}</code>
                               <Badge 
                                 variant="outline" 
-                                className={`text-[8px] font-black uppercase ${
+                                className={`text-[9px] font-black uppercase ${
                                   tx.status === 'Delivered' ? 'bg-green-100 text-green-700 border-green-200' :
                                   tx.status === 'Refunded' ? 'bg-red-100 text-red-700 border-red-200' :
                                   'bg-blue-100 text-blue-700 border-blue-200'
@@ -399,10 +399,10 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
                                 {tx.status}
                               </Badge>
                             </div>
-                            <p className="text-[10px] font-bold text-muted-foreground truncate">@{tx.buyerName || 'Collector'}</p>
+                            <p className="text-sm font-bold text-muted-foreground truncate">@{tx.buyerName || 'Collector'}</p>
                           </div>
-                          <p className="text-sm font-black text-accent shrink-0">${(tx.price || 0).toFixed(2)}</p>
-                          <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-[9px] font-bold rounded-lg shrink-0">
+                          <p className="text-base font-black text-accent shrink-0">${(tx.price || 0).toFixed(2)}</p>
+                          <Button asChild size="sm" variant="ghost" className="h-8 px-3 text-xs font-bold rounded-lg shrink-0">
                             <Link href={`/orders/${tx.id}`}>View</Link>
                           </Button>
                         </div>

@@ -9,7 +9,7 @@ import { useEffect } from 'react';
 export function ThemeHandler() {
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
-    const isDark = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const isDark = savedTheme === 'dark'; // Light mode is default on first visit
     
     if (isDark) {
       document.documentElement.classList.add('dark');

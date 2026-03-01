@@ -86,9 +86,9 @@ export default function VerifyEmailPage() {
           </div>
 
           <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden">
-            <CardHeader className="bg-primary text-white p-5 sm:p-8">
+            <CardHeader className="bg-primary dark:bg-accent text-white dark:text-zinc-900 p-5 sm:p-8">
               <CardTitle className="text-lg sm:text-xl font-black italic uppercase tracking-tight">Check Your Inbox</CardTitle>
-              <CardDescription className="text-white/70">A link was sent to {user?.email}</CardDescription>
+              <CardDescription className="text-white/70 dark:text-zinc-700">A link was sent to {user?.email}</CardDescription>
             </CardHeader>
             <CardContent className="p-5 sm:p-8 space-y-6">
               <p className="text-sm text-muted-foreground leading-relaxed font-medium">
