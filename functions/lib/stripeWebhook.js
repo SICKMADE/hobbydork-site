@@ -263,14 +263,57 @@ exports.stripeWebhook = (0, https_1.onRequest)({ secrets: [STRIPE_SECRET, STRIPE
         const orderId = session.metadata?.orderId;
         const buyerUid = session.metadata?.buyerUid;
         if (orderId && buyerUid) {
+            // Get order data to find seller and listing info
+            const orderSnap = await db.collection("orders").doc(orderId).get();
+            const orderData = orderSnap.data();
+            const listingId = orderData?.listingId;
             // Mark order as paid in Firestore
             await db.collection("orders").doc(orderId).update({
-                status: "PAID",
-                state: "PAID",
+                status: "Confirmed",
+                state: "Confirmed",
                 paidAt: admin.firestore.FieldValue.serverTimestamp(),
                 paymentIntentId: session.payment_intent,
+                buyerUid: buyerUid,
             });
-            // Optionally notify buyer/seller here
+            // If we have listing ID, get seller info and mark listing as sold
+            if (listingId) {
+                const listingSnap = await db.collection("listings").doc(listingId).get();
+                const listingData = listingSnap.data();
+                const sellerUid = listingData?.sellerId;
+                const listingTitle = listingData?.title;
+                // Mark listing as sold
+                if (listingSnap.exists) {
+                    await db.collection("listings").doc(listingId).update({
+                        sold: true,
+                        soldAt: admin.firestore.FieldValue.serverTimestamp(),
+                        soldTo: buyerUid,
+                        orderId: orderId,
+                    });
+                }
+                // Notify seller of new order
+                if (sellerUid) {
+                    const buyerSnap = await db.collection("users").doc(buyerUid).get();
+                    const buyerData = buyerSnap.data();
+                    const buyerName = buyerData?.displayName || buyerData?.username || "A user";
+                    await db.collection("users").doc(sellerUid).collection("notifications").add({
+                        type: "ORDER",
+                        title: "New Order Received!",
+                        body: `${buyerName} purchased: ${listingTitle}`,
+                        relatedId: orderId,
+                        read: false,
+                        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    });
+                }
+            }
+            // Notify buyer of successful payment
+            await db.collection("users").doc(buyerUid).collection("notifications").add({
+                type: "PAYMENT_SUCCESS",
+                title: "Payment Confirmed",
+                body: "Your order has been confirmed. Track your shipment in Orders.",
+                relatedId: orderId,
+                read: false,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
             res.status(200).send("Order payment processed");
             return;
         }

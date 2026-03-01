@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateOrderStatus = exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = exports.createAuctionFeeCheckoutSession = exports.getStripeAccount = exports.closeAuction = exports.placeBid = exports.createAuction = exports.dailySellerEnforcement = exports.stripeWebhook = exports.setBlindBidAuctionImage = exports.submitBlindBid = exports.createBlindBidAuction = exports.getStripePayouts = void 0;
+exports.calculateSellerTier = exports.denyWithdrawal = exports.approveWithdrawal = exports.processRefund = exports.updateOrderStatus = exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = exports.createAuctionFeeCheckoutSession = exports.getStripeAccount = exports.closeAuction = exports.placeBid = exports.createAuction = exports.dailySellerEnforcement = exports.shippoWebhook = exports.stripeWebhook = exports.setBlindBidAuctionImage = exports.submitBlindBid = exports.createBlindBidAuction = exports.getStripePayouts = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const firebaseAdmin_1 = require("./firebaseAdmin");
 const stripe_1 = __importDefault(require("stripe"));
@@ -49,6 +49,8 @@ var blindBidder_2 = require("./blindBidder");
 Object.defineProperty(exports, "setBlindBidAuctionImage", { enumerable: true, get: function () { return blindBidder_2.setBlindBidAuctionImage; } });
 var stripeWebhook_1 = require("./stripeWebhook");
 Object.defineProperty(exports, "stripeWebhook", { enumerable: true, get: function () { return stripeWebhook_1.stripeWebhook; } });
+var shippoWebhook_1 = require("./shippoWebhook");
+Object.defineProperty(exports, "shippoWebhook", { enumerable: true, get: function () { return shippoWebhook_1.shippoWebhook; } });
 var dailySellerEnforcement_1 = require("./dailySellerEnforcement");
 Object.defineProperty(exports, "dailySellerEnforcement", { enumerable: true, get: function () { return dailySellerEnforcement_1.dailySellerEnforcement; } });
 var auctions_1 = require("./auctions");
@@ -173,7 +175,7 @@ exports.createAuctionFeeCheckoutSession = (0, https_1.onCall)(async (request) =>
 exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
     const stripe = getStripeInstance();
     const uid = requireAuth(request);
-    const { orderId, listingTitle, amountCents, appBaseUrl } = request.data || {};
+    const { orderId, listingId, listingTitle, amountCents, appBaseUrl } = request.data || {};
     if (!orderId || !listingTitle || !amountCents || !appBaseUrl) {
         throw new https_1.HttpsError("invalid-argument", "Missing required parameters");
     }
@@ -190,10 +192,19 @@ exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
         postalCode: userAddress.zip || "",
         country: userAddress.country || "",
     };
-    // Only set if at least line1 and city/state/zip are present
+    // Store order info with listing details
+    const orderData = {
+        buyerUid: uid,
+        listingId: listingId || "",
+        listingTitle,
+        amount: amountCents,
+        status: "PENDING",
+        createdAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
+    };
     if (shippingAddress.line1 && shippingAddress.city && shippingAddress.state && shippingAddress.postalCode) {
-        await firebaseAdmin_1.db.collection("orders").doc(orderId).set({ shippingAddress }, { merge: true });
+        orderData.shippingAddress = shippingAddress;
     }
+    await firebaseAdmin_1.db.collection("orders").doc(orderId).set(orderData, { merge: true });
     const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         mode: "payment",
@@ -209,11 +220,11 @@ exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
                 quantity: 1,
             },
         ],
-        success_url: `${appBaseUrl}/cart/success?orderId=${orderId}`,
+        success_url: `${appBaseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&item_id=${orderId}`,
         metadata: {
             orderId,
+            listingId: listingId || "",
             buyerUid: uid,
-            shippingAddress: JSON.stringify(shippingAddress),
         },
     });
     return { url: session.url };
@@ -333,7 +344,7 @@ exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
             throw new https_1.HttpsError("permission-denied", "Not authorized to update this order");
         }
         if (updates.status) {
-            const validStatuses = ["PAID", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED", "DISPUTED"];
+            const validStatuses = ["PAID", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED", "DISPUTED", "Confirmed", "Processing", "Return Requested", "Return Approved", "Return Shipped", "Delivered"];
             if (!validStatuses.includes(updates.status)) {
                 throw new https_1.HttpsError("invalid-argument", "Invalid status value");
             }
@@ -380,6 +391,292 @@ exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
     catch (error) {
         const orderId = request.data?.orderId || null;
         await logError(error instanceof Error ? error : String(error), { function: "updateOrderStatus", orderId });
+        throw error;
+    }
+});
+/**
+ * Process refund for an order
+ * Called when seller confirms return receipt and initiates refund
+ */
+exports.processRefund = (0, https_1.onCall)({ secrets: ["STRIPE_SECRET"] }, async (request) => {
+    try {
+        const uid = requireAuth(request);
+        const { orderId } = request.data;
+        if (!orderId) {
+            throw new https_1.HttpsError("invalid-argument", "Order ID required");
+        }
+        const orderRef = firebaseAdmin_1.db.collection("orders").doc(orderId);
+        const orderSnap = await orderRef.get();
+        const order = orderSnap.data();
+        if (!order) {
+            throw new https_1.HttpsError("not-found", "Order not found");
+        }
+        // Only seller can process refund
+        if (order.sellerUid !== uid) {
+            throw new https_1.HttpsError("permission-denied", "Only seller can process refund");
+        }
+        // Check if order is in Return Shipped status
+        if (order.status !== "Return Shipped") {
+            throw new https_1.HttpsError("failed-precondition", "Order must be in Return Shipped status");
+        }
+        // Get the payment intent ID from Stripe metadata
+        const stripe = getStripeInstance();
+        if (!order.stripePaymentIntentId) {
+            throw new https_1.HttpsError("failed-precondition", "No payment intent found for this order");
+        }
+        // Retrieve the payment intent to get the charge ID
+        const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId, {
+            expand: ['charges']
+        }); // Cast to any to access expanded charges
+        if (!paymentIntent.charges || !paymentIntent.charges.data || paymentIntent.charges.data.length === 0) {
+            throw new https_1.HttpsError("failed-precondition", "No charge found for this payment intent");
+        }
+        const chargeId = paymentIntent.charges.data[0].id;
+        const refundAmount = Math.round(order.price * 100); // Convert to cents
+        // Create refund in Stripe
+        const refund = await stripe.refunds.create({
+            charge: chargeId,
+            amount: refundAmount,
+            metadata: {
+                orderId: orderId,
+                returnId: order.returnId
+            }
+        });
+        if (refund.status !== "succeeded") {
+            throw new https_1.HttpsError("internal", "Refund processing failed");
+        }
+        // Update order status to Refunded
+        await orderRef.update({
+            status: "Refunded",
+            refundId: refund.id,
+            refundAmount: order.price,
+            refundDate: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp()
+        });
+        // Send notifications
+        await sendNotification(order.buyerUid, "ORDER", "Refund Processed", `Your refund of $${order.price} has been processed. Funds will appear in 3-5 business days.`, orderId);
+        await sendNotification(order.sellerUid, "ORDER", "Refund Sent", `Refund of $${order.price} sent to buyer for order #${orderId.substring(0, 8)}.`, orderId);
+        // Log the refund
+        await logAudit("refund-processed", {
+            orderId,
+            sellerId: uid,
+            amount: order.price,
+            stripeRefundId: refund.id,
+            timestamp: new Date().toISOString()
+        });
+        return { ok: true, refundId: refund.id };
+    }
+    catch (error) {
+        await logError(error instanceof Error ? error : String(error), { function: "processRefund" });
+        throw error;
+    }
+});
+/* ================= APPROVE WITHDRAWAL ================= */
+exports.approveWithdrawal = (0, https_1.onCall)({ secrets: ["STRIPE_SECRET"] }, async (request) => {
+    try {
+        const uid = requireAuth(request);
+        const { payoutRequestId } = request.data;
+        if (!payoutRequestId) {
+            throw new https_1.HttpsError("invalid-argument", "Payout request ID required");
+        }
+        // Verify user is admin
+        const adminSnap = await firebaseAdmin_1.db.collection("users").doc(uid).get();
+        const admin = adminSnap.data();
+        if (!admin || (admin.role !== "ADMIN" && admin.role !== "MODERATOR")) {
+            throw new https_1.HttpsError("permission-denied", "Only admins can approve withdrawals");
+        }
+        const payoutRef = firebaseAdmin_1.db.collection("payoutRequests").doc(payoutRequestId);
+        const payoutSnap = await payoutRef.get();
+        const payout = payoutSnap.data();
+        if (!payout) {
+            throw new https_1.HttpsError("not-found", "Payout request not found");
+        }
+        if (payout.status !== "PENDING") {
+            throw new https_1.HttpsError("failed-precondition", "Only PENDING requests can be approved");
+        }
+        const stripe = getStripeInstance();
+        const amount = Math.round(payout.amount * 100); // Convert to cents
+        // Create transfer to seller's connected account
+        const transfer = await stripe.transfers.create({
+            amount,
+            currency: "usd",
+            destination: payout.stripeAccountId,
+            metadata: {
+                payoutRequestId,
+                sellerUid: payout.sellerUid
+            },
+            description: `Withdrawal request from studio seller ${payout.sellerUsername}`
+        });
+        // Wait a moment for transfer to process
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Retrieve the transfer to check status
+        const completedTransfer = await stripe.transfers.retrieve(transfer.id);
+        if (completedTransfer.status !== "succeeded" && completedTransfer.status !== "paid") {
+            throw new https_1.HttpsError("internal", "Transfer failed");
+        }
+        // Update payout request status to APPROVED
+        await payoutRef.update({
+            status: "APPROVED",
+            stripeTransferId: transfer.id,
+            approvedBy: uid,
+            approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        // Send notification to seller
+        await sendNotification(payout.sellerUid, "PAYMENT", "Withdrawal Approved", `Your withdrawal request of $${payout.amount} has been approved and transferred to your Stripe account.`, payoutRequestId);
+        // Log the approval
+        await logAudit("withdrawal-approved", {
+            payoutRequestId,
+            sellerUid: payout.sellerUid,
+            amount: payout.amount,
+            stripeTransferId: transfer.id,
+            approvedBy: uid,
+            timestamp: new Date().toISOString()
+        });
+        return { ok: true, transferId: transfer.id };
+    }
+    catch (error) {
+        await logError(error instanceof Error ? error : String(error), { function: "approveWithdrawal" });
+        throw error;
+    }
+});
+/* ================= DENY WITHDRAWAL ================= */
+exports.denyWithdrawal = (0, https_1.onCall)(async (request) => {
+    try {
+        const uid = requireAuth(request);
+        const { payoutRequestId, reason } = request.data;
+        if (!payoutRequestId) {
+            throw new https_1.HttpsError("invalid-argument", "Payout request ID required");
+        }
+        // Verify user is admin
+        const adminSnap = await firebaseAdmin_1.db.collection("users").doc(uid).get();
+        const admin = adminSnap.data();
+        if (!admin || (admin.role !== "ADMIN" && admin.role !== "MODERATOR")) {
+            throw new https_1.HttpsError("permission-denied", "Only admins can deny withdrawals");
+        }
+        const payoutRef = firebaseAdmin_1.db.collection("payoutRequests").doc(payoutRequestId);
+        const payoutSnap = await payoutRef.get();
+        const payout = payoutSnap.data();
+        if (!payout) {
+            throw new https_1.HttpsError("not-found", "Payout request not found");
+        }
+        if (payout.status !== "PENDING") {
+            throw new https_1.HttpsError("failed-precondition", "Only PENDING requests can be denied");
+        }
+        // Update payout request status to DENIED
+        await payoutRef.update({
+            status: "DENIED",
+            denialReason: reason || "No reason provided",
+            deniedBy: uid,
+            deniedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        // Send notification to seller
+        await sendNotification(payout.sellerUid, "PAYMENT", "Withdrawal Denied", `Your withdrawal request of $${payout.amount} has been denied. Reason: ${reason || "See admin notes"}`, payoutRequestId);
+        // Log the denial
+        await logAudit("withdrawal-denied", {
+            payoutRequestId,
+            sellerUid: payout.sellerUid,
+            amount: payout.amount,
+            reason,
+            deniedBy: uid,
+            timestamp: new Date().toISOString()
+        });
+        return { ok: true };
+    }
+    catch (error) {
+        await logError(error instanceof Error ? error : String(error), { function: "denyWithdrawal" });
+        throw error;
+    }
+});
+/* ================= CALCULATE SELLER TIER ================= */
+exports.calculateSellerTier = (0, https_1.onCall)(async (request) => {
+    try {
+        const uid = requireAuth(request);
+        const { sellerId } = request.data || {};
+        const targetSellerId = sellerId || uid;
+        // Fetch all orders for this seller
+        const ordersSnap = await firebaseAdmin_1.db
+            .collection("orders")
+            .where("sellerUid", "==", targetSellerId)
+            .get();
+        const orders = ordersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Count completed sales (Delivered or Refunded status)
+        const completedSales = orders.filter(o => o.status === 'Delivered' || o.status === 'Refunded');
+        // Get returns for this seller
+        const returnsSnap = await firebaseAdmin_1.db
+            .collection("returns")
+            .where("sellerUid", "==", targetSellerId)
+            .get();
+        const totalReturns = returnsSnap.size;
+        const approvedReturns = returnsSnap.docs.filter(doc => {
+            const returnData = doc.data();
+            return returnData.status === 'Return Shipped' || returnData.status === 'Refunded';
+        }).length;
+        // Count refunded orders
+        const refundedOrders = completedSales.filter(o => o.status === 'Refunded').length;
+        // Calculate rates
+        const completedCount = completedSales.length;
+        const returnRate = completedCount > 0 ? (approvedReturns / completedCount) * 100 : 0;
+        const refundRate = completedCount > 0 ? (refundedOrders / completedCount) * 100 : 0;
+        // Determine tier based on thresholds
+        let tier = 'Bronze';
+        if (completedCount >= 200) {
+            if (returnRate < 2 && refundRate < 2) {
+                tier = 'Platinum';
+            }
+            else if (returnRate < 5 && refundRate < 5) {
+                tier = 'Gold';
+            }
+            else {
+                tier = 'Silver';
+            }
+        }
+        else if (completedCount >= 50) {
+            tier = 'Silver';
+        }
+        else {
+            tier = 'Bronze';
+        }
+        // Update user profile with tier and metrics
+        const userRef = firebaseAdmin_1.db.collection("users").doc(targetSellerId);
+        await userRef.update({
+            sellerTier: tier,
+            tierLastUpdated: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
+            tierMetrics: {
+                completedSales: completedCount,
+                totalReturns,
+                approvedReturns,
+                refundedOrders,
+                returnRate: Math.round(returnRate * 100) / 100,
+                refundRate: Math.round(refundRate * 100) / 100,
+                calculatedAt: new Date().toISOString()
+            }
+        });
+        // Log audit
+        await logAudit("tier-calculated", {
+            sellerId: targetSellerId,
+            previousTier: null, // Could fetch this for comparison
+            newTier: tier,
+            metrics: {
+                completedSales: completedCount,
+                returnRate,
+                refundRate
+            },
+            timestamp: new Date().toISOString()
+        });
+        return {
+            ok: true,
+            tier,
+            metrics: {
+                completedSales: completedCount,
+                returnRate: Math.round(returnRate * 100) / 100,
+                refundRate: Math.round(refundRate * 100) / 100
+            }
+        };
+    }
+    catch (error) {
+        await logError(error instanceof Error ? error : String(error), { function: "calculateSellerTier" });
         throw error;
     }
 });

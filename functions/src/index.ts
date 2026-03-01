@@ -404,9 +404,11 @@ export const processRefund = onCall({ secrets: ["STRIPE_SECRET"] }, async (reque
     }
 
     // Retrieve the payment intent to get the charge ID
-    const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
+    const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId, {
+      expand: ['charges']
+    }) as any; // Cast to any to access expanded charges
     
-    if (!paymentIntent.charges.data || paymentIntent.charges.data.length === 0) {
+    if (!paymentIntent.charges || !paymentIntent.charges.data || paymentIntent.charges.data.length === 0) {
       throw new HttpsError("failed-precondition", "No charge found for this payment intent");
     }
 
@@ -501,7 +503,12 @@ export const approveWithdrawal = onCall({ secrets: ["STRIPE_SECRET"] }, async (r
       description: `Withdrawal request from studio seller ${payout.sellerUsername}`
     });
 
-    if (transfer.status !== "succeeded") {
+    // Wait a moment for transfer to process
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Retrieve the transfer to check status
+    const completedTransfer = await stripe.transfers.retrieve(transfer.id) as any;
+    if (completedTransfer.status !== "succeeded" && completedTransfer.status !== "paid") {
       throw new HttpsError("internal", "Transfer failed");
     }
 
@@ -619,7 +626,7 @@ export const calculateSellerTier = onCall(async (request) => {
       .where("sellerUid", "==", targetSellerId)
       .get();
 
-    const orders = ordersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const orders = ordersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Array<{ id: string; status?: string; [key: string]: any }>;
 
     // Count completed sales (Delivered or Refunded status)
     const completedSales = orders.filter(o => 
