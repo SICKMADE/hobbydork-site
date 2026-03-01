@@ -147,11 +147,11 @@ export default function StoreSettings() {
           <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase">
             <Store className="w-3 h-3" /> Storefront Management
           </div>
-          <h1 className="text-4xl font-headline font-black uppercase italic tracking-tighter">Shop Customization</h1>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black uppercase italic tracking-tighter">Shop Customization</h1>
           <p className="text-muted-foreground font-medium">Build your brand identity and apply premium themes.</p>
         </header>
 
-        <div className="grid lg:grid-cols-[1fr_350px] gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8 lg:gap-12">
           <div className="space-y-12">
             <section className="space-y-6">
               <h2 className="text-xl font-headline font-black uppercase flex items-center gap-3">

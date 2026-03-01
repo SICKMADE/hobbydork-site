@@ -40,7 +40,7 @@ export default function TrustBoard() {
             <Award className="w-10 h-10 text-accent" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-4xl md:text-6xl font-headline font-black uppercase tracking-tighter text-primary">Seller Leaderboard</h1>
+            <h1 className="text-2xl sm:text-4xl md:text-6xl font-headline font-black uppercase tracking-tighter text-primary">Seller Leaderboard</h1>
             <p className="text-xl text-muted-foreground font-medium max-w-2xl mx-auto leading-relaxed">
               The community rankings. Discover the most active and highly-rated sellers in the hobby.
             </p>
@@ -68,8 +68,8 @@ export default function TrustBoard() {
             filteredSellers.map((seller, idx) => (
               <Card key={seller.id} className="border-none shadow-lg bg-card rounded-2xl overflow-hidden group hover:ring-2 hover:ring-accent transition-all">
                 <CardContent className="p-0">
-                  <div className="flex flex-col md:flex-row items-center">
-                    <div className="w-full md:w-16 bg-primary text-white flex items-center justify-center font-black text-2xl py-4 md:py-0 md:h-full shrink-0">
+                  <div className="flex flex-col sm:flex-row items-center">
+                    <div className="w-full sm:w-16 bg-zinc-900 text-white flex items-center justify-center font-black text-xl sm:text-2xl py-3 sm:py-0 sm:h-full shrink-0">
                       #{idx + 1}
                     </div>
                     
@@ -100,7 +100,7 @@ export default function TrustBoard() {
                       </div>
 
                       <div className="shrink-0 p-6">
-                        <Button asChild className="rounded-full px-8 h-12 font-black uppercase tracking-widest">
+                        <Button asChild className="rounded-full px-8 h-12 font-black uppercase tracking-widest dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800">
                           <Link href={`/shop/${seller.username}`}>
                             Visit Shop <ArrowRight className="w-4 h-4 ml-2" />
                           </Link>

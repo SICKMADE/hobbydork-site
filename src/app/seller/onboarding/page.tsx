@@ -160,7 +160,7 @@ export default function SellerOnboarding() {
           </div>
           <h1 className="text-4xl font-headline font-black uppercase italic tracking-tight">Identity Required</h1>
           <p className="text-muted-foreground font-medium">To maintain a secure marketplace, storefronts can only be established by active members with verified email addresses.</p>
-          <Button asChild className="h-14 px-10 rounded-xl font-black uppercase bg-accent text-white shadow-xl">
+          <Button asChild className="h-14 px-10 rounded-xl font-black uppercase bg-accent text-accent-foreground shadow-xl">
             <Link href="/verify-email">Verify Email Now</Link>
           </Button>
         </main>
@@ -176,11 +176,11 @@ export default function SellerOnboarding() {
           <Badge variant="outline" className="px-6 py-1.5 rounded-full text-accent border-accent uppercase font-black text-[9px] md:text-[10px] tracking-widest">
             Dealer Onboarding
           </Badge>
-          <h1 className="text-3xl md:text-7xl font-headline font-black uppercase italic tracking-tighter text-primary leading-tight md:leading-none">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-7xl font-headline font-black uppercase italic tracking-tighter text-primary leading-tight">
             Become a Seller
           </h1>
           
-          <div className="flex items-center justify-center gap-0 mt-8 md:mt-12 overflow-x-auto pb-4 md:pb-0">
+          <div className="flex items-center justify-center gap-0 mt-8 md:mt-12 overflow-x-auto pb-4 scrollbar-hide">
             {steps.map((s, idx) => (
               <div key={s.id} className="flex items-center shrink-0">
                 <div className={cn(
@@ -200,11 +200,11 @@ export default function SellerOnboarding() {
         <div className="max-w-2xl mx-auto">
           {step === 1 && (
             <Card className="border-none shadow-2xl rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <CardHeader className="bg-primary text-white p-6 md:p-10">
-                <CardTitle className="text-xl md:text-3xl font-black italic uppercase tracking-tight">Step 1: Identity</CardTitle>
-                <CardDescription className="text-white/70 text-sm md:text-base font-medium">Branding your professional storefront.</CardDescription>
+              <CardHeader className="bg-card border-b p-5 sm:p-6 md:p-10">
+                <CardTitle className="text-lg sm:text-xl md:text-3xl font-black italic uppercase tracking-tight">Step 1: Identity</CardTitle>
+                <CardDescription className="text-muted-foreground text-sm md:text-base font-medium">Branding your professional storefront.</CardDescription>
               </CardHeader>
-              <CardContent className="p-6 md:p-10 space-y-6 md:space-y-8">
+              <CardContent className="p-5 sm:p-6 md:p-10 space-y-6 md:space-y-8">
                 <div className="bg-zinc-50 p-6 md:p-8 rounded-2xl md:rounded-3xl border-2 border-dashed border-zinc-200">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Shop Handle</Label>
                   <p className="text-2xl md:text-4xl font-headline font-black text-primary mt-2 italic">@{profile?.username || 'Collector'}</p>
@@ -224,7 +224,7 @@ export default function SellerOnboarding() {
                 <Button 
                   onClick={nextStep} 
                   disabled={!formData.tagline} 
-                  className="bg-accent text-white rounded-xl md:rounded-2xl px-8 md:px-12 h-12 md:h-14 font-black text-base md:text-lg gap-2 shadow-xl shadow-accent/20 active:scale-95 transition-transform w-full md:w-auto"
+                  className="bg-accent text-accent-foreground rounded-xl md:rounded-2xl px-8 md:px-12 h-12 md:h-14 font-black text-base md:text-lg gap-2 shadow-xl shadow-accent/20 active:scale-95 transition-transform w-full md:w-auto"
                 >
                   Continue <ChevronRight className="w-5 h-5" />
                 </Button>
@@ -234,9 +234,9 @@ export default function SellerOnboarding() {
 
           {step === 2 && (
             <Card className="border-none shadow-2xl rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <CardHeader className="bg-primary text-white p-6 md:p-10">
+              <CardHeader className="bg-card border-b p-6 md:p-10">
                 <CardTitle className="text-xl md:text-3xl font-black italic uppercase tracking-tight">Step 2: Specialty</CardTitle>
-                <CardDescription className="text-white/70 text-sm md:text-base font-medium">What is your niche?</CardDescription>
+                <CardDescription className="text-muted-foreground text-sm md:text-base font-medium">What is your niche?</CardDescription>
               </CardHeader>
               <CardContent className="p-6 md:p-10 space-y-6 md:space-y-8">
                 <div className="space-y-3">
@@ -266,7 +266,7 @@ export default function SellerOnboarding() {
                 <Button 
                   onClick={nextStep} 
                   disabled={!formData.category} 
-                  className="bg-accent text-white rounded-xl md:rounded-2xl px-8 md:px-12 h-12 md:h-14 font-black text-base md:text-lg gap-2 shadow-xl shadow-accent/20 active:scale-95 transition-transform flex-1 md:flex-none"
+                  className="bg-accent text-accent-foreground rounded-xl md:rounded-2xl px-8 md:px-12 h-12 md:h-14 font-black text-base md:text-lg gap-2 shadow-xl shadow-accent/20 active:scale-95 transition-transform flex-1 md:flex-none"
                 >
                   Continue <ChevronRight className="w-5 h-5" />
                 </Button>
@@ -276,9 +276,9 @@ export default function SellerOnboarding() {
 
           {step === 3 && (
             <Card className="border-none shadow-2xl rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <CardHeader className="bg-primary text-white p-6 md:p-10">
+              <CardHeader className="bg-card border-b p-6 md:p-10">
                 <CardTitle className="text-xl md:text-3xl font-black italic uppercase tracking-tight">Step 3: Trust</CardTitle>
-                <CardDescription className="text-white/70 text-sm md:text-base font-medium">Dealer standards.</CardDescription>
+                <CardDescription className="text-muted-foreground text-sm md:text-base font-medium">Dealer standards.</CardDescription>
               </CardHeader>
               <CardContent className="p-6 md:p-10 space-y-3 md:space-y-4">
                 {[
@@ -302,7 +302,7 @@ export default function SellerOnboarding() {
                 <Button 
                   onClick={nextStep} 
                   disabled={!formData.agreedToTerms || !formData.agreedToPaymentRules || !formData.agreedToAuthenticity} 
-                  className="bg-accent text-white rounded-xl md:rounded-2xl px-8 md:px-12 h-12 md:h-14 font-black text-base md:text-lg gap-2 shadow-xl shadow-accent/20 active:scale-95 transition-transform flex-1 md:flex-none"
+                  className="bg-accent text-accent-foreground rounded-xl md:rounded-2xl px-8 md:px-12 h-12 md:h-14 font-black text-base md:text-lg gap-2 shadow-xl shadow-accent/20 active:scale-95 transition-transform flex-1 md:flex-none"
                 >
                   Continue <ChevronRight className="w-5 h-5" />
                 </Button>
@@ -312,9 +312,9 @@ export default function SellerOnboarding() {
 
           {step === 4 && (
             <Card className="border-none shadow-2xl rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <CardHeader className="bg-primary text-white p-6 md:p-10">
+              <CardHeader className="bg-card border-b p-6 md:p-10">
                 <CardTitle className="text-xl md:text-3xl font-black italic uppercase tracking-tight">Step 4: Payments</CardTitle>
-                <CardDescription className="text-white/70 text-sm md:text-base font-medium">Connect Stripe.</CardDescription>
+                <CardDescription className="text-muted-foreground text-sm md:text-base font-medium">Connect Stripe.</CardDescription>
               </CardHeader>
               <CardContent className="p-8 md:p-16 text-center space-y-6 md:space-y-8">
                 <div className="w-20 h-20 md:w-28 md:h-28 bg-accent/10 rounded-2xl md:rounded-[2.5rem] flex items-center justify-center mx-auto border-2 border-accent/20">
@@ -347,7 +347,7 @@ export default function SellerOnboarding() {
                 <Button 
                   onClick={nextStep} 
                   disabled={!formData.stripeVerified || isConnectingStripe}
-                  className="bg-accent text-white rounded-xl md:rounded-2xl px-8 md:px-12 h-12 md:h-14 font-black text-base md:text-lg gap-2 shadow-xl shadow-accent/20 active:scale-95 transition-transform flex-1 md:flex-none"
+                  className="bg-accent text-accent-foreground rounded-xl md:rounded-2xl px-8 md:px-12 h-12 md:h-14 font-black text-base md:text-lg gap-2 shadow-xl shadow-accent/20 active:scale-95 transition-transform flex-1 md:flex-none"
                 >
                   Continue <ChevronRight className="w-5 h-5" />
                 </Button>

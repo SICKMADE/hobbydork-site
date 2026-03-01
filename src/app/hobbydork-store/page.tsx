@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { 
   Dialog, 
   DialogContent, 
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
@@ -235,6 +236,7 @@ export default function HobbydorkStore() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl">
+          <DialogTitle className="sr-only">Stripe Checkout</DialogTitle>
           <div className="bg-card text-foreground">
             <div className="bg-primary p-8 text-primary-foreground">
               <div className="flex justify-between items-start mb-6">

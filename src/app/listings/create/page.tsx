@@ -207,7 +207,7 @@ export default function CreateListing() {
             <ShieldAlert className="w-10 h-10 text-red-600" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-4xl font-headline font-black uppercase italic tracking-tight">Account Restricted</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black uppercase italic tracking-tight">Account Restricted</h1>
             <p className="text-muted-foreground font-medium">Your account status prevents you from creating new listings. Contact support for details.</p>
           </div>
           <Button asChild variant="outline" className="h-14 px-10 rounded-xl font-black uppercase tracking-widest">
@@ -227,10 +227,10 @@ export default function CreateListing() {
             <Mail className="w-10 h-10 text-accent" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-4xl font-headline font-black uppercase italic tracking-tight">Verify Identity</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black uppercase italic tracking-tight">Verify Identity</h1>
             <p className="text-muted-foreground font-medium">To follow Security Rules, all sellers must have a verified email address and an active profile.</p>
           </div>
-          <Button asChild className="h-14 px-10 rounded-xl font-black uppercase tracking-widest bg-accent text-white shadow-xl">
+          <Button asChild className="h-14 px-10 rounded-xl font-black uppercase tracking-widest bg-accent text-accent-foreground shadow-xl">
             <Link href="/verify-email">Go to Verification</Link>
           </Button>
         </main>
@@ -247,10 +247,10 @@ export default function CreateListing() {
             <Zap className="w-10 h-10 text-accent" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-4xl font-headline font-black uppercase italic tracking-tight">Become a Dealer</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black uppercase italic tracking-tight">Become a Dealer</h1>
             <p className="text-muted-foreground font-medium">You need to complete shop onboarding before you can list items for sale.</p>
           </div>
-          <Button asChild className="h-14 px-10 rounded-xl font-black uppercase tracking-widest bg-accent text-white shadow-xl">
+          <Button asChild className="h-14 px-10 rounded-xl font-black uppercase tracking-widest bg-accent text-accent-foreground shadow-xl">
             <Link href="/seller/onboarding">Start Onboarding</Link>
           </Button>
         </main>
@@ -390,13 +390,13 @@ export default function CreateListing() {
               )}
             </section>
 
-            <Button type="submit" disabled={isSubmitting} className="w-full bg-accent hover:bg-accent/90 text-white font-black h-20 text-2xl rounded-2xl shadow-xl transition-all active:scale-95 uppercase italic tracking-tighter">
+            <Button type="submit" disabled={isSubmitting} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black h-20 text-2xl rounded-2xl shadow-xl transition-all active:scale-95 uppercase italic tracking-tighter">
               {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : "List Item Now"}
             </Button>
           </div>
 
           <aside className="space-y-6">
-            <div className="bg-primary text-white p-8 rounded-2xl shadow-2xl sticky top-24">
+            <div className="bg-card/50 border-accent/20 border-2 p-8 rounded-2xl shadow-2xl sticky top-24">
               <h3 className="font-headline font-black text-xl mb-6 uppercase tracking-tighter flex items-center gap-2"><Sparkles className="w-5 h-5 text-accent" /> Seller Guide</h3>
               <ul className="space-y-8">
                 <li className="space-y-2">

@@ -46,7 +46,7 @@ export default function ISO24Feed() {
       <main className="container mx-auto px-4 py-12">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
           <div className="space-y-2">
-            <h1 className="text-4xl md:text-5xl font-headline font-black">ISO<span className="text-accent">24</span></h1>
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-headline font-black">ISO<span className="text-accent">24</span></h1>
             <p className="text-muted-foreground text-lg max-w-xl font-medium">Real-time community searches. All requests automatically expire after 24 hours.</p>
           </div>
           <Button asChild className="bg-accent text-white font-black h-12 px-8 rounded-full shadow-lg">

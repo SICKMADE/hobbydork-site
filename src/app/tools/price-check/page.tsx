@@ -84,14 +84,14 @@ export default function PriceCheckPage() {
           <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase">
             <Sparkles className="w-3 h-3" /> Expert Appraiser
           </div>
-          <h1 className="text-4xl font-headline font-black uppercase italic">AI Price Check</h1>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black uppercase italic">AI Price Check</h1>
           <p className="text-muted-foreground font-medium">Get an instant market valuation based on visual analysis and rarity data.</p>
         </header>
 
-        <div className="grid md:grid-cols-[1fr_350px] gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_350px] gap-6 md:gap-8">
           <div className="space-y-8">
             <Card className="border-none shadow-2xl bg-card rounded-[2rem] overflow-hidden">
-              <CardContent className="p-8 space-y-6">
+              <CardContent className="p-5 sm:p-8 space-y-6">
                 <div className="space-y-4">
                   <Label className="text-sm font-black uppercase tracking-widest">Identify Item (Optional)</Label>
                   <Input 
@@ -109,6 +109,7 @@ export default function PriceCheckPage() {
                       <Image src={photo} alt="Preview" fill className="object-cover" />
                       <button 
                         onClick={() => setPhoto(null)}
+                        aria-label="Remove photo"
                         className="absolute top-4 right-4 bg-zinc-950/50 text-white p-2 rounded-full backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <X className="w-4 h-4" />

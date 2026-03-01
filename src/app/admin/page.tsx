@@ -18,7 +18,9 @@ import {
   TrendingUp,
   CheckCircle2,
   Eye,
-  Ban
+  Ban,
+  Wallet,
+  XCircle
 } from 'lucide-react';
 import { useFirestore, useCollection, useUser, useMemoFirebase, useDoc } from '@/firebase';
 import { 
@@ -28,8 +30,11 @@ import {
   deleteDoc, 
   doc, 
   updateDoc, 
-  limit
+  limit,
+  where
 } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/firebase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -49,12 +54,17 @@ function AdminPanelContent({ isStaff }: { isStaff: boolean }) {
   const ordersQuery = useMemoFirebase(() => query(collection(db!, 'orders'), orderBy('timestamp', 'desc'), limit(100)), [db]);
   const listingsQuery = useMemoFirebase(() => collection(db!, 'listings'), [db]);
   const giveawaysQuery = useMemoFirebase(() => collection(db!, 'giveaways'), [db]);
+  const payoutRequestsQuery = useMemoFirebase(() => query(collection(db!, 'payoutRequests'), where('status', '==', 'PENDING'), orderBy('createdAt', 'desc')), [db]);
 
   const { data: reports, isLoading: reportsLoading } = useCollection(reportsQuery);
   const { data: users, isLoading: usersLoading } = useCollection(usersQuery);
   const { data: orders, isLoading: ordersLoading } = useCollection(ordersQuery);
   const { data: listings, isLoading: listingsLoading } = useCollection(listingsQuery);
   const { data: giveaways } = useCollection(giveawaysQuery);
+  const { data: payoutRequests, isLoading: payoutRequestsLoading } = useCollection(payoutRequestsQuery);
+
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [denyingId, setDenyingId] = useState<string | null>(null);
 
   const handleUpdateUserStatus = async (userId: string, status: string) => {
     try {
@@ -84,6 +94,43 @@ function AdminPanelContent({ isStaff }: { isStaff: boolean }) {
     }
   };
 
+  const handleApproveWithdrawal = async (payoutId: string) => {
+    setApprovingId(payoutId);
+    try {
+      const approveWithdrawal = httpsCallable(functions, 'approveWithdrawal');
+      await approveWithdrawal({ payoutRequestId: payoutId });
+      toast({ title: "Withdrawal Approved", description: "Funds have been transferred to seller's Stripe account." });
+    } catch (e: any) {
+      toast({ 
+        variant: 'destructive', 
+        title: "Approval Failed", 
+        description: e.message || "Failed to approve withdrawal"
+      });
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleDenyWithdrawal = async (payoutId: string) => {
+    const reason = prompt("Reason for denial (optional):");
+    if (reason === null) return; // User cancelled
+    
+    setDenyingId(payoutId);
+    try {
+      const denyWithdrawal = httpsCallable(functions, 'denyWithdrawal');
+      await denyWithdrawal({ payoutRequestId: payoutId, reason });
+      toast({ title: "Withdrawal Denied", description: "Seller has been notified." });
+    } catch (e: any) {
+      toast({ 
+        variant: 'destructive', 
+        title: "Denial Failed", 
+        description: e.message || "Failed to deny withdrawal"
+      });
+    } finally {
+      setDenyingId(null);
+    }
+  };
+
   const totalGMV = useMemo(() => {
     return orders?.reduce((acc, order) => acc + (order.price || 0), 0) || 0;
   }, [orders]);
@@ -95,6 +142,7 @@ function AdminPanelContent({ isStaff }: { isStaff: boolean }) {
         <TabsTrigger value="marketplace" className="rounded-lg px-8 h-10 font-bold shrink-0">Disputes</TabsTrigger>
         <TabsTrigger value="moderation" className="rounded-lg px-8 h-10 font-bold shrink-0">Moderation</TabsTrigger>
         <TabsTrigger value="reports" className="rounded-lg px-8 h-10 font-bold shrink-0">Reports</TabsTrigger>
+        <TabsTrigger value="payouts" className="rounded-lg px-8 h-10 font-bold shrink-0">Payouts</TabsTrigger>
         <TabsTrigger value="users" className="rounded-lg px-8 h-10 font-bold shrink-0">Users</TabsTrigger>
       </TabsList>
 
@@ -337,6 +385,75 @@ function AdminPanelContent({ isStaff }: { isStaff: boolean }) {
                         {u.status === 'BANNED' ? <UserCheck className="w-4 h-4 mr-2" /> : <Ban className="w-4 h-4 mr-2" />}
                         {u.status === 'BANNED' ? 'Unban' : 'Ban'}
                       </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="payouts">
+        <Card className="rounded-2xl border-none shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-zinc-50 border-b">
+                <tr>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Seller</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Amount</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Requested</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest">Status</th>
+                  <th className="p-4 text-right text-[10px] font-black uppercase tracking-widest">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {payoutRequestsLoading ? (
+                  <tr><td colSpan={5} className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-accent" /></td></tr>
+                ) : payoutRequests?.length === 0 ? (
+                  <tr><td colSpan={5} className="p-12 text-center text-muted-foreground font-bold italic">No pending withdrawal requests.</td></tr>
+                ) : payoutRequests?.map(payout => (
+                  <tr key={payout.id} className="hover:bg-zinc-50">
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-zinc-200 flex items-center justify-center font-black text-[10px]">{payout.sellerUsername?.[0]?.toUpperCase()}</div>
+                        <div>
+                          <p className="font-bold text-sm">@{payout.sellerUsername}</p>
+                          <p className="text-[9px] text-zinc-400 font-mono">{payout.sellerUid?.substring(0, 8)}...</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4 font-black text-lg">${payout.amount?.toLocaleString()}</td>
+                    <td className="p-4 text-[10px] text-zinc-500">
+                      {payout.createdAt?.toDate ? new Date(payout.createdAt.toDate()).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="p-4">
+                      <Badge className="text-[9px] font-black uppercase bg-yellow-600">
+                        {payout.status}
+                      </Badge>
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          className="h-8 bg-green-600 text-white hover:bg-green-700 font-black text-[10px]"
+                          onClick={() => handleApproveWithdrawal(payout.id)}
+                          disabled={approvingId === payout.id || denyingId === payout.id}
+                        >
+                          {approvingId === payout.id ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <CheckCircle2 className="w-3 h-3 mr-1" />}
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-red-600 hover:bg-red-50 font-black text-[10px]"
+                          onClick={() => handleDenyWithdrawal(payout.id)}
+                          disabled={approvingId === payout.id || denyingId === payout.id}
+                        >
+                          {denyingId === payout.id ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <XCircle className="w-3 h-3 mr-1" />}
+                          Deny
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

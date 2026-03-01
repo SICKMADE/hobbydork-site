@@ -23,6 +23,8 @@ import {
   Sun,
   Moon,
   Store,
+  LogOut,
+  User,
 } from 'lucide-react';
 
 import {
@@ -38,30 +40,32 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { Switch } from '@/components/ui/switch';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
+import { getRandomAvatar } from '@/lib/utils';
 import Image from 'next/image';
 
 const navItems = [
   { title: 'Explore', url: '/', icon: Home },
+  { title: 'ISO24', url: '/iso24', icon: Search },
   { title: 'Trust Board', url: '/trust-board', icon: Trophy },
-  { title: 'About Us', url: '/creed', icon: Info },
-  { title: 'Help Center', url: '/help', icon: HelpCircle },
   { title: 'hobbydork Store', url: '/hobbydork-store', icon: Crown },
 ];
 
 const authItems = [
-  { title: 'Notifications', url: '/notifications', icon: Bell },
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'ISO24', url: '/iso24', icon: Search },
-  { title: 'Community Chat', url: '/community-chat', icon: MessageSquare },
+  { title: 'Live Chat', url: '/community-chat', icon: MessageSquare, isLive: true },
   { title: 'Messages', url: '/messages', icon: Mail },
+  { title: 'Notifications', url: '/notifications', icon: Bell },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { user } = useUser();
   const db = useFirestore();
+  const auth = useAuth();
   const [isDark, setIsDark] = React.useState(false);
 
   React.useEffect(() => {
@@ -89,18 +93,37 @@ export function AppSidebar() {
   const isSeller = !!profile?.isSeller || isDemo;
   const username = profile?.username;
 
+  // Only use custom photo if it's a data: URL (real file upload)
+  const isCustomPhoto = profile?.photoURL && profile.photoURL.startsWith('data:');
+  const userAvatar = isCustomPhoto ? profile.photoURL : getRandomAvatar(user?.uid);
+
+  const handleSignOut = async () => {
+    localStorage.removeItem('hobbydork_demo_mode');
+    if (auth) {
+      try {
+        await signOut(auth);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    window.location.href = '/';
+  };
+
   return (
     <Sidebar collapsible="icon" className="border-r">
-      <SidebarHeader className="h-16 flex items-center px-6 border-b">
-        <Link href="/" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-          <Image 
-            src="/hobbydork-main.png" 
-            alt="hobbydork" 
-            width={160} 
-            height={40} 
-            className="h-9 w-auto dark:brightness-0 dark:invert" 
-          />
-        </Link>
+      <SidebarHeader className="h-16 flex items-center justify-center border-b">
+        {user ? (
+          <Link href="/dashboard" className="flex items-center justify-center">
+            <Avatar className="w-12 h-12 border-2 border-primary/10 hover:border-accent transition-colors">
+              <AvatarImage src={userAvatar} />
+              <AvatarFallback><User className="w-6 h-6" /></AvatarFallback>
+            </Avatar>
+          </Link>
+        ) : (
+          <Link href="/" className="flex items-center justify-center">
+            {/* Empty when signed out */}
+          </Link>
+        )}
       </SidebarHeader>
       
       <SidebarContent>
@@ -137,7 +160,19 @@ export function AppSidebar() {
               {authItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={pathname === item.url}>
-                    <Link href={item.url}><item.icon className="w-4 h-4" /><span>{item.title}</span></Link>
+                    <Link href={item.url} className="flex items-center gap-2">
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                      {item.isLive && (
+                        <span className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/30">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+                          </span>
+                          <span className="text-[10px] font-bold text-red-400 uppercase group-data-[collapsible=icon]:hidden">Live</span>
+                        </span>
+                      )}
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -188,7 +223,7 @@ export function AppSidebar() {
                 </>
               ) : (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild className="bg-accent text-white hover:bg-accent/90 font-black h-12 rounded-xl">
+                  <SidebarMenuButton asChild className="bg-accent text-accent-foreground hover:bg-accent/90 font-black h-12 rounded-xl">
                     <Link href="/seller/onboarding" className="flex items-center gap-3">
                       <UserCheck className="w-5 h-5" /><span>Become Seller</span>
                     </Link>
@@ -210,6 +245,19 @@ export function AppSidebar() {
         {user && (
           <SidebarMenuButton asChild isActive={pathname === '/settings'}>
             <Link href="/settings"><Settings className="w-4 h-4" /><span>My Account</span></Link>
+          </SidebarMenuButton>
+        )}
+        
+        <SidebarMenuButton asChild isActive={pathname === '/creed'} className="text-xs">
+          <Link href="/creed"><Info className="w-4 h-4" /><span>About Us</span></Link>
+        </SidebarMenuButton>
+        <SidebarMenuButton asChild isActive={pathname === '/help'} className="text-xs">
+          <Link href="/help"><HelpCircle className="w-4 h-4" /><span>Help Center</span></Link>
+        </SidebarMenuButton>
+        
+        {user && (
+          <SidebarMenuButton onClick={handleSignOut} className="bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-950/60 !text-red-700 dark:!text-red-300 border-2 border-red-300 dark:border-red-800/60 font-black rounded-lg h-12">
+            <LogOut className="w-5 h-5" /><span>Sign Out</span>
           </SidebarMenuButton>
         )}
         

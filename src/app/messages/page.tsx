@@ -7,17 +7,20 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MessageSquare, Search, Loader2 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { query, collection, orderBy, limit, where, doc } from 'firebase/firestore';
+import { query, collection, orderBy, limit, where, doc, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { getRandomAvatar } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function MessagesInbox() {
   const { user, isUserLoading: authLoading } = useUser();
   const db = useFirestore();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const sellerParam = searchParams?.get('seller');
   const [searchQuery, setSearchQuery] = useState('');
+  const [creatingConversation, setCreatingConversation] = useState(false);
 
   const profileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
   const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
@@ -32,6 +35,79 @@ export default function MessagesInbox() {
       else if (!profile) router.push('/onboarding');
     }
   }, [user, profile, isVerificationComplete]);
+
+  // Auto-create conversation with seller if seller param provided
+  useEffect(() => {
+    const handleSellerParam = async () => {
+      if (!sellerParam || !user || !db || creatingConversation) return;
+
+      setCreatingConversation(true);
+
+      try {
+        // Find user by username
+        const usersSnap = await getDocs(query(collection(db, 'users'), where('username', '==', sellerParam)));
+        
+        if (usersSnap.empty) {
+          console.error('Seller not found');
+          setCreatingConversation(false);
+          return;
+        }
+
+        const sellerUid = usersSnap.docs[0].id;
+        const sellerData = usersSnap.docs[0].data();
+
+        if (sellerUid === user.uid) {
+          setCreatingConversation(false);
+          return;
+        }
+
+        // Check if conversation already exists
+        const existingConvs = await getDocs(
+          query(
+            collection(db, 'conversations'),
+            where('participantUids', 'array-contains', user.uid)
+          )
+        );
+
+        let existingConvId = null;
+        for (const conv of existingConvs.docs) {
+          if (conv.data().participantUids.includes(sellerUid)) {
+            existingConvId = conv.id;
+            break;
+          }
+        }
+
+        if (existingConvId) {
+          router.push(`/messages/${existingConvId}`);
+        } else {
+          // Create new conversation
+          const convData = {
+            participantUids: [user.uid, sellerUid],
+            participantNames: {
+              [user.uid]: user.displayName || 'User',
+              [sellerUid]: sellerData.displayName || sellerParam,
+            },
+            participantAvatars: {
+              [user.uid]: (profile?.photoURL && profile.photoURL.startsWith('data:')) ? profile.photoURL : getRandomAvatar(user.uid),
+              [sellerUid]: (sellerData.photoURL && sellerData.photoURL.startsWith('data:')) ? sellerData.photoURL : getRandomAvatar(sellerUid),
+            },
+            createdAt: serverTimestamp(),
+            lastTimestamp: serverTimestamp(),
+            lastMessage: '',
+          };
+
+          const newConv = await addDoc(collection(db, 'conversations'), convData);
+          router.push(`/messages/${newConv.id}`);
+        }
+      } catch (error) {
+        console.error('Error creating conversation:', error);
+      } finally {
+        setCreatingConversation(false);
+      }
+    };
+
+    handleSellerParam();
+  }, [sellerParam, user, db, creatingConversation, router]);
 
   // Security Rule Alignment: Must be ACTIVE to list conversations
   const conversationsQuery = useMemoFirebase(() => {
@@ -64,7 +140,7 @@ export default function MessagesInbox() {
         </header>
 
         <Card className="flex-1 border-none shadow-2xl bg-card overflow-hidden rounded-[2rem] min-h-0">
-          <div className="grid md:grid-cols-[350px_1fr] h-[650px]">
+          <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] lg:grid-cols-[350px_1fr] h-[500px] md:h-[650px]">
             <div className="border-r flex flex-col min-h-0">
               <div className="p-4 border-b">
                 <div className="relative">

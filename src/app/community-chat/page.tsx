@@ -44,11 +44,15 @@ export default function CommunityChat() {
     // Apply global profanity filter
     const sanitizedText = filterProfanity(messageText.trim());
 
+    // Only use custom photos (data: URLs only)
+    const isCustomPhoto = profile?.photoURL && profile.photoURL.startsWith('data:');
+    const avatarUrl = isCustomPhoto ? profile.photoURL : getRandomAvatar(user.uid);
+
     const chatMessage = {
       text: sanitizedText,
       senderId: user.uid,
       senderName: profile?.username ? `@${profile.username}` : (user.displayName || 'Anonymous Collector'),
-      avatarUrl: profile?.photoURL || user.photoURL || getRandomAvatar(user.uid),
+      avatarUrl,
       timestamp: serverTimestamp(),
     };
 
@@ -75,38 +79,44 @@ export default function CommunityChat() {
           <h1 className="text-2xl md:text-4xl font-headline font-black">Community Chat</h1>
         </header>
 
-        <Card className="flex-1 flex flex-col border-none shadow-2xl bg-card overflow-hidden rounded-[2rem] min-h-0">
-          <CardHeader className="bg-primary text-white py-4 px-6 flex flex-row items-center justify-between">
+        <Card className="flex-1 flex flex-col border-none shadow-2xl bg-card dark:bg-white overflow-hidden rounded-[2rem] min-h-0">
+          <CardHeader className="bg-red-600 text-white py-4 px-6 flex flex-row items-center justify-between">
             <div className="flex items-center gap-3">
-              <Users className="w-5 h-5 text-accent" />
+              <Users className="w-5 h-5 text-white" />
               <CardTitle className="text-sm md:text-lg">Main Lobby</CardTitle>
             </div>
           </CardHeader>
 
-          <CardContent className="flex-1 flex flex-col p-0 min-h-0">
+          <CardContent className="flex-1 flex flex-col p-0 min-h-0 dark:bg-white">
             <ScrollArea className="flex-1 p-4 md:p-6">
               <div className="space-y-4">
                 {messagesLoading ? (
                   <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
-                ) : messages?.map((msg, idx) => (
+                ) : messages?.map((msg, idx) => {
+                  // Only use custom photos (data: URLs only)
+                  const isCustomAvatar = msg.avatarUrl && msg.avatarUrl.startsWith('data:');
+                  const displayAvatar = isCustomAvatar ? msg.avatarUrl : getRandomAvatar(msg.senderId);
+                  
+                  return (
                   <div key={msg.id || idx} className={cn("flex gap-3", msg.senderId === user?.uid ? "flex-row-reverse" : "flex-row")}>
                     <Avatar className="w-8 h-8 md:w-10 h-10 border-2 border-white shadow-sm">
-                      <AvatarImage src={msg.avatarUrl || getRandomAvatar(msg.senderId)} />
+                      <AvatarImage src={displayAvatar} />
                       <AvatarFallback className="bg-zinc-100 text-[10px] font-black">{msg.senderName?.[0]}</AvatarFallback>
                     </Avatar>
                     <div className={cn("max-w-[70%] space-y-1", msg.senderId === user?.uid ? "items-end text-right" : "items-start")}>
-                      <span className="text-[9px] font-black uppercase text-zinc-500">{msg.senderName}</span>
-                      <div className={cn("px-4 py-2 rounded-2xl text-sm", msg.senderId === user?.uid ? "bg-accent text-white" : "bg-zinc-100")}>
+                      <span className="text-[9px] font-black uppercase text-zinc-500 dark:text-zinc-600">{msg.senderName}</span>
+                      <div className={cn("px-4 py-2 rounded-2xl text-sm", msg.senderId === user?.uid ? "bg-accent text-white" : "bg-zinc-100 dark:bg-zinc-200")}>
                         {msg.text}
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
                 <div ref={scrollRef} />
               </div>
             </ScrollArea>
 
-            <div className="p-4 bg-zinc-50 border-t mt-auto">
+            <div className="p-4 bg-[#4f4f4f] border-t mt-auto">
               <form onSubmit={handleSendMessage} className="flex gap-2">
                 <Input
                   placeholder="Type a message..."
@@ -114,7 +124,7 @@ export default function CommunityChat() {
                   onChange={(e) => setMessageText(e.target.value)}
                   className="flex-1 rounded-full h-12 px-6"
                 />
-                <Button type="submit" disabled={!messageText.trim()} className="h-12 w-12 rounded-full bg-accent text-white">
+                <Button type="submit" disabled={!messageText.trim()} className="h-12 w-12 rounded-full bg-white text-gray-700 hover:bg-gray-100">
                   <Send className="w-5 h-5" />
                 </Button>
               </form>

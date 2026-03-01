@@ -125,7 +125,7 @@ export default function Onboarding() {
         isSeller: false,
         sellerStatus: 'NONE',
         premiumItems: [],
-        photoURL: user.photoURL || '',
+        // Don't set photoURL - let it use randomized avatar from getRandomAvatar(uid)
         displayName: user.displayName || cleanUsername,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -170,12 +170,12 @@ export default function Onboarding() {
       <div className="max-w-md w-full space-y-8 animate-in fade-in zoom-in duration-500">
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-accent/10 rounded-3xl mb-4"><Sparkles className="w-8 h-8 md:w-10 md:h-10 text-accent" /></div>
-          <h1 className="text-3xl md:text-4xl font-headline font-black italic tracking-tighter uppercase">Choose Your Handle</h1>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black italic tracking-tighter uppercase">Choose Your Handle</h1>
           <p className="text-muted-foreground font-medium text-sm md:text-base">Your permanent identity on hobbydork.</p>
         </div>
 
         <Card className="border-none shadow-2xl rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden">
-          <CardHeader className="bg-primary text-white p-6 md:p-8">
+          <CardHeader className="bg-primary text-white p-5 sm:p-6 md:p-8">
             <div className="flex justify-between items-center">
               <CardTitle className="text-lg md:text-xl font-black italic uppercase tracking-tight">Identity Setup</CardTitle>
               <ShieldCheck className="w-5 h-5 text-accent" />

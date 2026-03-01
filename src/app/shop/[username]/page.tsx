@@ -23,7 +23,8 @@ import {
   Ghost,
   Users,
   Image as ImageIcon,
-  CheckCircle2
+  CheckCircle2,
+  Medal
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -31,7 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn, getRandomAvatar, filterProfanity } from '@/lib/utils';
 import type { Listing, Giveaway } from '@/lib/mock-data';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, orderBy, addDoc, serverTimestamp, setDoc, deleteDoc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, collection, query, where, orderBy, addDoc, serverTimestamp, setDoc, deleteDoc, getDoc, updateDoc, increment, limit } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
@@ -49,6 +50,15 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
 
   const storeRef = useMemoFirebase(() => db ? doc(db, 'storefronts', username) : null, [db, username]);
   const { data: storeData, isLoading: storeLoading } = useDoc(storeRef);
+
+  // Fetch current user's profile for avatar
+  const currentUserProfileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
+  const { data: currentUserProfile } = useDoc(currentUserProfileRef);
+
+  // Fetch seller's user profile to get tier
+  const sellerUsersQuery = useMemoFirebase(() => db ? query(collection(db, 'users'), where('username', '==', username), limit(1)) : null, [db, username]);
+  const { data: sellerUsers } = useCollection(sellerUsersQuery);
+  const sellerProfile = sellerUsers?.[0];
 
   const listingsQuery = useMemoFirebase(() => db ? query(collection(db, 'listings'), where('seller', '==', username)) : null, [db, username]);
   const giveawaysQuery = useMemoFirebase(() => db ? query(collection(db, 'giveaways'), where('seller', '==', username)) : null, [db, username]);
@@ -111,11 +121,15 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
     setIsPosting(true);
     const sanitized = filterProfanity(newPostContent);
 
+    // Only use custom photo if it's a data: URL (real file upload)
+    const isCustomPhoto = currentUserProfile?.photoURL && currentUserProfile.photoURL.startsWith('data:');
+    const avatarUrl = isCustomPhoto ? currentUserProfile.photoURL : getRandomAvatar(user.uid);
+
     const postData = {
       content: sanitized,
       authorId: user.uid,
       authorName: user.displayName || username,
-      authorAvatar: user.photoURL || getRandomAvatar(user.uid),
+      authorAvatar: avatarUrl,
       timestamp: serverTimestamp(),
       likes: 0
     };
@@ -200,9 +214,9 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
                   <Image src={avatarUrl} alt={username} fill className="object-cover" />
                 </div>
                 <div className="space-y-2 md:space-y-3">
-                  <div className="flex items-center justify-center md:justify-start gap-2 md:gap-3">
+                  <div className="flex items-center justify-center md:justify-start gap-2 md:gap-3 flex-wrap">
                     <h1 className={cn(
-                      "text-2xl md:text-5xl font-headline font-black uppercase tracking-tighter",
+                      "text-xl sm:text-2xl md:text-5xl font-headline font-black uppercase tracking-tighter",
                       isComicBook ? "text-black bg-yellow-400 border-4 border-black px-3 py-1" : 
                       isNeonSyndicate ? "text-white italic tracking-[0.1em] drop-shadow-[0_0_10px_cyan]" : 
                       isUrban ? "text-slate-950 font-mono" : 
@@ -214,6 +228,18 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
                       "w-6 h-6 md:w-8 md:h-8",
                       isNeonSyndicate ? "text-cyan-400" : isHobbyShop ? "text-white" : "text-primary"
                     )} />
+                    {sellerProfile?.sellerTier && (
+                      <Badge className={cn(
+                        "gap-1.5 font-black uppercase text-[9px] md:text-[10px] tracking-widest",
+                        sellerProfile.sellerTier === 'Platinum' ? "bg-purple-600" :
+                        sellerProfile.sellerTier === 'Gold' ? "bg-yellow-600" :
+                        sellerProfile.sellerTier === 'Silver' ? "bg-slate-400" :
+                        "bg-orange-600"
+                      )}>
+                        <Medal className="w-3.5 h-3.5" />
+                        {sellerProfile.sellerTier}
+                      </Badge>
+                    )}
                   </div>
                   <p className={cn(
                     "font-bold text-xs md:text-sm uppercase tracking-widest",
@@ -234,12 +260,12 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
                   disabled={isFollowLoading}
                   className={cn(
                     "font-black px-8 md:px-12 h-12 md:h-14 uppercase tracking-[0.2em] rounded-xl md:rounded-2xl shadow-xl transition-all active:scale-95 w-full md:w-auto",
-                    isFollowing ? "bg-zinc-200 text-zinc-600 hover:bg-zinc-300" : (
+                    isFollowing ? "bg-zinc-200 text-zinc-600 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600" : (
                       isComicBook ? "bg-black text-white rounded-none border-4 border-black" : 
                       isNeonSyndicate ? "bg-cyan-500 text-zinc-950 rounded-none italic shadow-[0_0_20px_rgba(34,211,238,0.4)]" : 
                       isUrban ? "bg-orange-600 text-white rounded-none border-b-4 border-r-4 border-slate-950" : 
                       isHobbyShop ? "bg-white text-[#355e3b] rounded-none" : 
-                      "bg-primary text-white"
+                      "bg-primary text-white dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
                     )
                   )}
                 >
@@ -319,7 +345,7 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
                   <form onSubmit={handleCreatePost} className="space-y-4">
                     <div className="flex gap-3 md:gap-4">
                       <Avatar className="w-10 h-10 border shadow-sm">
-                        <AvatarImage src={user?.photoURL || getRandomAvatar(user?.uid)} />
+                        <AvatarImage src={(currentUserProfile?.photoURL && currentUserProfile.photoURL.startsWith('data:')) ? currentUserProfile.photoURL : getRandomAvatar(user?.uid)} />
                         <AvatarFallback>{(user?.displayName || 'C')[0]}</AvatarFallback>
                       </Avatar>
                       <Textarea 
@@ -347,12 +373,17 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
                       <p className="text-xs md:text-sm font-medium leading-relaxed text-muted-foreground">Be the first to start the conversation!</p>
                     </div>
                   </div>
-                ) : posts.map(post => (
+                ) : posts.map(post => {
+                  // Only use custom photo if it's a data: URL (real file upload)
+                  const isCustomAvatar = post.authorAvatar && post.authorAvatar.startsWith('data:');
+                  const displayAvatar = isCustomAvatar ? post.authorAvatar : getRandomAvatar(post.authorId);
+
+                  return (
                   <Card key={post.id} className="p-4 md:p-6 border-none shadow-lg bg-card rounded-[1.5rem] md:rounded-[2rem]">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
                         <Avatar className="w-8 md:w-10 h-8 md:h-10 border-2 border-white">
-                          <AvatarImage src={post.authorAvatar || getRandomAvatar(post.authorId)} />
+                          <AvatarImage src={displayAvatar} />
                           <AvatarFallback>{post.authorName[0]}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -367,7 +398,8 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
                       <button className="flex items-center gap-2 text-[9px] md:text-[10px] font-black uppercase text-muted-foreground hover:text-primary"><MessageSquare className="w-3.5 h-3.5" /> Reply</button>
                     </div>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </TabsContent>

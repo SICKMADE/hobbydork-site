@@ -84,12 +84,12 @@ export default function NotificationsCenter() {
     <div className="min-h-screen bg-background pb-20">
       <Navbar />
       <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-12">
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase">
               <Bell className="w-3 h-3" /> Activity Feed
             </div>
-            <h1 className="text-4xl font-headline font-black italic tracking-tighter uppercase">Notifications</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black italic tracking-tighter uppercase">Notifications</h1>
             <p className="text-muted-foreground font-medium">Stay updated on your auctions, messages, and order status.</p>
           </div>
           {notifications && notifications.length > 0 && (

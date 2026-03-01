@@ -119,8 +119,8 @@ export default function LoginPage() {
         </div>
 
         <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-card">
-          <CardHeader className="bg-primary text-white p-8 pb-12">
-            <CardTitle className="text-2xl font-headline font-black italic uppercase tracking-tight">
+          <CardHeader className="bg-primary text-white p-5 sm:p-8 pb-10 sm:pb-12">
+            <CardTitle className="text-xl sm:text-2xl font-headline font-black italic uppercase tracking-tight">
               Community Access
             </CardTitle>
             <CardDescription className="text-white/60 font-medium">
@@ -128,9 +128,9 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           
-          <CardContent className="p-8 -mt-8">
-            <Tabs defaultValue="login" className="space-y-8">
-              <TabsList className="grid w-full grid-cols-2 h-14 bg-muted rounded-2xl p-1.5 shadow-inner">
+          <CardContent className="p-5 sm:p-8 -mt-8">
+            <Tabs defaultValue="login" className="space-y-6 sm:space-y-8">
+              <TabsList className="grid w-full grid-cols-2 h-12 sm:h-14 bg-muted rounded-2xl p-1.5 shadow-inner">
                 <TabsTrigger value="login" className="rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
                   Sign In
                 </TabsTrigger>

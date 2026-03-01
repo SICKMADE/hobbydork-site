@@ -104,7 +104,7 @@ export default function ReportIssuePage() {
           <p className="text-muted-foreground font-medium">Encountered a bug or suspicious behavior? Let us know.</p>
         </header>
 
-        <div className="grid md:grid-cols-[1fr_300px] gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-8 lg:gap-12">
           <Card className="border-none shadow-2xl bg-card rounded-[2rem] overflow-hidden">
             <CardContent className="p-8 md:p-10 space-y-8">
               <form onSubmit={handleSubmit} className="space-y-6">

@@ -79,18 +79,18 @@ export default function VerifyEmailPage() {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-accent/10 rounded-3xl mb-4">
               <Mail className="w-10 h-10 text-accent" />
             </div>
-            <h1 className="text-4xl font-headline font-black italic tracking-tighter uppercase leading-none">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black italic tracking-tighter uppercase leading-none">
               Verify Your Email
             </h1>
             <p className="text-muted-foreground font-medium">We need to ensure you're a real collector.</p>
           </div>
 
           <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden">
-            <CardHeader className="bg-primary text-white p-8">
-              <CardTitle className="text-xl font-black italic uppercase tracking-tight">Check Your Inbox</CardTitle>
+            <CardHeader className="bg-primary text-white p-5 sm:p-8">
+              <CardTitle className="text-lg sm:text-xl font-black italic uppercase tracking-tight">Check Your Inbox</CardTitle>
               <CardDescription className="text-white/70">A link was sent to {user?.email}</CardDescription>
             </CardHeader>
-            <CardContent className="p-8 space-y-6">
+            <CardContent className="p-5 sm:p-8 space-y-6">
               <p className="text-sm text-muted-foreground leading-relaxed font-medium">
                 To prevent scams and maintain community integrity, all members must verify their email address before listing items or chatting on hobbydork.
               </p>

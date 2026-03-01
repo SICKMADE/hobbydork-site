@@ -31,7 +31,7 @@ import { useDoc, useFirestore, useUser, useCollection, useMemoFirebase } from '@
 import { doc, updateDoc, increment, collection, addDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -180,7 +180,51 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
     }
   };
 
+  const handleProceedCheckout = async () => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    if (!listing || !db) return;
+
+    setIsProcessing(true);
+
+    try {
+      const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const orderData = {
+        orderId,
+        buyerUid: user.uid,
+        buyerName: user.displayName || 'Buyer',
+        sellerUid: listing.sellerId,
+        sellerName: listing.sellerName || listing.seller,
+        listingId: listing.id,
+        listingTitle: listing.title,
+        price: listing.price,
+        amount: Math.round(listing.price * 100),
+        status: 'Confirmed',
+        state: 'Confirmed',
+        createdAt: serverTimestamp(),
+        imageUrl: listing.imageUrl,
+      };
+
+      await addDoc(collection(db, 'orders'), orderData).then((docRef) => {
+        setIsCheckoutOpen(false);
+        router.push(`/checkout?listing=${listing.id}`);
+      });
+    } catch (error) {
+      console.error('Order creation error:', error);
+      toast({ 
+        variant: 'destructive', 
+        title: 'Checkout Error', 
+        description: 'Failed to create order. Please try again.' 
+      });
+      setIsProcessing(false);
+    }
+  };
+
   const isAuction = listing.type === 'Auction';
+  const listingImageUrl = listing.imageUrl?.trim();
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -199,10 +243,19 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
           </button>
         </div>
 
-        <div className="grid lg:grid-cols-[1.2fr_1fr] gap-6 lg:gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6 lg:gap-12">
           <div className="space-y-4">
-            <div className="relative aspect-[4/3] rounded-xl md:rounded-2xl overflow-hidden bg-card border shadow-sm">
-              <Image src={listing.imageUrl} alt={listing.title} fill className="object-cover" />
+            <div className="relative aspect-[4/3] rounded-xl md:rounded-2xl overflow-hidden bg-muted/20 border shadow-sm">
+              {listingImageUrl ? (
+                <Image src={listingImageUrl} alt={listing.title} fill className="object-cover" />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted/30">
+                  <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+                    <AlertTriangle className="w-8 h-8 text-muted-foreground/40" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">Image not available</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -215,7 +268,7 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
                   <Button variant="ghost" size="icon" className="rounded-full w-9 h-9"><Share2 className="w-4 h-4" /></Button>
                 </div>
               </div>
-              <h1 className="text-2xl md:text-4xl font-headline font-black leading-tight uppercase text-primary tracking-tight">{listing.title}</h1>
+              <h1 className="text-xl sm:text-2xl md:text-4xl font-headline font-black leading-tight uppercase text-primary tracking-tight">{listing.title}</h1>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
                 <Link href={`/shop/${listing.sellerName || listing.seller}`} className="group flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center shrink-0 border"><Store className="w-3.5 h-3.5 text-muted-foreground" /></div>
@@ -281,9 +334,11 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <Button className="w-full h-14 md:h-16 text-lg md:text-xl font-black bg-accent hover:bg-accent/90 text-white shadow-xl rounded-xl transition-all">Buy It Now</Button>
-                  <Button variant="outline" className="w-full h-12 md:h-14 font-black border-2 rounded-xl gap-2 hover:bg-primary/5 transition-all text-primary">
-                    <MessageCircle className="w-4 h-4" /> Message Seller
+                  <Button onClick={() => setIsCheckoutOpen(true)} className="w-full h-14 md:h-16 text-lg md:text-xl font-black bg-accent hover:bg-accent/90 text-white shadow-xl rounded-xl transition-all">Buy It Now</Button>
+                  <Button asChild variant="outline" className="w-full h-12 md:h-14 font-black border-2 rounded-xl gap-2 hover:bg-primary/5 transition-all text-primary">
+                    <Link href={`/messages?seller=${listing.sellerName || listing.seller}`}>
+                      <MessageCircle className="w-4 h-4" /> Message Seller
+                    </Link>
                   </Button>
                 </div>
               )}
@@ -329,8 +384,47 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
         </div>
       </main>
 
+      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl">
+          <DialogTitle className="sr-only">Checkout</DialogTitle>
+          <div className="bg-card text-foreground">
+            <div className="bg-primary p-8 text-primary-foreground">
+              <div className="flex justify-between items-start mb-6">
+                <div className="bg-accent/20 p-3 rounded-2xl">
+                  <CreditCard className="w-6 h-6 text-accent" />
+                </div>
+              </div>
+              <h2 className="text-3xl font-headline font-black italic mb-2 tracking-tight">Checkout</h2>
+            </div>
+            <div className="p-8 space-y-8">
+              <div className="flex justify-between items-center p-4 bg-muted/30 rounded-2xl border border-dashed border-muted-foreground/20">
+                <div className="space-y-1">
+                  <p className="text-xs font-black uppercase text-muted-foreground tracking-widest">Item</p>
+                  <p className="font-black text-lg">{listing?.title}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-black uppercase text-muted-foreground tracking-widest">Price</p>
+                  <p className="font-black text-2xl text-accent">${listing?.price}</p>
+                </div>
+              </div>
+              <Button onClick={handleProceedCheckout} disabled={isProcessing} className="w-full h-12 bg-accent hover:bg-accent/90 text-white font-black rounded-xl disabled:opacity-50">
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Creating Order...
+                  </>
+                ) : (
+                  'Proceed to Checkout'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
         <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[1.5rem] md:rounded-[2rem] shadow-2xl">
+          <DialogTitle className="sr-only">Report Listing</DialogTitle>
           <div className="bg-white text-zinc-900">
             <div className="bg-red-600 p-6 md:p-8 text-white">
               <div className="bg-white/20 w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl flex items-center justify-center mb-4">

@@ -16,7 +16,7 @@ export default function AboutPage() {
           <Badge variant="outline" className="px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest">
             About hobbydork
           </Badge>
-          <h1 className="text-5xl md:text-8xl font-headline font-black tracking-tighter uppercase leading-none">
+          <h1 className="text-3xl sm:text-5xl md:text-8xl font-headline font-black tracking-tighter uppercase leading-none">
             Built for <span className="text-accent">Collectors.</span>
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground font-medium leading-relaxed max-w-3xl mx-auto italic">

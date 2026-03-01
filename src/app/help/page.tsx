@@ -16,7 +16,7 @@ export default function HelpPage() {
           <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto">
             <HelpCircle className="w-8 h-8 text-accent" />
           </div>
-          <h1 className="text-4xl font-headline font-black uppercase tracking-tighter">Help Center</h1>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black uppercase tracking-tighter">Help Center</h1>
           <p className="text-muted-foreground font-medium">Everything you need to know about buying and selling on hobbydork.</p>
         </header>
 

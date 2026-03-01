@@ -36,11 +36,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { doc, collection, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/firebase/client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 export default function OrderTracking({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -59,6 +62,11 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
   const [disputeReason, setDisputeReason] = useState('');
   const [isProcessingAction, setIsProcessingAction] = useState(false);
   const [isGeneratingLabel, setIsGeneratingLabel] = useState(false);
+
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
+  const [isProcessingReturn, setIsProcessingReturn] = useState(false);
+  const [returnData, setReturnData] = useState<any>(null);
 
   const orderRef = useMemoFirebase(() => id && db ? doc(db, 'orders', id) : null, [db, id]);
   const { data: order, isLoading: loading } = useDoc(orderRef);
@@ -226,6 +234,76 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
     }
   };
 
+  const handleReturnSubmit = async () => {
+    if (!db || !user || !order || !returnReason.trim() || !orderRef) return;
+    setIsProcessingReturn(true);
+
+    try {
+      // If return is already approved, just mark as shipped
+      if (order.status === 'Return Approved') {
+        await updateDoc(orderRef!, { 
+          status: 'Return Shipped', 
+          returnTrackingNumber: returnReason,
+          updatedAt: serverTimestamp() 
+        });
+        toast({ title: 'Return Shipped', description: 'The seller has been notified. Awaiting confirmation of receipt.' });
+      } else {
+        // Otherwise, create a new return request
+        const returnId = `return_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        const returnRequestData = {
+          returnId,
+          orderId: id,
+          buyerUid: user.uid,
+          buyerName: user.displayName || 'Buyer',
+          sellerUid: order.sellerUid,
+          sellerName: order.sellerName,
+          listingId: order.listingId,
+          listingTitle: order.listingTitle,
+          reason: returnReason,
+          status: 'Return Requested',
+          amount: order.price,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+
+        await addDoc(collection(db, 'returns'), returnRequestData);
+        await updateDoc(orderRef!, { status: 'Return Requested', returnId, updatedAt: serverTimestamp() });
+        
+        toast({ title: 'Return Requested', description: 'The seller has been notified. Awaiting approval...' });
+        setReturnData(returnRequestData);
+      }
+      
+      setIsReturnDialogOpen(false);
+      setReturnReason('');
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Return Request Failed' });
+    } finally {
+      setIsProcessingReturn(false);
+    }
+  };
+
+  const handleProcessRefund = async () => {
+    if (!user || !order) return;
+    setIsProcessingAction(true);
+
+    try {
+      const processRefund = httpsCallable(functions, 'processRefund');
+      const result = await processRefund({ orderId: id });
+      
+      toast({ title: 'Refund Processed', description: 'Refund has been sent to the buyer.' });
+    } catch (error: any) {
+      console.error('Refund error:', error);
+      toast({ 
+        variant: 'destructive', 
+        title: 'Refund Failed',
+        description: error.message || 'Could not process refund. Please try again.'
+      });
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
   const isGiveaway = order.type === 'Giveaway' || order.price === 0;
 
   return (
@@ -317,37 +395,82 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
                           <span className="text-[9px] font-black uppercase text-accent tracking-widest">Must Ship in 48h</span>
                         </div>
                       </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {!order.trackingNumber ? (
-                          <Button 
-                            onClick={handleGenerateLabel} 
-                            className="bg-accent text-white hover:bg-accent/90 h-14 rounded-xl font-black uppercase gap-2"
-                            disabled={isGeneratingLabel}
-                          >
-                            {isGeneratingLabel ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}
-                            Generate Shippo Label
-                          </Button>
-                        ) : (
-                          <Button asChild className="bg-green-600 hover:bg-green-700 text-white h-14 rounded-xl font-black uppercase gap-2">
-                            <a href={order.labelUrl} target="_blank" rel="noopener noreferrer">
-                              <FileText className="w-5 h-5" /> Print Label
-                            </a>
-                          </Button>
-                        )}
-                        
-                        {(order.status === 'Confirmed' || order.status === 'Processing') && (
-                          <Button 
-                            variant="outline" 
-                            onClick={() => handleUpdateStatus('Cancelled')} 
-                            className="border-white/20 text-white hover:bg-red-600 hover:border-red-600 h-14 rounded-xl font-black uppercase"
-                            disabled={isProcessingAction}
-                          >
-                            Cancel Transaction
-                          </Button>
-                        )}
+
+                      {/* Status Progression Buttons */}
+                      <div className="bg-white/5 border border-white/10 p-6 rounded-xl space-y-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                          <Truck className="w-3 h-3" /> Order Status
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          {order.status === 'Confirmed' && (
+                            <Button 
+                              onClick={() => handleUpdateStatus('Processing')}
+                              className="bg-accent text-white hover:bg-accent/90 h-12 rounded-lg font-black uppercase text-[9px] col-span-2"
+                              disabled={isProcessingAction}
+                            >
+                              {isProcessingAction ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Package className="w-4 h-4 mr-2" />}
+                              Start Processing
+                            </Button>
+                          )}
+                          
+                          {order.status === 'Processing' && (
+                            <Button 
+                              onClick={handleGenerateLabel}
+                              className="bg-accent text-white hover:bg-accent/90 h-12 rounded-lg font-black uppercase text-[9px]"
+                              disabled={isGeneratingLabel}
+                            >
+                              {isGeneratingLabel ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Printer className="w-4 h-4 mr-2" />}
+                              Gen Label
+                            </Button>
+                          )}
+
+                          {order.status === 'Processing' && order.trackingNumber && (
+                            <Button 
+                              onClick={() => handleUpdateStatus('Shipped')}
+                              className="bg-green-600 text-white hover:bg-green-700 h-12 rounded-lg font-black uppercase text-[9px]"
+                              disabled={isProcessingAction}
+                            >
+                              {isProcessingAction ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Truck className="w-4 h-4 mr-2" />}
+                              Mark Shipped
+                            </Button>
+                          )}
+
+                          {(order.status === 'Confirmed' || order.status === 'Processing') && (
+                            <Button 
+                              variant="outline" 
+                              onClick={() => handleUpdateStatus('Cancelled')} 
+                              className="border-white/20 text-white hover:bg-red-600 hover:border-red-600 h-12 rounded-lg font-black uppercase text-[9px]"
+                              disabled={isProcessingAction}
+                            >
+                              <XCircle className="w-4 h-4 mr-2" />
+                              Cancel
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       
+                      {/* Label Generation */}
+                      {order.status !== 'Shipped' && order.status !== 'Delivered' && !order.trackingNumber && (
+                        <Button 
+                          onClick={handleGenerateLabel} 
+                          className="w-full bg-accent text-white hover:bg-accent/90 h-14 rounded-xl font-black uppercase gap-2"
+                          disabled={isGeneratingLabel}
+                        >
+                          {isGeneratingLabel ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}
+                          Generate Shippo Label
+                        </Button>
+                      )}
+
+                      {order.trackingNumber && (
+                        <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-2">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Tracking Info</p>
+                          <div className="flex items-center justify-between">
+                            <code className="text-sm font-mono text-cyan-400 font-bold">{order.trackingNumber}</code>
+                            <Badge variant="outline" className="border-cyan-400/30 text-cyan-400 text-[8px]">{order.carrier || 'USPS'}</Badge>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="bg-white/5 border border-white/10 p-6 rounded-xl space-y-4">
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                           <Sparkles className="w-3 h-3" /> Dealer fulfillment tip
@@ -357,13 +480,119 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
                         </p>
                       </div>
 
-                      {order.trackingNumber && (
-                        <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-2">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Tracking Info</p>
-                          <div className="flex items-center justify-between">
-                            <code className="text-sm font-mono text-cyan-400 font-bold">{order.trackingNumber}</code>
-                            <Badge variant="outline" className="border-cyan-400/30 text-cyan-400 text-[8px]">{order.carrier || 'USPS'}</Badge>
+                      {order.status === 'Return Requested' && (
+                        <div className="bg-orange-950 border border-orange-900/50 p-6 rounded-xl space-y-4">
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-orange-400 flex items-center gap-2">
+                            <RotateCcw className="w-3 h-3" /> Return Request
+                          </h4>
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-[9px] text-orange-400/70 uppercase font-bold tracking-wide mb-1">Buyer's Reason:</p>
+                              <p className="text-sm text-orange-100 font-medium">{returnData?.reason || 'Return request pending...'}</p>
+                            </div>
+                            <div className="flex gap-3">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    onClick={() => handleUpdateStatus('Return Approved')}
+                                    className="flex-1 bg-green-600 text-white hover:bg-green-700 h-12 rounded-lg font-black uppercase text-[9px]"
+                                    disabled={isProcessingAction}
+                                  >
+                                    {isProcessingAction ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                                    Approve Return
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs font-bold">Approve the return and buyer will ship item back</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    onClick={() => handleUpdateStatus('Delivered')}
+                                    className="flex-1 bg-red-600 text-white hover:bg-red-700 h-12 rounded-lg font-black uppercase text-[9px]"
+                                    disabled={isProcessingAction}
+                                  >
+                                    <XCircle className="w-4 h-4 mr-2" />
+                                    Deny
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs font-bold">Reject return request and order stays completed</TooltipContent>
+                              </Tooltip>
+                            </div>
                           </div>
+                        </div>
+                      )}
+
+                      {order.status === 'Return Requested' && (
+                        <div className="bg-orange-950/50 border border-orange-900/30 p-6 rounded-xl space-y-3">
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-orange-300 flex items-center gap-2">
+                            <Sparkles className="w-3 h-3" /> Return Best Practices
+                          </h4>
+                          <ul className="space-y-2 text-[11px] text-orange-200/80 font-medium">
+                            <li className="flex gap-2">
+                              <span className="text-orange-400 font-black">→</span>
+                              <span><strong>Accept returns</strong> to protect your seller rating and maintain buyer trust</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span className="text-orange-400 font-black">→</span>
+                              <span><strong>Fast refunds</strong> often result in positive feedback even for returns</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span className="text-orange-400 font-black">→</span>
+                              <span><strong>Disputed returns</strong> can impact your tier status and search visibility</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span className="text-orange-400 font-black">→</span>
+                              <span><strong>Communicate</strong> return address details promptly via messages</span>
+                            </li>
+                          </ul>
+                        </div>
+                      )}
+
+                      {order.status === 'Return Shipped' && (
+                        <div className="bg-blue-950 border border-blue-900/50 p-6 rounded-xl space-y-4">
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 flex items-center gap-2">
+                            <Truck className="w-3 h-3" /> Item Return Shipping
+                          </h4>
+                          <p className="text-sm text-blue-100 font-medium">The buyer has shipped the item back. Awaiting receipt.</p>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                onClick={handleProcessRefund}
+                                className="w-full bg-green-600 text-white hover:bg-green-700 h-12 rounded-lg font-black uppercase text-[9px]"
+                                disabled={isProcessingAction}
+                              >
+                                {isProcessingAction ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                                Confirm Received & Process Refund
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs font-bold">Verify item received and issue refund immediately via Stripe</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      )}
+
+                      {order.status === 'Return Shipped' && (
+                        <div className="bg-blue-950/50 border border-blue-900/30 p-6 rounded-xl space-y-3">
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-300 flex items-center gap-2">
+                            <Sparkles className="w-3 h-3" /> Refund Best Practices
+                          </h4>
+                          <ul className="space-y-2 text-[11px] text-blue-200/80 font-medium">
+                            <li className="flex gap-2">
+                              <span className="text-blue-400 font-black">→</span>
+                              <span><strong>Process immediately</strong> when item is received for best buyer experience</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span className="text-blue-400 font-black">→</span>
+                              <span><strong>Quick refunds</strong> often convert returns into positive 5-star reviews</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span className="text-blue-400 font-black">→</span>
+                              <span><strong>Buyer retention</strong> is 2x higher when refunds are handled smoothly</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span className="text-blue-400 font-black">→</span>
+                              <span><strong>Your reputation</strong> is worth more than any single sale</span>
+                            </li>
+                          </ul>
                         </div>
                       )}
                     </div>
@@ -388,40 +617,105 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
                         <div className="bg-zinc-50 p-8 rounded-2xl border-2 border-dashed flex flex-col items-center gap-4 text-center">
                           <h3 className="font-black uppercase text-sm">Change of heart?</h3>
                           <p className="text-xs text-muted-foreground font-medium">You can cancel your order before the seller begins processing it.</p>
-                          <Button 
-                            variant="outline" 
-                            onClick={() => handleUpdateStatus('Cancelled')}
-                            className="rounded-xl font-bold gap-2 text-red-600 border-red-200 hover:bg-red-50"
-                            disabled={isProcessingAction}
-                          >
-                            <XCircle className="w-4 h-4" /> Cancel Order
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                onClick={() => handleUpdateStatus('Cancelled')}
+                                className="rounded-xl font-bold gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                                disabled={isProcessingAction}
+                              >
+                                <XCircle className="w-4 h-4" /> Cancel Order
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs font-bold">Cancel before seller starts processing for full refund</TooltipContent>
+                          </Tooltip>
                         </div>
                       )}
 
                       {order.status === 'Shipped' && (
-                        <div className="bg-accent/5 border-2 border-accent/20 p-8 rounded-2xl text-center space-y-4">
-                          <h3 className="text-xl font-black uppercase tracking-tighter italic">Package Arrived?</h3>
-                          <p className="text-sm font-medium text-muted-foreground">Once you verify the contents, confirm delivery to release funds to the seller.</p>
-                          <Button 
-                            onClick={() => handleUpdateStatus('Delivered')}
-                            className="bg-accent text-white font-black rounded-xl h-14 px-12 shadow-xl"
-                            disabled={isProcessingAction}
-                          >
-                            Confirm Delivery Received
-                          </Button>
+                        <div className="bg-zinc-50 dark:bg-zinc-900 border-2 border-dashed p-8 rounded-2xl text-center space-y-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Truck className="w-5 h-5 text-accent" />
+                            <h3 className="text-lg font-black uppercase tracking-tighter">On Its Way</h3>
+                          </div>
+                          <p className="text-sm font-medium text-muted-foreground">Tracking your package automatically. You'll be notified when delivered.</p>
+                          <p className="text-xs text-muted-foreground italic">Delivery status updates automatically from the carrier.</p>
                         </div>
                       )}
 
                       {order.status === 'Delivered' && !hasReviewed && (
                         <div className="bg-accent/5 border-2 border-dashed border-accent/20 p-8 rounded-2xl flex flex-col items-center text-center space-y-4">
-                          <div className="bg-accent/10 p-4 rounded-full"><ShieldAlert className="w-8 h-8 text-accent" /></div>
-                          <h3 className="text-xl font-black uppercase tracking-tighter">Verified Delivery</h3>
-                          <p className="text-sm text-muted-foreground font-medium max-w-sm">Help the community by rating your experience with @{order.sellerName}.</p>
+                          <div className="bg-accent/10 p-4 rounded-full"><CheckCircle2 className="w-8 h-8 text-accent" /></div>
+                          <h3 className="text-xl font-black uppercase tracking-tighter">✓ Carrier Delivered</h3>
+                          <p className="text-sm text-muted-foreground font-medium max-w-sm">
+                            {order.carrierDeliveryDate ? `Package confirmed delivered on ${new Date(order.carrierDeliveryDate).toLocaleDateString()}` : 'Your package has been delivered.'}
+                          </p>
+                          <p className="text-xs text-muted-foreground italic">Help the community by rating your experience with @{order.sellerName}.</p>
                           <div className="flex gap-3">
                             <Button onClick={() => setIsReviewOpen(true)} className="bg-accent text-white font-black rounded-xl px-10 h-14 uppercase tracking-widest shadow-lg">Rate Seller</Button>
-                            <Button variant="outline" onClick={() => handleUpdateStatus('Return Requested')} className="rounded-xl h-14 px-6 font-bold border-2 gap-2"><RotateCcw className="w-4 h-4" /> Request Return</Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" onClick={() => setIsReturnDialogOpen(true)} className="rounded-xl h-14 px-6 font-bold border-2 gap-2"><RotateCcw className="w-4 h-4" /> Request Return</Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs font-bold">Start return process if item not as described or damaged</TooltipContent>
+                            </Tooltip>
                           </div>
+                        </div>
+                      )}
+
+                      {order.status === 'Return Requested' && (
+                        <div className="bg-orange-50 border-2 border-orange-200 p-8 rounded-2xl space-y-4">
+                          <div className="flex items-center gap-2">
+                            <RotateCcw className="w-5 h-5 text-orange-600" />
+                            <h3 className="text-lg font-black uppercase tracking-tighter text-orange-700">Return Requested</h3>
+                          </div>
+                          <p className="text-sm text-orange-700 font-medium">Your return request has been sent to the seller. They will review it shortly.</p>
+                          <p className="text-xs text-orange-600 italic">You'll receive a notification once they approve or deny your request.</p>
+                        </div>
+                      )}
+
+                      {order.status === 'Return Approved' && (
+                        <div className="bg-blue-50 border-2 border-blue-200 p-8 rounded-2xl space-y-4">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                            <h3 className="text-lg font-black uppercase tracking-tighter text-blue-700">Return Approved</h3>
+                          </div>
+                          <p className="text-sm text-blue-700 font-medium">Great! The seller approved your return. Please package and ship the item back.</p>
+                          <div className="bg-white p-4 rounded-xl border border-blue-200 space-y-2">
+                            <p className="text-xs font-bold text-blue-900 uppercase">Return Address (to be provided by seller):</p>
+                            <p className="text-xs text-blue-700 font-medium">Check your messages for return shipping instructions.</p>
+                          </div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button onClick={() => setIsReturnDialogOpen(true)} variant="outline" className="w-full rounded-xl h-12 font-black border-blue-200 gap-2">
+                                <Truck className="w-4 h-4" /> Mark as Shipped Back
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs font-bold">Provide tracking number for return shipment</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      )}
+
+                      {order.status === 'Return Shipped' && (
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 p-8 rounded-2xl space-y-4">
+                          <div className="flex items-center gap-2">
+                            <Truck className="w-5 h-5 text-blue-600" />
+                            <h3 className="text-lg font-black uppercase tracking-tighter text-blue-700">Item On Way Back</h3>
+                          </div>
+                          <p className="text-sm text-blue-700 font-medium">The seller has received your return shipment. They'll verify the item and process your refund.</p>
+                          <p className="text-xs text-blue-600 italic">Refunds typically process within 3-5 business days.</p>
+                        </div>
+                      )}
+
+                      {order.status === 'Refunded' && (
+                        <div className="bg-green-50 border-2 border-green-200 p-8 rounded-2xl space-y-4">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5 text-green-600" />
+                            <h3 className="text-lg font-black uppercase tracking-tighter text-green-700">Refund Processed</h3>
+                          </div>
+                          <p className="text-sm text-green-700 font-medium">${order.price?.toFixed(2)} has been refunded to your account.</p>
+                          <p className="text-xs text-green-600 italic">Please allow 3-5 business days for the funds to appear in your account.</p>
                         </div>
                       )}
                     </div>
@@ -585,6 +879,48 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
                 className="flex-1 bg-red-600 text-white font-black rounded-xl h-14 shadow-lg"
               >
                 {isProcessingAction ? "Processing..." : "Open Dispute"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isReturnDialogOpen} onOpenChange={setIsReturnDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-white">
+          <div className="bg-orange-600 p-8 text-white">
+             <h2 className="text-3xl font-headline font-black uppercase tracking-tight">
+               {order.status === 'Return Approved' ? 'Ship Return' : 'Request Return'}
+             </h2>
+             <p className="text-white/70 text-sm font-medium">
+               {order.status === 'Return Approved' ? 'Provide tracking info for the returned item.' : 'Let the seller know why you want to return this item.'}
+             </p>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest">
+                {order.status === 'Return Approved' ? 'Tracking Number' : 'Return Reason'}
+              </Label>
+              <Textarea 
+                placeholder={order.status === 'Return Approved' ? 'Enter your return shipping tracking number...' : 'Tell the seller why you need to return this item. Examples: Item not as described, item damaged, wrong item received, changed mind...'} 
+                className="min-h-[120px] rounded-xl border-2"
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+              />
+            </div>
+            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 flex gap-3">
+              <RotateCcw className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+              <p className="text-[10px] text-orange-900 leading-relaxed font-medium">
+                {order.status === 'Return Approved' ? 'Once received by the seller, they\'ll verify the item and process your refund.' : 'Once submitted, the seller has 48 hours to approve or deny your return request. Approved returns must be shipped within 14 days.'}
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <Button variant="outline" onClick={() => { setIsReturnDialogOpen(false); setReturnReason(''); }} className="flex-1 rounded-xl h-14 font-black">Cancel</Button>
+              <Button 
+                onClick={handleReturnSubmit} 
+                disabled={isProcessingReturn || !returnReason.trim()}
+                className="flex-1 bg-orange-600 text-white font-black rounded-xl h-14 shadow-lg"
+              >
+                {isProcessingReturn ? "Processing..." : order.status === 'Return Approved' ? "Confirm Shipped" : "Request Return"}
               </Button>
             </div>
           </div>

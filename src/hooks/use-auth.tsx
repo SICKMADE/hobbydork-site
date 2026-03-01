@@ -5,7 +5,6 @@ import { useUser, useFirebase } from "@/firebase/provider";
 import { User, UserCredential, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendEmailVerification, updateProfile } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp, getFirestore, collection, query, where, getDocs, updateDoc } from "firebase/firestore";
 import type { UserStatus } from "@/lib/types";
-import { getDefaultAvatarUrl } from "@/lib/default-avatar";
 
 export type UserDoc = {
   uid: string;
@@ -143,7 +142,7 @@ export function useAuth(): AuthContextType {
         isSeller: false,
         sellerStatus: 'NONE',
         storeId: '',
-        avatar: getDefaultAvatarUrl(cred.user.uid),
+        // Don't set avatar field - let getRandomAvatar handle it dynamically
         about: '',
         notifyMessages: true,
         notifyOrders: true,

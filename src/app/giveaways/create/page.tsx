@@ -179,7 +179,7 @@ export default function CreateGiveaway() {
           </div>
           <h1 className="text-4xl font-headline font-black uppercase italic tracking-tight">Verify Identity</h1>
           <p className="text-muted-foreground font-medium">Email verification and an active profile are required to host live drops on hobbydork.</p>
-          <Button asChild className="h-14 px-10 rounded-xl font-black uppercase tracking-widest bg-accent text-white shadow-xl">
+          <Button asChild className="h-14 px-10 rounded-xl font-black uppercase tracking-widest bg-accent text-accent-foreground shadow-xl">
             <Link href="/verify-email">Go to Verification</Link>
           </Button>
         </main>
@@ -197,7 +197,7 @@ export default function CreateGiveaway() {
           </div>
           <h1 className="text-4xl font-headline font-black uppercase italic tracking-tight">Become a Dealer</h1>
           <p className="text-muted-foreground font-medium">Complete shop onboarding to unlock the community drops feature.</p>
-          <Button asChild className="h-14 px-10 rounded-xl font-black uppercase tracking-widest bg-accent text-white shadow-xl">
+          <Button asChild className="h-14 px-10 rounded-xl font-black uppercase tracking-widest bg-accent text-accent-foreground shadow-xl">
             <Link href="/seller/onboarding">Start Onboarding</Link>
           </Button>
         </main>
@@ -266,20 +266,20 @@ export default function CreateGiveaway() {
               <div className="space-y-2"><Label htmlFor="description" className="text-xs font-black uppercase tracking-widest">Description</Label><Textarea id="description" placeholder="Why is this a must-have?" className="min-h-[150px] rounded-2xl border-2 font-medium" value={description} onChange={(e) => setDescription(e.target.value)} required /></div>
             </section>
 
-            <Button type="submit" disabled={isSubmitting} className="w-full bg-accent text-white font-black h-20 text-2xl rounded-2xl shadow-xl shadow-accent/20 uppercase italic tracking-tighter">
+            <Button type="submit" disabled={isSubmitting} className="w-full bg-accent text-accent-foreground font-black h-20 text-2xl rounded-2xl shadow-xl shadow-accent/20 uppercase italic tracking-tighter">
               {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : "Launch Live Drop"}
             </Button>
           </div>
 
           <aside className="space-y-6">
-            <div className="bg-zinc-950 text-white p-8 rounded-[2.5rem] shadow-2xl sticky top-24">
+            <div className="bg-card/50 border-accent/20 border-2 p-8 rounded-[2.5rem] shadow-2xl sticky top-24">
               <h3 className="font-headline font-black text-xl mb-6 uppercase italic tracking-tighter flex items-center gap-2"><Gift className="w-5 h-5 text-accent" /> Drop Policy</h3>
               <ul className="space-y-8">
                 <li className="space-y-2">
                   <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase">
                     <Users className="w-3 h-3" /> Follower Requirement
                   </div>
-                  <p className="text-xs font-bold leading-relaxed text-white/70">
+                  <p className="text-xs font-bold leading-relaxed text-muted-foreground">
                     Only collectors following your shop can enter. Use drops to reward your most loyal fans and grow your reach.
                   </p>
                 </li>
@@ -287,7 +287,7 @@ export default function CreateGiveaway() {
                   <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase">
                     <ShieldCheck className="w-3 h-3" /> Fair Play
                   </div>
-                  <p className="text-xs font-bold leading-relaxed text-white/70">
+                  <p className="text-xs font-bold leading-relaxed text-muted-foreground">
                     Winners are selected randomly by the system. Sellers are expected to ship prizes within the standard 2-business-day window.
                   </p>
                 </li>
@@ -295,7 +295,7 @@ export default function CreateGiveaway() {
                   <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase">
                     <Sparkles className="w-3 h-3" /> Engagement Tip
                   </div>
-                  <p className="text-xs font-bold leading-relaxed text-white/70">
+                  <p className="text-xs font-bold leading-relaxed text-muted-foreground">
                     Announce your drop in the Community Chat 1 hour before launching to maximize entry volume.
                   </p>
                 </li>

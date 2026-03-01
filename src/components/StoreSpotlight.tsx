@@ -19,7 +19,7 @@ export default function StoreSpotlight({ store }: StoreSpotlightProps) {
   const username = store?.username || 'Collector';
   const tagline = store?.tagline || 'Verified hobbydork Dealer';
   const avatarUrl = store?.avatarUrl || getRandomAvatar(username);
-  const bannerUrl = store?.bannerUrl || '/hobbydork-banner-default.png';
+  const bannerUrl = store?.bannerUrl || '/hobbydork-banner-default.jpg';
   const totalSales = store?.totalSales || 0;
   const tier = store?.tier;
   const featuredItems = store?.featuredItems || [];
@@ -47,7 +47,7 @@ export default function StoreSpotlight({ store }: StoreSpotlightProps) {
             </div>
             <div className="flex-1 min-w-0 space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge className="bg-accent text-white border-none font-bold uppercase tracking-widest text-[8px] px-2 h-4">
+                <Badge className="bg-accent text-accent-foreground border-none font-bold uppercase tracking-widest text-[8px] px-2 h-4">
                   Spotlight
                 </Badge>
                 {tier && <TierBadge tier={tier} className="h-4 text-[8px] px-2" />}
@@ -56,11 +56,11 @@ export default function StoreSpotlight({ store }: StoreSpotlightProps) {
                 {username}
                 <ShieldCheck className="w-4 h-4 text-accent shrink-0" />
               </h3>
-              <p className="text-white/60 text-[10px] font-bold flex items-center gap-2">
+              <p className="text-white/70 text-[10px] font-bold flex items-center gap-2">
                 <Star className="w-3 h-3 fill-accent text-accent" /> {totalSales} Sold
               </p>
             </div>
-            <Button asChild size="sm" className="hidden sm:flex bg-white text-primary hover:bg-white/90 font-black px-4 rounded-full h-10 text-xs shrink-0">
+            <Button asChild size="sm" className="hidden sm:flex bg-card text-foreground hover:bg-card/90 font-black px-4 rounded-full h-10 text-xs shrink-0 border-2">
               <Link href={`/shop/${username}`}>
                 Visit
               </Link>

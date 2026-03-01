@@ -154,7 +154,7 @@ export default function CreateISORequest() {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full h-20 bg-primary text-white font-black text-2xl rounded-2xl shadow-2xl transition-all active:scale-95 uppercase italic tracking-tighter"
+              className="w-full h-20 bg-red-600 dark:bg-red-600 text-white font-black text-2xl rounded-2xl shadow-2xl transition-all active:scale-95 uppercase italic tracking-tighter hover:bg-red-700 dark:hover:bg-red-700"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-3">

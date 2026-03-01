@@ -65,7 +65,7 @@ function EventSafe() {
               <Badge className="bg-yellow-500 text-black font-black uppercase tracking-widest px-4 py-1 rounded-full text-[10px]">
                 Community Event
               </Badge>
-              <h2 className="text-3xl md:text-5xl lg:text-6xl font-headline font-black text-white tracking-tighter uppercase leading-none">
+              <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-headline font-black text-white tracking-tighter uppercase leading-none">
                 Unlock the <span className="text-yellow-500">Box</span>
               </h2>
               <p className="text-white/60 text-sm md:text-lg font-medium max-w-xl mx-auto lg:mx-0">
@@ -83,10 +83,10 @@ function EventSafe() {
             <div className="relative shrink-0">
               <div 
                 onClick={() => setIsOpen(true)}
-                className="w-40 h-48 md:w-80 md:h-80 bg-zinc-900 border-4 md:border-8 border-zinc-800 rounded-full flex items-center justify-center cursor-pointer hover:border-yellow-500/50 transition-all shadow-2xl relative"
+                className="w-32 h-32 sm:w-40 sm:h-48 md:w-80 md:h-80 bg-zinc-900 border-4 md:border-8 border-zinc-800 rounded-full flex items-center justify-center cursor-pointer hover:border-yellow-500/50 transition-all shadow-2xl relative"
               >
                 <Lock className={cn(
-                  "w-12 h-12 md:w-24 md:h-24 text-zinc-700 transition-all duration-500",
+                  "w-10 h-10 sm:w-12 sm:h-12 md:w-24 md:h-24 text-zinc-700 transition-all duration-500",
                   status === 'success' ? "text-green-500 scale-110" : "group-hover:text-yellow-500"
                 )} />
               </div>
@@ -96,20 +96,20 @@ function EventSafe() {
       </section>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-zinc-950 text-white">
+        <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-card text-foreground">
           <div className="p-8 space-y-8">
             <div className="text-center space-y-2">
               <h3 className="text-2xl font-headline font-black uppercase text-yellow-500">Keypad</h3>
-              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Enter 4-Digit PIN</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Enter 4-Digit PIN</p>
             </div>
 
-            <div className="flex justify-center gap-4">
+            <div className="flex justify-center gap-2 sm:gap-4">
               {[0, 1, 2, 3].map((i) => (
                 <div 
                   key={i} 
                   className={cn(
-                    "w-12 h-16 rounded-xl border-2 flex items-center justify-center text-2xl font-black transition-all",
-                    pin[i] ? "border-yellow-500 text-yellow-500 bg-yellow-500/10" : "border-zinc-800 text-zinc-800",
+                    "w-10 h-12 sm:w-12 sm:h-16 rounded-xl border-2 flex items-center justify-center text-xl sm:text-2xl font-black transition-all",
+                    pin[i] ? "border-yellow-500 text-yellow-500 bg-yellow-500/10" : "border-border text-muted-foreground",
                     status === 'error' && "border-red-500 text-red-500",
                     status === 'success' && "border-green-500 text-green-500"
                   )}
@@ -128,7 +128,7 @@ function EventSafe() {
                   <h4 className="text-3xl font-black uppercase">Unlocked!</h4>
                   <p className="text-green-500 font-bold uppercase tracking-widest text-xs">Winner: @{user?.displayName || 'Collector'}</p>
                 </div>
-                <Button onClick={() => setIsOpen(false)} className="w-full bg-white text-zinc-950 font-black h-12 rounded-xl">Claim Reward</Button>
+                <Button onClick={() => setIsOpen(false)} className="w-full bg-card text-foreground font-black h-12 rounded-xl border-2">Claim Reward</Button>
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-4">
@@ -138,8 +138,8 @@ function EventSafe() {
                     onClick={() => key === 'C' ? setPin('') : key !== '' && handleKeyClick(key)}
                     className={cn(
                       "h-16 rounded-xl font-black text-xl flex items-center justify-center transition-all active:scale-95",
-                      key === '' ? "invisible" : "bg-zinc-900 border border-white/5 hover:bg-zinc-800",
-                      key === 'C' && "text-red-500"
+                      key === '' ? "invisible" : "bg-card border border-border hover:bg-muted",
+                      key === 'C' && "text-destructive"
                     )}
                   >
                     {key}
@@ -158,6 +158,7 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const db = useFirestore();
+  const { user } = useUser();
   
   const category = searchParams?.get('category') || 'All';
   const searchQuery = searchParams?.get('q') || '';
@@ -234,7 +235,7 @@ function HomeContent() {
 
   return (
     <main className="flex-1">
-      <section className="relative overflow-hidden bg-slate-950 py-12 md:py-24 lg:py-32 text-white">
+      <section className="relative overflow-hidden bg-[#151515] py-12 md:py-24 lg:py-32 text-white">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-accent via-transparent to-transparent" />
         <div className="container mx-auto px-4 relative z-10 text-center">
           <Badge variant="outline" className="text-accent border-accent px-4 py-1 mb-6 rounded-full font-black text-[10px] tracking-widest uppercase">
@@ -247,11 +248,11 @@ function HomeContent() {
             Follow verified dealers, track live shop feeds, and join the conversation. It's more than a market—it's the home for collectors.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4 px-6 md:px-0">
-            <Button size="lg" asChild className="bg-accent hover:bg-accent/90 text-white font-black h-12 md:h-14 px-10 text-lg rounded-full shadow-lg w-full sm:w-auto">
+            <Button size="lg" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-12 md:h-14 px-10 text-lg rounded-full shadow-lg w-full sm:w-auto">
               <Link href="#listings">Explore Items</Link>
             </Button>
-            <Button size="lg" asChild className="bg-white text-slate-950 hover:bg-white/90 font-black h-12 md:h-14 px-10 text-lg rounded-full shadow-lg w-full sm:w-auto">
-              <Link href="/login">Join the Community</Link>
+            <Button size="lg" asChild className="bg-card text-foreground hover:bg-card/90 font-black h-12 md:h-14 px-10 text-lg rounded-full shadow-lg w-full sm:w-auto border-2">
+              <Link href={user ? "/community-chat" : "/login"}>{user ? "Join the Chat" : "Join the Community"}</Link>
             </Button>
           </div>
         </div>
@@ -413,20 +414,20 @@ export default function Home() {
         <HomeContent />
       </Suspense>
       
-      <footer className="bg-slate-950 text-white py-12 md:py-24 border-t border-white/5">
+      <footer className="bg-[#141414] text-white py-12 md:py-24 border-t border-white/5">
         <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-16 text-center md:text-left">
-          <div className="space-y-6">
+          <div className="space-y-4">
             <Link href="/" className="inline-block">
               <Image 
                 src="/hobbydork-main.png" 
                 alt="hobbydork" 
                 width={240} 
                 height={50} 
-                className="h-12 md:h-16 w-auto brightness-0 invert" 
+                className="h-12 md:h-16 w-auto" 
               />
             </Link>
-            <p className="text-white/60 text-sm md:text-base leading-relaxed max-w-sm mx-auto md:mx-0 font-bold italic">
-              The community destination for serious collectors.
+            <p className="text-white/60 text-xs md:text-sm leading-relaxed mx-auto md:mx-0 md:ml-4 font-bold uppercase tracking-widest">
+              The social marketplace.
             </p>
           </div>
           <div className="hidden md:block">
@@ -447,7 +448,7 @@ export default function Home() {
           <div className="max-w-md mx-auto md:mx-0">
             <h4 className="font-black mb-6 md:mb-8 text-accent uppercase tracking-widest text-[10px]">Platform</h4>
             <p className="text-[10px] text-white/60 mb-6 font-bold uppercase tracking-widest">Protocol Environment Live.</p>
-            <Button variant="outline" className="text-white border-white/20 w-full font-black uppercase text-[10px] tracking-widest h-12 rounded-xl">Network Status: Online</Button>
+            <Button variant="outline" className="text-zinc-900 dark:text-white border-white/20 w-full font-black uppercase text-[10px] tracking-widest h-12 rounded-xl">Network Status: Online</Button>
           </div>
         </div>
         <div className="container mx-auto px-4 mt-12 md:mt-20 pt-10 border-t border-white/10 text-center text-[9px] text-white/20 uppercase font-black tracking-widest">
