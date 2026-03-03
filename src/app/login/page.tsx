@@ -119,23 +119,23 @@ export default function LoginPage() {
           <p className="text-muted-foreground font-black uppercase text-[10px] tracking-[0.3em]">Verified Social Marketplace</p>
         </div>
 
-        <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-card">
-          <CardHeader className="bg-primary dark:bg-accent text-white dark:text-zinc-900 p-5 sm:p-8 pb-10 sm:pb-12">
+        <Card className="border-2 border-red-700 shadow-2xl rounded-[2.5rem] overflow-hidden bg-card">
+          <CardHeader className="bg-[#222222] rounded-t-[2.5rem] text-white p-5 sm:p-8 pb-10 sm:pb-12">
             <CardTitle className="text-xl sm:text-2xl font-headline font-black italic uppercase tracking-tight">
               Community Access
             </CardTitle>
-            <CardDescription className="text-white/60 dark:text-zinc-700 font-medium">
+            <CardDescription className="text-white/60 font-medium">
               Join 500k collectors in the definitive trade hub.
             </CardDescription>
           </CardHeader>
           
           <CardContent className="p-5 sm:p-8 -mt-8">
             <Tabs defaultValue="login" className="space-y-6 sm:space-y-8">
-              <TabsList className="grid w-full grid-cols-2 h-12 sm:h-14 bg-muted rounded-2xl p-1.5 shadow-inner">
-                <TabsTrigger value="login" className="rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
+              <TabsList className="grid w-full grid-cols-2 h-12 sm:h-14 bg-muted rounded-2xl p-1.5 shadow-inner mt-6">
+                <TabsTrigger value="login" className="rounded-xl font-black uppercase text-[10px] tracking-widest text-white data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-red-700">
                   Sign In
                 </TabsTrigger>
-                <TabsTrigger value="register" className="rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
+                <TabsTrigger value="register" className="rounded-xl font-black uppercase text-[10px] tracking-widest text-white data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-red-700">
                   Join Now
                 </TabsTrigger>
               </TabsList>
@@ -150,7 +150,7 @@ export default function LoginPage() {
                         id="email-signin"
                         type="email" 
                         placeholder="collector@hobbydork.com" 
-                        className="pl-11 h-12 rounded-xl border-2 font-medium"
+                        className="pl-11 h-12 rounded-xl border-2 font-medium bg-white text-black"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -165,7 +165,7 @@ export default function LoginPage() {
                         id="password-signin"
                         type="password" 
                         placeholder="••••••••" 
-                        className="pl-11 h-12 rounded-xl border-2 font-medium"
+                        className="pl-11 h-12 rounded-xl border-2 font-medium bg-white text-black"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -175,7 +175,7 @@ export default function LoginPage() {
                   <Button 
                     type="submit" 
                     disabled={isProcessing}
-                    className="w-full h-14 bg-zinc-950 text-white hover:bg-zinc-800 font-black rounded-xl shadow-xl transition-all active:scale-95 gap-2"
+                    className="w-full h-14 bg-red-700 text-white hover:bg-red-800 font-black rounded-xl shadow-xl transition-all active:scale-95 gap-2"
                   >
                     {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
                     Unlock My Vault
@@ -193,7 +193,7 @@ export default function LoginPage() {
                         id="email-signup"
                         type="email" 
                         placeholder="collector@hobbydork.com" 
-                        className="pl-11 h-12 rounded-xl border-2 font-medium"
+                        className="pl-11 h-12 rounded-xl border-2 font-medium bg-white text-black"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -208,7 +208,7 @@ export default function LoginPage() {
                         id="password-signup"
                         type="password" 
                         placeholder="Create a strong password" 
-                        className="pl-11 h-12 rounded-xl border-2 font-medium"
+                        className="pl-11 h-12 rounded-xl border-2 font-medium bg-white text-black"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required

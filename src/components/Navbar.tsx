@@ -101,7 +101,7 @@ export default function Navbar() {
             )}
 
             {!user && (
-              <Button asChild className="bg-accent text-accent-foreground font-black px-6 h-12 rounded-full flex items-center gap-2">
+              <Button asChild className="bg-accent text-accent-foreground dark:bg-zinc-900 dark:text-accent font-black px-6 h-12 rounded-full flex items-center gap-2">
                 <Link href="/login"><LogIn className="w-4 h-4" /> Sign In</Link>
               </Button>
             )}
