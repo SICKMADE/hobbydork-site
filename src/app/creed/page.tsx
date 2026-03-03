@@ -4,7 +4,7 @@ import Navbar from '@/components/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, Users, ArrowRight, Target, Sparkles, Clock, Gavel, MessageSquare, Trophy } from 'lucide-react';
+import { ShieldCheck, Users, ArrowRight, Target, Sparkles, Clock, Gavel, MessageSquare, Trophy, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AboutPage() {

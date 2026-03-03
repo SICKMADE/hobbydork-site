@@ -36,7 +36,7 @@ export default function CreateListing() {
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [showCamera, setShowCamera] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   
@@ -254,33 +254,32 @@ export default function CreateListing() {
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file format
-      const allowedFormats = ['image/jpeg', 'image/png', 'image/webp'];
+    const files = e.target.files;
+    if (!files) return;
+    const allowedFormats = ['image/jpeg', 'image/png', 'image/webp'];
+    const MAX_SIZE = 5 * 1024 * 1024;
+    let newPhotos: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       if (!allowedFormats.includes(file.type)) {
         toast({ 
           variant: 'destructive', 
           title: "Invalid Format", 
           description: "Only JPEG, PNG, and WebP images are allowed."
         });
-        return;
+        continue;
       }
-
-      // Validate file size (5MB max)
-      const MAX_SIZE = 5 * 1024 * 1024;
       if (file.size > MAX_SIZE) {
         toast({ 
           variant: 'destructive', 
           title: "File Too Large", 
           description: `Maximum file size is 5MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`
         });
-        return;
+        continue;
       }
-
       try {
         const optimizedImage = await compressImageForUpload(file);
-        setPhoto(optimizedImage);
+        newPhotos.push(optimizedImage);
       } catch (error) {
         toast({
           variant: 'destructive',
@@ -289,23 +288,21 @@ export default function CreateListing() {
         });
       }
     }
+    if (newPhotos.length > 0) {
+      setPhotos(prev => [...prev, ...newPhotos]);
+    }
   };
 
-  const uploadPhotoToStorage = async (photoDataUri: string): Promise<string> => {
+  const uploadPhotoToStorage = async (photoDataUri: string, idx: number): Promise<string> => {
     if (!user) throw new Error('User not authenticated');
     try {
       const storage = getStorage();
-      const fileName = `listings/${user.uid}/${Date.now()}.jpg`;
+      const fileName = `listings/${user.uid}/${Date.now()}_${idx}.jpg`;
       const storageRef = ref(storage, fileName);
-      
       // Convert data URL to Blob
       const response = await fetch(photoDataUri);
       const blob = await response.blob();
-      
-      // Upload to Storage
       await uploadBytes(storageRef, blob);
-      
-      // Get download URL
       const downloadUrl = await getDownloadURL(storageRef);
       return downloadUrl;
     } catch (error) {
@@ -315,10 +312,11 @@ export default function CreateListing() {
   };
 
   const runAiAssistant = async () => {
-    if (!photo) return;
+    if (!photos.length) return;
     setLoading(true);
     try {
-      const result = await suggestListingDetails({ photoDataUri: photo });
+      // Use the first photo for AI suggestions
+      const result = await suggestListingDetails({ photoDataUri: photos[0] });
       setDescription(result.description);
       setTags(result.tags);
       toast({ title: 'Listing suggestions applied.' });
@@ -354,13 +352,14 @@ export default function CreateListing() {
     try {
       const sanitizedTitle = filterProfanity(title);
       const sanitizedDescription = filterProfanity(description);
-      
-      // Upload image to Storage if one exists
-      let imageUrl = '';
-      if (photo) {
-        imageUrl = await uploadPhotoToStorage(photo);
+      // Upload all images to Storage if any exist
+      let imageUrls: string[] = [];
+      if (photos.length) {
+        for (let i = 0; i < photos.length; i++) {
+          const url = await uploadPhotoToStorage(photos[i], i);
+          imageUrls.push(url);
+        }
       }
-      
       const listingData = {
         title: sanitizedTitle,
         description: sanitizedDescription,
@@ -371,7 +370,7 @@ export default function CreateListing() {
         seller: profile?.username || user.uid,
         sellerId: user.uid,
         sellerName: profile?.username || 'Collector',
-        imageUrl: imageUrl,
+        imageUrls: imageUrls,
         status: 'Active',
         visibility: visibility,
         tags: tags,
@@ -392,7 +391,6 @@ export default function CreateListing() {
         bidCount: 0,
         endsAt: type === 'auction' ? new Date(Date.now() + 1000 * 60 * 60 * 24 * 7) : null
       };
-
       addDoc(collection(db, 'listings'), listingData)
         .then(async () => {
           // Clear draft from localStorage on successful submission
@@ -536,10 +534,14 @@ export default function CreateListing() {
             <section className="space-y-4">
               <Label className="text-xs font-black uppercase tracking-widest">Item Photos</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {photo ? (
-                  <div className="relative aspect-square rounded-2xl overflow-hidden border-4 border-zinc-100 shadow-2xl group">
-                    <Image src={photo} alt="Preview" fill className="object-cover" />
-                    <button type="button" title="Remove photo" aria-label="Remove photo" onClick={() => setPhoto(null)} className="absolute top-4 right-4 bg-zinc-950/50 text-white rounded-full p-2 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10"><X className="w-4 h-4" /></button>
+                {photos.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    {photos.map((photo, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border-4 border-zinc-100 shadow-2xl group">
+                        <Image src={photo} alt={`Preview ${idx + 1}`} fill className="object-cover" />
+                        <button type="button" title="Remove photo" aria-label="Remove photo" onClick={() => setPhotos(p => p.filter((_, i) => i !== idx))} className="absolute top-4 right-4 bg-zinc-950/50 text-white rounded-full p-2 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10"><X className="w-4 h-4" /></button>
+                      </div>
+                    ))}
                   </div>
                 ) : showCamera ? (
                   <div className="relative aspect-square rounded-2xl overflow-hidden bg-black border-4 border-accent shadow-2xl">
@@ -562,7 +564,7 @@ export default function CreateListing() {
                     <label className="aspect-square border-4 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group">
                       <Camera className="w-8 h-8 text-muted-foreground group-hover:scale-110 transition-transform" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Upload</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                      <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
                     </label>
                     <button type="button" onClick={startCamera} className="aspect-square border-4 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group">
                       <Monitor className="w-8 h-8 text-muted-foreground group-hover:scale-110 transition-transform" />
@@ -571,7 +573,7 @@ export default function CreateListing() {
                   </div>
                 )}
               </div>
-              {photo && (
+              {photos.length > 0 && (
                 <Button type="button" variant="outline" className="w-full h-14 gap-2 border-2 border-accent text-accent hover:bg-accent/5 rounded-xl font-black shadow-lg" onClick={runAiAssistant} disabled={loading}>
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                   Use AI Suggestions
