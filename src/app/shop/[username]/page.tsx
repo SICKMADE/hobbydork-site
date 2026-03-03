@@ -70,6 +70,16 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
   const { data: reviews } = useCollection(reviewsQuery);
   const { data: posts } = useCollection(postsQuery);
 
+  // Filter listings based on visibility and ownership
+  const visibleListings = listings?.filter(listing => {
+    // Owner can see all listings (Visible and Invisible)
+    const isOwner = user?.uid === listing.sellerId;
+    if (isOwner) return true;
+    
+    // Non-owners can only see Visible listings
+    return listing.visibility === 'Visible';
+  }) || [];
+
   // Check Follow Status
   useEffect(() => {
     if (!db || !user || !username) {
@@ -251,6 +261,25 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
                     <span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500" /> 5.0 Rating</span>
                     <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> {storeData?.totalSales || 0} Sales</span>
                   </div>
+                  {sellerProfile && (
+                    <div className="flex items-center justify-center md:justify-start gap-3 mt-2">
+                      <Badge variant="outline" className={cn(
+                        "gap-1.5 font-black uppercase text-[8px] md:text-[9px] tracking-widest border-2",
+                        (sellerProfile.onTimeShippingRate || 1) >= 0.95 
+                          ? "bg-green-50 dark:bg-green-950/20 border-green-500 text-green-700 dark:text-green-300"
+                          : "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-500 text-yellow-700 dark:text-yellow-300"
+                      )}>
+                        <Clock className="w-3 h-3" />
+                        {Math.round((sellerProfile.onTimeShippingRate || 1) * 100)}% On-Time Shipping
+                      </Badge>
+                      {(sellerProfile.lateShipmentsLast30d || 0) === 0 && (
+                        <Badge variant="outline" className="gap-1.5 font-black uppercase text-[8px] md:text-[9px] tracking-widest border-2 bg-blue-50 dark:bg-blue-950/20 border-blue-500 text-blue-700 dark:text-blue-300">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Fast Shipper
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
             </div>
             <div className="flex items-center gap-4 w-full md:w-auto">
@@ -307,17 +336,26 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
         )}
 
         <Tabs defaultValue="listings" className="space-y-6 md:space-y-10">
-          <TabsList className="p-1 h-12 md:h-14 rounded-xl md:rounded-2xl border overflow-x-auto justify-start flex-nowrap scrollbar-hide">
-            <TabsTrigger value="listings" className="px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest">Listings</TabsTrigger>
-            <TabsTrigger value="giveaways" className="px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest">Giveaways</TabsTrigger>
-            <TabsTrigger value="feed" className="px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest">Feed</TabsTrigger>
-            <TabsTrigger value="reviews" className="px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest">Reviews</TabsTrigger>
-          </TabsList>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <TabsList className="p-1 h-10 md:h-14 rounded-xl md:rounded-2xl border overflow-x-auto w-full sm:w-auto justify-start flex-nowrap scrollbar-hide">
+              <TabsTrigger value="listings" className="px-3 sm:px-6 md:px-8 h-full font-black uppercase text-[8px] sm:text-[9px] md:text-[10px] tracking-widest whitespace-nowrap">Listings</TabsTrigger>
+              <TabsTrigger value="giveaways" className="px-3 sm:px-6 md:px-8 h-full font-black uppercase text-[8px] sm:text-[9px] md:text-[10px] tracking-widest whitespace-nowrap">Giveaways</TabsTrigger>
+              <TabsTrigger value="feed" className="px-3 sm:px-6 md:px-8 h-full font-black uppercase text-[8px] sm:text-[9px] md:text-[10px] tracking-widest whitespace-nowrap">Feed</TabsTrigger>
+              <TabsTrigger value="reviews" className="px-3 sm:px-6 md:px-8 h-full font-black uppercase text-[8px] sm:text-[9px] md:text-[10px] tracking-widest whitespace-nowrap">Reviews</TabsTrigger>
+            </TabsList>
+            {isOwner && (
+              <Link href="/listings/create" className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto px-6 md:px-8 h-10 md:h-14 rounded-xl md:rounded-2xl font-black uppercase text-[9px] md:text-[10px] tracking-widest">
+                  + Create Listing
+                </Button>
+              </Link>
+            )}
+          </div>
 
           <TabsContent value="listings">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {listings && listings.length > 0 ? (
-                listings.map((listing) => <ListingCard key={listing.id} listing={listing} theme={appliedTheme} />)
+              {visibleListings && visibleListings.length > 0 ? (
+                visibleListings.map((listing) => <ListingCard key={listing.id} listing={listing} theme={appliedTheme} />)
               ) : (
                 <div className="col-span-full py-20 text-center border-4 border-dashed rounded-[2rem] border-zinc-100 text-zinc-400">
                   <p className="font-black uppercase text-sm">No active listings</p>

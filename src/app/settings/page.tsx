@@ -27,6 +27,7 @@ import { doc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { deleteUser } from 'firebase/auth';
 import { getRandomAvatar, filterProfanity } from '@/lib/utils';
 import { auth } from '@/firebase/client';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -158,7 +159,7 @@ export default function SettingsPage() {
       toast({ title: 'Account deleted' });
       router.push('/login');
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Deletion failed', description: error.message });
+      toast({ variant: 'destructive', title: 'Account Deletion Failed', description: getFriendlyErrorMessage(error) });
       setIsDeletingAccount(false);
     }
   };

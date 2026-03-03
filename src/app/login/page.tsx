@@ -18,6 +18,7 @@ import {
 } from 'firebase/auth';
 import { useState } from 'react';
 import Image from 'next/image';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,8 +48,8 @@ export default function LoginPage() {
     } catch (error: any) {
       toast({ 
         variant: 'destructive',
-        title: "Access Denied", 
-        description: error.message || "Could not authenticate with Google." 
+        title: "Sign In Failed", 
+        description: getFriendlyErrorMessage(error) 
       });
     } finally {
       setIsProcessing(false);
@@ -69,7 +70,7 @@ export default function LoginPage() {
       toast({ 
         variant: 'destructive',
         title: "Registration Failed", 
-        description: error.message 
+        description: getFriendlyErrorMessage(error) 
       });
     } finally {
       setIsProcessing(false);

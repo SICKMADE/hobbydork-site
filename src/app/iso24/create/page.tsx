@@ -16,6 +16,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
 export default function CreateISORequest() {
   const { toast } = useToast();
@@ -58,6 +59,11 @@ export default function CreateISORequest() {
         router.push('/iso24');
       })
       .catch(async (error) => {
+        toast({
+          variant: 'destructive',
+          title: 'Request Failed',
+          description: getFriendlyErrorMessage(error)
+        });
         const permissionError = new FirestorePermissionError({
           path: 'iso24Posts',
           operation: 'create',

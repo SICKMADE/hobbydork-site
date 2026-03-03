@@ -33,9 +33,65 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onCreateGiveaway = exports.endExpiredGiveaways = void 0;
+exports.onCreateGiveaway = exports.endExpiredGiveaways = exports.drawGiveawayWinner = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
+const https_1 = require("firebase-functions/v2/https");
+// Callable function to manually draw a winner for a giveaway
+exports.drawGiveawayWinner = (0, https_1.onCall)(async (request) => {
+    const { giveawayId } = request.data || {};
+    if (!giveawayId) {
+        throw new https_1.HttpsError("invalid-argument", "Missing giveawayId");
+    }
+    // Verify user is authenticated
+    if (!request.auth) {
+        throw new https_1.HttpsError("unauthenticated", "Must be authenticated");
+    }
+    const db = admin.firestore();
+    const giveawayRef = db.collection('giveaways').doc(giveawayId);
+    const giveawayDoc = await giveawayRef.get();
+    if (!giveawayDoc.exists) {
+        throw new https_1.HttpsError("not-found", "Giveaway not found");
+    }
+    const giveaway = giveawayDoc.data();
+    // Verify the user is the seller/owner of the giveaway
+    if (giveaway.seller !== request.auth.uid && giveaway.sellerName !== request.auth.token.name) {
+        throw new https_1.HttpsError("permission-denied", "Only the giveaway creator can draw a winner");
+    }
+    // Check if already ended
+    if (giveaway.status === 'ended' || giveaway.status === 'Ended') {
+        throw new https_1.HttpsError("failed-precondition", "This giveaway has already ended");
+    }
+    // Get all entries
+    const entriesRef = giveawayRef.collection('giveawayEntries');
+    const entriesSnap = await entriesRef.get();
+    if (entriesSnap.empty) {
+        // No entries, just end the giveaway
+        await giveawayRef.update({
+            status: 'ended',
+            endedAt: admin.firestore.Timestamp.now()
+        });
+        return { success: true, message: "Giveaway ended with no entries", winner: null };
+    }
+    // Pick a random winner
+    const entries = entriesSnap.docs;
+    const winnerEntry = entries[Math.floor(Math.random() * entries.length)];
+    const winnerData = winnerEntry.data();
+    await giveawayRef.update({
+        status: 'ended',
+        endedAt: admin.firestore.Timestamp.now(),
+        winnerUserId: winnerData.userId,
+        winnerName: winnerData.userName || 'Anonymous'
+    });
+    return {
+        success: true,
+        message: "Winner drawn successfully!",
+        winner: {
+            userId: winnerData.userId,
+            userName: winnerData.userName || 'Anonymous'
+        }
+    };
+});
 // Scheduled function to end giveaways and pick a winner
 exports.endExpiredGiveaways = functions.pubsub.schedule('every 5 minutes').onRun(async (context) => {
     const db = admin.firestore();

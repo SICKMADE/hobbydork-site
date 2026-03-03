@@ -85,11 +85,108 @@ function AdminPanelContent({ isStaff }: { isStaff: boolean }) {
   const [themeDialogOpen, setThemeDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{ uid: string; username: string } | null>(null);
   const [selectedTheme, setSelectedTheme] = useState('');
+  const [feeDialogOpen, setFeeDialogOpen] = useState(false);
+  const [selectedFeeUser, setSelectedFeeUser] = useState<{ uid: string; username: string; currentFee: number | null; tier: string } | null>(null);
+  const [newFeePercentage, setNewFeePercentage] = useState('');
 
   const handleUpdateUserStatus = async (userId: string, status: string) => {
     try {
       await updateDoc(doc(db!, 'users', userId), { status });
       toast({ title: `User ${status}` });
+    } catch (e) {
+      toast({ variant: 'destructive', title: "Update Failed" });
+    }
+  };
+
+  const getTierBasedFee = (tier: string | undefined): number => {
+    // Default tier-based fees
+    if (tier === 'Platinum') return 5;
+    if (tier === 'Gold') return 7;
+    if (tier === 'Silver') return 10;
+    if (tier === 'Bronze') return 12;
+    return 10; // Default
+  };
+
+  const getUserFee = (user: any): number => {
+    // 1. Check if user has active promo
+    if (user.promoEndDate) {
+      const now = new Date();
+      const promoEnd = user.promoEndDate.toDate ? user.promoEndDate.toDate() : new Date(user.promoEndDate);
+      if (now < promoEnd) {
+        return 0; // Active promo = 0% fee
+      }
+    }
+    
+    // 2. Custom fee takes precedence
+    if (user.sellerFeePercentage !== undefined && user.sellerFeePercentage !== null) {
+      return user.sellerFeePercentage;
+    }
+    
+    // 3. Otherwise use tier-based
+    return getTierBasedFee(user.sellerTier);
+  };
+
+  const getPromoStatus = (user: any): { active: boolean; daysLeft: number; code: string | null } => {
+    if (!user.promoEndDate) return { active: false, daysLeft: 0, code: null };
+    
+    const now = new Date();
+    const promoEnd = user.promoEndDate.toDate ? user.promoEndDate.toDate() : new Date(user.promoEndDate);
+    const daysLeft = Math.ceil((promoEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    return {
+      active: daysLeft > 0,
+      daysLeft: Math.max(0, daysLeft),
+      code: user.promoCode || null
+    };
+  };
+
+  const handleGrantPromo = async (userId: string, username: string, days: number = 30) => {
+    try {
+      const startDate = new Date();
+      const endDate = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
+      
+      await updateDoc(doc(db!, 'users', userId), {
+        promoCode: 'FIRST100',
+        promoStartDate: startDate,
+        promoEndDate: endDate,
+        sellerFeePercentage: 0
+      });
+      
+      toast({ title: `Granted ${days}-day promo to @${username}` });
+    } catch (e) {
+      toast({ variant: 'destructive', title: "Failed to grant promo" });
+    }
+  };
+
+  // Count users with active FIRST100 promo
+  const activePromoCount = useMemo(() => {
+    if (!users) return 0;
+    return users.filter(u => {
+      const status = getPromoStatus(u);
+      return status.active && status.code === 'FIRST100';
+    }).length;
+  }, [users]);
+
+  const handleUpdateSellerFee = async () => {
+    if (!selectedFeeUser || !newFeePercentage) {
+      toast({ variant: 'destructive', title: "Missing fee percentage" });
+      return;
+    }
+    
+    const feeValue = parseFloat(newFeePercentage);
+    if (isNaN(feeValue) || feeValue < 0 || feeValue > 100) {
+      toast({ variant: 'destructive', title: "Fee must be between 0 and 100" });
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db!, 'users', selectedFeeUser.uid), {
+        sellerFeePercentage: feeValue
+      });
+      toast({ title: `Updated fee to ${feeValue}% for @${selectedFeeUser.username}` });
+      setFeeDialogOpen(false);
+      setSelectedFeeUser(null);
+      setNewFeePercentage('');
     } catch (e) {
       toast({ variant: 'destructive', title: "Update Failed" });
     }
@@ -598,6 +695,14 @@ function AdminPanelContent({ isStaff }: { isStaff: boolean }) {
 
       <TabsContent value="users">
         <Card className="rounded-2xl border-none shadow-sm overflow-hidden">
+          <div className="p-6 border-b">
+            <div className="flex items-center justify-between">
+              <h3 className="font-black text-lg uppercase tracking-tight">User Management</h3>
+              <Badge variant="secondary" className="font-black uppercase text-[9px] tracking-widest">
+                {activePromoCount} / 100 FIRST100 Promos Active
+              </Badge>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-zinc-50 dark:bg-zinc-800 border-b dark:border-zinc-700">
@@ -605,45 +710,99 @@ function AdminPanelContent({ isStaff }: { isStaff: boolean }) {
                   <th className="p-4 text-[10px] font-black uppercase tracking-widest dark:text-zinc-200">User</th>
                   <th className="p-4 text-[10px] font-black uppercase tracking-widest dark:text-zinc-200">Status</th>
                   <th className="p-4 text-[10px] font-black uppercase tracking-widest dark:text-zinc-200">Role</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest dark:text-zinc-200">Fee %</th>
                   <th className="p-4 text-right text-[10px] font-black uppercase tracking-widest dark:text-zinc-200">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y dark:divide-zinc-700">
                 {usersLoading ? (
-                  <tr><td colSpan={4} className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-accent" /></td></tr>
-                ) : users?.map(u => (
-                  <tr key={u.id}>
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center font-black text-xs dark:text-zinc-200">{u.username?.[0]?.toUpperCase()}</div>
-                        <div>
-                          <p className="font-bold text-sm dark:text-zinc-200">@{u.username}</p>
-                          <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase">{u.email}</p>
+                  <tr><td colSpan={5} className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-accent" /></td></tr>
+                ) : users?.map(u => {
+                  const fee = getUserFee(u);
+                  const promoStatus = getPromoStatus(u);
+                  return (
+                    <tr key={u.id}>
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center font-black text-xs dark:text-zinc-200">{u.username?.[0]?.toUpperCase()}</div>
+                          <div>
+                            <p className="font-bold text-sm dark:text-zinc-200">@{u.username}</p>
+                            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase">{u.email}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <Badge className={cn(
-                        "text-[9px] font-black uppercase",
-                        u.status === 'BANNED' ? "bg-red-600" : "bg-green-600"
-                      )}>
-                        {u.status}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-[10px] font-black uppercase tracking-widest dark:text-zinc-200">{u.role}</td>
-                    <td className="p-4 text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 font-black text-[10px] uppercase text-red-600 hover:bg-red-50" 
-                        onClick={() => handleUpdateUserStatus(u.id, u.status === 'BANNED' ? 'ACTIVE' : 'BANNED')}
-                      >
-                        {u.status === 'BANNED' ? <UserCheck className="w-4 h-4 mr-2" /> : <Ban className="w-4 h-4 mr-2" />}
-                        {u.status === 'BANNED' ? 'Unban' : 'Ban'}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="p-4">
+                        <Badge className={cn(
+                          "text-[9px] font-black uppercase",
+                          u.status === 'BANNED' ? "bg-red-600" : "bg-green-600"
+                        )}>
+                          {u.status}
+                        </Badge>
+                      </td>
+                      <td className="p-4 text-[10px] font-black uppercase tracking-widest dark:text-zinc-200">{u.role}</td>
+                      <td className="p-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "font-black text-lg",
+                              promoStatus.active ? "text-green-600" : "dark:text-zinc-200"
+                            )}>
+                              {fee}%
+                            </span>
+                            {promoStatus.active && (
+                              <Badge className="bg-green-600 text-[8px] font-black">
+                                PROMO {promoStatus.daysLeft}d left
+                              </Badge>
+                            )}
+                          </div>
+                          {u.sellerFeePercentage !== undefined && u.sellerFeePercentage !== null && !promoStatus.active && (
+                            <p className="text-[9px] text-zinc-400 font-bold uppercase">Custom Fee</p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 font-black text-[9px] uppercase" 
+                            onClick={() => {
+                              setSelectedFeeUser({
+                                uid: u.id,
+                                username: u.username,
+                                currentFee: u.sellerFeePercentage ?? null,
+                                tier: u.sellerTier || 'Bronze'
+                              });
+                              setNewFeePercentage((u.sellerFeePercentage ?? getTierBasedFee(u.sellerTier)).toString());
+                              setFeeDialogOpen(true);
+                            }}
+                          >
+                            <Wallet className="w-3 h-3 mr-1" /> Edit Fee
+                          </Button>
+                          {!promoStatus.active && activePromoCount < 100 && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-8 font-black text-[9px] uppercase text-green-600 hover:bg-green-50" 
+                              onClick={() => handleGrantPromo(u.id, u.username, 30)}
+                            >
+                              <Crown className="w-3 h-3 mr-1" /> Grant Promo
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 font-black text-[10px] uppercase text-red-600 hover:bg-red-50" 
+                            onClick={() => handleUpdateUserStatus(u.id, u.status === 'BANNED' ? 'ACTIVE' : 'BANNED')}
+                          >
+                            {u.status === 'BANNED' ? <UserCheck className="w-4 h-4 mr-2" /> : <Ban className="w-4 h-4 mr-2" />}
+                            {u.status === 'BANNED' ? 'Unban' : 'Ban'}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

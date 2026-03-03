@@ -26,6 +26,7 @@ import {
   LogOut,
   User,
   Sparkles,
+  ShoppingBag,
 } from 'lucide-react';
 
 import {
@@ -51,6 +52,7 @@ import Image from 'next/image';
 
 const navItems = [
   { title: 'Explore', url: '/', icon: Home },
+  { title: 'Browse Listings', url: '/listings', icon: ShoppingBag },
   { title: 'ISO24', url: '/iso24', icon: Search },
   { title: 'Trust Board', url: '/trust-board', icon: Trophy },
   { title: 'hobbydork Store', url: '/hobbydork-store', icon: Crown },

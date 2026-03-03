@@ -56,6 +56,7 @@ export default function SellerOnboarding() {
     agreedToTerms: false,
     agreedToPaymentRules: false,
     agreedToAuthenticity: false,
+    agreedToShippingStandards: false,
     stripeVerified: false,
   });
 
@@ -87,7 +88,7 @@ export default function SellerOnboarding() {
     setIsConnectingStripe(true);
     try {
       const callable = httpsCallable(functions, 'createStripeOnboarding');
-      const result = await callable({ appBaseUrl: window.location.origin });
+      const result = await callable({ appBaseUrl: "https://hobbydork.com" });
       const data = result.data as { url?: string };
       if (!data?.url) {
         throw new Error('Missing Stripe onboarding URL');
@@ -278,22 +279,48 @@ export default function SellerOnboarding() {
             <Card className="border-none shadow-2xl rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
               <CardHeader className="bg-card border-b p-6 md:p-10">
                 <CardTitle className="text-xl md:text-3xl font-black italic uppercase tracking-tight">Step 3: Trust</CardTitle>
-                <CardDescription className="text-muted-foreground text-sm md:text-base font-medium">Dealer standards.</CardDescription>
+                <CardDescription className="text-muted-foreground text-sm md:text-base font-medium">What makes HobbyDork different.</CardDescription>
               </CardHeader>
               <CardContent className="p-6 md:p-10 space-y-3 md:space-y-4">
+                <div className="bg-gradient-to-r from-red-500/10 to-accent/10 p-4 md:p-6 rounded-2xl border-2 border-red-500/20 mb-6">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 md:w-6 md:h-6 text-red-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-black text-sm md:text-base uppercase tracking-tight mb-2 text-red-900 dark:text-red-100">⚠️ Built on Fast, Honest Shipping</h4>
+                      <p className="text-xs md:text-sm font-bold text-red-800/80 dark:text-red-200/80 leading-relaxed mb-3">
+                        HobbyDork is different. We hold sellers to strict shipping standards that are ENFORCED.
+                      </p>
+                      <ul className="text-xs md:text-sm font-bold text-red-900 dark:text-red-100 space-y-2 list-disc pl-5">
+                        <li>Your package must be <span className="underline">received by carrier</span> within <span className="font-black">2 business days</span> of payment (weekends & holidays excluded)</li>
+                        <li>If tracking doesn't show carrier acceptance within 2 business days, buyers can cancel with one click</li>
+                        <li>You lose the sale AND receive penalties: lower tier, higher fees, damaged reputation</li>
+                        <li>Just creating a label is NOT enough - the package must actually be scanned by USPS/UPS/FedEx</li>
+                      </ul>
+                      <div className="bg-red-900/10 dark:bg-red-100/10 border-2 border-red-600 rounded-lg p-3 md:p-4 mt-4">
+                        <p className="text-xs md:text-sm font-black text-red-900 dark:text-red-100 leading-relaxed">
+                          🚨 IMPORTANT: If you cannot commit to shipping within 2 business days, DO NOT list the item for sale. Only list items you can ship immediately. Going on vacation? Traveling? Don't have time to get to the post office? Then don't list items until you're ready to fulfill orders fast.
+                        </p>
+                      </div>
+                      <p className="text-xs md:text-sm font-black text-red-900 dark:text-red-100 mt-3">
+                        If you can't ship fast consistently, this platform is not for you.
+                      </p>
+                    </div>
+                  </div>
+                </div>
                 {[
                   { id: 'terms', label: 'Agree to Community Terms', field: 'agreedToTerms' },
                   { id: 'payment', label: 'Use Stripe for transactions', field: 'agreedToPaymentRules' },
                   { id: 'auth', label: 'Guarantee authenticity', field: 'agreedToAuthenticity' },
+                  { id: 'shipping', label: 'I will get packages RECEIVED by carrier within 2 business days or buyers can cancel', field: 'agreedToShippingStandards', highlight: true },
                 ].map((item) => (
-                  <div key={item.id} className="flex items-center gap-4 md:gap-6 p-4 md:p-6 rounded-xl md:rounded-3xl bg-zinc-50 border-2 border-dashed border-zinc-200 hover:bg-zinc-100 transition-colors">
+                  <div key={item.id} className={`flex items-center gap-4 md:gap-6 p-4 md:p-6 rounded-xl md:rounded-3xl ${item.highlight ? 'bg-red-50 dark:bg-red-950/20 border-2 border-red-500/30' : 'bg-zinc-50 border-2 border-dashed border-zinc-200'} hover:bg-opacity-80 transition-colors`}>
                     <Checkbox 
                       id={item.id} 
                       checked={(formData as any)[item.field]} 
                       onCheckedChange={(checked) => setFormData({...formData, [item.field]: !!checked})} 
                       className="w-6 h-6 md:w-8 md:h-8 rounded-lg md:rounded-xl border-zinc-300" 
                     />
-                    <Label htmlFor={item.id} className="text-xs md:text-sm font-black cursor-pointer uppercase tracking-tight leading-none">{item.label}</Label>
+                    <Label htmlFor={item.id} className={`text-xs md:text-sm font-black cursor-pointer uppercase tracking-tight leading-none ${item.highlight ? 'text-red-900 dark:text-red-100' : ''}`}>{item.label}</Label>
                   </div>
                 ))}
               </CardContent>
@@ -301,7 +328,7 @@ export default function SellerOnboarding() {
                 <Button variant="ghost" onClick={prevStep} className="font-black uppercase text-[10px] md:text-xs tracking-widest hover:bg-zinc-200 h-12 md:h-14">Back</Button>
                 <Button 
                   onClick={nextStep} 
-                  disabled={!formData.agreedToTerms || !formData.agreedToPaymentRules || !formData.agreedToAuthenticity} 
+                  disabled={!formData.agreedToTerms || !formData.agreedToPaymentRules || !formData.agreedToAuthenticity || !formData.agreedToShippingStandards} 
                   className="bg-accent text-accent-foreground rounded-xl md:rounded-2xl px-8 md:px-12 h-12 md:h-14 font-black text-base md:text-lg gap-2 shadow-xl shadow-accent/20 active:scale-95 transition-transform flex-1 md:flex-none"
                 >
                   Continue <ChevronRight className="w-5 h-5" />

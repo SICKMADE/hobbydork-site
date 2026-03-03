@@ -5,7 +5,7 @@ import { Search, ShoppingBag, LogIn, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import Image from 'next/image';
@@ -13,11 +13,16 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const [searchValue, setSearchValue] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   
   const { user } = useUser();
   const db = useFirestore();
+  
+  // Hide search bar on /browse page since it has its own
+  const safePathname = pathname || '';
+  const showSearch = !(safePathname.startsWith('/browse') || safePathname.startsWith('/listings'));
 
   // Fetch unread notifications count
   const notificationsQuery = useMemoFirebase(() => 
@@ -40,13 +45,11 @@ export default function Navbar() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const params = new URLSearchParams();
     if (searchValue) {
       params.set('q', searchValue);
-    } else {
-      params.delete('q');
     }
-    router.push(`/?${params.toString()}`);
+    router.push(`/listings?${params.toString()}`);
   };
 
   return (
@@ -69,15 +72,17 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Search Bar */}
-          <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-2xl relative">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground dark:text-zinc-500 w-5 h-5 z-10" />
-            <Input 
-              placeholder="Search listings..." 
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              className="pl-14 bg-card text-foreground dark:bg-white dark:text-zinc-900 dark:border-accent dark:border-4 border-border focus-visible:ring-2 focus-visible:ring-accent rounded-full h-14 text-base shadow-lg"
-            />
-          </form>
+          {showSearch && (
+            <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-2xl relative">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground dark:text-zinc-500 w-5 h-5 z-10" />
+              <Input 
+                placeholder="Search listings..." 
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                className="pl-14 bg-card text-foreground dark:bg-white dark:text-zinc-900 dark:border-accent dark:border-4 border-border focus-visible:ring-2 focus-visible:ring-accent rounded-full h-14 text-base shadow-lg"
+              />
+            </form>
+          )}
 
           {/* Desktop Actions (right side) */}
           <div className="hidden md:flex items-center gap-2 lg:gap-4 shrink-0">
@@ -123,14 +128,16 @@ export default function Navbar() {
             )}
 
             {/* Mobile Search Toggle */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="rounded-full w-10 h-10"
-              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-            >
-              <Search className="w-5 h-5" />
-            </Button>
+            {showSearch && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full w-10 h-10"
+                onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+              >
+                <Search className="w-5 h-5" />
+              </Button>
+            )}
 
             {/* Mobile Sidebar Trigger */}
             <SidebarTrigger />
@@ -138,7 +145,7 @@ export default function Navbar() {
         </div>
 
         {/* Mobile Search Bar (Expandable) */}
-        {isMobileSearchOpen && (
+        {showSearch && isMobileSearchOpen && (
           <div className="md:hidden pb-4 animate-in slide-in-from-top duration-300">
             <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground dark:text-zinc-500 w-5 h-5 z-10" />
