@@ -1,3 +1,4 @@
+      'use client';
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -175,13 +176,41 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
       </div>
 
       {/* Tabs */}
+
+      {/* Desktop Tabs */}
       <Tabs defaultValue="collector" className="w-full">
-        <TabsList className="bg-muted p-1 h-14 rounded-xl px-2 mb-8 flex-nowrap overflow-x-auto justify-start md:justify-center">
+        <TabsList className="dashboard-tabs bg-muted p-1 h-14 rounded-xl px-2 mb-8 flex-nowrap overflow-x-auto justify-start md:justify-center scrollbar-hide hidden sm:flex" style={{ WebkitOverflowScrolling: 'touch' }}>
           <TabsTrigger value="collector" className="rounded-lg px-8 h-10 font-bold shrink-0">Collector Hub</TabsTrigger>
           {isSeller && <TabsTrigger value="dealer" className="rounded-lg px-8 h-10 font-bold shrink-0">Seller Hub</TabsTrigger>}
           {isSeller && <TabsTrigger value="sales" className="rounded-lg px-8 h-10 font-bold shrink-0">Sales & Shipping</TabsTrigger>}
           {isSeller && <TabsTrigger value="payouts" className="rounded-lg px-8 h-10 font-bold shrink-0">Payouts</TabsTrigger>}
         </TabsList>
+
+        {/* Mobile Bottom Tabs */}
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t flex sm:hidden justify-around h-16 shadow-lg">
+          <TabsTrigger value="collector" className="flex flex-col items-center justify-center flex-1 h-full font-bold text-xs focus:outline-none data-[state=active]:text-accent">
+            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 8h2v-2H7v2zm0-4h2v-2H7v2zm0-4h2V7H7v2zm4 8h2v-2h-2v2zm0-4h2v-2h-2v2zm0-4h2V7h-2v2zm4 8h2v-2h-2v2zm0-4h2v-2h-2v2zm0-4h2V7h-2v2z"/></svg>
+            Collector
+          </TabsTrigger>
+          {isSeller && (
+            <TabsTrigger value="dealer" className="flex flex-col items-center justify-center flex-1 h-full font-bold text-xs focus:outline-none data-[state=active]:text-accent">
+              <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21V7a2 2 0 0 0-2-2h-4V3a1 1 0 0 0-2 0v2H6a2 2 0 0 0-2 2v14"/></svg>
+              Seller
+            </TabsTrigger>
+          )}
+          {isSeller && (
+            <TabsTrigger value="sales" className="flex flex-col items-center justify-center flex-1 h-full font-bold text-xs focus:outline-none data-[state=active]:text-accent">
+              <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 17v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M16 11V7a4 4 0 0 0-8 0v4"/></svg>
+              Sales
+            </TabsTrigger>
+          )}
+          {isSeller && (
+            <TabsTrigger value="payouts" className="flex flex-col items-center justify-center flex-1 h-full font-bold text-xs focus:outline-none data-[state=active]:text-accent">
+              <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 8c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/></svg>
+              Payouts
+            </TabsTrigger>
+          )}
+        </div>
 
         {/* Collector Tab */}
         <TabsContent value="collector" className="space-y-10">

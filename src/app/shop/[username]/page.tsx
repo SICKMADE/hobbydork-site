@@ -31,6 +31,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { cn, getRandomAvatar, filterProfanity } from '@/lib/utils';
 import type { Listing, Giveaway } from '@/lib/mock-data';
+import { isListingExpired } from '@/lib/mock-data';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, orderBy, addDoc, serverTimestamp, setDoc, deleteDoc, getDoc, updateDoc, increment, limit } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -41,7 +42,12 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
   const { toast } = useToast();
   const { user } = useUser();
   const db = useFirestore();
-  
+
+  // Relist handler must be defined at the top level
+  const handleRelist = async (listing: Listing) => {
+    toast({ title: 'Relist', description: `Relist action for ${listing.title} coming soon!` });
+  };
+
   const [newPostContent, setNewPostContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -170,6 +176,10 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
   const isUrban = appliedTheme === 'Urban Theme';
   const isHobbyShop = appliedTheme === 'Hobby Shop Theme';
   const avatarUrl = storeData.avatarUrl || getRandomAvatar(username);
+
+  // Split listings into active and expired
+  const activeListings = listings?.filter((listing) => !isListingExpired(listing));
+  const expiredListings = listings?.filter((listing) => isListingExpired(listing));
 
   return (
     <div className={cn(
@@ -309,15 +319,31 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
         <Tabs defaultValue="listings" className="space-y-6 md:space-y-10">
           <TabsList className="p-1 h-12 md:h-14 rounded-xl md:rounded-2xl border overflow-x-auto justify-start flex-nowrap scrollbar-hide">
             <TabsTrigger value="listings" className="px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest">Listings</TabsTrigger>
+            {isOwner && (
+              <TabsTrigger
+                value="expired"
+                className={
+                  cn(
+                    "px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest",
+                    isComicBook && "bg-white border-4 border-black rounded-none shadow-[8px_8px_0px_#000] data-[state=active]:bg-yellow-400 data-[state=active]:text-black",
+                    isNeonSyndicate && "bg-zinc-900 border border-cyan-500/20 rounded-none shadow-[0_0_20px_rgba(34,211,238,0.05)] data-[state=active]:bg-cyan-500 data-[state=active]:text-zinc-950 italic",
+                    isUrban && "bg-slate-100 border-4 border-slate-900 rounded-none shadow-[10px_10px_0px_#000] data-[state=active]:bg-orange-600 data-[state=active]:text-white",
+                    isHobbyShop && "bg-[#355e3b] border-4 border-white/10 text-white rounded-none shadow-2xl data-[state=active]:bg-white data-[state=active]:text-[#355e3b]",
+                  )
+                }
+              >
+                Expired Listings
+              </TabsTrigger>
+            )}
             <TabsTrigger value="giveaways" className="px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest">Giveaways</TabsTrigger>
             <TabsTrigger value="feed" className="px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest">Feed</TabsTrigger>
             <TabsTrigger value="reviews" className="px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest">Reviews</TabsTrigger>
           </TabsList>
 
           <TabsContent value="listings">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {listings && listings.length > 0 ? (
-                listings.map((listing) => <ListingCard key={listing.id} listing={listing} theme={appliedTheme} />)
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 md:gap-8">
+              {activeListings && activeListings.length > 0 ? (
+                activeListings.map((listing) => <ListingCard key={listing.id} listing={listing} theme={appliedTheme} />)
               ) : (
                 <div className="col-span-full py-20 text-center border-4 border-dashed rounded-[2rem] border-zinc-100 text-zinc-400">
                   <p className="font-black uppercase text-sm">No active listings</p>
@@ -325,6 +351,38 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
               )}
             </div>
           </TabsContent>
+
+          {isOwner && (
+            <TabsContent value="expired">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                {expiredListings && expiredListings.length > 0 ? (
+                  expiredListings.map((listing) => (
+                    <div key={listing.id} className="relative">
+                      <ListingCard listing={listing} theme={appliedTheme} />
+                      <div
+                        className="absolute top-2 right-2 z-20 flex pointer-events-none"
+                      >
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleRelist(listing)}
+                          className="!pointer-events-auto !rounded-lg !px-4 !py-1.5 !text-xs !font-bold !shadow-md !bg-white !text-black !border border-zinc-200 hover:!bg-zinc-100 focus-visible:!ring-2 focus-visible:!ring-accent focus-visible:!ring-offset-2"
+                          style={{ minWidth: 64 }}
+                          aria-label={`Relist ${listing.title}`}
+                        >
+                          Relist
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full py-20 text-center border-4 border-dashed rounded-[2rem] border-zinc-100 text-zinc-400">
+                    <p className="font-black uppercase text-sm">No expired listings</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          )}
 
           <TabsContent value="giveaways">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">

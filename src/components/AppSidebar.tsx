@@ -26,6 +26,7 @@ import {
   LogOut,
   User,
   Sparkles,
+  ShoppingBag,
 } from 'lucide-react';
 
 import {
@@ -51,6 +52,7 @@ import Image from 'next/image';
 
 const navItems = [
   { title: 'Explore', url: '/', icon: Home },
+  { title: 'Browse Listings', url: '/listings', icon: ShoppingBag },
   { title: 'ISO24', url: '/iso24', icon: Search },
   { title: 'Trust Board', url: '/trust-board', icon: Trophy },
   { title: 'hobbydork Store', url: '/hobbydork-store', icon: Crown },
@@ -140,7 +142,7 @@ export function AppSidebar() {
         )}
       </SidebarHeader>
       
-      <SidebarContent>
+      <SidebarContent className="relative">
         {user && isStaff && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-red-600 font-black uppercase">Authority</SidebarGroupLabel>
@@ -266,6 +268,8 @@ export function AppSidebar() {
             )}
           </SidebarMenu>
         </SidebarGroup>
+        {/* Mobile-only scroll indicator */}
+        <div className="sm:hidden pointer-events-none absolute left-0 right-0 bottom-0 h-8 z-20 sidebar-scroll-gradient" />
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t space-y-4">
@@ -275,12 +279,14 @@ export function AppSidebar() {
           </SidebarMenuButton>
         )}
         
-        <SidebarMenuButton asChild isActive={pathname === '/creed'} className="text-xs" onClick={handleNavClick}>
-          <Link href="/creed"><Info className="w-4 h-4" /><span>About Us</span></Link>
-        </SidebarMenuButton>
-        <SidebarMenuButton asChild isActive={pathname === '/help'} className="text-xs" onClick={handleNavClick}>
-          <Link href="/help"><HelpCircle className="w-4 h-4" /><span>Help Center</span></Link>
-        </SidebarMenuButton>
+        <div className="flex flex-col gap-1">
+          <SidebarMenuButton asChild isActive={pathname === '/creed'} className="text-xs" onClick={handleNavClick}>
+            <Link href="/creed"><Info className="w-4 h-4" /><span>About Us</span></Link>
+          </SidebarMenuButton>
+          <SidebarMenuButton asChild isActive={pathname === '/help'} className="text-xs" onClick={handleNavClick}>
+            <Link href="/help"><HelpCircle className="w-4 h-4" /><span>Help Center</span></Link>
+          </SidebarMenuButton>
+        </div>
         
         {user && (
           <SidebarMenuButton onClick={handleSignOut} className="bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-950/60 !text-red-700 dark:!text-red-300 border-2 border-red-300 dark:border-red-800/60 font-black rounded-lg h-12">

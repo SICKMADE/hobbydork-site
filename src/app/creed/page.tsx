@@ -4,7 +4,7 @@ import Navbar from '@/components/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, Users, ArrowRight, Target, Sparkles } from 'lucide-react';
+import { ShieldCheck, Users, ArrowRight, Target, Sparkles, Clock, Gavel, MessageSquare, Trophy, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AboutPage() {
@@ -31,18 +31,22 @@ export default function AboutPage() {
             </h2>
             <div className="space-y-6 text-muted-foreground text-lg leading-relaxed font-medium">
               <p>
-                hobbydork started with a simple idea: collectors deserve a platform that prioritizes authenticity and safety over high fees and corporate growth.
+                hobbydork started with a simple idea: collectors deserve a platform that prioritizes authenticity, fast shipping, and community trust over corporate profits.
               </p>
               <p>
-                We built a community where every seller is reviewed by their peers, and every payment is secured via Stripe integration. No scams, no fakes, just the items you love.
+                We built a community where sellers are held accountable with enforced 2-business-day shipping standards. Where every payment is secured via Stripe integration. Where performance-based seller tiers reward honest dealers with lower fees. No scams, no fakes, no slow shipping. Just the items you love, delivered fast.
+              </p>
+              <p className="font-bold text-accent">
+                We're different because we actually enforce standards. Ship late? Buyers can cancel and you're penalized. It's that simple.
               </p>
             </div>
           </div>
           <div className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border bg-zinc-950 flex items-center justify-center p-12">
-            <div className="text-center space-y-6 opacity-40">
-              <Sparkles className="w-24 h-24 text-accent mx-auto" />
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white">The hobbydork Community</p>
-            </div>
+            <img
+              src="/landing.png"
+              alt="Hobbydork Community"
+              className="object-contain w-full h-full opacity-80"
+            />
           </div>
         </section>
 
@@ -51,22 +55,27 @@ export default function AboutPage() {
             <h2 className="text-4xl font-headline font-black uppercase tracking-tighter">Core Values</h2>
             <div className="w-24 h-2 bg-accent mx-auto rounded-full" />
           </div>
-          <div className="grid md:grid-cols-3 gap-10">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
             {[
+              { 
+                icon: Clock, 
+                title: "Fast Shipping", 
+                desc: "Sellers must ship within 2 business days or buyers can cancel. We enforce this with automatic penalties and tier demotions. No excuses, no delays." 
+              },
               { 
                 icon: ShieldCheck, 
                 title: "Transparency", 
-                desc: "Every review on the leaderboard is linked to a verified transaction. We keep the marketplace honest by making feedback permanent and public." 
+                desc: "Every seller's on-time shipping rate is publicly displayed. Performance metrics are tracked daily. Reviews are permanent and linked to real transactions." 
               },
               { 
-                icon: Target, 
-                title: "Accuracy", 
-                desc: "We provide tools for sellers to accurately describe and photograph their items, ensuring buyers know exactly what they're getting." 
+                icon: Trophy, 
+                title: "Performance-Driven", 
+                desc: "Seller tiers and fees are based on shipping speed and customer satisfaction. Fast, reliable sellers pay lower fees (5-7%). Slow sellers pay more (10-12%)." 
               },
               { 
                 icon: Users, 
                 title: "Community", 
-                desc: "hobbydork is driven by the feedback of its members. We listen to collectors to build the features that actually matter." 
+                desc: "ISO24 request feed, live community chat, giveaways, auctions, and Trust Board leaderboards. We're building connections, not just transactions." 
               },
             ].map((p, i) => (
               <Card key={i} className="p-10 rounded-2xl hover:shadow-xl transition-all group">
@@ -81,6 +90,73 @@ export default function AboutPage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </section>
+
+        <section className="mb-40 space-y-16">
+          <div className="text-center space-y-4">
+            <h2 className="text-4xl font-headline font-black uppercase tracking-tighter">What Makes Us Different</h2>
+            <div className="w-24 h-2 bg-accent mx-auto rounded-full" />
+          </div>
+          <div className="grid md:grid-cols-2 gap-8">
+                        <Card className="p-8 border-2">
+                          <CardContent className="p-0 space-y-4">
+                            <div className="flex items-center gap-3">
+                              <DollarSign className="w-6 h-6 text-accent" />
+                              <h3 className="text-xl font-black uppercase">Lowest Seller Fees</h3>
+                            </div>
+                            <p className="text-muted-foreground">Hobbydork charges some of the lowest seller fees in the industry—just 5-7% for top performers, and never more than 12%. That means more money in your pocket with every sale. No hidden charges, no surprise deductions, and you always see your fee rate up front.</p>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="p-8 border-2">
+                          <CardContent className="p-0 space-y-4">
+                            <div className="flex items-center gap-3">
+                              <Users className="w-6 h-6 text-accent" />
+                              <h3 className="text-xl font-black uppercase">Social Store Feeds</h3>
+                            </div>
+                            <p className="text-muted-foreground">Every store on Hobbydork has its own social feed. Sellers can post updates, showcase new arrivals, share behind-the-scenes content, and interact with their followers. Buyers can comment, like, and stay connected—making every store a true community hub, not just a storefront.</p>
+                          </CardContent>
+                        </Card>
+            <Card className="p-8 border-2">
+              <CardContent className="p-0 space-y-4">
+                <div className="flex items-center gap-3">
+                  <Gavel className="w-6 h-6 text-accent" />
+                  <h3 className="text-xl font-black uppercase">Live Auctions</h3>
+                </div>
+                <p className="text-muted-foreground">Real-time bidding on rare items. Place your bids, get instant notifications when you're outbid, and win the collectibles you want. Transparent, fair, and fast.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="p-8 border-2">
+              <CardContent className="p-0 space-y-4">
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="w-6 h-6 text-accent" />
+                  <h3 className="text-xl font-black uppercase">ISO24 Request Feed</h3>
+                </div>
+                <p className="text-muted-foreground">Can't find what you're looking for? Post an "In Search Of" request and let sellers come to you. Save time hunting and connect directly with dealers who have your item.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="p-8 border-2">
+              <CardContent className="p-0 space-y-4">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="w-6 h-6 text-accent" />
+                  <h3 className="text-xl font-black uppercase">Seller Giveaways</h3>
+                </div>
+                <p className="text-muted-foreground">Sellers reward their communities with free item giveaways. Enter to win, build relationships with dealers, and discover new stores. Winners are randomly selected when giveaways end.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="p-8 border-2">
+              <CardContent className="p-0 space-y-4">
+                <div className="flex items-center gap-3">
+                  <Trophy className="w-6 h-6 text-accent" />
+                  <h3 className="text-xl font-black uppercase">Trust Board Rankings</h3>
+                </div>
+                <p className="text-muted-foreground">Real-time seller leaderboard ranked by sales volume, shipping performance, and customer ratings. Find the most reliable dealers and see transparent performance metrics before you buy.</p>
+              </CardContent>
+            </Card>
           </div>
         </section>
 

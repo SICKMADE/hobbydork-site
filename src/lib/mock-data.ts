@@ -1,3 +1,9 @@
+// Utility function to check if a Buy It Now listing is expired
+export function isListingExpired(listing: Listing): boolean {
+  if (!listing.endsAt || listing.type !== 'Buy It Now') return false;
+  const expirationDate = listing.endsAt.toDate ? listing.endsAt.toDate() : new Date(listing.endsAt);
+  return new Date() > expirationDate;
+}
 export type Category = 'Watches' | 'Cards' | 'Coins' | 'Toys' | 'Stamps' | 'Comics' | 'Other';
 export type SellerTier = 'Bronze' | 'Silver' | 'Gold';
 

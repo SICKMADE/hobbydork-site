@@ -351,6 +351,16 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
               </TabsList>
               <TabsContent value="description" className="py-4 md:py-6 text-sm md:text-base text-muted-foreground font-medium">
                 <p className="leading-relaxed">{listing.description}</p>
+                {listing.aiNotes && (
+                  <>
+                    <div className="mt-4 p-4 bg-yellow-50 border-l-4 border-accent rounded">
+                      <div className="text-xs text-muted-foreground mb-1">
+                        <strong>Note:</strong> If this listing includes AI-generated condition notes, this feature is in <span className="font-bold text-accent">beta</span>. Suggestions are provided to assist, but may not be fully accurate. Please review all AI notes carefully before relying on them.
+                      </div>
+                      <div className="text-sm text-zinc-800 whitespace-pre-line">{listing.aiNotes}</div>
+                    </div>
+                  </>
+                )}
               </TabsContent>
               {isAuction && (
                 <TabsContent value="bids" className="py-4 md:py-6 space-y-4">

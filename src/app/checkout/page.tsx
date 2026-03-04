@@ -104,33 +104,32 @@ function CheckoutContent() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
+      <main className="container mx-auto px-2 sm:px-4 py-6 max-w-2xl">
         <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-lg">
-          <div className="bg-gradient-to-r from-accent to-accent/80 p-6 md:p-8 text-white">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black uppercase tracking-tight">Checkout</h1>
+          <div className="bg-gradient-to-r from-accent to-accent/80 p-4 sm:p-6 md:p-8 text-white">
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-headline font-black uppercase tracking-tight">Checkout</h1>
           </div>
-          
-          <div className="p-6 md:p-8 space-y-8">
-            <div className="space-y-4">
-              <div className="flex justify-between items-start p-4 bg-muted/30 rounded-xl border border-dashed border-muted-foreground/20">
+          <div className="p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0 p-3 sm:p-4 bg-muted/30 rounded-xl border border-dashed border-muted-foreground/20">
                 <div className="flex-1">
-                  <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-2">Item</p>
-                  <p className="font-black text-lg">{listing.title}</p>
+                  <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-1 sm:mb-2">Item</p>
+                  <p className="font-black text-base sm:text-lg">{listing.title}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-2">Price</p>
-                  <p className="font-black text-2xl text-accent">${listing.price}</p>
+                <div className="text-left sm:text-right">
+                  <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-1 sm:mb-2">Price</p>
+                  <p className="font-black text-xl sm:text-2xl text-accent">${listing.price}</p>
                 </div>
               </div>
 
-              <div className="p-4 bg-secondary/10 rounded-xl border border-border">
-                <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-2">Seller</p>
+              <div className="p-3 sm:p-4 bg-secondary/10 rounded-xl border border-border">
+                <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-1 sm:mb-2">Seller</p>
                 <p className="font-bold text-sm">@{listing.sellerName || listing.seller}</p>
               </div>
             </div>
 
             {error && (
-              <div className="bg-red-50 dark:bg-red-950/20 border-2 border-red-200 dark:border-red-800 p-4 rounded-xl">
+              <div className="bg-red-50 dark:bg-red-950/20 border-2 border-red-200 dark:border-red-800 p-3 sm:p-4 rounded-xl">
                 <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
               </div>
             )}
@@ -138,7 +137,7 @@ function CheckoutContent() {
             <Button 
               onClick={handleCheckout} 
               disabled={processing}
-              className="w-full h-14 bg-accent hover:bg-accent/90 text-white font-black uppercase text-lg shadow-xl rounded-xl transition-all"
+              className="w-full h-12 sm:h-14 bg-accent hover:bg-accent/90 text-white font-black uppercase text-base sm:text-lg shadow-xl rounded-xl transition-all"
             >
               {processing ? (
                 <>

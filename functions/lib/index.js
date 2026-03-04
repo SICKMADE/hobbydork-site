@@ -36,10 +36,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateSellerTier = exports.denyWithdrawal = exports.approveWithdrawal = exports.processRefund = exports.updateOrderStatus = exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = exports.createAuctionFeeCheckoutSession = exports.getStripeAccount = exports.closeAuction = exports.placeBid = exports.createAuction = exports.dailySellerEnforcement = exports.shippoWebhook = exports.stripeWebhook = exports.setBlindBidAuctionImage = exports.submitBlindBid = exports.createBlindBidAuction = exports.getStripePayouts = void 0;
+exports.calculateSellerTier = exports.denyWithdrawal = exports.approveWithdrawal = exports.processRefund = exports.updateOrderStatus = exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = exports.createAuctionFeeCheckoutSession = exports.getStripeAccount = exports.drawGiveawayWinner = exports.onCreateGiveaway = exports.endExpiredGiveaways = exports.closeAuction = exports.placeBid = exports.createAuction = exports.dailySellerEnforcement = exports.shippoWebhook = exports.stripeWebhook = exports.setBlindBidAuctionImage = exports.submitBlindBid = exports.createBlindBidAuction = exports.getStripePayouts = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const firebaseAdmin_1 = require("./firebaseAdmin");
 const stripe_1 = __importDefault(require("stripe"));
+const params_1 = require("firebase-functions/params");
 var getStripePayouts_1 = require("./getStripePayouts");
 Object.defineProperty(exports, "getStripePayouts", { enumerable: true, get: function () { return getStripePayouts_1.getStripePayouts; } });
 var blindBidder_1 = require("./blindBidder");
@@ -57,11 +58,16 @@ var auctions_1 = require("./auctions");
 Object.defineProperty(exports, "createAuction", { enumerable: true, get: function () { return auctions_1.createAuction; } });
 Object.defineProperty(exports, "placeBid", { enumerable: true, get: function () { return auctions_1.placeBid; } });
 Object.defineProperty(exports, "closeAuction", { enumerable: true, get: function () { return auctions_1.closeAuction; } });
+var giveaway_1 = require("./giveaway");
+Object.defineProperty(exports, "endExpiredGiveaways", { enumerable: true, get: function () { return giveaway_1.endExpiredGiveaways; } });
+Object.defineProperty(exports, "onCreateGiveaway", { enumerable: true, get: function () { return giveaway_1.onCreateGiveaway; } });
+Object.defineProperty(exports, "drawGiveawayWinner", { enumerable: true, get: function () { return giveaway_1.drawGiveawayWinner; } });
 const functions = __importStar(require("firebase-functions"));
 // ...existing code...
 // Use environment variable for Stripe secret, fallback to functions.config for legacy support
+const stripeSecretParam = (0, params_1.defineSecret)("STRIPE_SECRET");
 const config = typeof functions.config === "object" ? functions.config : {};
-const stripeSecret = process.env.STRIPE_SECRET || (config.stripe && config.stripe.secret);
+const stripeSecret = stripeSecretParam.value() || process.env.STRIPE_SECRET || process.env.STRIPE_SECRET_KEY || (config.stripe && config.stripe.secret);
 /* ================= HELPERS ================= */
 function getStripeInstance() {
     if (!stripeSecret) {
@@ -113,7 +119,7 @@ async function logError(error, context = {}) {
     });
 }
 /* ================= GET STRIPE ACCOUNT DETAILS ================= */
-exports.getStripeAccount = (0, https_1.onCall)(async (request) => {
+exports.getStripeAccount = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, async (request) => {
     const stripe = getStripeInstance();
     const { accountId } = request.data || {};
     if (!accountId) {
@@ -141,7 +147,7 @@ exports.getStripeAccount = (0, https_1.onCall)(async (request) => {
     }
 });
 /* ========== CREATE AUCTION FEE CHECKOUT SESSION ========== */
-exports.createAuctionFeeCheckoutSession = (0, https_1.onCall)(async (request) => {
+exports.createAuctionFeeCheckoutSession = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, async (request) => {
     const stripe = getStripeInstance();
     const uid = requireAuth(request);
     const { auctionId, auctionTitle, amountCents, appBaseUrl } = request.data || {};
@@ -172,7 +178,7 @@ exports.createAuctionFeeCheckoutSession = (0, https_1.onCall)(async (request) =>
     return { sessionId: session.id, url: session.url };
 });
 /* ================= CREATE STRIPE CHECKOUT SESSION ================= */
-exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
+exports.createCheckoutSession = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, async (request) => {
     const stripe = getStripeInstance();
     const uid = requireAuth(request);
     const { orderId, listingId, listingTitle, amountCents, appBaseUrl } = request.data || {};
@@ -230,7 +236,7 @@ exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
     return { url: session.url };
 });
 /* ================= CREATE STRIPE ONBOARDING ================= */
-exports.createStripeOnboarding = (0, https_1.onCall)(async (request) => {
+exports.createStripeOnboarding = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, async (request) => {
     const stripe = getStripeInstance();
     const uid = requireAuth(request);
     const userRef = firebaseAdmin_1.db.collection("users").doc(uid);
@@ -264,7 +270,7 @@ exports.createStripeOnboarding = (0, https_1.onCall)(async (request) => {
     return { url: link.url };
 });
 /* ================= FINALIZE SELLER ================= */
-exports.finalizeSeller = (0, https_1.onCall)(async (request) => {
+exports.finalizeSeller = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, async (request) => {
     const stripe = getStripeInstance();
     const uid = requireAuth(request);
     const userRef = firebaseAdmin_1.db.collection("users").doc(uid);
@@ -398,7 +404,7 @@ exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
  * Process refund for an order
  * Called when seller confirms return receipt and initiates refund
  */
-exports.processRefund = (0, https_1.onCall)({ secrets: ["STRIPE_SECRET"] }, async (request) => {
+exports.processRefund = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, async (request) => {
     try {
         const uid = requireAuth(request);
         const { orderId } = request.data;
@@ -472,7 +478,7 @@ exports.processRefund = (0, https_1.onCall)({ secrets: ["STRIPE_SECRET"] }, asyn
     }
 });
 /* ================= APPROVE WITHDRAWAL ================= */
-exports.approveWithdrawal = (0, https_1.onCall)({ secrets: ["STRIPE_SECRET"] }, async (request) => {
+exports.approveWithdrawal = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, async (request) => {
     try {
         const uid = requireAuth(request);
         const { payoutRequestId } = request.data;

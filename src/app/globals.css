@@ -1,3 +1,31 @@
+/* Utility: sidebar-width-vars for SidebarProvider */
+.sidebar-width-vars {
+  --sidebar-width: 16rem;
+  --sidebar-width-icon: 3rem;
+}
+/* Utility: sidebar-scroll-gradient for AppSidebar mobile scroll indicator */
+.sidebar-scroll-gradient {
+  background: linear-gradient(to top, rgba(0,0,0,0.10) 70%, transparent);
+}
+/* Utility: pointer-events-none */
+.pointer-events-none {
+  pointer-events: none !important;
+}
+/* Red border around selected dashboard tab in all modes */
+.dashboard-tabs [data-state="active"],
+.dashboard-tabs [aria-selected="true"] {
+  border: 2px solid #ef4444 !important;
+  box-shadow: 0 2px 8px 0 #0002;
+}
+
+/* Ensure error page Try Reboot button is always visible in all modes */
+.error-reboot-btn,
+.dark .error-reboot-btn {
+  background-color: #ef4444 !important;
+  color: #fff !important;
+  border: 2px solid #ef4444 !important;
+  box-shadow: 0 2px 8px 0 #0004 !important;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -89,6 +117,48 @@
 
 .glass-panel {
   @apply bg-white/10 dark:bg-card/10 border border-border/20 shadow-sm backdrop-blur-none;
+}
+
+/* Fix white-on-white issues for forms in dark mode */
+/* Aggressive dark mode fix for all light backgrounds and text */
+.dark input,
+.dark textarea,
+.dark select,
+.dark .bg-white,
+.dark .bg-white\/5,
+.dark .bg-white\/10,
+.dark .bg-white\/20,
+.dark .bg-white\/50,
+.dark .bg-white\/90,
+.dark .bg-zinc-50,
+.dark .bg-zinc-100,
+.dark .bg-card,
+.dark .bg-card\/50,
+.dark .bg-muted,
+.dark .bg-secondary,
+.dark .bg-secondary\/10,
+.dark .bg-secondary\/50 {
+  background-color: #23272f !important;
+  color: #f3f3f3 !important;
+  border-color: #444 !important;
+}
+.dark .border-zinc-100,
+.dark .border-zinc-200,
+.dark .border-accent\/20 {
+  border-color: #444 !important;
+}
+.dark .text-zinc-950,
+.dark .text-primary,
+.dark .text-black {
+  color: #f3f3f3 !important;
+}
+
+/* Highlight selected shipping option in dark mode */
+.dark .bg-white.border-accent.shadow-lg,
+.dark .bg-white.border-accent {
+  background-color: #23272f !important;
+  border-color: #ef4444 !important; /* Red-500 from Tailwind */
+  box-shadow: 0 2px 8px 0 #0004;
 }
 
 .premium-card {

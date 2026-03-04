@@ -150,6 +150,28 @@ export default function StoreSettings() {
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black uppercase italic tracking-tighter">Shop Customization</h1>
           <p className="text-muted-foreground font-medium">Build your brand identity and apply premium themes.</p>
         </header>
+        {/* Shop Tips (mobile only, just below header) */}
+        <div className="block md:hidden mb-6">
+          <div className="bg-zinc-950 text-white p-4 rounded-2xl shadow-xl">
+            <h3 className="font-headline font-black text-lg mb-4 uppercase italic tracking-tighter flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-accent" /> Shop Tips
+            </h3>
+            <ul className="space-y-4">
+              <li className="space-y-1">
+                <p className="text-[9px] font-black uppercase text-white/40 tracking-widest">Brand Voice</p>
+                <p className="text-xs font-bold leading-relaxed">Keep your tagline focused on your collector niche to attract high-value buyers.</p>
+              </li>
+              <li className="space-y-1">
+                <p className="text-[9px] font-black uppercase text-white/40 tracking-widest">Themes</p>
+                <p className="text-xs font-bold leading-relaxed">Applying a premium theme overhaul's your Shop Header and Giveaway styling.</p>
+              </li>
+              <li className="space-y-1">
+                <p className="text-[9px] font-black uppercase text-white/40 tracking-widest">Visual Identity</p>
+                <p className="text-xs font-bold leading-relaxed">Upload a clean banner and a recognizable icon to build instant community trust.</p>
+              </li>
+            </ul>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8 lg:gap-12">
           <div className="space-y-12">
@@ -194,8 +216,8 @@ export default function StoreSettings() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center opacity-20"><Store className="w-12 h-12" /></div>
                     )}
-                    <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                      <Camera className="w-6 h-6 text-white dark:text-accent" />
+                    <label className="absolute inset-0 bg-white border-2 border-accent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-[2.5rem]">
+                      <Camera className="w-6 h-6 text-accent" />
                       <input type="file" accept="image/*" aria-label="Upload shop avatar" title="Upload shop avatar" className="hidden" onChange={(e) => handleFilePicker(e, 'avatarUrl')} />
                     </label>
                   </div>
@@ -315,7 +337,8 @@ export default function StoreSettings() {
           </div>
 
           <aside className="space-y-6">
-            <div className="bg-zinc-950 text-white p-8 rounded-[2.5rem] shadow-2xl sticky top-24">
+            {/* Shop Tips (desktop only, sticky sidebar) */}
+            <div className="hidden md:block bg-zinc-950 text-white p-8 rounded-[2.5rem] shadow-2xl sticky top-24">
               <h3 className="font-headline font-black text-xl mb-6 uppercase italic tracking-tighter flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-accent" /> Shop Tips
               </h3>

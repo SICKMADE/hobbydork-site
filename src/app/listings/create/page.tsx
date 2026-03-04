@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,8 @@ import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { storage } from '@/firebase/client-provider';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { cn, filterProfanity } from '@/lib/utils';
 import Link from 'next/link';
@@ -35,7 +38,9 @@ export default function CreateListing() {
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
-  const [photo, setPhoto] = useState<string | null>(null);
+  // Support up to 10 photos
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [showCamera, setShowCamera] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   
@@ -93,7 +98,9 @@ export default function CreateListing() {
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(videoRef.current, 0, 0);
       const dataUri = canvas.toDataURL('image/jpeg');
-      setPhoto(dataUri);
+      if (photos.length < 10) {
+        setPhotos(prev => [...prev, dataUri]);
+      }
       stopCamera();
     }
   };
@@ -107,23 +114,41 @@ export default function CreateListing() {
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = e.target.files;
+    if (!files) return;
+    const newFiles: File[] = [];
+    const newPhotos: string[] = [];
+    let total = photos.length;
+    for (let i = 0; i < files.length && total < 10; i++) {
+      const file = files[i];
       if (file.size > 5 * 1024 * 1024) {
         toast({ variant: 'destructive', title: "File Too Large" });
-        return;
       }
+      newFiles.push(file);
       const reader = new FileReader();
-      reader.onloadend = () => setPhoto(reader.result as string);
+      reader.onloadend = () => {
+        setPhotos(prev => {
+          if (prev.length < 10) {
+            return [...prev, reader.result as string];
+          }
+          return prev;
+        });
+      };
       reader.readAsDataURL(file);
+      total++;
     }
+    setPhotoFiles(prev => {
+      const combined = [...prev, ...newFiles];
+      return combined.slice(0, 10);
+    });
   };
 
+  // Use the first photo for AI suggestions
   const runAiAssistant = async () => {
-    if (!photo) return;
+    if (!photos.length) return;
     setLoading(true);
     try {
-      const result = await suggestListingDetails({ photoDataUri: photo });
+      const result = await suggestListingDetails({ photoDataUri: photos[0] });
       setDescription(result.description);
       setTags(result.tags);
       toast({ title: 'Listing suggestions applied.' });
@@ -147,7 +172,46 @@ export default function CreateListing() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db || !title || !price || !category) return;
+    if (!category) {
+      toast({
+        variant: 'destructive',
+        title: 'Category Required',
+        description: 'Please choose a category before submitting your listing.'
+      });
+      return;
+    }
+    if (!title) {
+      toast({
+        variant: 'destructive',
+        title: 'Title Required',
+        description: 'Please enter a title for your listing.'
+      });
+      return;
+    }
+    if (!price) {
+      toast({
+        variant: 'destructive',
+        title: 'Price Required',
+        description: 'Please enter a price for your listing.'
+      });
+      return;
+    }
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'User Not Logged In',
+        description: 'You must be logged in to create a listing.'
+      });
+      return;
+    }
+    if (!db) {
+      toast({
+        variant: 'destructive',
+        title: 'Database Error',
+        description: 'Database connection not available.'
+      });
+      return;
+    }
 
     if (!isVerified || !isSeller) {
       toast({ variant: 'destructive', title: "Security Gate Triggered", description: "You do not meet the verified dealer requirements." });
@@ -158,8 +222,30 @@ export default function CreateListing() {
 
     const sanitizedTitle = filterProfanity(title);
     const sanitizedDescription = filterProfanity(description);
-    
+    const listingId = uuidv4();
+    let imageUrls: string[] = [];
+
+    // Upload all photos to Firebase Storage
+    if (photoFiles.length > 0) {
+      try {
+        if (!storage) throw new Error('Storage not initialized');
+        imageUrls = await Promise.all(photoFiles.map(async (file, idx) => {
+          const storageRef = ref(storage!, `listingImages/${user.uid}/${listingId}/${file.name}`);
+          await uploadString(storageRef, photos[idx], 'data_url');
+          return await getDownloadURL(storageRef);
+        }));
+      } catch (err) {
+        console.error('Image upload error:', err);
+        toast({ variant: 'destructive', title: 'Image Upload Failed', description: String(err) });
+        setIsSubmitting(false);
+        return;
+      }
+    } else if (photos.length > 0) {
+      imageUrls = photos;
+    }
+
     const listingData = {
+      listingId,
       title: sanitizedTitle,
       description: sanitizedDescription,
       price: parseFloat(price),
@@ -168,7 +254,7 @@ export default function CreateListing() {
       seller: profile?.username || user.uid,
       sellerId: user.uid, // Required by Security Rules: request.resource.data.sellerId == uid()
       sellerName: profile?.username || 'Collector',
-      imageUrl: photo || '',
+      imageUrls,
       status: 'Active',
       tags: tags,
       shippingType,
@@ -274,13 +360,17 @@ export default function CreateListing() {
           <div className="space-y-12">
             <section className="space-y-4">
               <Label className="text-xs font-black uppercase tracking-widest">Item Photos</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {photo ? (
-                  <div className="relative aspect-square rounded-2xl overflow-hidden border-4 border-zinc-100 shadow-2xl group">
-                    <Image src={photo} alt="Preview" fill className="object-cover" />
-                    <button type="button" title="Remove photo" aria-label="Remove photo" onClick={() => setPhoto(null)} className="absolute top-4 right-4 bg-zinc-950/50 text-white rounded-full p-2 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10"><X className="w-4 h-4" /></button>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {photos.length > 0 && photos.map((img, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border-4 border-zinc-100 shadow-2xl group">
+                    <Image src={img} alt={`Preview ${idx + 1}`} fill className="object-cover" />
+                    <button type="button" title="Remove photo" aria-label="Remove photo" onClick={() => {
+                      setPhotos(prev => prev.filter((_, i) => i !== idx));
+                      setPhotoFiles(prev => prev.filter((_, i) => i !== idx));
+                    }} className="absolute top-4 right-4 bg-zinc-950/50 text-white rounded-full p-2 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10"><X className="w-4 h-4" /></button>
                   </div>
-                ) : showCamera ? (
+                ))}
+                {showCamera ? (
                   <div className="relative aspect-square rounded-2xl overflow-hidden bg-black border-4 border-accent shadow-2xl">
                     <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
                     <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-4 px-6">
@@ -297,20 +387,22 @@ export default function CreateListing() {
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    <label className="aspect-square border-4 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group">
-                      <Camera className="w-8 h-8 text-muted-foreground group-hover:scale-110 transition-transform" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Upload</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-                    </label>
-                    <button type="button" onClick={startCamera} className="aspect-square border-4 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group">
-                      <Monitor className="w-8 h-8 text-muted-foreground group-hover:scale-110 transition-transform" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Live Cam</span>
-                    </button>
-                  </div>
+                  photos.length < 10 && (
+                    <>
+                      <label className="aspect-square border-4 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group">
+                        <Camera className="w-8 h-8 text-muted-foreground group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Upload</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} multiple />
+                      </label>
+                      <button type="button" onClick={startCamera} className="aspect-square border-4 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group">
+                        <Monitor className="w-8 h-8 text-muted-foreground group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Live Cam</span>
+                      </button>
+                    </>
+                  )
                 )}
               </div>
-              {photo && (
+              {photos.length > 0 && (
                 <Button type="button" variant="outline" className="w-full h-14 gap-2 border-2 border-accent text-accent hover:bg-accent/5 rounded-xl font-black shadow-lg" onClick={runAiAssistant} disabled={loading}>
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                   Use AI Suggestions
@@ -352,6 +444,9 @@ export default function CreateListing() {
               <div className="space-y-2">
                 <Label htmlFor="description" className="text-xs font-black uppercase tracking-widest">Description</Label>
                 <Textarea id="description" placeholder="Tell buyers about the history and condition..." className="min-h-[150px] rounded-xl border-2 font-medium" value={description} onChange={(e) => setDescription(e.target.value)} />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              <strong>Note:</strong> If you use AI-generated condition notes, remember this feature is in <span className="font-bold text-accent">beta</span>. Suggestions are provided to assist you, but may not be fully accurate. Please review all AI notes carefully before relying on them.
+                            </p>
               </div>
             </section>
 
