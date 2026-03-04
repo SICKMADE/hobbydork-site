@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,17 +9,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { CATEGORIES } from '@/lib/mock-data';
+import { CATEGORIES, GRADING_OPTIONS } from '@/lib/mock-data';
 import { Camera, Sparkles, Loader2, X, Truck, Calculator, Zap, Monitor, Info, ShieldCheck, Mail, ShieldAlert } from 'lucide-react';
 import { suggestListingDetails } from '@/ai/flows/ai-powered-listing-description-and-tags';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { storage } from '@/firebase/client-provider';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { cn, filterProfanity } from '@/lib/utils';
 import Link from 'next/link';
@@ -38,9 +36,7 @@ export default function CreateListing() {
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
-  // Support up to 10 photos
   const [photos, setPhotos] = useState<string[]>([]);
-  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [showCamera, setShowCamera] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   
@@ -49,7 +45,15 @@ export default function CreateListing() {
   const [category, setCategory] = useState('');
   const [price, setPrice] = useState('');
   const [type, setType] = useState('bin');
+  const [condition, setCondition] = useState<'New' | 'Like New' | 'Used'>('Used');
   const [tags, setTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState('');
+  const [visibility, setVisibility] = useState<'Visible' | 'Invisible'>('Visible');
+
+  // Grading fields (category-specific)
+  const [isGraded, setIsGraded] = useState(false);
+  const [gradingCompany, setGradingCompany] = useState('');
+  const [gradingGrade, setGradingGrade] = useState('');
 
   const [shippingType, setShippingType] = useState<'Free' | 'Paid'>('Free');
   const [weight, setWeight] = useState('');
@@ -57,6 +61,7 @@ export default function CreateListing() {
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
   const [calculatedShippingCost, setCalculatedShippingCost] = useState<number | null>(null);
+  const [quantity, setQuantity] = useState('1');
 
   const isDemo = typeof window !== 'undefined' && localStorage.getItem('hobbydork_demo_mode') === 'true';
   
@@ -65,6 +70,116 @@ export default function CreateListing() {
   // Security Rule Alignment: canSell() requires isVerified() && userIsSeller()
   const isSeller = !!(profile?.isSeller || isDemo);
   const isSuspended = profile?.status === 'BANNED' || profile?.status === 'SUSPENDED';
+
+  // Auto-save draft to localStorage
+  const [draftSaveTime, setDraftSaveTime] = useState<string | null>(null);
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+
+  const applyDraft = (draft: any) => {
+    setTitle(draft.title || '');
+    setDescription(draft.description || '');
+    setCategory(draft.category || '');
+    setPrice(draft.price || '');
+    setType(draft.type || 'bin');
+    setCondition(draft.condition || 'Used');
+    setTags(draft.tags || []);
+    setVisibility(draft.visibility || 'Visible');
+    setShippingType(draft.shippingType || 'Free');
+    setWeight(draft.weight || '');
+    setLength(draft.length || '');
+    setWidth(draft.width || '');
+    setHeight(draft.height || '');
+    setIsGraded(draft.isGraded || false);
+    setGradingCompany(draft.gradingCompany || '');
+    setGradingGrade(draft.gradingGrade || '');
+    setQuantity(draft.quantity || '1');
+  };
+
+  // Load draft from localStorage first, then backend if needed
+  useEffect(() => {
+    if (isDraftLoaded) return;
+
+    const loadDraft = async () => {
+      let loadedDraft: any = null;
+
+      if (typeof window !== 'undefined') {
+        const savedDraft = localStorage.getItem('listing_draft');
+        if (savedDraft) {
+          try {
+            loadedDraft = JSON.parse(savedDraft);
+          } catch (e) {
+            console.error('Failed to parse local draft:', e);
+          }
+        }
+      }
+
+      if (!loadedDraft && user && db) {
+        try {
+          const draftRef = doc(db, 'users', user.uid, 'drafts', 'listing-create');
+          const draftSnap = await getDoc(draftRef);
+          if (draftSnap.exists()) {
+            loadedDraft = draftSnap.data();
+          }
+        } catch (e) {
+          console.error('Failed to load backend draft:', e);
+        }
+      }
+
+      if (loadedDraft) {
+        applyDraft(loadedDraft);
+      }
+
+      setIsDraftLoaded(true);
+    };
+
+    loadDraft();
+  }, [isDraftLoaded, user, db]);
+
+  // Auto-save draft to localStorage and backend on form change (debounced)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isDraftLoaded) return;
+
+    const timer = setTimeout(async () => {
+      const draft = {
+        title,
+        description,
+        category,
+        price,
+        type,
+        condition,
+        tags,
+        visibility,
+        shippingType,
+        weight,
+        length,
+        width,
+        height,
+        isGraded,
+        gradingCompany,
+        gradingGrade,
+        quantity,
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        localStorage.setItem('listing_draft', JSON.stringify(draft));
+
+        if (user && db) {
+          const draftRef = doc(db, 'users', user.uid, 'drafts', 'listing-create');
+          await setDoc(draftRef, {
+            ...draft,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        }
+
+        setDraftSaveTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      } catch (e) {
+        console.error('Failed to save draft:', e);
+      }
+    }, 1000); // Save after 1 second of inactivity
+
+    return () => clearTimeout(timer);
+  }, [title, description, category, price, type, condition, tags, visibility, shippingType, weight, length, width, height, isGraded, gradingCompany, gradingGrade, quantity, user, db, isDraftLoaded]);
 
   useEffect(() => {
     if (!authLoading && !profileLoading && !user) {
@@ -98,9 +213,7 @@ export default function CreateListing() {
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(videoRef.current, 0, 0);
       const dataUri = canvas.toDataURL('image/jpeg');
-      if (photos.length < 10) {
-        setPhotos(prev => [...prev, dataUri]);
-      }
+      setPhotos(prev => [...prev, dataUri]);
       stopCamera();
     }
   };
@@ -113,41 +226,96 @@ export default function CreateListing() {
     setShowCamera(false);
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    const newFiles: File[] = [];
-    const newPhotos: string[] = [];
-    let total = photos.length;
-    for (let i = 0; i < files.length && total < 10; i++) {
-      const file = files[i];
-      if (file.size > 5 * 1024 * 1024) {
-        toast({ variant: 'destructive', title: "File Too Large" });
-      }
-      newFiles.push(file);
+  const compressImageForUpload = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotos(prev => {
-          if (prev.length < 10) {
-            return [...prev, reader.result as string];
+      reader.onload = () => {
+        const image = document.createElement('img');
+        image.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDimension = 1600;
+          const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+          canvas.width = Math.round(image.width * scale);
+          canvas.height = Math.round(image.height * scale);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Failed to process image'));
+            return;
           }
-          return prev;
-        });
+          ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        image.onerror = () => reject(new Error('Invalid image file'));
+        image.src = reader.result as string;
       };
+      reader.onerror = () => reject(new Error('Failed to read image'));
       reader.readAsDataURL(file);
-      total++;
-    }
-    setPhotoFiles(prev => {
-      const combined = [...prev, ...newFiles];
-      return combined.slice(0, 10);
     });
   };
 
-  // Use the first photo for AI suggestions
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    const allowedFormats = ['image/jpeg', 'image/png', 'image/webp'];
+    const MAX_SIZE = 5 * 1024 * 1024;
+    let newPhotos: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!allowedFormats.includes(file.type)) {
+        toast({ 
+          variant: 'destructive', 
+          title: "Invalid Format", 
+          description: "Only JPEG, PNG, and WebP images are allowed."
+        });
+        continue;
+      }
+      if (file.size > MAX_SIZE) {
+        toast({ 
+          variant: 'destructive', 
+          title: "File Too Large", 
+          description: `Maximum file size is 5MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`
+        });
+        continue;
+      }
+      try {
+        const optimizedImage = await compressImageForUpload(file);
+        newPhotos.push(optimizedImage);
+      } catch (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Image Processing Failed',
+          description: 'Could not process this image. Please try another photo.',
+        });
+      }
+    }
+    if (newPhotos.length > 0) {
+      setPhotos(prev => [...prev, ...newPhotos]);
+    }
+  };
+
+  const uploadPhotoToStorage = async (photoDataUri: string, idx: number): Promise<string> => {
+    if (!user) throw new Error('User not authenticated');
+    try {
+      const storage = getStorage();
+      const fileName = `listings/${user.uid}/${Date.now()}_${idx}.jpg`;
+      const storageRef = ref(storage, fileName);
+      // Convert data URL to Blob
+      const response = await fetch(photoDataUri);
+      const blob = await response.blob();
+      await uploadBytes(storageRef, blob);
+      const downloadUrl = await getDownloadURL(storageRef);
+      return downloadUrl;
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      throw new Error('Failed to upload image to storage');
+    }
+  };
+
   const runAiAssistant = async () => {
     if (!photos.length) return;
     setLoading(true);
     try {
+      // Use the first photo for AI suggestions
       const result = await suggestListingDetails({ photoDataUri: photos[0] });
       setDescription(result.description);
       setTags(result.tags);
@@ -172,46 +340,7 @@ export default function CreateListing() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!category) {
-      toast({
-        variant: 'destructive',
-        title: 'Category Required',
-        description: 'Please choose a category before submitting your listing.'
-      });
-      return;
-    }
-    if (!title) {
-      toast({
-        variant: 'destructive',
-        title: 'Title Required',
-        description: 'Please enter a title for your listing.'
-      });
-      return;
-    }
-    if (!price) {
-      toast({
-        variant: 'destructive',
-        title: 'Price Required',
-        description: 'Please enter a price for your listing.'
-      });
-      return;
-    }
-    if (!user) {
-      toast({
-        variant: 'destructive',
-        title: 'User Not Logged In',
-        description: 'You must be logged in to create a listing.'
-      });
-      return;
-    }
-    if (!db) {
-      toast({
-        variant: 'destructive',
-        title: 'Database Error',
-        description: 'Database connection not available.'
-      });
-      return;
-    }
+    if (!user || !db || !title || !price || !category) return;
 
     if (!isVerified || !isSeller) {
       toast({ variant: 'destructive', title: "Security Gate Triggered", description: "You do not meet the verified dealer requirements." });
@@ -220,64 +349,87 @@ export default function CreateListing() {
 
     setIsSubmitting(true);
 
-    const sanitizedTitle = filterProfanity(title);
-    const sanitizedDescription = filterProfanity(description);
-    const listingId = uuidv4();
-    let imageUrls: string[] = [];
-
-    // Upload all photos to Firebase Storage
-    if (photoFiles.length > 0) {
-      try {
-        if (!storage) throw new Error('Storage not initialized');
-        imageUrls = await Promise.all(photoFiles.map(async (file, idx) => {
-          const storageRef = ref(storage!, `listingImages/${user.uid}/${listingId}/${file.name}`);
-          await uploadString(storageRef, photos[idx], 'data_url');
-          return await getDownloadURL(storageRef);
-        }));
-      } catch (err) {
-        console.error('Image upload error:', err);
-        toast({ variant: 'destructive', title: 'Image Upload Failed', description: String(err) });
-        setIsSubmitting(false);
-        return;
+    try {
+      const sanitizedTitle = filterProfanity(title);
+      const sanitizedDescription = filterProfanity(description);
+      // Upload all images to Storage if any exist
+      let imageUrls: string[] = [];
+      if (photos.length) {
+        for (let i = 0; i < photos.length; i++) {
+          const url = await uploadPhotoToStorage(photos[i], i);
+          imageUrls.push(url);
+        }
       }
-    } else if (photos.length > 0) {
-      imageUrls = photos;
-    }
-
-    const listingData = {
-      listingId,
-      title: sanitizedTitle,
-      description: sanitizedDescription,
-      price: parseFloat(price),
-      category,
-      type: type === 'bin' ? 'Buy It Now' : 'Auction',
-      seller: profile?.username || user.uid,
-      sellerId: user.uid, // Required by Security Rules: request.resource.data.sellerId == uid()
-      sellerName: profile?.username || 'Collector',
-      imageUrls,
-      status: 'Active',
-      tags: tags,
-      shippingType,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      currentBid: type === 'auction' ? parseFloat(price) : null,
-      bidCount: 0,
-      endsAt: type === 'auction' ? new Date(Date.now() + 1000 * 60 * 60 * 24 * 7) : null 
-    };
-
-    addDoc(collection(db, 'listings'), listingData)
-      .then(() => {
-        toast({ title: 'Item Listed!', description: 'Your item is now live in the catalog.' });
-        router.push('/');
-      })
-      .catch(async (error) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: 'listings',
-          operation: 'create',
-          requestResourceData: listingData,
-        } satisfies SecurityRuleContext));
-        setIsSubmitting(false);
+      const listingData = {
+        title: sanitizedTitle,
+        description: sanitizedDescription,
+        price: parseFloat(price),
+        category,
+        condition, // Now saved
+        type: type === 'bin' ? 'Buy It Now' : 'Auction',
+        seller: profile?.username || user.uid,
+        sellerId: user.uid,
+        sellerName: profile?.username || 'Collector',
+        imageUrls: imageUrls,
+        status: 'Active',
+        visibility: visibility,
+        tags: tags,
+        shippingType,
+        weight: shippingType === 'Paid' ? parseFloat(weight) || null : null, // Now saved
+        length: shippingType === 'Paid' ? parseFloat(length) || null : null, // Now saved
+        width: shippingType === 'Paid' ? parseFloat(width) || null : null, // Now saved
+        height: shippingType === 'Paid' ? parseFloat(height) || null : null, // Now saved
+        shippingCost: calculatedShippingCost || null, // Now saved
+        isGraded: isGraded,
+        gradingCompany: isGraded ? gradingCompany : null,
+        gradingGrade: isGraded ? gradingGrade : null,
+        quantity: type === 'bin' ? Math.max(1, parseInt(quantity) || 1) : null, // Stock tracking for Buy It Now
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        expiresAt: type === 'bin' ? new Date(Date.now() + 1000 * 60 * 60 * 24 * 30) : null, // 30 days for Buy It Now
+        currentBid: type === 'auction' ? parseFloat(price) : null,
+        bidCount: 0,
+        endsAt: type === 'auction' ? new Date(Date.now() + 1000 * 60 * 60 * 24 * 7) : null
+      };
+      addDoc(collection(db, 'listings'), listingData)
+        .then(async () => {
+          // Clear draft from localStorage on successful submission
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('listing_draft');
+          }
+          if (user && db) {
+            const draftRef = doc(db, 'users', user.uid, 'drafts', 'listing-create');
+            await setDoc(draftRef, {
+              title: '',
+              description: '',
+              category: '',
+              price: '',
+              tags: [],
+              updatedAt: serverTimestamp(),
+            }, { merge: true });
+          }
+          const message = visibility === 'Invisible' 
+            ? 'Saved! You can edit or publish it later from your dashboard.' 
+            : 'Item Listed! Your item is now live in the catalog.';
+          toast({ title: visibility === 'Invisible' ? 'Saved!' : 'Item Listed!', description: message });
+          router.push(visibility === 'Invisible' ? '/dashboard' : '/');
+        })
+        .catch((error) => {
+          toast({ 
+            variant: 'destructive', 
+            title: 'Listing Failed', 
+            description: error?.message || 'Failed to create listing. Please try again.'
+          });
+          setIsSubmitting(false);
+        });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Upload Failed',
+        description: error?.message || 'Failed to upload image. Please try again.'
       });
+      setIsSubmitting(false);
+    }
   };
 
   if (authLoading || profileLoading) {
@@ -347,10 +499,31 @@ export default function CreateListing() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      
+      {/* 2-Day Shipping Policy Warning */}
+      <div className="bg-gradient-to-r from-red-600 to-red-700 border-b-4 border-red-800">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-start gap-3 max-w-5xl mx-auto">
+            <ShieldAlert className="w-5 h-5 text-white shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-sm font-black text-white uppercase tracking-tight mb-1">⚠️ Mandatory 2-Day Shipping Policy</h3>
+              <p className="text-xs text-white/90 font-bold leading-relaxed">
+                All items you list MUST be received by carrier within <span className="underline">2 business days</span> of payment. Creating a label is not enough—package must be scanned by USPS/UPS/FedEx. Buyers can cancel with 1-click if you're late. Late shipping = automatic penalties + tier downgrade.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <main className="container mx-auto px-4 py-12 max-w-5xl">
         <header className="mb-10 space-y-2">
-          <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase">
-            <Zap className="w-3 h-3" /> Seller Tools
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase">
+              <Zap className="w-3 h-3" /> Seller Tools
+            </div>
+            {draftSaveTime && (
+              <p className="text-[9px] text-muted-foreground font-medium">Draft saved at {draftSaveTime}</p>
+            )}
           </div>
           <h1 className="text-4xl font-headline font-black uppercase tracking-tighter">Create New Listing</h1>
           <p className="text-muted-foreground font-medium">List your items and reach collectors instantly.</p>
@@ -360,17 +533,17 @@ export default function CreateListing() {
           <div className="space-y-12">
             <section className="space-y-4">
               <Label className="text-xs font-black uppercase tracking-widest">Item Photos</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {photos.length > 0 && photos.map((img, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border-4 border-zinc-100 shadow-2xl group">
-                    <Image src={img} alt={`Preview ${idx + 1}`} fill className="object-cover" />
-                    <button type="button" title="Remove photo" aria-label="Remove photo" onClick={() => {
-                      setPhotos(prev => prev.filter((_, i) => i !== idx));
-                      setPhotoFiles(prev => prev.filter((_, i) => i !== idx));
-                    }} className="absolute top-4 right-4 bg-zinc-950/50 text-white rounded-full p-2 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10"><X className="w-4 h-4" /></button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {photos.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    {photos.map((photo, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border-4 border-zinc-100 shadow-2xl group">
+                        <Image src={photo} alt={`Preview ${idx + 1}`} fill className="object-cover" />
+                        <button type="button" title="Remove photo" aria-label="Remove photo" onClick={() => setPhotos(p => p.filter((_, i) => i !== idx))} className="absolute top-4 right-4 bg-zinc-950/50 text-white rounded-full p-2 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10"><X className="w-4 h-4" /></button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-                {showCamera ? (
+                ) : showCamera ? (
                   <div className="relative aspect-square rounded-2xl overflow-hidden bg-black border-4 border-accent shadow-2xl">
                     <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
                     <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-4 px-6">
@@ -387,19 +560,17 @@ export default function CreateListing() {
                     )}
                   </div>
                 ) : (
-                  photos.length < 10 && (
-                    <>
-                      <label className="aspect-square border-4 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group">
-                        <Camera className="w-8 h-8 text-muted-foreground group-hover:scale-110 transition-transform" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Upload</span>
-                        <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} multiple />
-                      </label>
-                      <button type="button" onClick={startCamera} className="aspect-square border-4 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group">
-                        <Monitor className="w-8 h-8 text-muted-foreground group-hover:scale-110 transition-transform" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Live Cam</span>
-                      </button>
-                    </>
-                  )
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className="aspect-square border-4 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group">
+                      <Camera className="w-8 h-8 text-muted-foreground group-hover:scale-110 transition-transform" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Upload</span>
+                      <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
+                    </label>
+                    <button type="button" onClick={startCamera} className="aspect-square border-4 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group">
+                      <Monitor className="w-8 h-8 text-muted-foreground group-hover:scale-110 transition-transform" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Live Cam</span>
+                    </button>
+                  </div>
                 )}
               </div>
               {photos.length > 0 && (
@@ -425,28 +596,174 @@ export default function CreateListing() {
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest">Condition</Label>
+                  <Select onValueChange={(val) => setCondition(val as 'New' | 'Like New' | 'Used')} value={condition}>
+                    <SelectTrigger className="h-14 rounded-xl border-2 font-bold"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="New">New</SelectItem>
+                      <SelectItem value="Like New">Like New</SelectItem>
+                      <SelectItem value="Used">Used</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Conditional Grading Section - Show if category has grading options */}
+              {GRADING_OPTIONS[category as keyof typeof GRADING_OPTIONS] && (
+                <div className="bg-accent/5 p-6 rounded-xl border-2 border-accent/20 space-y-4">
+                  <h3 className="font-black uppercase tracking-widest text-sm">Grading Information (Optional)</h3>
+                  
+                  <div className="flex items-center gap-4">
+                    <Label htmlFor="is-graded" className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        id="is-graded"
+                        type="checkbox"
+                        aria-label="Item is professionally graded"
+                        title="Item is professionally graded"
+                        checked={isGraded}
+                        onChange={(e) => {
+                          setIsGraded(e.target.checked);
+                          if (!e.target.checked) {
+                            setGradingCompany('');
+                            setGradingGrade('');
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-2 cursor-pointer"
+                      />
+                      <span className="font-bold uppercase text-[10px] tracking-widest">Item is professionally graded</span>
+                    </Label>
+                  </div>
+
+                  {isGraded && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-black uppercase tracking-widest">Grading Company</Label>
+                        <Select value={gradingCompany} onValueChange={setGradingCompany}>
+                          <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
+                            <SelectValue placeholder="Select Company" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {GRADING_OPTIONS[category as keyof typeof GRADING_OPTIONS]?.companies.map(company => (
+                              <SelectItem key={company} value={company}>{company}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-black uppercase tracking-widest">Grade</Label>
+                        <Select value={gradingGrade} onValueChange={setGradingGrade}>
+                          <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
+                            <SelectValue placeholder="Select Grade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {GRADING_OPTIONS[category as keyof typeof GRADING_OPTIONS]?.grades.map(grade => (
+                              <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest">Pricing Model</Label>
                   <RadioGroup defaultValue="bin" className="flex gap-2" onValueChange={setType}>
                     <div className="flex items-center space-x-2 border-2 rounded-xl p-4 flex-1 cursor-pointer hover:bg-secondary/50 transition-colors"><RadioGroupItem value="bin" id="bin" /><Label htmlFor="bin" className="cursor-pointer font-bold">Buy It Now</Label></div>
                     <div className="flex items-center space-x-2 border-2 rounded-xl p-4 flex-1 cursor-pointer hover:bg-secondary/50 transition-colors"><RadioGroupItem value="auction" id="auction" /><Label htmlFor="auction" className="cursor-pointer font-bold">Auction</Label></div>
                   </RadioGroup>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="price" className="text-xs font-black uppercase tracking-widest">{type === 'bin' ? 'Price' : 'Starting Bid'}</Label>
+                  <div className="relative">
+                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black text-xl">$</span>
+                    <Input id="price" type="number" placeholder="0.00" className="pl-10 h-14 rounded-xl border-2 font-bold" value={price} onChange={(e) => setPrice(e.target.value)} required />
+                  </div>
+                </div>
+
+                {type === 'bin' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity" className="text-xs font-black uppercase tracking-widest">Quantity Available</Label>
+                    <Input id="quantity" type="number" placeholder="1" className="h-14 rounded-xl border-2 font-bold" value={quantity} onChange={(e) => setQuantity(e.target.value)} min="1" />
+                    <p className="text-xs text-muted-foreground">How many items are you selling?</p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="price" className="text-xs font-black uppercase tracking-widest">{type === 'bin' ? 'Price' : 'Starting Bid'}</Label>
-                <div className="relative">
-                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black text-xl">$</span>
-                  <Input id="price" type="number" placeholder="0.00" className="pl-10 h-16 rounded-xl border-2 text-2xl font-black" value={price} onChange={(e) => setPrice(e.target.value)} required />
+                <Label htmlFor="description" className="text-xs font-black uppercase tracking-widest">Description</Label>
+                <Textarea id="description" placeholder="Tell buyers about the history and condition..." className="min-h-[150px] rounded-xl border-2 font-medium" value={description} onChange={(e) => setDescription(e.target.value)} />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest">Tags (Separate with Enter)</Label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {tags.map((tag, idx) => (
+                    <div key={idx} className="bg-accent/20 text-accent font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm">
+                      {tag}
+                      <button type="button" aria-label={`Remove tag ${tag}`} title={`Remove tag ${tag}`} onClick={() => setTags(tags.filter((_, i) => i !== idx))} className="hover:opacity-70">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input 
+                    type="text" 
+                    placeholder="Add a tag..." 
+                    className="h-12 rounded-xl border-2" 
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newTag.trim() && !tags.includes(newTag.trim())) {
+                          setTags([...tags, newTag.trim()]);
+                          setNewTag('');
+                        }
+                      }
+                    }}
+                  />
+                  <Button 
+                    type="button"
+                    onClick={() => {
+                      if (newTag.trim() && !tags.includes(newTag.trim())) {
+                        setTags([...tags, newTag.trim()]);
+                        setNewTag('');
+                      }
+                    }}
+                    className="h-12 px-4 rounded-xl font-bold uppercase text-[10px]"
+                  >
+                    Add
+                  </Button>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="description" className="text-xs font-black uppercase tracking-widest">Description</Label>
                 <Textarea id="description" placeholder="Tell buyers about the history and condition..." className="min-h-[150px] rounded-xl border-2 font-medium" value={description} onChange={(e) => setDescription(e.target.value)} />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              <strong>Note:</strong> If you use AI-generated condition notes, remember this feature is in <span className="font-bold text-accent">beta</span>. Suggestions are provided to assist you, but may not be fully accurate. Please review all AI notes carefully before relying on them.
-                            </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest">Visibility</Label>
+                <RadioGroup value={visibility} className="grid grid-cols-2 gap-3" onValueChange={(val) => setVisibility(val as 'Visible' | 'Invisible')}>
+                  <div className={cn("flex flex-col gap-2 p-4 rounded-xl border-2 transition-all cursor-pointer", visibility === 'Visible' ? "bg-white border-accent shadow-lg" : "bg-transparent border-zinc-200")}>
+                    <RadioGroupItem value="Visible" id="vis-visible" className="sr-only" />
+                    <Label htmlFor="vis-visible" className="cursor-pointer flex flex-col gap-1">
+                      <span className="font-black uppercase tracking-widest text-xs">Visible</span>
+                      <span className="text-[9px] text-muted-foreground font-medium">Show in browse & shop</span>
+                    </Label>
+                  </div>
+                  <div className={cn("flex flex-col gap-2 p-4 rounded-xl border-2 transition-all cursor-pointer", visibility === 'Invisible' ? "bg-white border-accent shadow-lg" : "bg-transparent border-zinc-200")}>
+                    <RadioGroupItem value="Invisible" id="vis-invisible" className="sr-only" />
+                    <Label htmlFor="vis-invisible" className="cursor-pointer flex flex-col gap-1">
+                      <span className="font-black uppercase tracking-widest text-xs">Invisible</span>
+                      <span className="text-[9px] text-muted-foreground font-medium">Only you can see</span>
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
             </section>
 

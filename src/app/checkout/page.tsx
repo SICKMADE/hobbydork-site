@@ -10,6 +10,7 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { httpsCallable } from 'firebase/functions';
 import { getFunctions } from 'firebase/functions';
+import { cn } from '@/lib/utils';
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -18,6 +19,8 @@ function CheckoutContent() {
   const db = useFirestore();
   const { toast } = useToast();
   const listingId = searchParams?.get('listing');
+  const existingOrderId = searchParams?.get('order');
+  const amountFromQuery = Number(searchParams?.get('amount') || 0);
   
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -25,6 +28,9 @@ function CheckoutContent() {
 
   const listingRef = listingId && db ? doc(db, 'listings', listingId) : null;
   const { data: listing } = useDoc(listingRef);
+  const checkoutAmountCents = amountFromQuery > 0 ? amountFromQuery : Math.round((listing?.price || 0) * 100);
+  const checkoutAmountDollars = checkoutAmountCents / 100;
+  const isAuctionWinner = !!(user && listing?.winnerUid === user.uid && listing?.paymentStatus === 'PENDING');
 
   useEffect(() => {
     if (!user) {
@@ -37,12 +43,16 @@ function CheckoutContent() {
   const handleCheckout = async () => {
     if (!listing || !user || !db) return;
 
+    if (listing.type === 'Auction' && !isAuctionWinner) {
+      setError('Only the winning bidder can complete auction payment.');
+      return;
+    }
+
     setProcessing(true);
     setError('');
 
     try {
-      // Create order first
-      const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const orderId = existingOrderId || `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       // Call createCheckoutSession cloud function
       const functions = getFunctions();
@@ -52,7 +62,7 @@ function CheckoutContent() {
         orderId,
         listingId: listing.id,
         listingTitle: listing.title,
-        amountCents: Math.round(listing.price * 100),
+        amountCents: checkoutAmountCents,
         appBaseUrl: typeof window !== 'undefined' ? window.location.origin : 'https://hobbydork.com',
       });
 
@@ -115,17 +125,52 @@ function CheckoutContent() {
                 <div className="flex-1">
                   <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-1 sm:mb-2">Item</p>
                   <p className="font-black text-base sm:text-lg">{listing.title}</p>
-                </div>
-                <div className="text-left sm:text-right">
-                  <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-1 sm:mb-2">Price</p>
-                  <p className="font-black text-xl sm:text-2xl text-accent">${listing.price}</p>
-                </div>
+</div>
+<div className="text-right">
+  <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-2">Price</p>
+  <p className="font-black text-2xl text-accent">${checkoutAmountDollars.toLocaleString()}</p>
+</div>
               </div>
 
               <div className="p-3 sm:p-4 bg-secondary/10 rounded-xl border border-border">
                 <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-1 sm:mb-2">Seller</p>
                 <p className="font-bold text-sm">@{listing.sellerName || listing.seller}</p>
               </div>
+
+              {/* Item Condition Section */}
+              {listing.condition && (
+                <div className={cn(
+                  "p-4 rounded-xl border-2 space-y-3",
+                  listing.isGraded 
+                    ? "bg-green-50/50 border-green-300" 
+                    : "bg-yellow-50/50 border-yellow-300"
+                )}>
+                  <div>
+                    <p className={cn(
+                      "text-xs font-black uppercase tracking-widest mb-1",
+                      listing.isGraded ? "text-green-900" : "text-yellow-900"
+                    )}>
+                      Item Condition
+                    </p>
+                    <p className={cn(
+                      "font-black text-sm",
+                      listing.isGraded ? "text-green-900" : "text-yellow-900"
+                    )}>
+                      {listing.isGraded && listing.gradingCompany && listing.gradingGrade 
+                        ? `${listing.gradingCompany} ${listing.gradingGrade} (GRADED)` 
+                        : `${listing.condition} (RAW)`}
+                    </p>
+                  </div>
+
+                  {!listing.isGraded && ['Sports Cards', 'Comics', 'Trading Cards', 'Collectibles', 'Pokemon', 'Magic: The Gathering', 'Anime'].some(cat => listing.category?.includes(cat)) && (
+                    <div className="bg-white/70 p-3 rounded-lg border border-yellow-200">
+                      <p className="text-xs font-bold text-yellow-900 leading-relaxed">
+                        <span className="font-black">⚠️ RAW ITEM:</span> This is an ungraded collectible. You accept the condition as-is. No returns based on condition. Check photos carefully.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {error && (
@@ -135,17 +180,17 @@ function CheckoutContent() {
             )}
 
             <Button 
-              onClick={handleCheckout} 
-              disabled={processing}
-              className="w-full h-12 sm:h-14 bg-accent hover:bg-accent/90 text-white font-black uppercase text-base sm:text-lg shadow-xl rounded-xl transition-all"
-            >
+  onClick={handleCheckout} 
+  disabled={processing || (listing.type === 'Auction' && !isAuctionWinner)}
+  className="w-full h-14 bg-accent hover:bg-accent/90 text-white font-black uppercase text-lg shadow-xl rounded-xl transition-all"
+>
               {processing ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
                   Processing...
                 </>
               ) : (
-                `Proceed to Payment - $${listing.price}`
+                `Proceed to Payment - $${checkoutAmountDollars.toLocaleString()}`
               )}
             </Button>
           </div>

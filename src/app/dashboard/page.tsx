@@ -20,7 +20,9 @@ import {
   Mail,
   Wallet,
   Medal,
-  Sparkles
+  Sparkles,
+  AlertCircle,
+  ShieldAlert
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -29,6 +31,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@
 import { doc, collection, query, where, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/firebase/client';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -48,6 +51,11 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [isCalculatingTier, setIsCalculatingTier] = useState(false);
 
+  // Define seller status first (needs to be before queries that use it)
+  const isSeller = profile?.isSeller && profile?.sellerStatus === 'APPROVED';
+  const username = profile?.username || 'Collector';
+  const shopUrl = `hobbydork.com/shop/${username}`;
+
   // Security Rule Alignment: Only query if user is ACTIVE and verified
   const ordersQuery = useMemoFirebase(() => query(
     collection(db!, 'orders'), 
@@ -66,16 +74,24 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
   const { data: orders } = useCollection(ordersQuery);
   const { data: sales } = useCollection(salesQuery);
 
+  // Fetch invisible listings for seller
+  const draftListingsQuery = useMemoFirebase(() => 
+    isSeller ? query(
+      collection(db!, 'listings'),
+      where('sellerId', '==', user.uid),
+      where('visibility', '==', 'Invisible'),
+      orderBy('createdAt', 'desc')
+    ) : null
+  , [db, user.uid, isSeller]);
+
+  const { data: draftListings } = useCollection(draftListingsQuery);
+
   // Calculate earnings
   const completedSales = sales?.filter(s => ['Delivered', 'Shipped'].includes(s.status)) || [];
   const refundedSales = sales?.filter(s => s.status === 'Refunded') || [];
   const lifetimeEarnings = completedSales.reduce((acc, s) => acc + (s.price || 0), 0);
   const refundedAmount = refundedSales.reduce((acc, s) => acc + (s.price || 0), 0);
   const pendingPayout = completedSales.filter(s => s.status === 'Shipped').reduce((acc, s) => acc + (s.price || 0), 0);
-
-  const isSeller = profile?.isSeller && profile?.sellerStatus === 'APPROVED';
-  const username = profile?.username || 'Collector';
-  const shopUrl = `hobbydork.com/shop/${username}`;
 
   const handleOpenPayoutHistory = async () => {
     if (!profile?.stripeAccountId) {
@@ -140,7 +156,7 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
       const result: any = await calculateSellerTier({});
       toast({ title: `Tier Updated: ${result.data.tier}`, description: `You are now tier ${result.data.tier}!` });
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Tier calculation failed', description: error.message });
+      toast({ variant: 'destructive', title: 'Tier Update Failed', description: getFriendlyErrorMessage(error) });
     } finally {
       setIsCalculatingTier(false);
     }
@@ -276,20 +292,41 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
                   <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-accent/20" />
                 </div>
                 
-                <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
                   <div>
                     <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Sales</p>
-                    <p className="text-xl sm:text-2xl font-black">{profile?.tierMetrics?.completedSales || 0}</p>
+                    <p className="text-xl sm:text-2xl font-black">{profile?.completedOrders || 0}</p>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">On-Time Rate</p>
+                    <p className="text-xl sm:text-2xl font-black text-green-600">
+                      {profile?.onTimeShippingRate ? Math.round(profile.onTimeShippingRate * 100) : 100}%
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Returns</p>
-                    <p className="text-xl sm:text-2xl font-black">{profile?.tierMetrics?.returnRate || 0}%</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Refunds</p>
-                    <p className="text-xl sm:text-2xl font-black">{profile?.tierMetrics?.refundRate || 0}%</p>
+                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Late (30d)</p>
+                    <p className={`text-xl sm:text-2xl font-black ${
+                      (profile?.lateShipmentsLast30d || 0) > 0 ? 'text-red-600' : 'text-green-600'
+                    }`}>{profile?.lateShipmentsLast30d || 0}</p>
                   </div>
                 </div>
+                
+                {(profile?.lateShipmentsLast30d || 0) > 0 && (
+                  <div className="bg-red-50 dark:bg-red-950/20 border-2 border-red-500/30 rounded-xl p-4 mb-4">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-black uppercase text-red-900 dark:text-red-100 mb-1">⚠️ Late Shipping Alert</p>
+                        <p className="text-xs font-bold text-red-800/80 dark:text-red-200/80 mb-2">
+                          You have {profile?.lateShipmentsLast30d} late shipment{(profile?.lateShipmentsLast30d || 0) > 1 ? 's' : ''} in the last 30 days. Buyers canceled these orders and you lost the sales.
+                        </p>
+                        <p className="text-xs font-bold text-red-900 dark:text-red-100">
+                          Late shipments lower your tier, increase your fees, and damage your reputation. Get packages to the carrier within 2 business days.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="pt-4 border-t">
                   <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-3">Tier Levels</p>
@@ -320,6 +357,42 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
                 {isCalculatingTier ? 'Calculating...' : 'Refresh Tier'}
               </Button>
             </div>
+
+            {/* Invisible Listings */}
+            {draftListings && draftListings.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Package className="w-5 h-5 text-muted-foreground" />
+                    <h2 className="text-lg font-black uppercase tracking-tight">Invisible Listings</h2>
+                  </div>
+                  <Badge variant="secondary" className="font-black uppercase text-[9px]">
+                    {draftListings.length}
+                  </Badge>
+                </div>
+                <div className="space-y-3">
+                  {draftListings.map(listing => (
+                    <Card key={listing.id} className="p-4 flex items-center gap-4 rounded-xl border hover:border-accent/50 transition-colors">
+                      <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-muted border">
+                        {listing.imageUrl ? <Image src={listing.imageUrl} alt={listing.title} fill className="object-cover" /> : <Package className="w-5 h-5 m-auto opacity-20" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant={listing.visibility === 'Draft' ? 'secondary' : 'outline'} className="text-[9px] font-black uppercase">
+                            {listing.visibility}
+                          </Badge>
+                        </div>
+                        <h4 className="font-bold text-sm truncate">{listing.title}</h4>
+                        <p className="text-xs text-muted-foreground font-medium">${listing.price?.toLocaleString()}</p>
+                      </div>
+                      <Button asChild size="sm" className="rounded-lg font-bold h-8 px-3 text-[10px] uppercase shrink-0">
+                        <Link href={`/listings/${listing.id}`}>Edit</Link>
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
           </TabsContent>
         )}
 
@@ -330,6 +403,22 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
                 <Package className="w-5 h-5 text-accent" />
                 <h2 className="text-lg font-black uppercase tracking-tight">Sales & Shipping</h2>
               </div>
+
+              <Card className="p-4 sm:p-5 rounded-xl border-2 border-blue-500/30 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20">
+                <div className="flex items-start gap-3">
+                  <Package className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-black uppercase text-sm mb-2 text-blue-900 dark:text-blue-100">⚡ Shipping Rule</h3>
+                    <p className="text-xs font-bold text-blue-800/90 dark:text-blue-200/90 leading-relaxed mb-2">
+                      Orders must be <span className="underline">received by carrier within 2 business days</span> of payment (excluding weekends/holidays). Carrier acceptance scan is required.
+                    </p>
+                    <p className="text-[10px] font-black uppercase text-blue-900 dark:text-blue-100 tracking-wider">
+                      Late orders can be canceled by buyers and may lower your seller tier
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
               <div className="space-y-3">
                 {sales && sales.length > 0 ? sales.map(sale => (
                   <Card key={sale.id} className="p-4 flex items-center gap-4 rounded-xl border hover:border-accent/50 transition-colors">

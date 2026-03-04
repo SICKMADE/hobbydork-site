@@ -111,14 +111,67 @@ service cloud.firestore {
     // ------------- listings -------------
     match /listings/{listingId} {
       allow get, list: if true;
-      allow create, update, delete: if isVerified();
+      
+      allow create: if userIsSeller() && userIsActive() && isVerified() && 
+        request.resource.data.sellerId == uid() &&
+        // Validate required fields
+        request.resource.data.title != null && request.resource.data.title is string &&
+        request.resource.data.price != null && request.resource.data.price >= 0 &&
+        request.resource.data.category != null && request.resource.data.category is string &&
+        // Validate optional but important fields
+        (!('condition' in request.resource.data) || 
+          request.resource.data.condition in ['New', 'Like New', 'Used']) &&
+        (!('visibility' in request.resource.data) || 
+          request.resource.data.visibility in ['Visible', 'Invisible']) &&
+        // Validate shipping fields if present
+        (!('weight' in request.resource.data) || request.resource.data.weight == null || request.resource.data.weight >= 0) &&
+        (!('length' in request.resource.data) || request.resource.data.length == null || request.resource.data.length >= 0) &&
+        (!('width' in request.resource.data) || request.resource.data.width == null || request.resource.data.width >= 0) &&
+        (!('height' in request.resource.data) || request.resource.data.height == null || request.resource.data.height >= 0) &&
+        (!('shippingCost' in request.resource.data) || request.resource.data.shippingCost == null || request.resource.data.shippingCost >= 0) &&
+        // Validate grading fields if present
+        (!('isGraded' in request.resource.data) || request.resource.data.isGraded is bool) &&
+        (!('gradingCompany' in request.resource.data) || request.resource.data.gradingCompany == null || request.resource.data.gradingCompany is string) &&
+        (!('gradingGrade' in request.resource.data) || request.resource.data.gradingGrade == null || (request.resource.data.gradingGrade is string || request.resource.data.gradingGrade is number)) &&
+        // Validate quantity if present (for Buy It Now listings)
+        (!('quantity' in request.resource.data) || request.resource.data.quantity == null || (request.resource.data.quantity is number && request.resource.data.quantity >= 1));
+      
+      allow update: if (userIsSeller() && resource.data.sellerId == uid()) || userIsStaff() &&
+        request.resource.data.sellerId == resource.data.sellerId &&
+        // Validate updated fields
+        (!('condition' in request.resource.data) || 
+          request.resource.data.condition in ['New', 'Like New', 'Used']) &&
+        (!('visibility' in request.resource.data) || 
+          request.resource.data.visibility in ['Visible', 'Invisible']) &&
+        // Validate shipping fields if present
+        (!('weight' in request.resource.data) || request.resource.data.weight == null || request.resource.data.weight >= 0) &&
+        (!('length' in request.resource.data) || request.resource.data.length == null || request.resource.data.length >= 0) &&
+        (!('width' in request.resource.data) || request.resource.data.width == null || request.resource.data.width >= 0) &&
+        (!('height' in request.resource.data) || request.resource.data.height == null || request.resource.data.height >= 0) &&
+        (!('shippingCost' in request.resource.data) || request.resource.data.shippingCost == null || request.resource.data.shippingCost >= 0) &&
+        // Validate grading fields if present
+        (!('isGraded' in request.resource.data) || request.resource.data.isGraded is bool) &&
+        (!('gradingCompany' in request.resource.data) || request.resource.data.gradingCompany == null || request.resource.data.gradingCompany is string) &&
+        (!('gradingGrade' in request.resource.data) || request.resource.data.gradingGrade == null || (request.resource.data.gradingGrade is string || request.resource.data.gradingGrade is number)) &&
+        // Validate quantity if present (for Buy It Now listings)
+        (!('quantity' in request.resource.data) || request.resource.data.quantity == null || (request.resource.data.quantity is number && request.resource.data.quantity >= 1));
+      
+      allow delete: if (userIsSeller() && resource.data.sellerId == uid()) || userIsStaff();
     }
 
     // ------------- orders -------------
     match /orders/{orderId} {
       allow get, list: if userIsActive() && (userIsStaff() || resource.data.buyerUid == uid() || resource.data.sellerUid == uid());
       allow create: if userIsActive() && request.resource.data.buyerUid == uid() && request.resource.data.shippingAddress != null;
-      allow update: if userIsStaff() || (isSignedIn() && (resource.data.buyerUid == uid() || resource.data.sellerUid == uid()));
+      
+      // Restrict updates to safe fields only - status changes must go through callables
+      allow update: if userIsStaff() || (
+        isSignedIn() && 
+        (resource.data.buyerUid == uid() || resource.data.sellerUid == uid()) &&
+        // Only allow updating safe fields - prevent status/price/payment manipulation
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['feedback', 'notes', 'buyerNotes', 'sellerNotes', 'carrierDeliveryDate', 'lastTrackingCheck', 'updatedAt'])
+      );
+      
       allow delete: if userIsAdmin();
     }
 

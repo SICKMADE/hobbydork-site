@@ -15,6 +15,7 @@ import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/e
 import Link from 'next/link';
 import { cn, getRandomAvatar, filterProfanity } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
 export default function PrivateChatThread({ params }: { params: Promise<{ chatId: string }> }) {
   const { chatId } = use(params);
@@ -57,6 +58,11 @@ export default function PrivateChatThread({ params }: { params: Promise<{ chatId
         if (threadRef) updateDoc(threadRef, { lastMessage: sanitizedText, lastTimestamp: serverTimestamp() });
       })
       .catch(async (error) => {
+        toast({
+          variant: 'destructive',
+          title: 'Message Failed',
+          description: getFriendlyErrorMessage(error)
+        });
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: `conversations/${chatId}/messages`,
           operation: 'create',

@@ -27,6 +27,15 @@
         ]
       },
       {
+        "collectionGroup": "listings",
+        "queryScope": "COLLECTION",
+        "fields": [
+          { "fieldPath": "type", "order": "ASCENDING" },
+          { "fieldPath": "status", "order": "ASCENDING" },
+          { "fieldPath": "endsAt", "order": "ASCENDING" }
+        ]
+      },
+      {
         "collectionGroup": "stores",
         "queryScope": "COLLECTION",
         "fields": [

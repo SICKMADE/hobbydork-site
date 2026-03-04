@@ -40,6 +40,7 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/firebase/client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -113,22 +114,49 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
     'left-full';
 
   const handleUpdateStatus = async (newStatus: string) => {
-    if (!db || !orderRef) return;
+    if (!functions) return;
     setIsProcessingAction(true);
     
-    updateDoc(orderRef, { status: newStatus, updatedAt: serverTimestamp() })
-      .then(() => {
-        toast({ title: `Order ${newStatus}` });
-        setIsProcessingAction(false);
-      })
-      .catch(async (error) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: orderRef.path,
-          operation: 'update',
-          requestResourceData: { status: newStatus },
-        } satisfies SecurityRuleContext));
-        setIsProcessingAction(false);
+    try {
+      const updateStatus = httpsCallable(functions, 'updateOrderStatus');
+      await updateStatus({ 
+        orderId: id, 
+        updates: { status: newStatus }
       });
+      toast({ title: `Order ${newStatus}` });
+    } catch (error: any) {
+      const friendlyMessage = getFriendlyErrorMessage(error);
+      toast({ 
+        variant: 'destructive', 
+        title: 'Update Failed', 
+        description: friendlyMessage 
+      });
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!functions) return;
+    setIsProcessingAction(true);
+    
+    try {
+      const cancelOrder = httpsCallable(functions, 'cancelLateOrder');
+      await cancelOrder({ orderId: id });
+      toast({ 
+        title: 'Order Cancelled', 
+        description: 'Refund will appear in 3-5 business days.' 
+      });
+    } catch (error: any) {
+      const friendlyMessage = getFriendlyErrorMessage(error);
+      toast({ 
+        variant: 'destructive', 
+        title: 'Cancellation Failed', 
+        description: friendlyMessage 
+      });
+    } finally {
+      setIsProcessingAction(false);
+    }
   };
 
   const handleGenerateLabel = async () => {
@@ -162,13 +190,17 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
         throw new Error(data?.error || 'Failed to generate shipping label');
       }
       
-      if (data.tracking_number) {
-        await updateDoc(orderRef, {
-          trackingNumber: data.tracking_number,
-          labelUrl: data.label_url,
-          carrier: data.carrier,
-          status: 'Shipped',
-          updatedAt: serverTimestamp()
+      if (data.tracking_number && functions) {
+        // Update order with tracking info and mark as shipped via callable
+        const updateStatus = httpsCallable(functions, 'updateOrderStatus');
+        await updateStatus({
+          orderId: id,
+          updates: {
+            trackingNumber: data.tracking_number,
+            shippingLabelUrl: data.label_url,
+            carrier: data.carrier,
+            status: 'Shipped'
+          }
         });
         toast({ title: "Shippo Label Generated", description: "Tracking number updated and label is ready." });
       }
@@ -180,7 +212,7 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
   };
 
   const handleOpenDispute = async () => {
-    if (!db || !user || !order || !disputeReason) return;
+    if (!db || !user || !order || !disputeReason || !functions) return;
     setIsProcessingAction(true);
 
     const reportData = {
@@ -197,7 +229,11 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
 
     try {
       await addDoc(collection(db, 'reports'), reportData);
-      await updateDoc(orderRef!, { status: 'Disputed', updatedAt: serverTimestamp() });
+      
+      // Update order status to Disputed via callable
+      const updateStatus = httpsCallable(functions, 'updateOrderStatus');
+      await updateStatus({ orderId: id, updates: { status: 'Disputed' } });
+      
       toast({ title: "Dispute Opened", description: "A moderator will review this transaction shortly." });
       setIsDisputeOpen(false);
     } catch (e) {
@@ -235,16 +271,20 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
   };
 
   const handleReturnSubmit = async () => {
-    if (!db || !user || !order || !returnReason.trim() || !orderRef) return;
+    if (!db || !user || !order || !returnReason.trim() || !functions) return;
     setIsProcessingReturn(true);
 
     try {
-      // If return is already approved, just mark as shipped
+      const updateStatus = httpsCallable(functions, 'updateOrderStatus');
+      
+      // If return is already approved, just mark as shipped with tracking
       if (order.status === 'Return Approved') {
-        await updateDoc(orderRef!, { 
-          status: 'Return Shipped', 
-          returnTrackingNumber: returnReason,
-          updatedAt: serverTimestamp() 
+        await updateStatus({
+          orderId: id,
+          updates: {
+            status: 'Return Shipped',
+            returnTrackingNumber: returnReason
+          }
         });
         toast({ title: 'Return Shipped', description: 'The seller has been notified. Awaiting confirmation of receipt.' });
       } else {
@@ -268,7 +308,15 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
         };
 
         await addDoc(collection(db, 'returns'), returnRequestData);
-        await updateDoc(orderRef!, { status: 'Return Requested', returnId, updatedAt: serverTimestamp() });
+        
+        // Update order status via callable
+        await updateStatus({
+          orderId: id,
+          updates: {
+            status: 'Return Requested',
+            returnId
+          }
+        });
         
         toast({ title: 'Return Requested', description: 'The seller has been notified. Awaiting approval...' });
         setReturnData(returnRequestData);
@@ -297,7 +345,7 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
       toast({ 
         variant: 'destructive', 
         title: 'Refund Failed',
-        description: error.message || 'Could not process refund. Please try again.'
+        description: getFriendlyErrorMessage(error)
       });
     } finally {
       setIsProcessingAction(false);
@@ -438,7 +486,7 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
                           {(order.status === 'Confirmed' || order.status === 'Processing') && (
                             <Button 
                               variant="outline" 
-                              onClick={() => handleUpdateStatus('Cancelled')} 
+                              onClick={handleCancelOrder} 
                               className="border-white/20 text-white hover:bg-red-600 hover:border-red-600 h-12 rounded-lg font-black uppercase text-[9px]"
                               disabled={isProcessingAction}
                             >
@@ -613,6 +661,38 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
                         </div>
                       )}
 
+                      {order.buyerCanCancel && order.status !== 'Shipped' && order.status !== 'Delivered' && isBuyer && (
+                        <div className="bg-gradient-to-r from-red-500 to-red-600 p-8 rounded-2xl border-2 border-red-700 space-y-4 shadow-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-white/20 p-3 rounded-full">
+                              <AlertTriangle className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-black uppercase tracking-tight text-white">Late Shipping - You Can Cancel</h3>
+                              <p className="text-sm text-white/90 font-medium">Seller has not provided carrier acceptance within 2 business days</p>
+                            </div>
+                          </div>
+                          <div className="bg-white/10 border-2 border-white/30 p-6 rounded-xl">
+                            <p className="text-sm text-white font-bold leading-relaxed mb-4">
+                              The seller was required to get this package <span className="underline">received by USPS/UPS/FedEx</span> within 2 business days of your payment. Since they missed this mandatory deadline, you are eligible for immediate cancellation with a full refund.
+                            </p>
+                            <ul className="text-xs text-white/90 font-medium space-y-2 list-disc pl-5 mb-4">
+                              <li>Full refund will be processed via Stripe within 3-5 business days</li>
+                              <li>The seller will receive penalties including tier downgrade and higher fees</li>
+                              <li>This is a zero-tolerance policy to ensure fast, reliable service for buyers</li>
+                            </ul>
+                          </div>
+                          <Button 
+                            onClick={handleCancelOrder}
+                            disabled={isProcessingAction}
+                            className="w-full bg-white text-red-600 hover:bg-white/90 h-16 rounded-xl font-black text-lg uppercase tracking-wide shadow-lg"
+                          >
+                            {isProcessingAction ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <XCircle className="w-5 h-5 mr-2" />}
+                            Cancel Order & Get Full Refund
+                          </Button>
+                        </div>
+                      )}
+
                       {order.status === 'Confirmed' && (
                         <div className="bg-zinc-50 p-8 rounded-2xl border-2 border-dashed flex flex-col items-center gap-4 text-center">
                           <h3 className="font-black uppercase text-sm">Change of heart?</h3>
@@ -621,7 +701,7 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
                             <TooltipTrigger asChild>
                               <Button 
                                 variant="outline" 
-                                onClick={() => handleUpdateStatus('Cancelled')}
+                                onClick={handleCancelOrder}
                                 className="rounded-xl font-bold gap-2 text-red-600 border-red-200 hover:bg-red-50"
                                 disabled={isProcessingAction}
                               >

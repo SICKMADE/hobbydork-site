@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Mail, Loader2, CheckCircle2, RefreshCw, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import Navbar from '@/components/Navbar';
 
 export default function VerifyEmailPage() {
@@ -33,7 +34,7 @@ export default function VerifyEmailPage() {
       await sendEmailVerification(user);
       toast({ title: "Email Sent", description: "A new verification link has been delivered." });
     } catch (error: any) {
-      toast({ variant: 'destructive', title: "Resend Failed", description: error.message });
+      toast({ variant: 'destructive', title: "Email Resend Failed", description: getFriendlyErrorMessage(error) });
     } finally {
       setIsResending(false);
     }
@@ -60,7 +61,7 @@ export default function VerifyEmailPage() {
         });
       }
     } catch (error: any) {
-      toast({ variant: 'destructive', title: "System Check Failed", description: error.message });
+      toast({ variant: 'destructive', title: "Verification Check Failed", description: getFriendlyErrorMessage(error) });
     } finally {
       setIsChecking(false);
     }

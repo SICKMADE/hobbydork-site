@@ -24,18 +24,19 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { useDoc, useFirestore, useUser, useMemoFirebase, useFunctions } from '@/firebase';
+import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { functions } from '@/firebase/client';
 import { doc, updateDoc, increment, collection, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
 export default function GiveawayDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { toast } = useToast();
   const db = useFirestore();
-  const functions = useFunctions();
   const { user } = useUser();
   const [isEntering, setIsEntering] = useState(false);
   const [hasEntered, setHasEntered] = useState(false);
@@ -152,7 +153,7 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
       toast({ 
         variant: 'destructive', 
         title: 'Error', 
-        description: error.message || 'Failed to draw winner' 
+        description: getFriendlyErrorMessage(error)
       });
     } finally {
       setIsDrawingWinner(false);

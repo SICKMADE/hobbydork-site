@@ -36,6 +36,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
 export default function ListingDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -108,12 +109,17 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
 
   if (!listing) return <div className="p-12 text-center text-muted-foreground font-black uppercase tracking-widest">Listing not found</div>;
 
+  const isAuction = listing.type === 'Auction';
+  const auctionEnded = isAuction && (isExpired || listing.status === 'Ended');
+  const isAuctionWinner = !!(user && listing.winnerUid === user.uid && listing.paymentStatus === 'PENDING');
+  const checkoutAmount = isAuction ? (listing.winningBid || listing.currentBid || listing.price) : listing.price;
+
   const handlePlaceBid = async () => {
     if (!user) {
       toast({ variant: 'destructive', title: 'Sign In Required', description: 'Please sign in to place a bid.' });
       return;
     }
-    if (isExpired) {
+    if (isExpired || listing.status === 'Ended' || listing.status === 'Sold') {
       toast({ variant: 'destructive', title: 'Auction Ended', description: 'No more bids are being accepted for this item.' });
       return;
     }
@@ -143,6 +149,11 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
         setIsBidding(false);
       })
       .catch(async (error) => {
+        toast({
+          variant: 'destructive',
+          title: 'Bid Failed',
+          description: getFriendlyErrorMessage(error)
+        });
         const permissionError = new FirestorePermissionError({
           path: `listings/${id}/bids`,
           operation: 'create',
@@ -187,31 +198,23 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
     }
     if (!listing || !db) return;
 
+    if (isAuction && !isAuctionWinner) {
+      toast({
+        variant: 'destructive',
+        title: 'Winner Payment Only',
+        description: 'Only the winning bidder can complete auction payment.',
+      });
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
       const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const amountCents = Math.round(Number(checkoutAmount) * 100);
       
-      const orderData = {
-        orderId,
-        buyerUid: user.uid,
-        buyerName: user.displayName || 'Buyer',
-        sellerUid: listing.sellerId,
-        sellerName: listing.sellerName || listing.seller,
-        listingId: listing.id,
-        listingTitle: listing.title,
-        price: listing.price,
-        amount: Math.round(listing.price * 100),
-        status: 'Confirmed',
-        state: 'Confirmed',
-        createdAt: serverTimestamp(),
-        imageUrl: listing.imageUrl,
-      };
-
-      await addDoc(collection(db, 'orders'), orderData).then((docRef) => {
-        setIsCheckoutOpen(false);
-        router.push(`/checkout?listing=${listing.id}`);
-      });
+      setIsCheckoutOpen(false);
+      router.push(`/checkout?listing=${listing.id}&order=${orderId}&amount=${amountCents}`);
     } catch (error) {
       console.error('Order creation error:', error);
       toast({ 
@@ -223,7 +226,6 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
     }
   };
 
-  const isAuction = listing.type === 'Auction';
   const listingImageUrl = listing.imageUrl?.trim();
 
   return (
@@ -235,12 +237,19 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
             <ArrowLeft className="w-4 h-4" />
             Back
           </Link>
-          <button 
-            onClick={() => setIsReportDialogOpen(true)}
-            className="text-muted-foreground hover:text-red-600 gap-2 font-black uppercase text-[9px] md:text-[10px] flex items-center"
-          >
-            <Flag className="w-3.5 h-3.5" /> Report
-          </button>
+          <div className="flex items-center gap-3">
+            {user && listing.sellerId === user.uid && (
+              <Link href={`/listings/${id}/edit`} className="text-muted-foreground hover:text-accent gap-2 font-black uppercase text-[9px] md:text-[10px] flex items-center">
+                ✎ Edit
+              </Link>
+            )}
+            <button 
+              onClick={() => setIsReportDialogOpen(true)}
+              className="text-muted-foreground hover:text-red-600 gap-2 font-black uppercase text-[9px] md:text-[10px] flex items-center"
+            >
+              <Flag className="w-3.5 h-3.5" /> Report
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6 lg:gap-12">
@@ -278,7 +287,26 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
                   <ShieldCheck className="w-3.5 h-3.5" />
                   Verified
                 </span>
+                {listing.condition && (
+                  <span className="text-muted-foreground font-medium text-[9px] tracking-widest uppercase">
+                    Condition: {listing.condition}
+                  </span>
+                )}
+                {listing.isGraded && listing.gradingCompany && listing.gradingGrade && (
+                  <span className="text-accent font-black text-[9px] tracking-widest uppercase bg-accent/10 px-3 py-1 rounded-full">
+                    {listing.gradingCompany} {listing.gradingGrade}
+                  </span>
+                )}
               </div>
+              {listing.tags && listing.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {listing.tags.map((tag: string) => (
+                    <span key={tag} className="text-[9px] px-3 py-1 bg-secondary text-secondary-foreground rounded-full font-black uppercase tracking-widest">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             <Separator className="opacity-50" />
@@ -302,7 +330,7 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
                   <p className="text-[9px] md:text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">{isAuction ? 'Current Bid' : 'Price'}</p>
                   <p className="text-3xl md:text-5xl font-black text-primary">${(isAuction ? (listing.currentBid || listing.price) : listing.price).toLocaleString()}</p>
                 </div>
-                {isAuction && !isExpired && (
+                {isAuction && !auctionEnded && (
                   <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none px-3 py-1 font-black uppercase text-[8px] tracking-widest">
                     <Gavel className="w-3 h-3 mr-1" /> {listing.bidCount || 0} Bids
                   </Badge>
@@ -310,13 +338,13 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
               </div>
 
               {listing.status === 'Sold' ? (
-                <div className="bg-zinc-100 p-6 rounded-xl text-center border-2 border-dashed">
-                  <Badge className="bg-zinc-500 text-white mb-2 uppercase font-black">SOLD</Badge>
+                <div className="bg-zinc-100 dark:bg-zinc-900 p-6 rounded-xl text-center border-2 border-dashed">
+                  <Badge className="bg-zinc-500 dark:bg-zinc-800 text-white mb-2 uppercase font-black">SOLD</Badge>
                   <p className="font-bold text-zinc-500 uppercase text-xs">No longer available.</p>
                 </div>
               ) : isAuction ? (
                 <div className="space-y-4">
-                  {!isExpired ? (
+                  {!auctionEnded ? (
                     <div className="flex flex-col sm:flex-row gap-3">
                       <div className="relative flex-1">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
@@ -324,6 +352,16 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
                       </div>
                       <Button onClick={handlePlaceBid} disabled={isBidding} className="h-12 md:h-14 px-8 bg-accent text-white font-black rounded-xl hover:bg-accent/90 shadow-lg w-full sm:w-auto">
                         {isBidding ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Place Bid'}
+                      </Button>
+                    </div>
+                  ) : isAuctionWinner ? (
+                    <div className="space-y-3">
+                      <div className="bg-green-50 p-6 rounded-xl border-2 border-green-200 text-center">
+                        <p className="text-green-700 font-black uppercase text-xs tracking-widest mb-1">You won this auction</p>
+                        <p className="text-green-900 font-bold">Complete payment to finalize your order.</p>
+                      </div>
+                      <Button onClick={() => setIsCheckoutOpen(true)} className="w-full h-14 md:h-16 text-lg md:text-xl font-black bg-accent hover:bg-accent/90 text-white shadow-xl rounded-xl transition-all">
+                        Pay Winning Bid (${Number(checkoutAmount).toLocaleString()})
                       </Button>
                     </div>
                   ) : (
@@ -334,7 +372,67 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
                 </div>
               ) : (
                 <div className="space-y-3">
+                  {listing.quantity && listing.quantity > 0 && (
+                    <div className="bg-green-50 border-2 border-green-200 p-4 rounded-xl">
+                      <p className="text-green-700 font-black uppercase text-[9px] tracking-widest mb-1">In Stock</p>
+                      <p className="text-green-900 font-bold text-sm">{listing.quantity} {listing.quantity === 1 ? 'item' : 'items'} available</p>
+                    </div>
+                  )}
                   <Button onClick={() => setIsCheckoutOpen(true)} className="w-full h-14 md:h-16 text-lg md:text-xl font-black bg-accent hover:bg-accent/90 text-white shadow-xl rounded-xl transition-all">Buy It Now</Button>
+                  
+                  {/* Condition Warning - Prominent Position */}
+                  {listing.condition && (
+                    <div className={cn(
+                      "p-4 md:p-5 rounded-xl border-2 space-y-3",
+                      listing.isGraded 
+                        ? "bg-green-50 border-green-400 dark:bg-green-950/30 dark:border-green-700" 
+                        : "bg-yellow-50 border-yellow-400 dark:bg-yellow-950/30 dark:border-yellow-700"
+                    )}>
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className={cn(
+                          "w-5 h-5 mt-0.5 shrink-0 flex-shrink-0",
+                          listing.isGraded ? "text-green-700 dark:text-green-300" : "text-yellow-700 dark:text-yellow-300"
+                        )} />
+                        <div className="flex-1 min-w-0">
+                          <p className={cn(
+                            "text-xs font-black uppercase tracking-widest mb-1",
+                            listing.isGraded ? "text-green-900 dark:text-green-100" : "text-yellow-900 dark:text-yellow-100"
+                          )}>
+                            {listing.isGraded ? '✓ PROFESSIONALLY GRADED' : '⚠️ CONDITION: RAW (UNGRADED)'}
+                          </p>
+                          <p className={cn(
+                            "font-black text-base md:text-lg",
+                            listing.isGraded ? "text-green-900 dark:text-green-100" : "text-yellow-900 dark:text-yellow-100"
+                          )}>
+                            {listing.isGraded && listing.gradingCompany && listing.gradingGrade 
+                              ? `${listing.gradingCompany} ${listing.gradingGrade}` 
+                              : listing.condition}
+                          </p>
+
+                          {!listing.isGraded && ['Sports Cards', 'Comics', 'Trading Cards', 'Collectibles', 'Pokemon', 'Magic: The Gathering', 'Anime'].some(cat => listing.category?.includes(cat)) && (
+                            <div className="mt-3 space-y-2 text-xs">
+                              <p className="font-bold text-yellow-900 dark:text-yellow-200">
+                                ⚠️ <span className="font-black">RAW ITEMS 9/10 TIMES WON'T BE PERFECT</span> - Micro scratches, wear, and centering issues are common.
+                              </p>
+                              <p className="font-bold text-yellow-900 dark:text-yellow-200">
+                                💡 <span className="font-black">WANT PSA 10 / CGC 9.8?</span> Search for professionally graded items to guarantee the condition you need.
+                              </p>
+                              <p className="font-bold text-yellow-900 dark:text-yellow-200">
+                                ✋ <span className="font-black">BUYER ACCEPTS AS-IS</span> - No returns based on condition. Inspect photos carefully before buying.
+                              </p>
+                            </div>
+                          )}
+
+                          {listing.isGraded && (
+                            <p className="mt-3 text-xs font-bold text-green-900 dark:text-green-200">
+                              ✓ Officially verified by <span className="font-black">{listing.gradingCompany}</span> as <span className="font-black">{listing.gradingGrade}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <Button asChild variant="outline" className="w-full h-12 md:h-14 font-black border-2 rounded-xl gap-2 hover:bg-primary/5 transition-all text-primary">
                     <Link href={`/messages?seller=${listing.sellerName || listing.seller}`}>
                       <MessageCircle className="w-4 h-4" /> Message Seller
@@ -414,7 +512,7 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-black uppercase text-muted-foreground tracking-widest">Price</p>
-                  <p className="font-black text-2xl text-accent">${listing?.price}</p>
+                  <p className="font-black text-2xl text-accent">${Number(checkoutAmount).toLocaleString()}</p>
                 </div>
               </div>
               <Button onClick={handleProceedCheckout} disabled={isProcessing} className="w-full h-12 bg-accent hover:bg-accent/90 text-white font-black rounded-xl disabled:opacity-50">

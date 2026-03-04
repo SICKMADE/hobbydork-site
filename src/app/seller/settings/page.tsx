@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CATEGORIES } from '@/lib/mock-data';
 import { 
@@ -28,7 +29,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { cn, getRandomAvatar, filterProfanity } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -61,6 +62,7 @@ export default function StoreSettings() {
     selectedTheme: 'Default',
     bannerUrl: '',
     avatarUrl: '',
+    vacationMode: false,
   });
 
   const profileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
@@ -83,6 +85,7 @@ export default function StoreSettings() {
         selectedTheme: storeData.theme || 'Default',
         bannerUrl: storeData.bannerUrl || '',
         avatarUrl: storeData.avatarUrl || '',
+        vacationMode: !!storeData.vacationMode,
       });
     }
   }, [storeData]);
@@ -101,7 +104,7 @@ export default function StoreSettings() {
   };
 
   const handleSave = async () => {
-    if (!db || !storeRef) return;
+    if (!db || !storeRef || !user) return;
     setIsSaving(true);
 
     // Apply global profanity filter
@@ -116,9 +119,42 @@ export default function StoreSettings() {
         theme: formData.selectedTheme,
         bannerUrl: formData.bannerUrl,
         avatarUrl: formData.avatarUrl,
+        vacationMode: formData.vacationMode,
         updatedAt: serverTimestamp()
       });
-      toast({ title: "Storefront Updated", description: "Your changes are now live." });
+
+      const sellerListingsQuery = query(collection(db, 'listings'), where('sellerId', '==', user.uid));
+      const sellerListingsSnapshot = await getDocs(sellerListingsQuery);
+
+      if (!sellerListingsSnapshot.empty) {
+        let batch = writeBatch(db);
+        let operations = 0;
+
+        for (const listingDoc of sellerListingsSnapshot.docs) {
+          batch.update(listingDoc.ref, {
+            sellerOnVacation: formData.vacationMode,
+            updatedAt: serverTimestamp(),
+          });
+          operations += 1;
+
+          if (operations >= 450) {
+            await batch.commit();
+            batch = writeBatch(db);
+            operations = 0;
+          }
+        }
+
+        if (operations > 0) {
+          await batch.commit();
+        }
+      }
+
+      toast({
+        title: "Storefront Updated",
+        description: formData.vacationMode
+          ? "Vacation Mode is ON. Your listings are hidden from marketplace discovery."
+          : "Vacation Mode is OFF. Your listings are discoverable again.",
+      });
     } catch (e) {
       toast({ variant: 'destructive', title: "Update Failed" });
     } finally {
@@ -216,8 +252,13 @@ export default function StoreSettings() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center opacity-20"><Store className="w-12 h-12" /></div>
                     )}
+<<<<<<< HEAD
                     <label className="absolute inset-0 bg-white border-2 border-accent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-[2.5rem]">
                       <Camera className="w-6 h-6 text-accent" />
+=======
+                    <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                      <Camera className="w-6 h-6 text-white" />
+>>>>>>> 435fe9cdc7301fa7f1c3b01e62a2950cb8a7f276
                       <input type="file" accept="image/*" aria-label="Upload shop avatar" title="Upload shop avatar" className="hidden" onChange={(e) => handleFilePicker(e, 'avatarUrl')} />
                     </label>
                   </div>
@@ -235,6 +276,20 @@ export default function StoreSettings() {
               </h2>
               <Card className="border-none shadow-xl rounded-[2.5rem] overflow-hidden">
                 <CardContent className="p-8 space-y-6">
+                  <div className="flex items-center justify-between gap-4 rounded-xl border-2 p-4">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Vacation Mode</Label>
+                      <p className="text-xs font-bold text-muted-foreground leading-relaxed">
+                        Pause marketplace discovery while you are away. Buyers won't see your listings in browse/search.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.vacationMode}
+                      onCheckedChange={(checked) => setFormData({ ...formData, vacationMode: checked })}
+                      aria-label="Toggle vacation mode"
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Store Tagline</Label>
                     <Input 

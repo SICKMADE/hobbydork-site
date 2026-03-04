@@ -189,6 +189,8 @@ function HomeContent() {
     if (!listings) return [];
     let result = [...listings];
 
+    result = result.filter(l => !(l as any).sellerOnVacation);
+
     // Search filter
     if (searchQuery) {
       const q = searchQuery.toLowerCase();

@@ -8,7 +8,7 @@ export { setBlindBidAuctionImage } from "./blindBidder";
 export { stripeWebhook } from "./stripeWebhook";
 export { shippoWebhook } from "./shippoWebhook";
 export { dailySellerEnforcement } from "./dailySellerEnforcement";
-export { createAuction, placeBid, closeAuction } from "./auctions";
+export { createAuction, placeBid, closeAuction, closeListingAuctions } from "./auctions";
 export { endExpiredGiveaways, onCreateGiveaway, drawGiveawayWinner } from "./giveaway";
 import * as functions from "firebase-functions";
 
@@ -16,11 +16,12 @@ import * as functions from "firebase-functions";
 
 // Use environment variable for Stripe secret, fallback to functions.config for legacy support
 const stripeSecretParam = defineSecret("STRIPE_SECRET");
-const config = typeof functions.config === "object" ? functions.config as { stripe?: { secret?: string } } : {};
-const stripeSecret = stripeSecretParam.value() || process.env.STRIPE_SECRET || process.env.STRIPE_SECRET_KEY || (config.stripe && config.stripe.secret);
+
 /* ================= HELPERS ================= */
 
 function getStripeInstance() {
+  // Access secret inside the function, not at module load time (Firebase v2 requirement)
+  const stripeSecret = process.env.STRIPE_SECRET || process.env.STRIPE_SECRET_KEY;
   if (!stripeSecret) {
     throw new HttpsError("internal", "Stripe secret not set in Firebase config");
   }
@@ -29,9 +30,6 @@ function getStripeInstance() {
 function requireAuth(request: any) {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Auth required");
-  if (!request.auth || request.auth.token.email_verified !== true) {
-    throw new HttpsError("failed-precondition", "Email verification required");
-  }
   return uid;
 }
 
@@ -299,6 +297,9 @@ export const updateOrderStatus = onCall(async (request) => {
       "shippingLabelUrl",
       "estimatedDelivery",
       "feedback",
+      "returnTrackingNumber",
+      "returnId",
+      "carrier",
       "updatedAt"
     ];
     const updateKeys = Object.keys(updates);
@@ -372,6 +373,124 @@ export const updateOrderStatus = onCall(async (request) => {
  * Process refund for an order
  * Called when seller confirms return receipt and initiates refund
  */
+/**
+ * Cancel late order - Buyer can cancel if seller hasn't shipped within 2 business days
+ * Automatically refunds buyer and penalizes seller
+ */
+export const cancelLateOrder = onCall({ secrets: [stripeSecretParam] }, async (request) => {
+  try {
+    const uid = requireAuth(request);
+    const { orderId } = request.data;
+
+    if (!orderId) {
+      throw new HttpsError("invalid-argument", "Order ID required");
+    }
+
+    const orderRef = db.collection("orders").doc(orderId);
+    const orderSnap = await orderRef.get();
+    const order = orderSnap.data();
+
+    if (!order) {
+      throw new HttpsError("not-found", "Order not found");
+    }
+
+    // Only buyer can cancel their own order
+    if (order.buyerUid !== uid) {
+      throw new HttpsError("permission-denied", "Only buyer can cancel this order");
+    }
+
+    // Check if order is eligible for cancellation
+    // Allow if: (1) Order is still in Confirmed status (early cancel) OR (2) buyerCanCancel flag is set (late cancel)
+    const isEarlyCancel = order.status === "Confirmed";
+    const isLateCancel = order.buyerCanCancel === true;
+    
+    if (!isEarlyCancel && !isLateCancel) {
+      throw new HttpsError("failed-precondition", "Order is not eligible for cancellation. Buyers can cancel before processing starts or if seller fails to ship within 2 business days.");
+    }
+
+    // Can only cancel orders that haven't shipped yet
+    if (order.status === "SHIPPED" || order.status === "DELIVERED" || order.status === "CANCELLED" || order.status === "REFUNDED") {
+      throw new HttpsError("failed-precondition", "Order cannot be cancelled in current status");
+    }
+
+    const stripe = getStripeInstance();
+    
+    if (!order.stripePaymentIntentId) {
+      throw new HttpsError("failed-precondition", "No payment intent found for this order");
+    }
+
+    // Retrieve the payment intent to get the charge ID
+    const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId, {
+      expand: ['charges']
+    }) as any;
+    
+    if (!paymentIntent.charges || !paymentIntent.charges.data || paymentIntent.charges.data.length === 0) {
+      throw new HttpsError("failed-precondition", "No charge found for this payment intent");
+    }
+
+    const chargeId = paymentIntent.charges.data[0].id;
+    const refundAmount = Math.round(order.price * 100); // Convert to cents
+
+    // Create full refund in Stripe
+    const refund = await stripe.refunds.create({
+      charge: chargeId,
+      amount: refundAmount,
+      reason: 'requested_by_customer',
+      metadata: {
+        orderId: orderId,
+        cancellationReason: 'Late shipping - seller failed to ship within 48 hours'
+      }
+    });
+
+    if (refund.status !== "succeeded") {
+      throw new HttpsError("internal", "Refund processing failed");
+    }
+
+    const cancellationReason = isEarlyCancel 
+      ? "Buyer cancelled before seller started processing"
+      : "Late shipping - no tracking after 2 business days";
+
+    // Update order status to Cancelled with refund info
+    await orderRef.update({
+      status: "CANCELLED",
+      cancelledBy: "buyer",
+      cancellationReason,
+      refundId: refund.id,
+      refundAmount: order.price,
+      refundDate: admin.firestore.FieldValue.serverTimestamp(),
+      cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Send notifications
+    await sendNotification(order.buyerUid, "ORDER", "Order Cancelled & Refunded", `Order #${orderId.substring(0, 8)} has been cancelled. Your refund of $${order.price} will appear in 3-5 business days.`, orderId);
+    
+    const sellerNotificationTitle = isLateCancel ? "Order Cancelled for Late Shipping" : "Order Cancelled";
+    const sellerNotificationMessage = isLateCancel 
+      ? `Order #${orderId.substring(0, 8)} was cancelled by the buyer due to late shipping. This affects your seller rating.`
+      : `Order #${orderId.substring(0, 8)} was cancelled by the buyer.`;
+    
+    await sendNotification(order.sellerUid, "ORDER", sellerNotificationTitle, sellerNotificationMessage, orderId);
+
+    // Log the cancellation
+    const auditAction = isLateCancel ? "order-cancelled-late-shipping" : "order-cancelled-by-buyer";
+    await logAudit(auditAction, {
+      orderId,
+      buyerId: uid,
+      sellerId: order.sellerUid,
+      amount: order.price,
+      stripeRefundId: refund.id,
+      reason: cancellationReason,
+      timestamp: new Date().toISOString()
+    });
+
+    return { ok: true, refundId: refund.id, message: "Order cancelled and refund processed" };
+  } catch (error) {
+    await logError(error instanceof Error ? error : String(error), { function: "cancelLateOrder" });
+    throw error;
+  }
+});
+
 export const processRefund = onCall({ secrets: [stripeSecretParam] }, async (request) => {
   try {
     const uid = requireAuth(request);
@@ -716,3 +835,72 @@ export const calculateSellerTier = onCall(async (request) => {
     throw error;
   }
 });
+
+export const moderateListingOnWrite = functions.firestore
+  .document("listings/{listingId}")
+  .onWrite(async (change, context) => {
+    const after = change.after.exists ? change.after.data() : null;
+    if (!after) return null;
+
+    const title = String(after.title || "");
+    const description = String(after.description || "");
+    const combinedText = `${title} ${description}`.toLowerCase();
+    const tags = Array.isArray(after.tags) ? after.tags : [];
+
+    const reasons: string[] = [];
+
+    if (/(https?:\/\/|www\.|t\.me|telegram|whatsapp|dm me|text me|contact me)/i.test(combinedText)) {
+      reasons.push("external-contact");
+    }
+
+    if (/(.)\1{6,}/.test(combinedText)) {
+      reasons.push("repeated-characters");
+    }
+
+    if (tags.length > 20) {
+      reasons.push("excessive-tags");
+    }
+
+    const alphaChars = title.replace(/[^A-Za-z]/g, "");
+    const uppercaseChars = alphaChars.replace(/[^A-Z]/g, "");
+    if (alphaChars.length >= 20 && uppercaseChars.length / alphaChars.length > 0.7) {
+      reasons.push("excessive-uppercase");
+    }
+
+    const nextModerationStatus = reasons.length > 0 ? "FLAGGED" : "APPROVED";
+    const shouldHide = reasons.length > 0;
+
+    const moderationUnchanged =
+      after.moderationStatus === nextModerationStatus &&
+      JSON.stringify(after.moderationReasons || []) === JSON.stringify(reasons) &&
+      (!shouldHide || after.visibility === "Invisible");
+
+    if (moderationUnchanged) {
+      return null;
+    }
+
+    const patch: Record<string, any> = {
+      moderationStatus: nextModerationStatus,
+      moderationReasons: reasons,
+      moderatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (shouldHide) {
+      patch.visibility = "Invisible";
+    }
+
+    await change.after.ref.update(patch);
+
+    if (shouldHide && after.sellerId) {
+      await sendNotification(
+        String(after.sellerId),
+        "LISTING_MODERATION",
+        "Listing flagged for review",
+        "Your listing was temporarily hidden while moderation reviews it.",
+        context.params.listingId
+      );
+    }
+
+    return null;
+  });

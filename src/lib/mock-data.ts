@@ -1,9 +1,3 @@
-// Utility function to check if a Buy It Now listing is expired
-export function isListingExpired(listing: Listing): boolean {
-  if (!listing.endsAt || listing.type !== 'Buy It Now') return false;
-  const expirationDate = listing.endsAt.toDate ? listing.endsAt.toDate() : new Date(listing.endsAt);
-  return new Date() > expirationDate;
-}
 export type Category = 'Watches' | 'Cards' | 'Coins' | 'Toys' | 'Stamps' | 'Comics' | 'Other';
 export type SellerTier = 'Bronze' | 'Silver' | 'Gold';
 
@@ -19,12 +13,29 @@ export interface Listing {
   sellerName?: string;
   buyer?: string;
   status: 'Active' | 'Sold' | 'Ended';
+  visibility?: 'Visible' | 'Invisible';
+  condition?: 'New' | 'Like New' | 'Used';
   type: 'Auction' | 'Buy It Now';
-  endsAt?: any; // Date or Timestamp
+  weight?: number | null;
+  length?: number | null;
+  width?: number | null;
+  height?: number | null;
+  shippingCost?: number | null;
+  expiresAt?: any; // Expiration date for Buy It Now
+  endsAt?: any;
   currentBid?: number;
   bidCount?: number;
   tags: string[];
   createdAt: any;
+  // Grading fields (category-specific)
+  isGraded?: boolean;
+  gradingCompany?: string;
+  gradingGrade?: string | number;
+  // Stock tracking for Buy It Now listings
+  quantity?: number; // Number of items available (default: 1)
+  winnerUid?: string | null;
+  winningBid?: number | null;
+  paymentStatus?: 'PENDING' | 'PAID' | null;
 }
 
 export interface Giveaway {
@@ -35,6 +46,7 @@ export interface Giveaway {
   seller: string;
   sellerId?: string;
   sellerName?: string;
+  winnerName?: string;
   status: 'Active' | 'Ended';
   endsAt: any;
   entriesCount: number;
@@ -71,6 +83,32 @@ export interface PremiumProduct {
 }
 
 export const CATEGORIES: Category[] = ['Watches', 'Cards', 'Coins', 'Toys', 'Stamps', 'Comics', 'Other'];
+
+// Grading options by category
+export const GRADING_OPTIONS: Record<Category, { companies: string[]; grades: string[] } | null> = {
+  'Comics': {
+    companies: ['PSA', 'CGC', 'CBCS'],
+    grades: ['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.2', '9.4', '9.6', '9.8', '10']
+  },
+  'Cards': {
+    companies: ['PSA', 'Beckett (BGS)', 'SGC'],
+    grades: ['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10']
+  },
+  'Coins': {
+    companies: ['PCGS', 'NGC', 'CCCS'],
+    grades: ['1', '2', '3', '4', '6', '8', '10', '12', '15', '20', '25', '30', '35', '40', '45', '50', '53', '55', '58', '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70']
+  },
+  'Toys': {
+    companies: ['None (Loose)', 'NRFB (Sealed)', 'MOSC (Sealed)'],
+    grades: ['Loose', 'Good', 'Excellent', 'Mint', 'Factory Sealed']
+  },
+  'Stamps': {
+    companies: ['None (Ungraded)', 'PSE', 'PSOG'],
+    grades: ['Poor', 'Fair', 'Good', 'Very Good', 'Fine', 'Very Fine', 'Extremely Fine', 'Superb']
+  },
+  'Watches': null, // Watches typically don't use formal grading
+  'Other': null
+};
 
 export const LISTINGS: Listing[] = [
   {
@@ -190,3 +228,11 @@ export const PREMIUM_PRODUCTS: PremiumProduct[] = [
     category: 'Utility'
   }
 ];
+
+// Utility function to check if a Buy It Now listing is expired
+export function isListingExpired(listing: Listing): boolean {
+  if (!listing.expiresAt || listing.type !== 'Buy It Now') return false;
+  
+  const expirationDate = listing.expiresAt.toDate ? listing.expiresAt.toDate() : new Date(listing.expiresAt);
+  return new Date() > expirationDate;
+}

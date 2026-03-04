@@ -1,4 +1,4 @@
-import { isListingExpired } from '@/lib/mock-data';
+import { CATEGORIES, isListingExpired } from '@/lib/mock-data';
 'use client';
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
@@ -26,7 +26,6 @@ import {
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
 import type { Listing, Category } from '@/lib/mock-data';
-import { CATEGORIES } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 
@@ -71,16 +70,13 @@ function ListingsContent() {
     if (!listings) return [];
     let result = [...listings] as Listing[];
 
-    result = result.filter(l => !isListingExpired(l));
-    // Always filter out expired listings
-    // Make sure isListingExpired is imported from '@/lib/mock-data'
-    // import { isListingExpired } from '@/lib/mock-data';
-    result = result.filter(l => !isListingExpired(l));
+// Always filter out expired listings
+result = result.filter(l => !isListingExpired(l));
 
-    // Only filter out sold listings if showSold is false
-    if (!showSold) {
-      result = result.filter(l => l.status !== 'Sold');
-    }
+// Only filter out sold listings if showSold is false
+if (!showSold) {
+  result = result.filter(l => l.status !== 'Sold');
+}
 
     if (initialQuery) {
       const q = initialQuery.toLowerCase();

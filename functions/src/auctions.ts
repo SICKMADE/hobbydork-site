@@ -239,4 +239,63 @@ export const closeAuction = functions.pubsub.schedule('every 5 minutes').onRun(a
   return null;
 });
 
+export const closeListingAuctions = functions.pubsub.schedule('every 5 minutes').onRun(async () => {
+  const now = admin.firestore.Timestamp.now();
+  const listingsSnap = await db
+    .collection('listings')
+    .where('type', '==', 'Auction')
+    .where('status', '==', 'Active')
+    .where('endsAt', '<=', now)
+    .get();
+
+  for (const listingDoc of listingsSnap.docs) {
+    const listingRef = listingDoc.ref;
+    const listingData = listingDoc.data();
+
+    const bidsSnap = await listingRef.collection('bids').orderBy('amount', 'desc').limit(1).get();
+    let winnerUid: string | null = null;
+    let winningBid: number | null = null;
+
+    if (!bidsSnap.empty) {
+      const topBid = bidsSnap.docs[0].data();
+      winnerUid = (topBid.bidderUid || topBid.bidderId || null) as string | null;
+      winningBid = Number(topBid.amount ?? listingData.currentBid ?? listingData.price ?? 0);
+    }
+
+    await listingRef.update({
+      status: 'Ended',
+      winnerUid,
+      winningBid,
+      paymentStatus: winnerUid ? 'PENDING' : null,
+      endedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    if (winnerUid) {
+      await db.collection('users').doc(winnerUid).collection('notifications').add({
+        type: 'AUCTION_WON',
+        listingId: listingDoc.id,
+        title: 'You won an auction!',
+        body: `Pay $${Number(winningBid || 0).toFixed(2)} to complete your purchase.`,
+        amount: winningBid,
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    if (listingData?.sellerId) {
+      await db.collection('users').doc(String(listingData.sellerId)).collection('notifications').add({
+        type: 'AUCTION_CLOSED',
+        listingId: listingDoc.id,
+        winnerUid,
+        amount: winningBid,
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  return null;
+});
+
 // Additional logic for fee processing, notifications, etc. can be added here.

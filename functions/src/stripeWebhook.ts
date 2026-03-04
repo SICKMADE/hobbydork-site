@@ -281,20 +281,47 @@ export const stripeWebhook = onRequest(
           buyerUid: buyerUid,
         });
 
-        // If we have listing ID, get seller info and mark listing as sold
+        // If we have listing ID, get seller info and finalize listing state
         if (listingId) {
           const listingSnap = await db.collection("listings").doc(listingId).get();
           const listingData = listingSnap.data();
           const sellerUid = listingData?.sellerId;
           const listingTitle = listingData?.title;
 
-          // Mark listing as sold
+          // Mark listing sold / decrement stock
           if (listingSnap.exists) {
-            await db.collection("listings").doc(listingId).update({
-              sold: true,
-              soldAt: admin.firestore.FieldValue.serverTimestamp(),
-              soldTo: buyerUid,
-              orderId: orderId,
+            const listingRef = db.collection("listings").doc(listingId);
+            await db.runTransaction(async (tx) => {
+              const latestSnap = await tx.get(listingRef);
+              const latest = latestSnap.data() as any;
+              if (!latestSnap.exists || !latest) return;
+
+              const listingUpdates: Record<string, any> = {
+                sold: true,
+                soldAt: admin.firestore.FieldValue.serverTimestamp(),
+                soldTo: buyerUid,
+                orderId: orderId,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              };
+
+              if (latest.type === "Buy It Now") {
+                const quantity = Number(latest.quantity ?? 1);
+                const nextQuantity = Math.max(0, quantity - 1);
+                listingUpdates.quantity = nextQuantity;
+                if (nextQuantity === 0) {
+                  listingUpdates.status = "Sold";
+                  listingUpdates.visibility = "Invisible";
+                }
+              }
+
+              if (latest.type === "Auction") {
+                listingUpdates.status = "Sold";
+                listingUpdates.paymentStatus = "PAID";
+                listingUpdates.winnerUid = buyerUid;
+                listingUpdates.winningBid = Number(latest.winningBid ?? latest.currentBid ?? latest.price ?? 0);
+              }
+
+              tx.update(listingRef, listingUpdates);
             });
           }
 

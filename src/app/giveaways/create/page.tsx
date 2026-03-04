@@ -30,6 +30,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import Link from 'next/link';
 import { filterProfanity } from '@/lib/utils';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
 export default function CreateGiveaway() {
   const { toast } = useToast();
@@ -138,6 +139,11 @@ export default function CreateGiveaway() {
         router.push('/dashboard');
       })
       .catch(async (error) => {
+        toast({
+          variant: 'destructive',
+          title: 'Giveaway Creation Failed',
+          description: getFriendlyErrorMessage(error)
+        });
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: 'giveaways',
           operation: 'create',
