@@ -34,6 +34,10 @@ export default function CreateListing() {
   const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
 
   const [loading, setLoading] = useState(false);
+  // AI Grading state
+  const [aiType, setAiType] = useState<string | null>(null);
+  const [aiCondition, setAiCondition] = useState<any>(null);
+  const [aiGradingOptIn, setAiGradingOptIn] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -313,12 +317,21 @@ export default function CreateListing() {
 
   const runAiAssistant = async () => {
     if (!photos.length) return;
+    if (isGraded) {
+      toast({ title: 'AI grading skipped for encapsulated/graded items.' });
+      setAiType(null);
+      setAiCondition(null);
+      return;
+    }
     setLoading(true);
     try {
       // Use the first photo for AI suggestions
       const result = await suggestListingDetails({ photoDataUri: photos[0] });
       setDescription(result.description);
       setTags(result.tags);
+      // Store AI type and condition in state for later save
+      setAiType(result.type);
+      setAiCondition(result.condition);
       toast({ title: 'Listing suggestions applied.' });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Suggestions failed.' });
@@ -389,7 +402,9 @@ export default function CreateListing() {
         expiresAt: type === 'bin' ? new Date(Date.now() + 1000 * 60 * 60 * 24 * 30) : null, // 30 days for Buy It Now
         currentBid: type === 'auction' ? parseFloat(price) : null,
         bidCount: 0,
-        endsAt: type === 'auction' ? new Date(Date.now() + 1000 * 60 * 60 * 24 * 7) : null
+        endsAt: type === 'auction' ? new Date(Date.now() + 1000 * 60 * 60 * 24 * 7) : null,
+        aiType: aiType || null,
+        aiCondition: aiCondition || null,
       };
       addDoc(collection(db, 'listings'), listingData)
         .then(async () => {
@@ -530,8 +545,36 @@ export default function CreateListing() {
         </header>
 
         <form onSubmit={handleSubmit} className="grid gap-12 lg:grid-cols-[1fr_350px]">
+                  {/* AI Grading Opt-In Toggle */}
+                  <div className="flex items-center gap-3 mb-2">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={aiGradingOptIn}
+                        onChange={e => setAiGradingOptIn(e.target.checked)}
+                        className="accent-accent w-5 h-5 rounded focus:ring-2 focus:ring-accent focus:ring-offset-2 dark:focus:ring-offset-background"
+                      />
+                      <span className="font-bold text-sm">Enable AI Condition Grading <span className="ml-1 px-2 py-0.5 rounded bg-accent/10 text-accent text-xs font-black">BETA</span></span>
+                    </label>
+                    <span
+                      className="ml-2 text-xs text-muted-foreground relative group"
+                      tabIndex={0}
+                      aria-label="AI grading info"
+                    >
+                      <span className="underline decoration-dotted cursor-pointer">What is this?</span>
+                      <span className="ai-grading-tooltip absolute left-1/2 z-20 w-64 -translate-x-1/2 mt-2 px-4 py-3 rounded-lg shadow-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs font-medium border border-accent opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto group-focus:pointer-events-auto">
+                        <strong>AI Condition Grading (BETA):</strong><br/>
+                        This feature uses artificial intelligence to analyze your uploaded photos and generate an unbiased, third-party condition assessment based on industry standards. <br/><br/>
+                        <span className="font-bold">Why opt in?</span> It helps buyers trust your listing and protects you from unfair returns. <br/><br/>
+                        <span className="font-bold">Beta Notice:</span> This feature is still being improved. If you see an error, you can dispute the AI grading after publishing your listing.
+                      </span>
+                    </span>
+                  </div>
           <div className="space-y-12">
             <section className="space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 p-3 rounded text-sm text-blue-900 dark:text-blue-100 mb-2">
+                <strong>Photo Tips for AI Grading:</strong> Position your item with good lighting, avoid glare, and show all corners/edges clearly. For chrome cards, tilt the card to reveal surface scratches. For comics, show the spine and cover close-up. If the AI requests more angles, follow its suggestions for optimal results. The more clear, well-angled photos you provide, the more accurate your AI grading will be.
+              </div>
               <Label className="text-xs font-black uppercase tracking-widest">Item Photos</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {photos.length > 0 ? (

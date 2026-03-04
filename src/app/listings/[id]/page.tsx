@@ -50,12 +50,46 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
   const [isBidding, setIsBidding] = useState(false);
   
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  // AI Feedback dialog state
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
+  const [aiFeedbackText, setAiFeedbackText] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [aiAccuracy, setAiAccuracy] = useState('');
+  const [aiImageClarity, setAiImageClarity] = useState('');
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   const [isExpired, setIsExpired] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState('');
+
+  // Submit feedback to Firestore
+  const handleSubmitFeedback = async () => {
+    if (!user || !db || !listing || !aiAccuracy || !aiImageClarity) return;
+    setIsSubmittingFeedback(true);
+    try {
+      await addDoc(collection(db, 'aiFeedback'), {
+        listingId: listing.id,
+        userId: user.uid,
+        username: user.displayName || user.email || 'Anonymous',
+        feedback: aiFeedbackText.trim(),
+        aiType: listing.aiType || null,
+        aiCondition: listing.aiCondition || null,
+        aiAccuracy,
+        aiImageClarity,
+        createdAt: serverTimestamp(),
+      });
+      setAiFeedbackText('');
+      setAiAccuracy('');
+      setAiImageClarity('');
+      setIsFeedbackDialogOpen(false);
+      toast({ title: 'Thank you for your feedback!' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Failed to submit feedback.' });
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
 
   const listingRef = useMemoFirebase(() => {
     if (!db || !id) return null;
@@ -449,16 +483,73 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
               </TabsList>
               <TabsContent value="description" className="py-4 md:py-6 text-sm md:text-base text-muted-foreground font-medium">
                 <p className="leading-relaxed">{listing.description}</p>
-                {listing.aiNotes && (
-                  <>
-                    <div className="mt-4 p-4 bg-yellow-50 border-l-4 border-accent rounded">
-                      <div className="text-xs text-muted-foreground mb-1">
-                        <strong>Note:</strong> If this listing includes AI-generated condition notes, this feature is in <span className="font-bold text-accent">beta</span>. Suggestions are provided to assist, but may not be fully accurate. Please review all AI notes carefully before relying on them.
-                      </div>
-                      <div className="text-sm text-zinc-800 whitespace-pre-line">{listing.aiNotes}</div>
+                {(listing.aiType || listing.aiCondition) && (
+                  <div className="mt-4 p-4 bg-yellow-50 border-l-4 border-accent rounded">
+                    <div className="text-xs text-muted-foreground mb-1">
+                      <strong>AI Condition Analysis:</strong> This feature is in <span className="font-bold text-accent">beta</span>. AI-generated notes are for guidance only. Please review all details and photos carefully before relying on them.
                     </div>
-                  </>
-                )}
+                    {listing.aiType && (
+                      <div className="mb-2 text-blue-900 font-bold">Type: <span className="font-semibold">{listing.aiType}</span></div>
+                    )}
+                    {listing.aiCondition && typeof listing.aiCondition === 'object' && (
+                      <div className="space-y-1">
+                        <div><span className="font-bold">Overall Condition:</span> {listing.aiCondition.overallCondition}</div>
+                        <div><span className="font-bold">Surface:</span> {listing.aiCondition.surface}</div>
+                        <div><span className="font-bold">Edges:</span> {listing.aiCondition.edges}</div>
+                        <div><span className="font-bold">Centering:</span> {listing.aiCondition.centering}</div>
+                        <div><span className="font-bold">Grading Standard:</span> {listing.aiCondition.gradingStandardReference}</div>
+                        <div><span className="font-bold">Confidence:</span> {(listing.aiCondition.confidence * 100).toFixed(1)}%</div>
+                        {listing.aiCondition.inconsistencies && (
+                          <div className="text-red-700"><span className="font-bold">Inconsistencies:</span> {listing.aiCondition.inconsistencies}</div>
+                        )}
+                      </div>
+                    )}
+                    {/* Feedback Button */}
+                    {user && !listing.isGraded && (
+                      <div className="mt-4">
+                        <Button variant="outline" size="sm" onClick={() => setIsFeedbackDialogOpen(true)}>
+                          Report AI Grading Issue
+                        </Button>
+                      </div>
+                    )}
+                  <Dialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
+                    <DialogContent className="max-w-md">
+                      <DialogTitle>Report AI Grading Issue</DialogTitle>
+                      <div className="space-y-4 mt-2">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 p-3 rounded text-sm text-blue-900 dark:text-blue-100 mb-2">
+                          <strong>Photo Tips:</strong> For best AI grading results, position your item with good lighting, avoid glare, and show all corners/edges clearly. For chrome cards, tilt the card to reveal surface scratches. For comics, show the spine and cover close-up. If the AI requests more angles, follow its suggestions for optimal results.
+                        </div>
+                        <div>
+                          <Label htmlFor="ai-accuracy">Was the AI grade accurate?</Label>
+                          <select id="ai-accuracy" title="Was the AI grade accurate?" value={aiAccuracy} onChange={e => setAiAccuracy(e.target.value)} className="w-full border rounded px-2 py-1">
+                            <option value="">Select...</option>
+                            <option value="accurate">Accurate</option>
+                            <option value="somewhat">Somewhat Accurate</option>
+                            <option value="inaccurate">Inaccurate</option>
+                          </select>
+                        </div>
+                        <div>
+                          <Label htmlFor="ai-image">Were the image requirements clear?</Label>
+                          <select id="ai-image" title="Were the image requirements clear?" value={aiImageClarity} onChange={e => setAiImageClarity(e.target.value)} className="w-full border rounded px-2 py-1">
+                            <option value="">Select...</option>
+                            <option value="clear">Clear</option>
+                            <option value="unclear">Unclear</option>
+                          </select>
+                        </div>
+                        <div>
+                          <Label htmlFor="ai-feedback">Additional comments (optional):</Label>
+                          <Textarea id="ai-feedback" value={aiFeedbackText} onChange={e => setAiFeedbackText(e.target.value)} rows={3} />
+                        </div>
+                      </div>
+                      <div className="flex justify-end mt-4">
+                        <Button onClick={handleSubmitFeedback} disabled={isSubmittingFeedback || !aiAccuracy || !aiImageClarity}>
+                          {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              )}
               </TabsContent>
               {isAuction && (
                 <TabsContent value="bids" className="py-4 md:py-6 space-y-4">

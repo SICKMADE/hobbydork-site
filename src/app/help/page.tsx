@@ -5,6 +5,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Search, ShoppingBag, ShieldCheck, HelpCircle, MessageSquare, PlusCircle, AlertTriangle, ArrowRight, UserCheck, Clock, Package, Gavel, Gift, Users, Trophy, Repeat } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const AiGradingHelpSection = dynamic(() => import('./AiGradingHelpSection'), { ssr: false });
 import Link from 'next/link';
 
 export default function HelpPage() {
@@ -45,6 +48,20 @@ export default function HelpPage() {
                       Yes! When you search or browse a category, you can use the filter panel to set price ranges and distinguish between standard listings and auctions. You can also look for top-ranked sellers on the Trust Board.
                     </AccordionContent>
                   </AccordionItem>
+                </Accordion>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* AI Grading (Beta) Help Section */}
+          <section className="space-y-6">
+            <h2 className="text-2xl font-headline font-black uppercase flex items-center gap-3">
+              <Trophy className="w-6 h-6 text-accent" /> AI Grading (Beta)
+            </h2>
+            <Card className="border-none shadow-sm">
+              <CardContent className="p-6">
+                <Accordion type="single" collapsible className="w-full">
+                  <AiGradingHelpSection />
                 </Accordion>
               </CardContent>
             </Card>

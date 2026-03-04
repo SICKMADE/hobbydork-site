@@ -1,5 +1,5 @@
+"use client";
 import { CATEGORIES, isListingExpired } from '@/lib/mock-data';
-'use client';
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';

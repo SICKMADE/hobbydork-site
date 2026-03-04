@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { ErrorBoundary } from './ErrorBoundary';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,12 +13,27 @@ import { collection, query, where, orderBy, doc, updateDoc, deleteDoc } from 'fi
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
-export default function ModerationDashboard() {
+function ModerationDashboard() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // Delete AI feedback
+  const handleDeleteAiFeedback = async (feedbackId: string) => {
+    try {
+      await deleteDoc(doc(db!, 'aiFeedback', feedbackId));
+      toast({ title: 'Feedback deleted' });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to delete feedback', variant: 'destructive' });
+    }
+  };
+  // Fetch AI grading feedback
+  const aiFeedbackQuery = db
+    ? query(collection(db, 'aiFeedback'), orderBy('createdAt', 'desc'))
+    : null;
+  const { data: aiFeedback, isLoading: aiFeedbackLoading } = useCollection(aiFeedbackQuery);
 
   // Check if user is admin
   useEffect(() => {
@@ -88,11 +104,66 @@ export default function ModerationDashboard() {
         </div>
 
         <Tabs defaultValue="reports" className="w-full space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-xl grid-cols-4">
             <TabsTrigger value="reports">Reports</TabsTrigger>
             <TabsTrigger value="sellers">Flagged Sellers</TabsTrigger>
+            <TabsTrigger value="ai-feedback">AI Grading Feedback</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
+        <TabsContent value="ai-feedback" className="space-y-4">
+          {aiFeedbackLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-accent" />
+            </div>
+          ) : !aiFeedback || aiFeedback.length === 0 ? (
+            <Card className="p-8 text-center bg-green-50 border-green-200">
+              <Check className="w-8 h-8 text-green-600 mx-auto mb-3" />
+              <p className="text-green-900 font-bold">No AI grading feedback</p>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {(aiFeedback || []).map((fb: any) => (
+                <Card key={fb.id} className="p-6 border-blue-200 bg-blue-50/50">
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black text-blue-900 mb-1">{fb.feedback}</p>
+                        <p className="text-xs text-blue-700 mb-1">From: <span className="font-bold">{fb.username}</span></p>
+                        <p className="text-xs text-blue-700 mb-1">Listing: <span className="font-bold">{fb.listingId}</span></p>
+                        {fb.aiType && <p className="text-xs text-blue-700">AI Type: <span className="font-bold">{fb.aiType}</span></p>}
+                        {fb.aiCondition && typeof fb.aiCondition === 'object' && (
+                          <div className="text-xs text-blue-700 mt-1">
+                            <div>AI Condition: <span className="font-bold">{fb.aiCondition.overallCondition}</span></div>
+                            <div>Confidence: {(fb.aiCondition.confidence * 100).toFixed(1)}%</div>
+                          </div>
+                        )}
+                        <p className="text-xs text-blue-500 mt-2">{fb.createdAt?.toDate ? fb.createdAt.toDate().toLocaleString() : ''}</p>
+                      </div>
+                      <div className="flex flex-col gap-2 items-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => window.open(`/listings/${fb.listingId}`)}
+                        >
+                          <Eye className="w-4 h-4" /> View Listing
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => handleDeleteAiFeedback(fb.id)}
+                        >
+                          <Trash2 className="w-4 h-4" /> Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
           <TabsContent value="reports" className="space-y-4">
             {reportsLoading ? (
@@ -106,7 +177,7 @@ export default function ModerationDashboard() {
               </Card>
             ) : (
               <div className="grid gap-4">
-                {reports.map((report: any) => (
+                {(reports || []).map((report: any) => (
                   <Card key={report.id} className="p-6 border-orange-200 bg-orange-50/50">
                     <div className="space-y-4">
                       <div className="flex items-start justify-between">
@@ -224,7 +295,7 @@ export default function ModerationDashboard() {
               <Card className="p-6">
                 <p className="text-sm font-bold text-muted-foreground mb-2">Pending Reports</p>
                 <p className="text-3xl font-black text-accent">
-                  {reports?.filter((r: any) => r.status === 'pending').length || 0}
+                  {(reports || []).filter((r: any) => r.status === 'pending').length || 0}
                 </p>
               </Card>
               <Card className="p-6">
@@ -244,5 +315,13 @@ export default function ModerationDashboard() {
         </Tabs>
       </main>
     </div>
+  );
+}
+
+export default function ModerationDashboardWithBoundary(props: any) {
+  return (
+    <ErrorBoundary>
+      <ModerationDashboard {...props} />
+    </ErrorBoundary>
   );
 }

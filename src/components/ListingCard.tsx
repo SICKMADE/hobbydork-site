@@ -68,22 +68,14 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
   return (
     <Link href={`/listings/${listing.id}`}>
       <Card className={cn(
-<<<<<<< HEAD
-        "group overflow-hidden transition-all duration-500 border-none h-full flex flex-col",
-        cardPadding,
-        isComicBook && "bg-white border-[4px] border-black rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] text-black",
-        isNeonSyndicate && "bg-zinc-900 border border-cyan-500/20 rounded-none shadow-[0_0_20px_rgba(34,211,238,0.05)] hover:border-cyan-500/50 hover:shadow-[0_0_30px_rgba(34,211,238,0.15)] text-white",
-        isUrban && "bg-slate-100 border-[3px] border-slate-900 rounded-none shadow-[6px_6px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none text-slate-950",
-        isHobbyShop && "bg-white rounded-[1.8rem] shadow-2xl p-0 border-none ring-4 ring-white/20 overflow-hidden",
-        (!isComicBook && !isNeonSyndicate && !isUrban && !isHobbyShop) && "bg-card rounded-2xl shadow-md hover:shadow-xl",
-=======
-        "group overflow-hidden transition-all duration-500 border-none h-full flex flex-col p-2 rounded-lg",
-        isComicBook && "bg-white border-[2px] border-black rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] text-black",
-        isNeonSyndicate && "bg-zinc-900 border border-cyan-500/20 rounded-none shadow-[0_0_10px_rgba(34,211,238,0.05)] hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(34,211,238,0.15)] text-white",
-        isUrban && "bg-slate-100 border-[2px] border-slate-900 rounded-none shadow-[3px_3px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none text-slate-950",
-        isHobbyShop && "bg-white rounded-lg shadow-lg p-0 border-none ring-2 ring-white/20 overflow-hidden",
-        (!isComicBook && !isNeonSyndicate && !isUrban && !isHobbyShop) && "bg-card rounded-lg shadow-sm hover:shadow-md",
->>>>>>> 435fe9cdc7301fa7f1c3b01e62a2950cb8a7f276
+  "group overflow-hidden transition-all duration-500 border-none h-full flex flex-col",
+  cardPadding,
+  isComicBook && "bg-white border-[4px] border-black rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] text-black",
+  isNeonSyndicate && "bg-zinc-900 border border-cyan-500/20 rounded-none shadow-[0_0_20px_rgba(34,211,238,0.05)] hover:border-cyan-500/50 hover:shadow-[0_0_30px_rgba(34,211,238,0.15)] text-white",
+  isUrban && "bg-slate-100 border-[3px] border-slate-900 rounded-none shadow-[6px_6px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none text-slate-950",
+  isHobbyShop && "bg-white rounded-[1.8rem] shadow-2xl p-0 border-none ring-4 ring-white/20 overflow-hidden",
+  (!isComicBook && !isNeonSyndicate && !isUrban && !isHobbyShop) && "bg-card rounded-2xl shadow-md hover:shadow-xl",
+  (isEnded || listing.status === 'Sold') && "opacity-80 grayscale-[0.5]"
         (isEnded || listing.status === 'Sold') && "opacity-80 grayscale-[0.5]"
       )}>
         {isHobbyShop && (
@@ -156,19 +148,11 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
           <CardContent className="p-2 flex-1 flex flex-col overflow-hidden">
             <div className="mb-1">
               <h3 className={cn(
-<<<<<<< HEAD
                 "font-headline font-black line-clamp-1 leading-tight uppercase px-2 sm:px-4 py-1 sm:py-2 block w-fit transition-all",
                 titleSize,
                 isComicBook && "text-black bg-yellow-400 border-4 border-black skew-x-[-6deg] drop-shadow-[4px_4px_0px_#ddd]",
                 isNeonSyndicate && "text-white tracking-[0.2em] italic border-b border-cyan-500/30 pb-1 mb-2 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]",
                 isUrban && "text-slate-950 bg-slate-200 border-2 border-slate-900 font-mono p-2 skew-y-1",
-=======
-                "font-headline text-base font-black line-clamp-1 leading-tight uppercase px-2 py-1 block w-fit transition-all",
-                isComicBook && "text-black bg-yellow-400 border-2 border-black skew-x-[-6deg] drop-shadow-[2px_2px_0px_#ddd]",
-                isNeonSyndicate && "text-white tracking-[0.2em] italic border-b border-cyan-500/30 pb-1 mb-1 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]",
-                isUrban && "text-slate-950 bg-slate-200 border font-mono p-1 skew-y-1",
->>>>>>> 435fe9cdc7301fa7f1c3b01e62a2950cb8a7f276
-                (!isComicBook && !isNeonSyndicate && !isUrban) && "text-primary"
               )}>{listing.title || 'Untitled Item'}</h3>
             </div>
             

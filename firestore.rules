@@ -114,6 +114,8 @@ service cloud.firestore {
       
       allow create: if userIsSeller() && userIsActive() && isVerified() && 
         request.resource.data.sellerId == uid() &&
+        // Prevent sellers from setting aiType or aiCondition
+        !("aiType" in request.resource.data) && !("aiCondition" in request.resource.data) &&
         // Validate required fields
         request.resource.data.title != null && request.resource.data.title is string &&
         request.resource.data.price != null && request.resource.data.price >= 0 &&
@@ -136,8 +138,18 @@ service cloud.firestore {
         // Validate quantity if present (for Buy It Now listings)
         (!('quantity' in request.resource.data) || request.resource.data.quantity == null || (request.resource.data.quantity is number && request.resource.data.quantity >= 1));
       
-      allow update: if (userIsSeller() && resource.data.sellerId == uid()) || userIsStaff() &&
-        request.resource.data.sellerId == resource.data.sellerId &&
+      allow update: if (
+        // Only staff or backend can update aiType/aiCondition
+        (
+          userIsStaff() && request.resource.data.sellerId == resource.data.sellerId
+        ) ||
+        // Sellers can update if not touching aiType/aiCondition
+        (
+          userIsSeller() && resource.data.sellerId == uid() &&
+          (!('aiType' in request.resource.data) || request.resource.data.aiType == resource.data.aiType) &&
+          (!('aiCondition' in request.resource.data) || request.resource.data.aiCondition == resource.data.aiCondition)
+        )
+      ) &&
         // Validate updated fields
         (!('condition' in request.resource.data) || 
           request.resource.data.condition in ['New', 'Like New', 'Used']) &&
