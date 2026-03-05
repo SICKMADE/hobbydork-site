@@ -239,55 +239,55 @@ function ModerationDashboard() {
           </TabsContent>
 
           <TabsContent value="sellers" className="space-y-4">
-            {sellersLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-accent" />
-              </div>
-            ) : !flaggedSellers || flaggedSellers.length === 0 ? (
-              <Card className="p-8 text-center bg-green-50 border-green-200">
-                <Check className="w-8 h-8 text-green-600 mx-auto mb-3" />
-                <p className="text-green-900 font-bold">No flagged sellers</p>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {flaggedSellers.map((seller: any) => (
-                  <Card key={seller.id} className="p-6 border-red-200 bg-red-50/50">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-black text-red-900 mb-1">{seller.displayName}</p>
-                          <p className="text-sm text-red-800">@{seller.displayName}</p>
-                          <p className="text-xs text-red-700 mt-2">
-                            Flags: <span className="font-black">{seller.flags}</span>
-                          </p>
+              {sellersLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-accent" />
+                </div>
+              ) : !flaggedSellers || flaggedSellers.length === 0 ? (
+                <Card className="p-8 text-center bg-green-50 border-green-200">
+                  <Check className="w-8 h-8 text-green-600 mx-auto mb-3" />
+                  <p className="text-green-900 font-bold">No flagged sellers</p>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {(flaggedSellers || []).map((seller: any) => (
+                    <Card key={seller.id} className="p-6 border-red-200 bg-red-50/50">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-black text-red-900 mb-1">{seller.displayName}</p>
+                            <p className="text-sm text-red-800">@{seller.displayName}</p>
+                            <p className="text-xs text-red-700 mt-2">
+                              Flags: <span className="font-black">{seller.flags}</span>
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-red-900">Violations</p>
+                            <p className="text-lg font-black text-red-600">{seller.flags}</p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-red-900">Violations</p>
-                          <p className="text-lg font-black text-red-600">{seller.flags}</p>
-                        </div>
-                      </div>
 
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(`/shop/${seller.displayName}`)}
-                        >
-                          View Shop
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleSuspendSeller(seller.id)}
-                        >
-                          Suspend Account
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`/shop/${seller.displayName}`)}
+                          >
+                            View Shop
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleSuspendSeller(seller.id)}
+                          >
+                            Suspend Account
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
+                    </Card>
+                  ))}
+                </div>
+              )}
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4">

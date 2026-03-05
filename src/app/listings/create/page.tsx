@@ -1,7 +1,11 @@
+
 'use client';
+import { ItemDetailsSection } from '@/components/ItemDetailsSection';
 
 import { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
+import { useAiGrading } from '@/ai/grading/useAiGrading';
+import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { CATEGORIES, GRADING_OPTIONS } from '@/lib/mock-data';
-import { Camera, Sparkles, Loader2, X, Truck, Calculator, Zap, Monitor, Info, ShieldCheck, Mail, ShieldAlert } from 'lucide-react';
+import { Camera, Sparkles, Loader2, X, Truck, Zap, Monitor, Info, ShieldCheck, Mail, ShieldAlert } from 'lucide-react';
+import { ShippingSection } from '@/components/ShippingSection';
+import { TagSection } from '@/components/TagSection';
 import { suggestListingDetails } from '@/ai/flows/ai-powered-listing-description-and-tags';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -24,122 +30,70 @@ import { cn, filterProfanity } from '@/lib/utils';
 import Link from 'next/link';
 
 export default function CreateListing() {
+      // AI Grading hook
+      const {
+        aiType,
+        aiCondition,
+        loading,
+        runAiAssistant,
+        setAiType,
+        setAiCondition,
+      } = useAiGrading();
+
+    // --- GLOBAL STATE & PROFILE LOGIC ---
+    const db = useFirestore();
+    const { user, isUserLoading: authLoading } = useUser();
+    const profileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
+    const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
+    const isDemo = typeof window !== 'undefined' && localStorage.getItem('hobbydork_demo_mode') === 'true';
+    const isVerified = !!(profile?.emailVerified && profile?.status === 'ACTIVE');
+    const isSeller = !!(profile?.isSeller || isDemo);
+    const isSuspended = profile?.status === 'BANNED' || profile?.status === 'SUSPENDED';
+  // ...existing code...
+  // Profile and account status logic
+    // Form state hooks
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [category, setCategory] = useState('');
+    const [price, setPrice] = useState('');
+    const [type, setType] = useState('bin');
+    const [condition, setCondition] = useState<'New' | 'Like New' | 'Used'>('Used');
+    const [tags, setTags] = useState<string[]>([]);
+    const [newTag, setNewTag] = useState('');
+    const [visibility, setVisibility] = useState<'Visible' | 'Invisible'>('Visible');
+    const [isGraded, setIsGraded] = useState(false);
+    const [gradingCompany, setGradingCompany] = useState('');
+    const [gradingGrade, setGradingGrade] = useState('');
+    const [shippingType, setShippingType] = useState<'Free' | 'Paid'>('Free');
+    const [weight, setWeight] = useState('');
+    const [length, setLength] = useState('');
+    const [width, setWidth] = useState('');
+    const [height, setHeight] = useState('');
+    const [calculatedShippingCost, setCalculatedShippingCost] = useState<number | null>(null);
+    const [quantity, setQuantity] = useState('1');
+    const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+    const [draftSaveTime, setDraftSaveTime] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
-  const db = useFirestore();
-  const { user, isUserLoading: authLoading } = useUser();
   const videoRef = useRef<HTMLVideoElement>(null);
-  
-  const profileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
-  const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
 
-  const [loading, setLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
   // AI Grading state
-  const [aiType, setAiType] = useState<string | null>(null);
-  const [aiCondition, setAiCondition] = useState<any>(null);
   const [aiGradingOptIn, setAiGradingOptIn] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
-  const [photos, setPhotos] = useState<string[]>([]);
+  const {
+    photos,
+    setPhotos,
+    loading: photoLoading,
+    handlePhotoUpload,
+    removePhoto,
+  } = usePhotoUpload();
   const [showCamera, setShowCamera] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [price, setPrice] = useState('');
-  const [type, setType] = useState('bin');
-  const [condition, setCondition] = useState<'New' | 'Like New' | 'Used'>('Used');
-  const [tags, setTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState('');
-  const [visibility, setVisibility] = useState<'Visible' | 'Invisible'>('Visible');
-
-  // Grading fields (category-specific)
-  const [isGraded, setIsGraded] = useState(false);
-  const [gradingCompany, setGradingCompany] = useState('');
-  const [gradingGrade, setGradingGrade] = useState('');
-
-  const [shippingType, setShippingType] = useState<'Free' | 'Paid'>('Free');
-  const [weight, setWeight] = useState('');
-  const [length, setLength] = useState('');
-  const [width, setWidth] = useState('');
-  const [height, setHeight] = useState('');
-  const [calculatedShippingCost, setCalculatedShippingCost] = useState<number | null>(null);
-  const [quantity, setQuantity] = useState('1');
-
-  const isDemo = typeof window !== 'undefined' && localStorage.getItem('hobbydork_demo_mode') === 'true';
-  
-  // Security Rule Alignment: isVerified() requires emailVerified == true && status == ACTIVE
-  const isVerified = !!(profile?.emailVerified && profile?.status === 'ACTIVE');
-  // Security Rule Alignment: canSell() requires isVerified() && userIsSeller()
-  const isSeller = !!(profile?.isSeller || isDemo);
-  const isSuspended = profile?.status === 'BANNED' || profile?.status === 'SUSPENDED';
-
-  // Auto-save draft to localStorage
-  const [draftSaveTime, setDraftSaveTime] = useState<string | null>(null);
-  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
-
-  const applyDraft = (draft: any) => {
-    setTitle(draft.title || '');
-    setDescription(draft.description || '');
-    setCategory(draft.category || '');
-    setPrice(draft.price || '');
-    setType(draft.type || 'bin');
-    setCondition(draft.condition || 'Used');
-    setTags(draft.tags || []);
-    setVisibility(draft.visibility || 'Visible');
-    setShippingType(draft.shippingType || 'Free');
-    setWeight(draft.weight || '');
-    setLength(draft.length || '');
-    setWidth(draft.width || '');
-    setHeight(draft.height || '');
-    setIsGraded(draft.isGraded || false);
-    setGradingCompany(draft.gradingCompany || '');
-    setGradingGrade(draft.gradingGrade || '');
-    setQuantity(draft.quantity || '1');
-  };
-
-  // Load draft from localStorage first, then backend if needed
-  useEffect(() => {
-    if (isDraftLoaded) return;
-
-    const loadDraft = async () => {
-      let loadedDraft: any = null;
-
-      if (typeof window !== 'undefined') {
-        const savedDraft = localStorage.getItem('listing_draft');
-        if (savedDraft) {
-          try {
-            loadedDraft = JSON.parse(savedDraft);
-          } catch (e) {
-            console.error('Failed to parse local draft:', e);
-          }
-        }
-      }
-
-      if (!loadedDraft && user && db) {
-        try {
-          const draftRef = doc(db, 'users', user.uid, 'drafts', 'listing-create');
-          const draftSnap = await getDoc(draftRef);
-          if (draftSnap.exists()) {
-            loadedDraft = draftSnap.data();
-          }
-        } catch (e) {
-          console.error('Failed to load backend draft:', e);
-        }
-      }
-
-      if (loadedDraft) {
-        applyDraft(loadedDraft);
-      }
-
-      setIsDraftLoaded(true);
-    };
-
-    loadDraft();
-  }, [isDraftLoaded, user, db]);
-
-  // Auto-save draft to localStorage and backend on form change (debounced)
+// ...existing code...
+// Place the ItemDetailsSection usage after all useState hooks
   useEffect(() => {
     if (typeof window === 'undefined' || !isDraftLoaded) return;
 
@@ -230,72 +184,7 @@ export default function CreateListing() {
     setShowCamera(false);
   };
 
-  const compressImageForUpload = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const image = document.createElement('img');
-        image.onload = () => {
-          const canvas = document.createElement('canvas');
-          const maxDimension = 1600;
-          const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
-          canvas.width = Math.round(image.width * scale);
-          canvas.height = Math.round(image.height * scale);
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            reject(new Error('Failed to process image'));
-            return;
-          }
-          ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.85));
-        };
-        image.onerror = () => reject(new Error('Invalid image file'));
-        image.src = reader.result as string;
-      };
-      reader.onerror = () => reject(new Error('Failed to read image'));
-      reader.readAsDataURL(file);
-    });
-  };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    const allowedFormats = ['image/jpeg', 'image/png', 'image/webp'];
-    const MAX_SIZE = 5 * 1024 * 1024;
-    let newPhotos: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (!allowedFormats.includes(file.type)) {
-        toast({ 
-          variant: 'destructive', 
-          title: "Invalid Format", 
-          description: "Only JPEG, PNG, and WebP images are allowed."
-        });
-        continue;
-      }
-      if (file.size > MAX_SIZE) {
-        toast({ 
-          variant: 'destructive', 
-          title: "File Too Large", 
-          description: `Maximum file size is 5MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`
-        });
-        continue;
-      }
-      try {
-        const optimizedImage = await compressImageForUpload(file);
-        newPhotos.push(optimizedImage);
-      } catch (error) {
-        toast({
-          variant: 'destructive',
-          title: 'Image Processing Failed',
-          description: 'Could not process this image. Please try another photo.',
-        });
-      }
-    }
-    if (newPhotos.length > 0) {
-      setPhotos(prev => [...prev, ...newPhotos]);
-    }
-  };
 
   const uploadPhotoToStorage = async (photoDataUri: string, idx: number): Promise<string> => {
     if (!user) throw new Error('User not authenticated');
@@ -315,30 +204,6 @@ export default function CreateListing() {
     }
   };
 
-  const runAiAssistant = async () => {
-    if (!photos.length) return;
-    if (isGraded) {
-      toast({ title: 'AI grading skipped for encapsulated/graded items.' });
-      setAiType(null);
-      setAiCondition(null);
-      return;
-    }
-    setLoading(true);
-    try {
-      // Use the first photo for AI suggestions
-      const result = await suggestListingDetails({ photoDataUri: photos[0] });
-      setDescription(result.description);
-      setTags(result.tags);
-      // Store AI type and condition in state for later save
-      setAiType(result.type);
-      setAiCondition(result.condition);
-      toast({ title: 'Listing suggestions applied.' });
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Suggestions failed.' });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const calculateShipping = async () => {
     if (!weight || !length || !width || !height) return;
@@ -582,7 +447,7 @@ export default function CreateListing() {
                     {photos.map((photo, idx) => (
                       <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border-4 border-zinc-100 shadow-2xl group">
                         <Image src={photo} alt={`Preview ${idx + 1}`} fill className="object-cover" />
-                        <button type="button" title="Remove photo" aria-label="Remove photo" onClick={() => setPhotos(p => p.filter((_, i) => i !== idx))} className="absolute top-4 right-4 bg-zinc-950/50 text-white rounded-full p-2 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10"><X className="w-4 h-4" /></button>
+                        <button type="button" title="Remove photo" aria-label="Remove photo" onClick={() => removePhoto(idx)} className="absolute top-4 right-4 bg-zinc-950/50 text-white rounded-full p-2 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10"><X className="w-4 h-4" /></button>
                       </div>
                     ))}
                   </div>
@@ -617,7 +482,7 @@ export default function CreateListing() {
                 )}
               </div>
               {photos.length > 0 && (
-                <Button type="button" variant="outline" className="w-full h-14 gap-2 border-2 border-accent text-accent hover:bg-accent/5 rounded-xl font-black shadow-lg" onClick={runAiAssistant} disabled={loading}>
+                <Button type="button" variant="outline" className="w-full h-14 gap-2 border-2 border-accent text-accent hover:bg-accent/5 rounded-xl font-black shadow-lg" onClick={() => runAiAssistant(photos[0], isGraded, setDescription, setTags)} disabled={loading}>
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                   Use AI Suggestions
                 </Button>
@@ -741,47 +606,7 @@ export default function CreateListing() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest">Tags (Separate with Enter)</Label>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {tags.map((tag, idx) => (
-                    <div key={idx} className="bg-accent/20 text-accent font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm">
-                      {tag}
-                      <button type="button" aria-label={`Remove tag ${tag}`} title={`Remove tag ${tag}`} onClick={() => setTags(tags.filter((_, i) => i !== idx))} className="hover:opacity-70">
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input 
-                    type="text" 
-                    placeholder="Add a tag..." 
-                    className="h-12 rounded-xl border-2" 
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (newTag.trim() && !tags.includes(newTag.trim())) {
-                          setTags([...tags, newTag.trim()]);
-                          setNewTag('');
-                        }
-                      }
-                    }}
-                  />
-                  <Button 
-                    type="button"
-                    onClick={() => {
-                      if (newTag.trim() && !tags.includes(newTag.trim())) {
-                        setTags([...tags, newTag.trim()]);
-                        setNewTag('');
-                      }
-                    }}
-                    className="h-12 px-4 rounded-xl font-bold uppercase text-[10px]"
-                  >
-                    Add
-                  </Button>
-                </div>
+                <TagSection tags={tags} setTags={setTags} newTag={newTag} setNewTag={setNewTag} />
               </div>
 
               <div className="space-y-2">
@@ -811,38 +636,20 @@ export default function CreateListing() {
             </section>
 
             <section className="bg-zinc-50 p-8 rounded-2xl border-2 border-dashed space-y-8">
-              <div className="flex items-center gap-3">
-                <div className="bg-accent/10 p-3 rounded-xl"><Truck className="w-6 h-6 text-accent" /></div>
-                <div><h3 className="text-xl font-black uppercase tracking-tighter">Shipping</h3><p className="text-xs text-muted-foreground font-bold">Manage delivery options.</p></div>
-              </div>
-              <RadioGroup defaultValue="Free" className="grid grid-cols-2 gap-4" onValueChange={(val) => setShippingType(val as 'Free' | 'Paid')}>
-                {['Free', 'Paid'].map(t => (
-                  <div key={t} className={cn("flex flex-col gap-2 p-6 rounded-xl border-2 transition-all cursor-pointer", shippingType === t ? "bg-white border-accent shadow-lg" : "bg-transparent border-zinc-200")}>
-                    <RadioGroupItem value={t} id={`ship-${t}`} className="sr-only" />
-                    <Label htmlFor={`ship-${t}`} className="cursor-pointer flex flex-col gap-1">
-                      <span className="font-black uppercase tracking-widest text-xs">{t} Shipping</span>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-              {shippingType === 'Paid' && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest">Weight (lbs)</Label><Input type="number" className="h-12 rounded-xl border-2" value={weight} onChange={(e) => setWeight(e.target.value)} /></div>
-                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest">Dimensions</Label>
-                      <div className="flex gap-2">
-                        <Input placeholder="L" className="h-12 border-2" value={length} onChange={(e) => setLength(e.target.value)} />
-                        <Input placeholder="W" className="h-12 border-2" value={width} onChange={(e) => setWidth(e.target.value)} />
-                        <Input placeholder="H" className="h-12 border-2" value={height} onChange={(e) => setHeight(e.target.value)} />
-                      </div>
-                    </div>
-                  </div>
-                  <Button type="button" onClick={calculateShipping} disabled={isCalculatingShipping} className="w-full bg-zinc-950 text-white font-black rounded-xl h-14">
-                    {isCalculatingShipping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calculator className="w-4 h-4 mr-2" />}
-                    Calculate Shipping Rate
-                  </Button>
-                </div>
-              )}
+              <ShippingSection
+                shippingType={shippingType}
+                setShippingType={setShippingType}
+                weight={weight}
+                setWeight={setWeight}
+                length={length}
+                setLength={setLength}
+                width={width}
+                setWidth={setWidth}
+                height={height}
+                setHeight={setHeight}
+                isCalculatingShipping={isCalculatingShipping}
+                calculateShipping={calculateShipping}
+              />
             </section>
 
             <Button type="submit" disabled={isSubmitting} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black h-20 text-2xl rounded-2xl shadow-xl transition-all active:scale-95 uppercase italic tracking-tighter">
