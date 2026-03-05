@@ -33,13 +33,9 @@ export async function generateMetadata({
     }
 
     const listing = listingSnap.data();
-    const isGraded = listing.isGraded && listing.gradingCompany && listing.gradingGrade;
-    const gradeText = isGraded ? ` - ${listing.gradingCompany} ${listing.gradingGrade}` : '';
     const conditionText = listing.condition ? ` (${listing.condition})` : '';
-    
-    const title = `${listing.title}${gradeText || conditionText} - $${listing.price.toLocaleString()} | hobbydork`;
+    const title = `${listing.title}${conditionText} - $${listing.price.toLocaleString()} | hobbydork`;
     const description = listing.description || `${listing.title} available on hobbydork marketplace for $${listing.price.toLocaleString()}.`;
-    
     const imageUrl = listing.imageUrl?.trim() || '/hobbydork-main.png';
     const currentPrice = listing.type === 'Auction' ? (listing.currentBid || listing.price) : listing.price;
 
@@ -50,7 +46,6 @@ export async function generateMetadata({
         listing.title,
         listing.category,
         listing.condition,
-        listing.gradingCompany,
         'collectibles',
         'marketplace',
       ].filter(Boolean),

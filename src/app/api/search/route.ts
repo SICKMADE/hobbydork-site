@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const minPrice = searchParams.get('minPrice') ? parseInt(searchParams.get('minPrice')!) : 0;
     const maxPrice = searchParams.get('maxPrice') ? parseInt(searchParams.get('maxPrice')!) : 999999999;
     const condition = searchParams.get('condition') || '';
-    const isGraded = searchParams.get('graded') === 'true' ? true : searchParams.get('graded') === 'false' ? false : null;
+    // Grading parameter removed
     const sortBy = searchParams.get('sort') || 'newest'; // newest, price-low, price-high, trending
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = 20;
@@ -55,9 +55,7 @@ export async function GET(request: NextRequest) {
       constraints.push(where('condition', '==', condition));
     }
 
-    if (isGraded !== null) {
-      constraints.push(where('isGraded', '==', isGraded));
-    }
+    // Grading constraint removed
 
     // Sort
     let orderByConstraint: any[] = [];
@@ -92,9 +90,6 @@ export async function GET(request: NextRequest) {
         seller: data.sellerName || data.seller,
         type: data.type,
         currentBid: data.currentBid,
-        isGraded: data.isGraded,
-        gradingCompany: data.gradingCompany,
-        gradingGrade: data.gradingGrade,
         createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
       };
     });

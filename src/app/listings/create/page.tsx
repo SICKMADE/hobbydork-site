@@ -1,10 +1,8 @@
-
 'use client';
 import { ItemDetailsSection } from '@/components/ItemDetailsSection';
 
 import { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
-import { useAiGrading } from '@/ai/grading/useAiGrading';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,11 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { CATEGORIES, GRADING_OPTIONS } from '@/lib/mock-data';
+import { CATEGORIES } from '@/lib/mock-data';
 import { Camera, Sparkles, Loader2, X, Truck, Zap, Monitor, Info, ShieldCheck, Mail, ShieldAlert } from 'lucide-react';
 import { ShippingSection } from '@/components/ShippingSection';
 import { TagSection } from '@/components/TagSection';
-import { suggestListingDetails } from '@/ai/flows/ai-powered-listing-description-and-tags';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
@@ -30,19 +27,15 @@ import { cn, filterProfanity } from '@/lib/utils';
 import Link from 'next/link';
 
 export default function CreateListing() {
-      // AI Grading hook
-
-    // --- GLOBAL STATE & PROFILE LOGIC ---
-    const db = useFirestore();
-    const { user, isUserLoading: authLoading } = useUser();
-    const profileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
-    const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
-    const isDemo = typeof window !== 'undefined' && localStorage.getItem('hobbydork_demo_mode') === 'true';
-    const isVerified = !!(profile?.emailVerified && profile?.status === 'ACTIVE');
-    const isSeller = !!(profile?.isSeller || isDemo);
-    const isSuspended = profile?.status === 'BANNED' || profile?.status === 'SUSPENDED';
-  // ...existing code...
-  // Profile and account status logic
+      // --- GLOBAL STATE & PROFILE LOGIC ---
+      const db = useFirestore();
+      const { user, isUserLoading: authLoading } = useUser();
+      const profileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
+      const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
+      const isDemo = typeof window !== 'undefined' && localStorage.getItem('hobbydork_demo_mode') === 'true';
+      const isVerified = !!(profile?.emailVerified && profile?.status === 'ACTIVE');
+      const isSeller = !!(profile?.isSeller || isDemo);
+      const isSuspended = profile?.status === 'BANNED' || profile?.status === 'SUSPENDED';
     // Form state hooks
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -53,9 +46,6 @@ export default function CreateListing() {
     const [tags, setTags] = useState<string[]>([]);
     const [newTag, setNewTag] = useState('');
     const [visibility, setVisibility] = useState<'Visible' | 'Invisible'>('Visible');
-    const [isGraded, setIsGraded] = useState(false);
-    const [gradingCompany, setGradingCompany] = useState('');
-    const [gradingGrade, setGradingGrade] = useState('');
     const [shippingType, setShippingType] = useState<'Free' | 'Paid'>('Free');
     const [weight, setWeight] = useState('');
     const [length, setLength] = useState('');
@@ -70,7 +60,6 @@ export default function CreateListing() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const [formLoading, setFormLoading] = useState(false);
-  // AI Grading state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const {
@@ -83,8 +72,7 @@ export default function CreateListing() {
   const [showCamera, setShowCamera] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   
-// ...existing code...
-// Place the ItemDetailsSection usage after all useState hooks
+  // Profile and account status logic
   useEffect(() => {
     if (typeof window === 'undefined' || !isDraftLoaded) return;
 
@@ -103,9 +91,6 @@ export default function CreateListing() {
         length,
         width,
         height,
-        isGraded,
-        gradingCompany,
-        gradingGrade,
         quantity,
         timestamp: new Date().toISOString()
       };
@@ -128,7 +113,7 @@ export default function CreateListing() {
     }, 1000); // Save after 1 second of inactivity
 
     return () => clearTimeout(timer);
-  }, [title, description, category, price, type, condition, tags, visibility, shippingType, weight, length, width, height, isGraded, gradingCompany, gradingGrade, quantity, user, db, isDraftLoaded]);
+  }, [title, description, category, price, type, condition, tags, visibility, shippingType, weight, length, width, height, quantity, user, db, isDraftLoaded]);
 
   useEffect(() => {
     if (!authLoading && !profileLoading && !user) {
@@ -249,9 +234,6 @@ export default function CreateListing() {
         width: shippingType === 'Paid' ? parseFloat(width) || null : null, // Now saved
         height: shippingType === 'Paid' ? parseFloat(height) || null : null, // Now saved
         shippingCost: calculatedShippingCost || null, // Now saved
-        isGraded: isGraded,
-        gradingCompany: isGraded ? gradingCompany : null,
-        gradingGrade: isGraded ? gradingGrade : null,
         quantity: type === 'bin' ? Math.max(1, parseInt(quantity) || 1) : null, // Stock tracking for Buy It Now
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -259,8 +241,6 @@ export default function CreateListing() {
         currentBid: type === 'auction' ? parseFloat(price) : null,
         bidCount: 0,
         endsAt: type === 'auction' ? new Date(Date.now() + 1000 * 60 * 60 * 24 * 7) : null,
-        aiType: aiType || null,
-        aiCondition: aiCondition || null,
       };
       addDoc(collection(db, 'listings'), listingData)
         .then(async () => {
@@ -473,65 +453,6 @@ export default function CreateListing() {
                 </div>
               </div>
 
-              {/* Conditional Grading Section - Show if category has grading options */}
-              {GRADING_OPTIONS[category as keyof typeof GRADING_OPTIONS] && (
-                <div className="bg-accent/5 p-6 rounded-xl border-2 border-accent/20 space-y-4">
-                  <h3 className="font-black uppercase tracking-widest text-sm">Grading Information (Optional)</h3>
-                  
-                  <div className="flex items-center gap-4">
-                    <Label htmlFor="is-graded" className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        id="is-graded"
-                        type="checkbox"
-                        aria-label="Item is professionally graded"
-                        title="Item is professionally graded"
-                        checked={isGraded}
-                        onChange={(e) => {
-                          setIsGraded(e.target.checked);
-                          if (!e.target.checked) {
-                            setGradingCompany('');
-                            setGradingGrade('');
-                          }
-                        }}
-                        className="w-4 h-4 rounded border-2 cursor-pointer"
-                      />
-                      <span className="font-bold uppercase text-[10px] tracking-widest">Item is professionally graded</span>
-                    </Label>
-                  </div>
-
-                  {isGraded && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-black uppercase tracking-widest">Grading Company</Label>
-                        <Select value={gradingCompany} onValueChange={setGradingCompany}>
-                          <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
-                            <SelectValue placeholder="Select Company" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {GRADING_OPTIONS[category as keyof typeof GRADING_OPTIONS]?.companies.map(company => (
-                              <SelectItem key={company} value={company}>{company}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs font-black uppercase tracking-widest">Grade</Label>
-                        <Select value={gradingGrade} onValueChange={setGradingGrade}>
-                          <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
-                            <SelectValue placeholder="Select Grade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {GRADING_OPTIONS[category as keyof typeof GRADING_OPTIONS]?.grades.map(grade => (
-                              <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest">Pricing Model</Label>
@@ -634,14 +555,7 @@ export default function CreateListing() {
                     Misleading listings lead to immediate account suspension. Ensure your photos capture any defects or restoration.
                   </p>
                 </li>
-                <li className="space-y-2">
-                  <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase">
-                    <Info className="w-3 h-3" /> AI Suggestions
-                  </div>
-                  <p className="text-xs font-bold leading-relaxed">
-                    Upload a high-quality photo to unlock AI-generated tags and descriptions that help your item appear in search.
-                  </p>
-                </li>
+                {/* AI Suggestions section removed */}
               </ul>
             </div>
           </aside>

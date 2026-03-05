@@ -37,11 +37,9 @@ export async function ListingSchema({ listingId }: { listingId: string }) {
       sku: listingId,
       category: listing.category,
       ...(listing.condition && { 
-        condition: listing.isGraded ? `https://schema.org/${listing.gradingGrade}` : 'https://schema.org/UsedCondition'
+        condition: 'https://schema.org/UsedCondition'
       }),
-      ...(listing.isGraded && listing.gradingCompany && listing.gradingGrade && {
-        award: `${listing.gradingCompany} ${listing.gradingGrade}`
-      }),
+      // Grading fields removed
       offers: {
         '@type': 'Offer',
         url: `https://hobbydork.com/listings/${listingId}`,

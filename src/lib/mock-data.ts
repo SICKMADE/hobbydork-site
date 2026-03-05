@@ -27,10 +27,6 @@ export interface Listing {
   bidCount?: number;
   tags: string[];
   createdAt: any;
-  // Grading fields (category-specific)
-  isGraded?: boolean;
-  gradingCompany?: string;
-  gradingGrade?: string | number;
   // Stock tracking for Buy It Now listings
   quantity?: number; // Number of items available (default: 1)
   winnerUid?: string | null;
@@ -84,31 +80,7 @@ export interface PremiumProduct {
 
 export const CATEGORIES: Category[] = ['Watches', 'Cards', 'Coins', 'Toys', 'Stamps', 'Comics', 'Other'];
 
-// Grading options by category
-export const GRADING_OPTIONS: Record<Category, { companies: string[]; grades: string[] } | null> = {
-  'Comics': {
-    companies: ['PSA', 'CGC', 'CBCS'],
-    grades: ['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.2', '9.4', '9.6', '9.8', '10']
-  },
-  'Cards': {
-    companies: ['PSA', 'Beckett (BGS)', 'SGC'],
-    grades: ['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10']
-  },
-  'Coins': {
-    companies: ['PCGS', 'NGC', 'CCCS'],
-    grades: ['1', '2', '3', '4', '6', '8', '10', '12', '15', '20', '25', '30', '35', '40', '45', '50', '53', '55', '58', '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70']
-  },
-  'Toys': {
-    companies: ['None (Loose)', 'NRFB (Sealed)', 'MOSC (Sealed)'],
-    grades: ['Loose', 'Good', 'Excellent', 'Mint', 'Factory Sealed']
-  },
-  'Stamps': {
-    companies: ['None (Ungraded)', 'PSE', 'PSOG'],
-    grades: ['Poor', 'Fair', 'Good', 'Very Good', 'Fine', 'Very Fine', 'Extremely Fine', 'Superb']
-  },
-  'Watches': null, // Watches typically don't use formal grading
-  'Other': null
-};
+// Grading options removed
 
 export const LISTINGS: Listing[] = [
   {

@@ -138,39 +138,7 @@ function CheckoutContent() {
               </div>
 
               {/* Item Condition Section */}
-              {listing.condition && (
-                <div className={cn(
-                  "p-4 rounded-xl border-2 space-y-3",
-                  listing.isGraded 
-                    ? "bg-green-50/50 border-green-300" 
-                    : "bg-yellow-50/50 border-yellow-300"
-                )}>
-                  <div>
-                    <p className={cn(
-                      "text-xs font-black uppercase tracking-widest mb-1",
-                      listing.isGraded ? "text-green-900" : "text-yellow-900"
-                    )}>
-                      Item Condition
-                    </p>
-                    <p className={cn(
-                      "font-black text-sm",
-                      listing.isGraded ? "text-green-900" : "text-yellow-900"
-                    )}>
-                      {listing.isGraded && listing.gradingCompany && listing.gradingGrade 
-                        ? `${listing.gradingCompany} ${listing.gradingGrade} (GRADED)` 
-                        : `${listing.condition} (RAW)`}
-                    </p>
-                  </div>
-
-                  {!listing.isGraded && ['Sports Cards', 'Comics', 'Trading Cards', 'Collectibles', 'Pokemon', 'Magic: The Gathering', 'Anime'].some(cat => listing.category?.includes(cat)) && (
-                    <div className="bg-white/70 p-3 rounded-lg border border-yellow-200">
-                      <p className="text-xs font-bold text-yellow-900 leading-relaxed">
-                        <span className="font-black">⚠️ RAW ITEM:</span> This is an ungraded collectible. You accept the condition as-is. No returns based on condition. Check photos carefully.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Grading condition section removed */}
             </div>
 
             {error && (

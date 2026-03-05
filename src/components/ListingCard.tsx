@@ -169,12 +169,7 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
                 <p className={cn("text-[8px] uppercase font-black tracking-widest", isComicBook ? "text-black" : isNeonSyndicate ? "text-cyan-400/40" : isUrban ? "text-slate-500" : "text-zinc-500")}>{isAuction ? 'Current Bid' : 'Price'}</p>
                 <p className={cn("text-lg md:text-xl font-black transition-all", isComicBook && "text-black text-xl skew-x-[-3deg] drop-shadow-[1px_1px_0px_#ddd]", isNeonSyndicate && "text-white text-2xl italic tracking-tighter drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]", isUrban && "text-slate-950 font-mono text-xl", (!isComicBook && !isNeonSyndicate && !isUrban) && "text-primary")}>${price}</p>
               </div>
-              {listing.isGraded && listing.gradingCompany && listing.gradingGrade && (
-                <div className={cn("text-[8px] px-2 py-1 rounded text-center font-black uppercase tracking-widest flex flex-col items-center justify-center h-fit", isComicBook ? "bg-yellow-400 text-black border-2 border-black rounded-none" : isNeonSyndicate ? "bg-cyan-500/20 text-cyan-400 border border-cyan-400 rounded-none" : isUrban ? "bg-orange-600 text-white border-2 border-orange-600 rounded-none" : "bg-accent/20 text-accent border border-accent/30")}>
-                  <div className="leading-tight text-[7px]">{listing.gradingCompany}</div>
-                  <div className="font-black text-[9px]">{listing.gradingGrade}</div>
-                </div>
-              )}
+              {/* Grading badge removed */}
               {isAuction && (
                 <div className={cn(
                   "flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 uppercase tracking-widest transition-all",

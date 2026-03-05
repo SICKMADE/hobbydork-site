@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -114,8 +113,6 @@ service cloud.firestore {
       
       allow create: if userIsSeller() && userIsActive() && isVerified() && 
         request.resource.data.sellerId == uid() &&
-        // Prevent sellers from setting aiType or aiCondition
-        !("aiType" in request.resource.data) && !("aiCondition" in request.resource.data) &&
         // Validate required fields
         request.resource.data.title != null && request.resource.data.title is string &&
         request.resource.data.price != null && request.resource.data.price >= 0 &&
@@ -131,24 +128,11 @@ service cloud.firestore {
         (!('width' in request.resource.data) || request.resource.data.width == null || request.resource.data.width >= 0) &&
         (!('height' in request.resource.data) || request.resource.data.height == null || request.resource.data.height >= 0) &&
         (!('shippingCost' in request.resource.data) || request.resource.data.shippingCost == null || request.resource.data.shippingCost >= 0) &&
-        // Validate grading fields if present
-        (!('isGraded' in request.resource.data) || request.resource.data.isGraded is bool) &&
-        (!('gradingCompany' in request.resource.data) || request.resource.data.gradingCompany == null || request.resource.data.gradingCompany is string) &&
-        (!('gradingGrade' in request.resource.data) || request.resource.data.gradingGrade == null || (request.resource.data.gradingGrade is string || request.resource.data.gradingGrade is number)) &&
         // Validate quantity if present (for Buy It Now listings)
         (!('quantity' in request.resource.data) || request.resource.data.quantity == null || (request.resource.data.quantity is number && request.resource.data.quantity >= 1));
       
       allow update: if (
-        // Only staff or backend can update aiType/aiCondition
-        (
-          userIsStaff() && request.resource.data.sellerId == resource.data.sellerId
-        ) ||
-        // Sellers can update if not touching aiType/aiCondition
-        (
-          userIsSeller() && resource.data.sellerId == uid() &&
-          (!('aiType' in request.resource.data) || request.resource.data.aiType == resource.data.aiType) &&
-          (!('aiCondition' in request.resource.data) || request.resource.data.aiCondition == resource.data.aiCondition)
-        )
+        userIsSeller() && resource.data.sellerId == uid()
       ) &&
         // Validate updated fields
         (!('condition' in request.resource.data) || 
@@ -161,10 +145,6 @@ service cloud.firestore {
         (!('width' in request.resource.data) || request.resource.data.width == null || request.resource.data.width >= 0) &&
         (!('height' in request.resource.data) || request.resource.data.height == null || request.resource.data.height >= 0) &&
         (!('shippingCost' in request.resource.data) || request.resource.data.shippingCost == null || request.resource.data.shippingCost >= 0) &&
-        // Validate grading fields if present
-        (!('isGraded' in request.resource.data) || request.resource.data.isGraded is bool) &&
-        (!('gradingCompany' in request.resource.data) || request.resource.data.gradingCompany == null || request.resource.data.gradingCompany is string) &&
-        (!('gradingGrade' in request.resource.data) || request.resource.data.gradingGrade == null || (request.resource.data.gradingGrade is string || request.resource.data.gradingGrade is number)) &&
         // Validate quantity if present (for Buy It Now listings)
         (!('quantity' in request.resource.data) || request.resource.data.quantity == null || (request.resource.data.quantity is number && request.resource.data.quantity >= 1));
       

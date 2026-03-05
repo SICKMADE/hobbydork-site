@@ -20,20 +20,7 @@ function ModerationDashboard() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Delete AI feedback
-  const handleDeleteAiFeedback = async (feedbackId: string) => {
-    try {
-      await deleteDoc(doc(db!, 'aiFeedback', feedbackId));
-      toast({ title: 'Feedback deleted' });
-    } catch {
-      toast({ title: 'Error', description: 'Failed to delete feedback', variant: 'destructive' });
-    }
-  };
-  // Fetch AI grading feedback
-  const aiFeedbackQuery = db
-    ? query(collection(db, 'aiFeedback'), orderBy('createdAt', 'desc'))
-    : null;
-  const { data: aiFeedback, isLoading: aiFeedbackLoading } = useCollection(aiFeedbackQuery);
+
 
   // Check if user is admin
   useEffect(() => {
@@ -107,44 +94,54 @@ function ModerationDashboard() {
           <TabsList className="grid w-full max-w-xl grid-cols-4">
             <TabsTrigger value="reports">Reports</TabsTrigger>
             <TabsTrigger value="sellers">Flagged Sellers</TabsTrigger>
-            <TabsTrigger value="ai-feedback">AI Grading Feedback</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
-        <TabsContent value="ai-feedback" className="space-y-4">
-          {aiFeedbackLoading ? (
+        <TabsContent value="reports" className="space-y-4">
+          {reportsLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-accent" />
             </div>
-          ) : !aiFeedback || aiFeedback.length === 0 ? (
+          ) : !reports || reports.length === 0 ? (
             <Card className="p-8 text-center bg-green-50 border-green-200">
               <Check className="w-8 h-8 text-green-600 mx-auto mb-3" />
-              <p className="text-green-900 font-bold">No AI grading feedback</p>
+              <p className="text-green-900 font-bold">No pending reports</p>
             </Card>
           ) : (
             <div className="grid gap-4">
-              {(aiFeedback || []).map((fb: any) => (
-                <Card key={fb.id} className="p-6 border-blue-200 bg-blue-50/50">
-                  <div className="space-y-2">
+              {(reports || []).map((report: any) => (
+                <Card key={report.id} className="p-6 border-orange-200 bg-orange-50/50">
+                  <div className="space-y-4">
                     <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-black text-blue-900 mb-1">{fb.feedback}</p>
-                        <p className="text-xs text-blue-700 mb-1">From: <span className="font-bold">{fb.username}</span></p>
-                        <p className="text-xs text-blue-700 mb-1">Listing: <span className="font-bold">{fb.listingId}</span></p>
-                        {fb.aiType && <p className="text-xs text-blue-700">AI Type: <span className="font-bold">{fb.aiType}</span></p>}
-                        {fb.aiCondition && typeof fb.aiCondition === 'object' && (
-                          <div className="text-xs text-blue-700 mt-1">
-                            <div>AI Condition: <span className="font-bold">{fb.aiCondition.overallCondition}</span></div>
-                            <div>Confidence: {(fb.aiCondition.confidence * 100).toFixed(1)}%</div>
-                          </div>
-                        )}
-                        <p className="text-xs text-blue-500 mt-2">{fb.createdAt?.toDate ? fb.createdAt.toDate().toLocaleString() : ''}</p>
+                      <div className="flex items-start gap-3 flex-1">
+                        <AlertTriangle className="w-5 h-5 text-orange-600 mt-1 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-orange-900 mb-1">{report.reason}</p>
+                          <p className="text-sm text-orange-800 mb-2">{report.details}</p>
+                          <p className="text-xs text-orange-700">
+                            Reported by: <span className="font-bold">{report.reporterName}</span>
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex flex-col gap-2 items-end">
+                      <Badge
+                        variant={
+                          report.status === 'pending'
+                            ? 'destructive'
+                            : report.status === 'under-review'
+                            ? 'secondary'
+                            : 'outline'
+                        }
+                      >
+                        {report.status}
+                      </Badge>
+                    </div>
+
+                    {report.listingId && (
+                      <div className="flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           className="gap-2"
-                          onClick={() => window.open(`/listings/${fb.listingId}`)}
+                          onClick={() => window.open(`/listings/${report.listingId}`)}
                         >
                           <Eye className="w-4 h-4" /> View Listing
                         </Button>
@@ -152,91 +149,25 @@ function ModerationDashboard() {
                           variant="destructive"
                           size="sm"
                           className="gap-2"
-                          onClick={() => handleDeleteAiFeedback(fb.id)}
+                          onClick={() => handleRemoveListing(report.listingId, report.id)}
                         >
-                          <Trash2 className="w-4 h-4" /> Delete
+                          <Trash2 className="w-4 h-4" /> Remove
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleResolveReport(report.id)}
+                        >
+                          Resolve
                         </Button>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </Card>
               ))}
             </div>
           )}
         </TabsContent>
-
-          <TabsContent value="reports" className="space-y-4">
-            {reportsLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-accent" />
-              </div>
-            ) : !reports || reports.length === 0 ? (
-              <Card className="p-8 text-center bg-green-50 border-green-200">
-                <Check className="w-8 h-8 text-green-600 mx-auto mb-3" />
-                <p className="text-green-900 font-bold">No pending reports</p>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {(reports || []).map((report: any) => (
-                  <Card key={report.id} className="p-6 border-orange-200 bg-orange-50/50">
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3 flex-1">
-                          <AlertTriangle className="w-5 h-5 text-orange-600 mt-1 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-black text-orange-900 mb-1">{report.reason}</p>
-                            <p className="text-sm text-orange-800 mb-2">{report.details}</p>
-                            <p className="text-xs text-orange-700">
-                              Reported by: <span className="font-bold">{report.reporterName}</span>
-                            </p>
-                          </div>
-                        </div>
-                        <Badge
-                          variant={
-                            report.status === 'pending'
-                              ? 'destructive'
-                              : report.status === 'under-review'
-                              ? 'secondary'
-                              : 'outline'
-                          }
-                        >
-                          {report.status}
-                        </Badge>
-                      </div>
-
-                      {report.listingId && (
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                            onClick={() => window.open(`/listings/${report.listingId}`)}
-                          >
-                            <Eye className="w-4 h-4" /> View Listing
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="gap-2"
-                            onClick={() => handleRemoveListing(report.listingId, report.id)}
-                          >
-                            <Trash2 className="w-4 h-4" /> Remove
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleResolveReport(report.id)}
-                          >
-                            Resolve
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
 
           <TabsContent value="sellers" className="space-y-4">
               {sellersLoading ? (

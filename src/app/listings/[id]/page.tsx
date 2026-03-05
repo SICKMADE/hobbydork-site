@@ -50,46 +50,12 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
   const [isBidding, setIsBidding] = useState(false);
   
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
-  // AI Feedback dialog state
-  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
-  const [aiFeedbackText, setAiFeedbackText] = useState('');
-  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
-  const [aiAccuracy, setAiAccuracy] = useState('');
-  const [aiImageClarity, setAiImageClarity] = useState('');
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   const [isExpired, setIsExpired] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState('');
-
-  // Submit feedback to Firestore
-  const handleSubmitFeedback = async () => {
-    if (!user || !db || !listing || !aiAccuracy || !aiImageClarity) return;
-    setIsSubmittingFeedback(true);
-    try {
-      await addDoc(collection(db, 'aiFeedback'), {
-        listingId: listing.id,
-        userId: user.uid,
-        username: user.displayName || user.email || 'Anonymous',
-        feedback: aiFeedbackText.trim(),
-        aiType: listing.aiType || null,
-        aiCondition: listing.aiCondition || null,
-        aiAccuracy,
-        aiImageClarity,
-        createdAt: serverTimestamp(),
-      });
-      setAiFeedbackText('');
-      setAiAccuracy('');
-      setAiImageClarity('');
-      setIsFeedbackDialogOpen(false);
-      toast({ title: 'Thank you for your feedback!' });
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Failed to submit feedback.' });
-    } finally {
-      setIsSubmittingFeedback(false);
-    }
-  };
 
   const listingRef = useMemoFirebase(() => {
     if (!db || !id) return null;
@@ -326,11 +292,6 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
                     Condition: {listing.condition}
                   </span>
                 )}
-                {listing.isGraded && listing.gradingCompany && listing.gradingGrade && (
-                  <span className="text-accent font-black text-[9px] tracking-widest uppercase bg-accent/10 px-3 py-1 rounded-full">
-                    {listing.gradingCompany} {listing.gradingGrade}
-                  </span>
-                )}
               </div>
               {listing.tags && listing.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 pt-2">
@@ -413,60 +374,37 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
                     </div>
                   )}
                   <Button onClick={() => setIsCheckoutOpen(true)} className="w-full h-14 md:h-16 text-lg md:text-xl font-black bg-accent hover:bg-accent/90 text-white shadow-xl rounded-xl transition-all">Buy It Now</Button>
-                  
                   {/* Condition Warning - Prominent Position */}
                   {listing.condition && (
                     <div className={cn(
-                      "p-4 md:p-5 rounded-xl border-2 space-y-3",
-                      listing.isGraded 
-                        ? "bg-green-50 border-green-400 dark:bg-green-950/30 dark:border-green-700" 
-                        : "bg-yellow-50 border-yellow-400 dark:bg-yellow-950/30 dark:border-yellow-700"
+                      "p-4 md:p-5 rounded-xl border-2 space-y-3 bg-yellow-50 border-yellow-400 dark:bg-yellow-950/30 dark:border-yellow-700"
                     )}>
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className={cn(
-                          "w-5 h-5 mt-0.5 shrink-0 flex-shrink-0",
-                          listing.isGraded ? "text-green-700 dark:text-green-300" : "text-yellow-700 dark:text-yellow-300"
-                        )} />
+                        <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0 flex-shrink-0 text-yellow-700 dark:text-yellow-300" />
                         <div className="flex-1 min-w-0">
-                          <p className={cn(
-                            "text-xs font-black uppercase tracking-widest mb-1",
-                            listing.isGraded ? "text-green-900 dark:text-green-100" : "text-yellow-900 dark:text-yellow-100"
-                          )}>
-                            {listing.isGraded ? '✓ PROFESSIONALLY GRADED' : '⚠️ CONDITION: RAW (UNGRADED)'}
+                          <p className="text-xs font-black uppercase tracking-widest mb-1 text-yellow-900 dark:text-yellow-100">
+                            {'\u26a0\ufe0f CONDITION: RAW (UNGRADED)'}
                           </p>
-                          <p className={cn(
-                            "font-black text-base md:text-lg",
-                            listing.isGraded ? "text-green-900 dark:text-green-100" : "text-yellow-900 dark:text-yellow-100"
-                          )}>
-                            {listing.isGraded && listing.gradingCompany && listing.gradingGrade 
-                              ? `${listing.gradingCompany} ${listing.gradingGrade}` 
-                              : listing.condition}
+                          <p className="font-black text-base md:text-lg text-yellow-900 dark:text-yellow-100">
+                            {listing.condition}
                           </p>
-
-                          {!listing.isGraded && ['Sports Cards', 'Comics', 'Trading Cards', 'Collectibles', 'Pokemon', 'Magic: The Gathering', 'Anime'].some(cat => listing.category?.includes(cat)) && (
+                          {['Sports Cards', 'Comics', 'Trading Cards', 'Collectibles', 'Pokemon', 'Magic: The Gathering', 'Anime'].some(cat => listing.category?.includes(cat)) && (
                             <div className="mt-3 space-y-2 text-xs">
                               <p className="font-bold text-yellow-900 dark:text-yellow-200">
-                                ⚠️ <span className="font-black">RAW ITEMS 9/10 TIMES WON'T BE PERFECT</span> - Micro scratches, wear, and centering issues are common.
+                                {'\u26a0\ufe0f '}<span className="font-black">RAW ITEMS 9/10 TIMES WON'T BE PERFECT</span> - Micro scratches, wear, and centering issues are common.
                               </p>
                               <p className="font-bold text-yellow-900 dark:text-yellow-200">
-                                💡 <span className="font-black">WANT PSA 10 / CGC 9.8?</span> Search for professionally graded items to guarantee the condition you need.
+                                {'\ud83d\udca1 '}<span className="font-black">WANT PSA 10 / CGC 9.8?</span> Search for professionally graded items to guarantee the condition you need.
                               </p>
                               <p className="font-bold text-yellow-900 dark:text-yellow-200">
-                                ✋ <span className="font-black">BUYER ACCEPTS AS-IS</span> - No returns based on condition. Inspect photos carefully before buying.
+                                {'\u270b '}<span className="font-black">BUYER ACCEPTS AS-IS</span> - No returns based on condition. Inspect photos carefully before buying.
                               </p>
                             </div>
-                          )}
-
-                          {listing.isGraded && (
-                            <p className="mt-3 text-xs font-bold text-green-900 dark:text-green-200">
-                              ✓ Officially verified by <span className="font-black">{listing.gradingCompany}</span> as <span className="font-black">{listing.gradingGrade}</span>
-                            </p>
                           )}
                         </div>
                       </div>
                     </div>
                   )}
-
                   <Button asChild variant="outline" className="w-full h-12 md:h-14 font-black border-2 rounded-xl gap-2 hover:bg-primary/5 transition-all text-primary">
                     <Link href={`/messages?seller=${listing.sellerName || listing.seller}`}>
                       <MessageCircle className="w-4 h-4" /> Message Seller
@@ -483,73 +421,6 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
               </TabsList>
               <TabsContent value="description" className="py-4 md:py-6 text-sm md:text-base text-muted-foreground font-medium">
                 <p className="leading-relaxed">{listing.description}</p>
-                {(listing.aiType || listing.aiCondition) && (
-                  <div className="mt-4 p-4 bg-yellow-50 border-l-4 border-accent rounded">
-                    <div className="text-xs text-muted-foreground mb-1">
-                      <strong>AI Condition Analysis:</strong> This feature is in <span className="font-bold text-accent">beta</span>. AI-generated notes are for guidance only. Please review all details and photos carefully before relying on them.
-                    </div>
-                    {listing.aiType && (
-                      <div className="mb-2 text-blue-900 font-bold">Type: <span className="font-semibold">{listing.aiType}</span></div>
-                    )}
-                    {listing.aiCondition && typeof listing.aiCondition === 'object' && (
-                      <div className="space-y-1">
-                        <div><span className="font-bold">Overall Condition:</span> {listing.aiCondition.overallCondition}</div>
-                        <div><span className="font-bold">Surface:</span> {listing.aiCondition.surface}</div>
-                        <div><span className="font-bold">Edges:</span> {listing.aiCondition.edges}</div>
-                        <div><span className="font-bold">Centering:</span> {listing.aiCondition.centering}</div>
-                        <div><span className="font-bold">Grading Standard:</span> {listing.aiCondition.gradingStandardReference}</div>
-                        <div><span className="font-bold">Confidence:</span> {(listing.aiCondition.confidence * 100).toFixed(1)}%</div>
-                        {listing.aiCondition.inconsistencies && (
-                          <div className="text-red-700"><span className="font-bold">Inconsistencies:</span> {listing.aiCondition.inconsistencies}</div>
-                        )}
-                      </div>
-                    )}
-                    {/* Feedback Button */}
-                    {user && !listing.isGraded && (
-                      <div className="mt-4">
-                        <Button variant="outline" size="sm" onClick={() => setIsFeedbackDialogOpen(true)}>
-                          Report AI Grading Issue
-                        </Button>
-                      </div>
-                    )}
-                  <Dialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
-                    <DialogContent className="max-w-md">
-                      <DialogTitle>Report AI Grading Issue</DialogTitle>
-                      <div className="space-y-4 mt-2">
-                        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 p-3 rounded text-sm text-blue-900 dark:text-blue-100 mb-2">
-                          <strong>Photo Tips:</strong> For best AI grading results, position your item with good lighting, avoid glare, and show all corners/edges clearly. For chrome cards, tilt the card to reveal surface scratches. For comics, show the spine and cover close-up. If the AI requests more angles, follow its suggestions for optimal results.
-                        </div>
-                        <div>
-                          <Label htmlFor="ai-accuracy">Was the AI grade accurate?</Label>
-                          <select id="ai-accuracy" title="Was the AI grade accurate?" value={aiAccuracy} onChange={e => setAiAccuracy(e.target.value)} className="w-full border rounded px-2 py-1">
-                            <option value="">Select...</option>
-                            <option value="accurate">Accurate</option>
-                            <option value="somewhat">Somewhat Accurate</option>
-                            <option value="inaccurate">Inaccurate</option>
-                          </select>
-                        </div>
-                        <div>
-                          <Label htmlFor="ai-image">Were the image requirements clear?</Label>
-                          <select id="ai-image" title="Were the image requirements clear?" value={aiImageClarity} onChange={e => setAiImageClarity(e.target.value)} className="w-full border rounded px-2 py-1">
-                            <option value="">Select...</option>
-                            <option value="clear">Clear</option>
-                            <option value="unclear">Unclear</option>
-                          </select>
-                        </div>
-                        <div>
-                          <Label htmlFor="ai-feedback">Additional comments (optional):</Label>
-                          <Textarea id="ai-feedback" value={aiFeedbackText} onChange={e => setAiFeedbackText(e.target.value)} rows={3} />
-                        </div>
-                      </div>
-                      <div className="flex justify-end mt-4">
-                        <Button onClick={handleSubmitFeedback} disabled={isSubmittingFeedback || !aiAccuracy || !aiImageClarity}>
-                          {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              )}
               </TabsContent>
               {isAuction && (
                 <TabsContent value="bids" className="py-4 md:py-6 space-y-4">

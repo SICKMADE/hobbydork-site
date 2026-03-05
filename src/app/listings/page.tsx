@@ -43,7 +43,7 @@ function ListingsContent() {
   const [listingType, setListingType] = useState(searchParams?.get('type') || 'all');
   const [sortBy, setSortBy] = useState(searchParams?.get('sort') || 'newest');
   const [showSold, setShowSold] = useState(searchParams?.get('sold') === 'true');
-  const [gradeStatus, setGradeStatus] = useState(searchParams?.get('grade') || 'all');
+  // Grading status removed
   const [condition, setCondition] = useState(searchParams?.get('condition') || 'all');
   
   const [priceRange, setPriceRange] = useState([
@@ -97,19 +97,7 @@ if (!showSold) {
       return p >= priceRange[0] && p <= priceRange[1];
     });
 
-    if (gradeStatus === 'graded') {
-      result = result.filter(l => 
-        l.title.toLowerCase().includes('psa') || 
-        l.title.toLowerCase().includes('bgs') || 
-        l.title.toLowerCase().includes('grade') ||
-        l.tags?.some(t => t.toLowerCase().includes('grade'))
-      );
-    } else if (gradeStatus === 'raw') {
-      result = result.filter(l => 
-        !l.title.toLowerCase().includes('psa') && 
-        !l.title.toLowerCase().includes('bgs')
-      );
-    }
+    // Grading filters removed
 
     if (condition !== 'all') {
       const condQ = condition.toLowerCase();
@@ -131,7 +119,7 @@ if (!showSold) {
     });
 
     return result;
-  }, [listings, initialQuery, listingType, sortBy, showSold, priceRange, gradeStatus, condition]);
+  }, [listings, initialQuery, listingType, sortBy, showSold, priceRange, condition]);
 
   const updateFilters = (updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams?.toString() || '');
@@ -156,7 +144,6 @@ if (!showSold) {
     setSortBy('newest');
     setShowSold(false);
     setPriceRange([0, 50000]);
-    setGradeStatus('all');
     setCondition('all');
     router.push('/listings');
   };
@@ -307,19 +294,7 @@ if (!showSold) {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-[9px] font-black uppercase tracking-widest text-foreground ml-1">Grading Status</Label>
-                  <Select value={gradeStatus} onValueChange={setGradeStatus}>
-                    <SelectTrigger className="h-9 rounded-xl border-2 border-foreground bg-transparent font-black text-xs shadow-none text-foreground">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Any Status</SelectItem>
-                      <SelectItem value="graded">Graded Assets</SelectItem>
-                      <SelectItem value="raw">Raw / Ungraded</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Grading status filter removed */}
 
                 <div className="space-y-2">
                   <Label className="text-[9px] font-black uppercase tracking-widest text-foreground ml-1">Condition Tier</Label>
@@ -341,7 +316,6 @@ if (!showSold) {
                 <Button 
                   onClick={() => updateFilters({ 
                     type: listingType,
-                    grade: gradeStatus,
                     condition,
                     minPrice: priceRange[0].toString(),
                     maxPrice: priceRange[1].toString(),

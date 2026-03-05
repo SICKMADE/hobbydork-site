@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { CATEGORIES, GRADING_OPTIONS } from '@/lib/mock-data';
+import { CATEGORIES } from '@/lib/mock-data';
 import { cn, filterProfanity } from '@/lib/utils';
 import Image from 'next/image';
 import { ArrowLeft, Loader2, X, Truck, Calculator } from 'lucide-react';
@@ -48,10 +48,6 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [quantity, setQuantity] = useState('1');
 
-  // Grading fields (category-specific)
-  const [isGraded, setIsGraded] = useState(false);
-  const [gradingCompany, setGradingCompany] = useState('');
-  const [gradingGrade, setGradingGrade] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,9 +85,6 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
     setWidth(String(listing.width || ''));
     setHeight(String(listing.height || ''));
     setCalculatedShippingCost(listing.shippingCost || null);
-    setIsGraded(listing.isGraded || false);
-    setGradingCompany(listing.gradingCompany || '');
-    setGradingGrade(String(listing.gradingGrade || ''));
     setQuantity(String(listing.quantity || '1'));
     setIsLoading(false);
   }, [listing, user, id, router, toast]);
@@ -218,9 +211,6 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
         width: shippingType === 'Paid' ? parseFloat(width) || null : null,
         height: shippingType === 'Paid' ? parseFloat(height) || null : null,
         shippingCost: calculatedShippingCost || null,
-        isGraded: isGraded,
-        gradingCompany: isGraded ? gradingCompany : null,
-        gradingGrade: isGraded ? gradingGrade : null,
         quantity: type === 'bin' ? Math.max(1, parseInt(quantity) || 1) : null, // Stock tracking for Buy It Now
         imageUrl: imageUrl,
         updatedAt: serverTimestamp()
@@ -350,64 +340,7 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
               </div>
             </div>
 
-            {/* Conditional Grading Section - Show if category has grading options */}
-            {GRADING_OPTIONS[category as keyof typeof GRADING_OPTIONS] && (
-              <div className="bg-accent/5 p-6 rounded-xl border-2 border-accent/20 space-y-4">
-                <h3 className="font-black uppercase tracking-widest text-sm">Grading Information (Optional)</h3>
-                
-                <div className="flex items-center gap-4">
-                  <Label htmlFor="edit-is-graded" className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      id="edit-is-graded"
-                      type="checkbox"
-                      aria-label="Item is professionally graded"
-                      title="Item is professionally graded"
-                      checked={isGraded}
-                      onChange={(e) => {
-                        setIsGraded(e.target.checked);
-                        if (!e.target.checked) {
-                          setGradingCompany('');
-                          setGradingGrade('');
-                        }
-                      }}
-                      className="w-4 h-4 rounded border-2 cursor-pointer"
-                    />
-                    <span className="font-bold uppercase text-[10px] tracking-widest">Item is professionally graded</span>
-                  </Label>
-                </div>
-
-                {isGraded && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-black uppercase tracking-widest">Grading Company</Label>
-                      <Select value={gradingCompany} onValueChange={setGradingCompany}>
-                        <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
-                          <SelectValue placeholder="Select Company" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {GRADING_OPTIONS[category as keyof typeof GRADING_OPTIONS]?.companies.map(company => (
-                            <SelectItem key={company} value={company}>{company}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-black uppercase tracking-widest">Grade</Label>
-                      <Select value={gradingGrade} onValueChange={setGradingGrade}>
-                        <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
-                          <SelectValue placeholder="Select Grade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {GRADING_OPTIONS[category as keyof typeof GRADING_OPTIONS]?.grades.map(grade => (
-                            <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Grading section removed */}
 
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest">Tags</Label>
