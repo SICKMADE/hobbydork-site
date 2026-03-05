@@ -28,6 +28,7 @@ import {
   Crown
 } from 'lucide-react';
 import { useFirestore, useCollection, useUser, useMemoFirebase, useDoc } from '@/firebase';
+import { getFunctions } from 'firebase/functions';
 import { 
   collection, 
   query, 
@@ -42,7 +43,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/firebase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -55,6 +55,7 @@ import { cn } from '@/lib/utils';
 function AdminPanelContent({ isStaff }: { isStaff: boolean }) {
   const { toast } = useToast();
   const db = useFirestore();
+  const functions = db ? getFunctions(db.app) : undefined; // Initialize functions using getFunctions
 
   // Queries only fire if sub-component is rendered (which requires isStaff check in parent)
   const reportsQuery = useMemoFirebase(() => query(collection(db!, 'reports'), orderBy('timestamp', 'desc')), [db]);
@@ -279,6 +280,10 @@ function AdminPanelContent({ isStaff }: { isStaff: boolean }) {
   };
 
   const handleApproveWithdrawal = async (payoutId: string) => {
+    if (!functions) {
+      toast({ variant: 'destructive', title: "Cloud Functions unavailable" });
+      return;
+    }
     setApprovingId(payoutId);
     try {
       const approveWithdrawal = httpsCallable(functions, 'approveWithdrawal');
@@ -296,6 +301,10 @@ function AdminPanelContent({ isStaff }: { isStaff: boolean }) {
   };
 
   const handleDenyWithdrawal = async (payoutId: string) => {
+    if (!functions) {
+      toast({ variant: 'destructive', title: "Cloud Functions unavailable" });
+      return;
+    }
     const reason = prompt("Reason for denial (optional):");
     if (reason === null) return; // User cancelled
     

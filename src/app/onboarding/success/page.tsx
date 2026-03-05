@@ -4,14 +4,15 @@ import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useDoc } from "@/firebase";
-import { httpsCallable } from "firebase/functions";
-import { functions } from "@/firebase/client";
+import { httpsCallable, getFunctions } from "firebase/functions";
+
 
 export default function OnboardingSuccess() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
+  const functions = getFunctions();
   const [finalizing, setFinalizing] = useState(true);
 
   useEffect(() => {

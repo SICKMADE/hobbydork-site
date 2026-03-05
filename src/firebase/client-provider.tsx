@@ -1,14 +1,7 @@
 
 'use client';
 
-export const functions: Functions | undefined = (() => {
-  try {
-    const s = clientSdks();
-    return s?.functions ?? undefined;
-  } catch (e) {
-    return undefined;
-  }
-})();
+
 
 import * as React from 'react';
 import type { ReactNode } from 'react';

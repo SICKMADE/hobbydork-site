@@ -26,7 +26,6 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { deleteUser } from 'firebase/auth';
 import { getRandomAvatar, filterProfanity } from '@/lib/utils';
-import { auth } from '@/firebase/client';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';

@@ -15,6 +15,8 @@ interface ListingCardProps {
 }
 
 export default function ListingCard({ listing, theme }: ListingCardProps) {
+      // Default title size, can be customized or made a prop later
+      const titleSize = "text-lg sm:text-xl";
     // Default card padding, can be customized or made a prop later
     const cardPadding = "p-4";
   if (!listing) return null;

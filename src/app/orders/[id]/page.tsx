@@ -36,8 +36,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { doc, collection, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/firebase/client';
+import { httpsCallable, getFunctions } from 'firebase/functions';
+
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
@@ -50,6 +50,7 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
   const { id } = use(params);
   const { toast } = useToast();
   const db = useFirestore();
+  const functions = typeof window !== 'undefined' ? getFunctions() : undefined;
   const { user } = useUser();
   
   const [currentStep, setCurrentStep] = useState(1);
@@ -332,7 +333,7 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
   };
 
   const handleProcessRefund = async () => {
-    if (!user || !order) return;
+    if (!user || !order || !functions) return;
     setIsProcessingAction(true);
 
     try {
