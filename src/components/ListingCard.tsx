@@ -3,22 +3,46 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Clock, Tag, Zap, Package, AlertCircle } from 'lucide-react';
+import { Clock, Tag, Zap, AlertCircle, ShieldCheck, Medal } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Listing, isListingExpired } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface ListingCardProps {
   listing: Listing;
   theme?: string;
 }
 
+import styles from './ListingCard.module.css';
+
+function SprayDrip({ color = "white" }: { color?: string }) {
+  // Map color to a CSS class
+  const colorClass =
+    color === 'white' ? styles.sprayWhite :
+    color === 'black' ? styles.sprayBlack :
+    color === 'accent' ? styles.sprayAccent :
+    styles.sprayWhite;
+  return (
+    <div className={"absolute bottom-[-1px] left-0 right-0 flex justify-around items-start pointer-events-none z-30 px-6 translate-y-full h-8 " + colorClass}>
+      <div className="flex flex-col items-center opacity-60 translate-x-[-15px]">
+        <div className={styles.sprayDrip1} />
+        <div className={styles.sprayDrip2} />
+      </div>
+      <div className="flex flex-col items-center opacity-30 mt-1 translate-x-4">
+        <div className={styles.sprayDrip3} />
+        <div className={styles.sprayDrip4} />
+      </div>
+      <div className="flex flex-col items-center opacity-50 mt-0.5 translate-x-12">
+        <div className={styles.sprayDrip5} />
+        <div className={styles.sprayDrip6} />
+      </div>
+    </div>
+  );
+}
+
 export default function ListingCard({ listing, theme }: ListingCardProps) {
-      // Default title size, can be customized or made a prop later
-      const titleSize = "text-lg sm:text-xl";
-    // Default card padding, can be customized or made a prop later
-    const cardPadding = "p-4";
   if (!listing) return null;
 
   const isAuction = listing.type === 'Auction';
@@ -35,7 +59,6 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
 
     const calculateTime = () => {
       const now = new Date();
-      // Handle endsAt being either a Date or a Firestore Timestamp
       const endsAt = listing.endsAt.toDate ? listing.endsAt.toDate() : new Date(listing.endsAt);
       const diff = endsAt.getTime() - now.getTime();
 
@@ -59,7 +82,6 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
     return () => clearInterval(interval);
   }, [isAuction, listing.endsAt]);
 
-  // Check if Buy It Now listing is expired
   useEffect(() => {
     if (!isAuction && listing.type === 'Buy It Now' && isListingExpired(listing)) {
       setIsEnded(true);
@@ -69,125 +91,79 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
   const price = (listing.currentBid || listing.price || 0).toLocaleString();
   const seller = listing.sellerName || listing.seller || 'Collector';
   
+  // ALIGNED: strictly use listingSellerId as defined in backend blueprint
+  const sellerUid = listing.listingSellerId;
+  
+  const defaultListingImage = PlaceHolderImages.find(img => img.id === 'default-listing')?.imageUrl || '/defaultbroken.jpg';
+  const listingImageUrl = listing.imageUrl?.trim() || defaultListingImage;
+
   return (
-    <Link href={`/listings/${listing.id}`}>
+    <Link href={`/listings/${listing.id}`} className="block h-full">
       <Card className={cn(
-  "group overflow-hidden transition-all duration-500 border-none h-full flex flex-col",
-  cardPadding,
-  isComicBook && "bg-white border-[4px] border-black rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] text-black",
-  isNeonSyndicate && "bg-zinc-900 border border-cyan-500/20 rounded-none shadow-[0_0_20px_rgba(34,211,238,0.05)] hover:border-cyan-500/50 hover:shadow-[0_0_30px_rgba(34,211,238,0.15)] text-white",
-  isUrban && "bg-slate-100 border-[3px] border-slate-900 rounded-none shadow-[6px_6px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none text-slate-950",
-  isHobbyShop && "bg-white rounded-[1.8rem] shadow-2xl p-0 border-none ring-4 ring-white/20 overflow-hidden",
-  (!isComicBook && !isNeonSyndicate && !isUrban && !isHobbyShop) && "bg-card rounded-2xl shadow-md hover:shadow-xl",
-  (isEnded || listing.status === 'Sold') && "opacity-80 grayscale-[0.5]"
+        "group transition-all duration-500 border-none h-full flex flex-col p-2 relative",
+        isComicBook && "bg-white border-[3px] border-black rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black",
+        isNeonSyndicate && "bg-zinc-900 border border-cyan-500/20 rounded-none text-white",
+        isUrban && "bg-black rounded-none text-white border-none overflow-visible",
+        isHobbyShop && "bg-white rounded-[1.2rem] shadow-xl p-0",
+        (!isComicBook && !isNeonSyndicate && !isUrban && !isHobbyShop) && "bg-card rounded-xl shadow-sm hover:shadow-lg overflow-hidden",
         (isEnded || listing.status === 'Sold') && "opacity-80 grayscale-[0.5]"
       )}>
-        {isHobbyShop && (
-          <div className="bg-zinc-100 border-b border-zinc-200 p-3 flex justify-between items-center h-14">
-            <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.15em] truncate pr-2">
-              @{seller}
-            </span>
-            <div className="bg-white border-2 border-blue-600 px-3 py-1 rounded-lg text-blue-600 font-black text-xs shadow-sm">
-              ${price}
-            </div>
-          </div>
+        {isUrban && (
+          <>
+            <div className="absolute inset-0 border-2 border-white/90 rounded-none pointer-events-none z-20" />
+            <SprayDrip />
+          </>
         )}
 
-        <div className="relative aspect-[3/4] overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-          {listing.imageUrl ? (
-            <Image 
-              src={listing.imageUrl} 
-              alt={listing.title || 'Collectible'}
-              fill
-              className={cn(
-                "object-cover transition-transform duration-1000",
-                isNeonSyndicate ? "group-hover:scale-110 saturate-[0.8]" : "scale-100 group-hover:scale-110"
-              )}
-            />
-          ) : (
-            <div className="flex flex-col items-center gap-2 opacity-20">
-              <Package className="w-12 h-12" />
-              <span className="text-[8px] font-black uppercase tracking-[0.2em]">No Image</span>
-            </div>
-          )}
-          {!isHobbyShop && (
-            <Badge className={cn(
-              "absolute top-4 left-4 border-none font-black px-3 py-1 shadow-2xl text-[9px] uppercase tracking-widest z-10",
-              isComicBook ? "bg-black text-white rounded-none border-2 border-white" : 
-              isNeonSyndicate ? "bg-cyan-500 text-zinc-950 rounded-none italic" : 
-              isUrban ? "bg-orange-600 text-white rounded-none skew-x-[-10deg]" : 
-              "bg-background/90 text-foreground"
-            )}>{listing.category || 'Collectible'}</Badge>
-          )}
-          {isAuction && !isHobbyShop && (
-            <Badge className={cn(
-              "absolute top-4 right-4 border-none font-black px-3 py-1 shadow-2xl text-[9px] uppercase tracking-widest z-10",
-              isEnded ? "bg-zinc-500 text-white" : (isComicBook ? "bg-white text-black rounded-none border-2 border-black" : isNeonSyndicate ? "bg-zinc-100 text-zinc-950 rounded-none italic" : isUrban ? "bg-slate-900 text-white rounded-none" : "bg-primary text-white animate-pulse")
-            )}>
-              {isEnded ? <AlertCircle className="w-3 h-3 mr-1.5" /> : <Zap className="w-3 h-3 mr-1.5" />}
-              {isEnded ? "ENDED" : "AUCTION"}
-            </Badge>
-          )}
-          {!isAuction && listing.type === 'Buy It Now' && !isHobbyShop && (
-            <Badge className={cn(
-              "absolute top-4 right-4 border-none font-black px-3 py-1 shadow-2xl text-[9px] uppercase tracking-widest z-10",
-              isEnded ? "bg-zinc-500 text-white" : (isComicBook ? "bg-white text-black rounded-none border-2 border-black" : isNeonSyndicate ? "bg-zinc-100 text-zinc-950 rounded-none italic" : isUrban ? "bg-slate-900 text-white rounded-none" : "bg-green-600 text-white")
-            )}>
-              {isEnded ? <AlertCircle className="w-3 h-3 mr-1.5" /> : <Clock className="w-3 h-3 mr-1.5" />}
-              {isEnded ? "EXPIRED" : "BUY NOW"}
-            </Badge>
-          )}
-          {isNeonSyndicate && <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/60 to-transparent" />}
+        <div className="relative aspect-[3/4] overflow-hidden bg-zinc-100 rounded-lg">
+          <Image 
+            src={listingImageUrl} 
+            alt={listing.title}
+            fill
+            className="object-cover transition-transform duration-1000 group-hover:scale-110"
+            data-ai-hint="listing photo"
+          />
           
-          {(isEnded || listing.status === 'Sold') && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[2px]">
-              <Badge className="bg-zinc-900 text-white font-black px-6 py-2 rounded-none text-xl uppercase tracking-widest shadow-2xl scale-110">
-                {listing.status === 'Sold' ? 'SOLD' : 'ENDED'}
-              </Badge>
-            </div>
+          <Badge className="absolute top-2 left-2 text-[7px] uppercase font-black px-1.5 py-0.5 border-none shadow-xl bg-background/90 text-foreground">
+            {listing.category}
+          </Badge>
+
+          {isAuction && (
+            <Badge className={cn(
+              "absolute top-2 right-2 text-[7px] font-black px-1.5 py-0.5 border-none shadow-xl uppercase",
+              isEnded ? "bg-zinc-500" : "bg-red-600 text-white animate-pulse"
+            )}>
+              <Zap className="w-2 h-2 mr-1" /> AUCTION
+            </Badge>
           )}
         </div>
         
-        {!isHobbyShop && (
-          <CardContent className="p-2 flex-1 flex flex-col overflow-hidden">
-            <div className="mb-1">
-              <h3 className={cn(
-                "font-headline font-black line-clamp-1 leading-tight uppercase px-2 sm:px-4 py-1 sm:py-2 block w-fit transition-all",
-                titleSize,
-                isComicBook && "text-black bg-yellow-400 border-4 border-black skew-x-[-6deg] drop-shadow-[4px_4px_0px_#ddd]",
-                isNeonSyndicate && "text-white tracking-[0.2em] italic border-b border-cyan-500/30 pb-1 mb-2 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]",
-                isUrban && "text-slate-950 bg-slate-200 border-2 border-slate-900 font-mono p-2 skew-y-1",
-              )}>{listing.title || 'Untitled Item'}</h3>
+        <CardContent className="p-2 flex-1 flex flex-col relative z-10">
+          <h3 className="font-headline font-black line-clamp-1 leading-tight uppercase text-xs sm:text-sm mb-1">
+            {listing.title}
+          </h3>
+          
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="text-[8px] font-black uppercase text-muted-foreground truncate">@{seller}</span>
+            {listing.sellerTier && (
+              <Badge className="h-3.5 px-1.5 text-[6px] font-black uppercase bg-accent text-white border-none">
+                {listing.sellerTier}
+              </Badge>
+            )}
+          </div>
+
+          <div className="mt-auto flex justify-between items-end">
+            <div className="space-y-0.5">
+              <p className="text-[7px] uppercase font-black text-muted-foreground">{isAuction ? 'Bid' : 'Price'}</p>
+              <p className="text-sm font-black">${price}</p>
             </div>
-            
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-2 font-bold">
-              <Tag className={cn("w-3.5 h-3.5", isComicBook ? "text-black" : isNeonSyndicate ? "text-cyan-400" : isUrban ? "text-orange-600" : "text-primary")} />
-              <span className={cn(isComicBook && "text-black font-black uppercase tracking-tighter", isNeonSyndicate && "text-cyan-400/60 italic tracking-wider", isUrban && "text-slate-600 font-mono uppercase")}>{seller}</span>
-            </div>
-            <div className="flex justify-between items-end mt-auto gap-1">
-              <div className="space-y-0.5 flex-1">
-                <p className={cn("text-[8px] uppercase font-black tracking-widest", isComicBook ? "text-black" : isNeonSyndicate ? "text-cyan-400/40" : isUrban ? "text-slate-500" : "text-zinc-500")}>{isAuction ? 'Current Bid' : 'Price'}</p>
-                <p className={cn("text-lg md:text-xl font-black transition-all", isComicBook && "text-black text-xl skew-x-[-3deg] drop-shadow-[1px_1px_0px_#ddd]", isNeonSyndicate && "text-white text-2xl italic tracking-tighter drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]", isUrban && "text-slate-950 font-mono text-xl", (!isComicBook && !isNeonSyndicate && !isUrban) && "text-primary")}>${price}</p>
+            {isAuction && !isEnded && (
+              <div className="flex items-center gap-1 text-[7px] font-black px-1.5 py-0.5 uppercase bg-accent/10 text-accent rounded-full">
+                <Clock className="w-2 h-2" /><span>{timeLeft}</span>
               </div>
-              {/* Grading badge removed */}
-              {isAuction && (
-                <div className={cn(
-                  "flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 uppercase tracking-widest transition-all",
-                  isEnded ? "bg-zinc-100 text-zinc-400 border-zinc-200" : (isComicBook ? "bg-black text-white rounded-none border-2 border-white" : isNeonSyndicate ? "bg-cyan-500 text-zinc-950 rounded-none italic shadow-[0_0_15px_rgba(34,211,238,0.4)]" : isUrban ? "bg-orange-600 text-white rounded-none shadow-[4px_4px_0px_#000]" : "bg-primary/10 text-primary rounded-full")
-                )}>
-                  <Clock className="w-3.5 h-3.5" /><span>{timeLeft}</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        )}
-        {!isHobbyShop && (
-          <CardFooter className="px-6 pb-6 pt-0 gap-3 flex-wrap mt-auto">
-            {listing.tags?.slice(0, 2).map(tag => (
-              <span key={tag} className={cn("text-[9px] px-3 py-1 rounded-none font-black uppercase tracking-widest transition-all", isComicBook ? "bg-black text-white skew-x-[-8deg]" : isNeonSyndicate ? "bg-cyan-500/5 text-cyan-400/50 border border-cyan-500/20 hover:bg-cyan-500/10 italic" : isUrban ? "bg-slate-900 text-white font-mono skew-x-3" : "bg-secondary text-secondary-foreground rounded-full")}>#{tag}</span>
-            ))}
-          </CardFooter>
-        )}
+            )}
+          </div>
+        </CardContent>
       </Card>
     </Link>
   );

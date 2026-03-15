@@ -1,0 +1,23 @@
+/* Digital time font for ISO24 */
+/* Stencil digital font: Digital-7. Download Digital7.ttf and place in /public/fonts/ */
+@font-face {
+  font-family: 'DigitalLCD';
+  src: url('/fonts/digital.TTF') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.digital-time {
+  font-family: 'DigitalLCD', monospace;
+  letter-spacing: 0.08em;
+  color: #ff3b3b;
+  font-weight: normal;
+  font-size: 1.15em;
+  display: inline-block;
+  text-shadow:
+    0 0 6px #ff3b3b,
+    0 0 12px #ff3b3b,
+    0 0 2px #fff,
+    0 0 1px #fff;
+  filter: brightness(1.1);
+}

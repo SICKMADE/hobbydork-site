@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, ShieldAlert, Trash2, Check, X, Eye, AlertTriangle, Flag } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, where, orderBy, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -20,8 +22,6 @@ function ModerationDashboard() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
 
-
-
   // Check if user is admin
   useEffect(() => {
     if (user?.email?.includes('admin') || user?.uid === 'admin-uid') {
@@ -33,7 +33,7 @@ function ModerationDashboard() {
 
   // Fetch reported listings
   const reportsQuery = db
-    ? query(collection(db, 'reports'), orderBy('createdAt', 'desc'))
+    ? query(collection(db, 'reports'), orderBy('timestamp', 'desc'))
     : null;
   const { data: reports, isLoading: reportsLoading } = useCollection(reportsQuery);
 
@@ -54,7 +54,7 @@ function ModerationDashboard() {
   const handleRemoveListing = async (listingId: string, reportId: string) => {
     try {
       await deleteDoc(doc(db!, 'listings', listingId));
-      await updateDoc(doc(db!, 'reports', reportId), { status: 'resolved' });
+      await updateDoc(doc(db!, 'reports', reportId), { status: 'RESOLVED' });
       toast({ title: 'Listing removed', description: 'The problematic listing has been removed.' });
     } catch {
       toast({ title: 'Error', description: 'Failed to remove listing', variant: 'destructive' });
@@ -63,7 +63,7 @@ function ModerationDashboard() {
 
   const handleResolveReport = async (reportId: string) => {
     try {
-      await updateDoc(doc(db!, 'reports', reportId), { status: 'resolved' });
+      await updateDoc(doc(db!, 'reports', reportId), { status: 'RESOLVED' });
       toast({ title: 'Report resolved' });
     } catch {
       toast({ title: 'Error', variant: 'destructive' });
@@ -72,7 +72,7 @@ function ModerationDashboard() {
 
   const handleSuspendSeller = async (sellerId: string) => {
     try {
-      await updateDoc(doc(db!, 'users', sellerId), { suspended: true });
+      await updateDoc(doc(db!, 'users', sellerId), { status: 'SUSPENDED' });
       toast({ title: 'Seller suspended' });
     } catch {
       toast({ title: 'Error', variant: 'destructive' });
@@ -91,83 +91,90 @@ function ModerationDashboard() {
         </div>
 
         <Tabs defaultValue="reports" className="w-full space-y-6">
-          <TabsList className="grid w-full max-w-xl grid-cols-4">
-            <TabsTrigger value="reports">Reports</TabsTrigger>
-            <TabsTrigger value="sellers">Flagged Sellers</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsList className="grid w-full max-w-xl grid-cols-3 h-12 bg-muted p-1 rounded-xl">
+            <TabsTrigger value="reports" className="rounded-lg font-bold uppercase text-[10px] tracking-widest">Reports</TabsTrigger>
+            <TabsTrigger value="sellers" className="rounded-lg font-bold uppercase text-[10px] tracking-widest">Flagged Sellers</TabsTrigger>
+            <TabsTrigger value="analytics" className="rounded-lg font-bold uppercase text-[10px] tracking-widest">Analytics</TabsTrigger>
           </TabsList>
-        <TabsContent value="reports" className="space-y-4">
-          {reportsLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-accent" />
-            </div>
-          ) : !reports || reports.length === 0 ? (
-            <Card className="p-8 text-center bg-green-50 border-green-200">
-              <Check className="w-8 h-8 text-green-600 mx-auto mb-3" />
-              <p className="text-green-900 font-bold">No pending reports</p>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {(reports || []).map((report: any) => (
-                <Card key={report.id} className="p-6 border-orange-200 bg-orange-50/50">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 flex-1">
-                        <AlertTriangle className="w-5 h-5 text-orange-600 mt-1 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-black text-orange-900 mb-1">{report.reason}</p>
-                          <p className="text-sm text-orange-800 mb-2">{report.details}</p>
-                          <p className="text-xs text-orange-700">
-                            Reported by: <span className="font-bold">{report.reporterName}</span>
-                          </p>
+          
+          <TabsContent value="reports" className="space-y-4">
+            {reportsLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-accent" />
+              </div>
+            ) : !reports || reports.length === 0 ? (
+              <Card className="p-12 text-center border-4 border-dashed rounded-[2.5rem] bg-muted/20">
+                <Check className="w-12 h-12 text-green-600 mx-auto mb-4 opacity-40" />
+                <p className="text-muted-foreground font-black uppercase text-sm">No pending reports</p>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {reports.map((report: any) => (
+                  <Card key={report.id} className="p-6 border shadow-sm rounded-2xl hover:shadow-md transition-shadow">
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-4 flex-1">
+                          <div className="bg-orange-100 p-2 rounded-lg">
+                            <AlertTriangle className="w-5 h-5 text-orange-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-black text-primary uppercase text-sm mb-1">{report.reason}</p>
+                            <p className="text-sm text-muted-foreground mb-3 font-medium">{report.details}</p>
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase text-zinc-400">
+                              <span>Reported by: @{report.reporterName}</span>
+                              <span>•</span>
+                              <span>{report.timestamp?.toDate ? new Date(report.timestamp.toDate()).toLocaleString() : 'Just now'}</span>
+                            </div>
+                          </div>
                         </div>
+                        <Badge
+                          variant={
+                            report.status === 'PENDING'
+                              ? 'destructive'
+                              : 'outline'
+                          }
+                          className="font-black uppercase text-[8px] tracking-widest"
+                        >
+                          {report.status}
+                        </Badge>
                       </div>
-                      <Badge
-                        variant={
-                          report.status === 'pending'
-                            ? 'destructive'
-                            : report.status === 'under-review'
-                            ? 'secondary'
-                            : 'outline'
-                        }
-                      >
-                        {report.status}
-                      </Badge>
-                    </div>
 
-                    {report.listingId && (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => window.open(`/listings/${report.listingId}`)}
-                        >
-                          <Eye className="w-4 h-4" /> View Listing
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => handleRemoveListing(report.listingId, report.id)}
-                        >
-                          <Trash2 className="w-4 h-4" /> Remove
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleResolveReport(report.id)}
-                        >
-                          Resolve
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
+                      {report.reportedId && (
+                        <div className="flex gap-2 pt-2 border-t border-dashed">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 h-9 rounded-lg font-bold text-[10px] uppercase"
+                            onClick={() => window.open(report.type === 'Listing' ? `/listings/${report.reportedId}` : `/orders/${report.reportedId}`)}
+                          >
+                            <Eye className="w-3.5 h-3.5" /> View Target
+                          </Button>
+                          {report.type === 'Listing' && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="gap-2 h-9 rounded-lg font-bold text-[10px] uppercase"
+                              onClick={() => handleRemoveListing(report.reportedId, report.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Remove Content
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 rounded-lg font-bold text-[10px] uppercase text-green-600 hover:bg-green-50"
+                            onClick={() => handleResolveReport(report.id)}
+                          >
+                            Resolve
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value="sellers" className="space-y-4">
               {sellersLoading ? (
@@ -175,40 +182,44 @@ function ModerationDashboard() {
                   <Loader2 className="w-8 h-8 animate-spin text-accent" />
                 </div>
               ) : !flaggedSellers || flaggedSellers.length === 0 ? (
-                <Card className="p-8 text-center bg-green-50 border-green-200">
-                  <Check className="w-8 h-8 text-green-600 mx-auto mb-3" />
-                  <p className="text-green-900 font-bold">No flagged sellers</p>
+                <Card className="p-12 text-center border-4 border-dashed rounded-[2.5rem] bg-muted/20">
+                  <Check className="w-12 h-12 text-green-600 mx-auto mb-4 opacity-40" />
+                  <p className="text-muted-foreground font-black uppercase text-sm">No flagged sellers</p>
                 </Card>
               ) : (
                 <div className="grid gap-4">
-                  {(flaggedSellers || []).map((seller: any) => (
-                    <Card key={seller.id} className="p-6 border-red-200 bg-red-50/50">
+                  {flaggedSellers.map((seller: any) => (
+                    <Card key={seller.id} className="p-6 border shadow-sm rounded-2xl">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-black text-red-900 mb-1">{seller.displayName}</p>
-                            <p className="text-sm text-red-800">@{seller.displayName}</p>
-                            <p className="text-xs text-red-700 mt-2">
-                              Flags: <span className="font-black">{seller.flags}</span>
-                            </p>
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center font-black">
+                              {seller.username?.[0]?.toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-black text-primary">@{seller.username}</p>
+                              <p className="text-[10px] font-black uppercase text-muted-foreground">{seller.email}</p>
+                            </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-bold text-red-900">Violations</p>
-                            <p className="text-lg font-black text-red-600">{seller.flags}</p>
+                            <p className="text-[10px] font-black uppercase text-red-600 tracking-widest">Violations</p>
+                            <p className="text-2xl font-black text-red-600">{seller.flags}</p>
                           </div>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 pt-2 border-t border-dashed">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(`/shop/${seller.displayName}`)}
+                            className="h-9 rounded-lg font-bold text-[10px] uppercase"
+                            onClick={() => window.open(`/shop/${seller.username}`)}
                           >
-                            View Shop
+                            View Storefront
                           </Button>
                           <Button
                             variant="destructive"
                             size="sm"
+                            className="h-9 rounded-lg font-bold text-[10px] uppercase"
                             onClick={() => handleSuspendSeller(seller.id)}
                           >
                             Suspend Account
@@ -222,25 +233,19 @@ function ModerationDashboard() {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-6">
-                <p className="text-sm font-bold text-muted-foreground mb-2">Pending Reports</p>
-                <p className="text-3xl font-black text-accent">
-                  {(reports || []).filter((r: any) => r.status === 'pending').length || 0}
-                </p>
-              </Card>
-              <Card className="p-6">
-                <p className="text-sm font-bold text-muted-foreground mb-2">Flagged Sellers</p>
-                <p className="text-3xl font-black text-orange-600">
-                  {flaggedSellers?.length || 0}
-                </p>
-              </Card>
-              <Card className="p-6">
-                <p className="text-sm font-bold text-muted-foreground mb-2">Resolution Rate</p>
-                <p className="text-3xl font-black text-green-600">
-                  {reports?.length ? Math.round(((reports?.filter((r: any) => r.status === 'resolved').length || 0) / reports.length) * 100) : 0}%
-                </p>
-              </Card>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { label: 'Pending Reports', val: reports?.filter((r: any) => r.status === 'PENDING').length || 0, color: 'text-accent' },
+                { label: 'Flagged Sellers', val: flaggedSellers?.length || 0, color: 'text-orange-600' },
+                { label: 'Resolution Rate', val: `${reports?.length ? Math.round(((reports?.filter((r: any) => r.status === 'RESOLVED').length || 0) / reports.length) * 100) : 0}%`, color: 'text-green-600' },
+              ].map((stat, i) => (
+                <Card key={i} className="p-8 rounded-2xl border-none shadow-sm">
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">{stat.label}</p>
+                  <p className={cn("text-4xl font-black", stat.color)}>
+                    {stat.val}
+                  </p>
+                </Card>
+              ))}
             </div>
           </TabsContent>
         </Tabs>

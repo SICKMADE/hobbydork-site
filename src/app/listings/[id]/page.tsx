@@ -22,21 +22,23 @@ import {
   Lock,
   Flag,
   AlertTriangle,
-  Gavel
+  Gavel,
+  MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, increment, collection, addDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
+import { doc, updateDoc, increment, collection, addDoc, serverTimestamp, query, orderBy, limit, deleteDoc, getDoc, setDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function ListingDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -56,11 +58,16 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
 
   const [isExpired, setIsExpired] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState('');
+  const [isWatched, setIsWatched] = useState(false);
+  const [isWatchLoading, setIsWatchLoading] = useState(false);
 
   const listingRef = useMemoFirebase(() => {
     if (!db || !id) return null;
     return doc(db, 'listings', id);
   }, [db, id]);
+
+  const profileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
 
   const bidsQuery = useMemoFirebase(() => {
     if (!db || !id) return null;
@@ -71,6 +78,12 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
   const { data: bidsHistory, isLoading: bidsLoading } = useCollection(bidsQuery);
 
   const listing = firestoreListing;
+
+  useEffect(() => {
+    if (!user || !db || !id) return;
+    const watchRef = doc(db, 'users', user.uid, 'watchlist', id);
+    getDoc(watchRef).then(snap => setIsWatched(snap.exists()));
+  }, [user, db, id]);
 
   useEffect(() => {
     if (!listing || listing.type !== 'Auction' || !listing.endsAt) return;
@@ -114,11 +127,54 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
   const isAuctionWinner = !!(user && listing.winnerUid === user.uid && listing.paymentStatus === 'PENDING');
   const checkoutAmount = isAuction ? (listing.winningBid || listing.currentBid || listing.price) : listing.price;
 
+  const handleToggleWatchlist = async () => {
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Sign In Required', description: 'Sign in to add items to your vault watchlist.' });
+      return;
+    }
+    if (!db || !id) return;
+
+    setIsWatchLoading(true);
+    const watchRef = doc(db, 'users', user.uid, 'watchlist', id);
+
+    try {
+      if (isWatched) {
+        await deleteDoc(watchRef);
+        setIsWatched(false);
+        toast({ title: "Removed from Watchlist" });
+      } else {
+        await setDoc(watchRef, {
+          listingId: id,
+          title: listing.title,
+          price: listing.currentBid || listing.price,
+          imageUrl: listing.imageUrl || null,
+          timestamp: serverTimestamp()
+        });
+        setIsWatched(true);
+        toast({ title: "Added to Watchlist", description: "You will receive updates about this item." });
+      }
+    } catch (e) {
+      toast({ variant: 'destructive', title: "Action Failed" });
+    } finally {
+      setIsWatchLoading(false);
+    }
+  };
+
   const handlePlaceBid = async () => {
     if (!user) {
       toast({ variant: 'destructive', title: 'Sign In Required', description: 'Please sign in to place a bid.' });
       return;
     }
+
+    if (!user.emailVerified || profile?.status !== 'ACTIVE') {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Verification Required', 
+        description: 'You must verify your email and have an active profile to place bids.' 
+      });
+      return;
+    }
+
     if (isExpired || listing.status === 'Ended' || listing.status === 'Sold') {
       toast({ variant: 'destructive', title: 'Auction Ended', description: 'No more bids are being accepted for this item.' });
       return;
@@ -138,12 +194,13 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
       amount,
       bidderId: user.uid,
       bidderName: user.displayName || 'User',
-      timestamp: serverTimestamp()
+      timestamp: serverTimestamp(),
+      listingSellerId: listing.listingSellerId
     };
 
     addDoc(collection(db, 'listings', id, 'bids'), bidData)
       .then(async () => {
-        updateDoc(listingRef, { currentBid: amount, bidCount: increment(1) });
+        await updateDoc(listingRef, { currentBid: amount, bidCount: increment(1) });
         toast({ title: 'Bid Placed!', description: `Successfully bid $${amount.toLocaleString()}.` });
         setBidAmount('');
         setIsBidding(false);
@@ -158,8 +215,9 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
           path: `listings/${id}/bids`,
           operation: 'create',
           requestResourceData: bidData,
-        } satisfies SecurityRuleContext);
+        });
         errorEmitter.emit('permission-error', permissionError);
+        // Do not clear bid input on error
         setIsBidding(false);
       });
   };
@@ -185,7 +243,7 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
       toast({ title: "Report Submitted", description: "Moderators will review this listing shortly." });
       setIsReportDialogOpen(false);
     } catch (e) {
-      toast({ variant: 'destructive', title: "Submission Failed" });
+      toast({ variant: 'destructive', title: "Submission Failed", description: "Could not submit your report. Please try again." });
     } finally {
       setIsSubmittingReport(false);
     }
@@ -226,7 +284,8 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
     }
   };
 
-  const listingImageUrl = listing.imageUrl?.trim();
+  const defaultListingImage = PlaceHolderImages.find(img => img.id === 'default-listing')?.imageUrl || '/hobbydork-main.png';
+  const listingImageUrl = (listing.imageUrl?.trim()) || defaultListingImage;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -238,7 +297,7 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
             Back
           </Link>
           <div className="flex items-center gap-3">
-            {user && listing.sellerId === user.uid && (
+            {user && listing.listingSellerId === user.uid && (
               <Link href={`/listings/${id}/edit`} className="text-muted-foreground hover:text-accent gap-2 font-black uppercase text-[9px] md:text-[10px] flex items-center">
                 ✎ Edit
               </Link>
@@ -255,16 +314,13 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6 lg:gap-12">
           <div className="space-y-4">
             <div className="relative aspect-[4/3] rounded-xl md:rounded-2xl overflow-hidden bg-muted/20 border shadow-sm">
-              {listingImageUrl ? (
-                <Image src={listingImageUrl} alt={listing.title} fill className="object-cover" />
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted/30">
-                  <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
-                    <AlertTriangle className="w-8 h-8 text-muted-foreground/40" />
-                  </div>
-                  <p className="text-sm font-medium text-muted-foreground">Image not available</p>
-                </div>
-              )}
+              <Image 
+                src={listingImageUrl} 
+                alt={listing.title} 
+                fill 
+                className="object-cover" 
+                data-ai-hint="listing photo"
+              />
             </div>
           </div>
 
@@ -273,7 +329,18 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
               <div className="flex justify-between items-start">
                 <Badge variant="secondary" className="px-3 py-1 text-[9px] md:text-[10px] font-bold uppercase tracking-wider">{listing.category}</Badge>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 hover:bg-accent/10 hover:text-accent"><Heart className="w-4 h-4" /></Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    disabled={isWatchLoading}
+                    onClick={handleToggleWatchlist}
+                    className={cn(
+                      "rounded-full w-9 h-9 transition-all",
+                      isWatched ? "text-accent bg-accent/10" : "hover:bg-accent/10 hover:text-accent"
+                    )}
+                  >
+                    {isWatchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Heart className={cn("w-4 h-4", isWatched && "fill-current")} />}
+                  </Button>
                   <Button variant="ghost" size="icon" className="rounded-full w-9 h-9"><Share2 className="w-4 h-4" /></Button>
                 </div>
               </div>
@@ -374,40 +441,37 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
                     </div>
                   )}
                   <Button onClick={() => setIsCheckoutOpen(true)} className="w-full h-14 md:h-16 text-lg md:text-xl font-black bg-accent hover:bg-accent/90 text-white shadow-xl rounded-xl transition-all">Buy It Now</Button>
-                  {/* Condition Warning - Prominent Position */}
-                  {listing.condition && (
-                    <div className={cn(
-                      "p-4 md:p-5 rounded-xl border-2 space-y-3 bg-yellow-50 border-yellow-400 dark:bg-yellow-950/30 dark:border-yellow-700"
-                    )}>
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0 flex-shrink-0 text-yellow-700 dark:text-yellow-300" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-black uppercase tracking-widest mb-1 text-yellow-900 dark:text-yellow-100">
-                            {'\u26a0\ufe0f CONDITION: RAW (UNGRADED)'}
-                          </p>
-                          <p className="font-black text-base md:text-lg text-yellow-900 dark:text-yellow-100">
-                            {listing.condition}
-                          </p>
-                          {['Sports Cards', 'Comics', 'Trading Cards', 'Collectibles', 'Pokemon', 'Magic: The Gathering', 'Anime'].some(cat => listing.category?.includes(cat)) && (
-                            <div className="mt-3 space-y-2 text-xs">
-                              <p className="font-bold text-yellow-900 dark:text-yellow-200">
-                                {'\u26a0\ufe0f '}<span className="font-black">RAW ITEMS 9/10 TIMES WON'T BE PERFECT</span> - Micro scratches, wear, and centering issues are common.
-                              </p>
-                              <p className="font-bold text-yellow-900 dark:text-yellow-200">
-                                {'\ud83d\udca1 '}<span className="font-black">WANT PSA 10 / CGC 9.8?</span> Search for professionally graded items to guarantee the condition you need.
-                              </p>
-                              <p className="font-bold text-yellow-900 dark:text-yellow-200">
-                                {'\u270b '}<span className="font-black">BUYER ACCEPTS AS-IS</span> - No returns based on condition. Inspect photos carefully before buying.
-                              </p>
-                            </div>
-                          )}
-                        </div>
+                  <div className={cn(
+                    "p-4 md:p-5 rounded-xl border-2 space-y-3 bg-yellow-50 border-yellow-400 dark:bg-yellow-950/30 dark:border-yellow-700"
+                  )}>
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0 flex-shrink-0 text-yellow-700 dark:text-yellow-300" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-black uppercase tracking-widest mb-1 text-yellow-900 dark:text-yellow-100">
+                          {'⚠️ CONDITION: RAW (UNGRADED)'}
+                        </p>
+                        <p className="font-black text-base md:text-lg text-yellow-900 dark:text-yellow-100">
+                          {listing.condition}
+                        </p>
+                        {['Sports Cards', 'Comics', 'Trading Cards', 'Collectibles', 'Pokemon', 'Magic: The Gathering', 'Anime'].some(cat => listing.category?.includes(cat)) && (
+                          <div className="mt-3 space-y-2 text-xs">
+                            <p className="font-bold text-yellow-900 dark:text-yellow-200">
+                              {'⚠️ '}<span className="font-black">RAW ITEMS 9/10 TIMES WON'T BE PERFECT</span> - Micro scratches, wear, and centering issues are common.
+                            </p>
+                            <p className="font-bold text-yellow-900 dark:text-yellow-200">
+                              {'💡 '}<span className="font-black">WANT PSA 10 / CGC 9.8?</span> Search for professionally graded items to guarantee the condition you need.
+                            </p>
+                            <p className="font-bold text-yellow-900 dark:text-yellow-200">
+                              {'✋ '}<span className="font-black">BUYER ACCEPTS AS-IS</span> - No returns based on condition. Inspect photos carefully before buying.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
+                  </div>
                   <Button asChild variant="outline" className="w-full h-12 md:h-14 font-black border-2 rounded-xl gap-2 hover:bg-primary/5 transition-all text-primary">
                     <Link href={`/messages?seller=${listing.sellerName || listing.seller}`}>
-                      <MessageCircle className="w-4 h-4" /> Message Seller
+                      <MessageSquare className="w-4 h-4" /> Message Seller
                     </Link>
                   </Button>
                 </div>

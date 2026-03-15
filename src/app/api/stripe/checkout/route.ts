@@ -9,20 +9,38 @@ const stripe = stripeApiKey
 
 /**
  * Stripe Checkout API Route.
- * Uses real Stripe if STRIPE_SECRET_KEY or STRIPE_SECRET is present in env, otherwise mocks.
+ * Uses real Stripe if STRIPE_SECRET_KEY is present, otherwise mock.
  */
 export async function POST(request: Request) {
   try {
     const { items, success_url, cancel_url, metadata } = await request.json();
+    const origin = request.headers.get('origin') || 'https://hobbydork.com';
+
+    // Helper to ensure URLs are absolute
+    const ensureAbsolute = (url: string) => {
+      try {
+        return new URL(url).toString();
+      } catch {
+        return new URL(url, origin).toString();
+      }
+    };
+
+    const absoluteSuccessUrl = ensureAbsolute(success_url);
+    const absoluteCancelUrl = ensureAbsolute(cancel_url);
 
     if (!stripe) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Stripe Key missing, using Mock Checkout');
-      }
       const sessionId = `mock_session_${Math.random().toString(36).substring(7)}`;
+      const finalUrl = new URL(absoluteSuccessUrl);
+      
+      finalUrl.searchParams.set('session_id', sessionId);
+      const idToPass = metadata?.listingId || metadata?.productId;
+      if (idToPass) {
+        finalUrl.searchParams.set('item_id', idToPass);
+      }
+      
       return NextResponse.json({ 
         sessionId,
-        url: `${success_url}?session_id=${sessionId}&item_id=${metadata?.listingId || metadata?.productId}`
+        url: finalUrl.toString()
       });
     }
 
@@ -39,14 +57,14 @@ export async function POST(request: Request) {
         quantity: item.quantity,
       })),
       mode: 'payment',
-      success_url: `${success_url}?session_id={CHECKOUT_SESSION_ID}&item_id=${metadata?.listingId || metadata?.productId}`,
-      cancel_url: cancel_url,
+      success_url: `${absoluteSuccessUrl}?session_id={CHECKOUT_SESSION_ID}&item_id=${metadata?.listingId || metadata?.productId}`,
+      cancel_url: absoluteCancelUrl,
       metadata: metadata,
     });
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error: any) {
     console.error('Stripe API Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

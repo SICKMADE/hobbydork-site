@@ -1,3 +1,4 @@
+
 'use client';
 
 import { use, useState, useEffect } from 'react';
@@ -42,9 +43,8 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 export default function OrderTracking({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -68,7 +68,6 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
   const [returnReason, setReturnReason] = useState('');
   const [isProcessingReturn, setIsProcessingReturn] = useState(false);
-  const [returnData, setReturnData] = useState<any>(null);
 
   const orderRef = useMemoFirebase(() => id && db ? doc(db, 'orders', id) : null, [db, id]);
   const { data: order, isLoading: loading } = useDoc(orderRef);
@@ -79,7 +78,7 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
     else if (order.status === 'Processing') setCurrentStep(2);
     else if (order.status === 'Shipped') setCurrentStep(3);
     else if (order.status === 'Delivered') setCurrentStep(4);
-    else if (order.status === 'Return Requested') setCurrentStep(4);
+    else if (order.status?.startsWith('Return')) setCurrentStep(4);
   }, [order]);
 
   if (loading) {
@@ -124,14 +123,9 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
         orderId: id, 
         updates: { status: newStatus }
       });
-      toast({ title: `Order ${newStatus}` });
+      toast({ title: `Order Status: ${newStatus}` });
     } catch (error: any) {
-      const friendlyMessage = getFriendlyErrorMessage(error);
-      toast({ 
-        variant: 'destructive', 
-        title: 'Update Failed', 
-        description: friendlyMessage 
-      });
+      toast({ variant: 'destructive', title: 'Update Failed', description: getFriendlyErrorMessage(error) });
     } finally {
       setIsProcessingAction(false);
     }
@@ -144,17 +138,9 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
     try {
       const cancelOrder = httpsCallable(functions, 'cancelLateOrder');
       await cancelOrder({ orderId: id });
-      toast({ 
-        title: 'Order Cancelled', 
-        description: 'Refund will appear in 3-5 business days.' 
-      });
+      toast({ title: 'Order Cancelled', description: 'Full refund has been processed.' });
     } catch (error: any) {
-      const friendlyMessage = getFriendlyErrorMessage(error);
-      toast({ 
-        variant: 'destructive', 
-        title: 'Cancellation Failed', 
-        description: friendlyMessage 
-      });
+      toast({ variant: 'destructive', title: 'Cancellation Failed', description: getFriendlyErrorMessage(error) });
     } finally {
       setIsProcessingAction(false);
     }
@@ -167,11 +153,20 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
     try {
       const toAddress = {
         name: order.buyerName || 'Buyer',
-        street1: order.shippingAddress?.street || '',
+        street1: order.shippingAddress?.street || order.shippingAddress?.line1 || '',
         city: order.shippingAddress?.city || '',
         state: order.shippingAddress?.state || '',
-        zip: order.shippingAddress?.zip || '',
+        zip: order.shippingAddress?.zip || order.shippingAddress?.postalCode || '',
         country: order.shippingAddress?.country || 'US',
+      };
+
+      const parcel = {
+        length: String(order.length || '10'),
+        width: String(order.width || '8'),
+        height: String(order.height || '4'),
+        weight: String(order.weight || '1'),
+        distance_unit: 'in',
+        mass_unit: 'lb',
       };
 
       const response = await fetch('/api/shippo/label', {
@@ -179,9 +174,8 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: id,
-          listingId: order.listingId,
-          buyerId: order.buyerUid,
           toAddress,
+          parcel,
         }),
       });
       
@@ -192,7 +186,6 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
       }
       
       if (data.tracking_number && functions) {
-        // Update order with tracking info and mark as shipped via callable
         const updateStatus = httpsCallable(functions, 'updateOrderStatus');
         await updateStatus({
           orderId: id,
@@ -203,10 +196,10 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
             status: 'Shipped'
           }
         });
-        toast({ title: "Shippo Label Generated", description: "Tracking number updated and label is ready." });
+        toast({ title: "Shippo Label Generated" });
       }
-    } catch (e) {
-      toast({ variant: 'destructive', title: "Shippo Error", description: "Failed to connect to shipping provider." });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: "Shipping Error", description: e.message });
     } finally {
       setIsGeneratingLabel(false);
     }
@@ -230,12 +223,9 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
 
     try {
       await addDoc(collection(db, 'reports'), reportData);
-      
-      // Update order status to Disputed via callable
       const updateStatus = httpsCallable(functions, 'updateOrderStatus');
       await updateStatus({ orderId: id, updates: { status: 'Disputed' } });
-      
-      toast({ title: "Dispute Opened", description: "A moderator will review this transaction shortly." });
+      toast({ title: "Dispute Opened" });
       setIsDisputeOpen(false);
     } catch (e) {
       toast({ variant: 'destructive', title: "Failed to open dispute" });
@@ -264,11 +254,15 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
       setHasReviewed(true);
       setIsSubmittingReview(false);
       setIsReviewOpen(false);
-      toast({ title: 'Feedback Shared!', description: 'Your review helps the community.' });
+      toast({ title: 'Feedback Shared!' });
     } catch (error) {
       toast({ variant: 'destructive', title: "Review Failed" });
       setIsSubmittingReview(false);
     }
+  };
+
+  const handleReviewClick = () => {
+    setIsReviewOpen(true);
   };
 
   const handleReturnSubmit = async () => {
@@ -278,7 +272,6 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
     try {
       const updateStatus = httpsCallable(functions, 'updateOrderStatus');
       
-      // If return is already approved, just mark as shipped with tracking
       if (order.status === 'Return Approved') {
         await updateStatus({
           orderId: id,
@@ -287,69 +280,27 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
             returnTrackingNumber: returnReason
           }
         });
-        toast({ title: 'Return Shipped', description: 'The seller has been notified. Awaiting confirmation of receipt.' });
+        toast({ title: 'Return Shipped' });
       } else {
-        // Otherwise, create a new return request
         const returnId = `return_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        const returnRequestData = {
+        await addDoc(collection(db, 'returns'), {
           returnId,
           orderId: id,
           buyerUid: user.uid,
-          buyerName: user.displayName || 'Buyer',
-          sellerUid: order.sellerUid,
-          sellerName: order.sellerName,
-          listingId: order.listingId,
-          listingTitle: order.listingTitle,
           reason: returnReason,
           status: 'Return Requested',
           amount: order.price,
           createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        };
-
-        await addDoc(collection(db, 'returns'), returnRequestData);
-        
-        // Update order status via callable
-        await updateStatus({
-          orderId: id,
-          updates: {
-            status: 'Return Requested',
-            returnId
-          }
         });
-        
-        toast({ title: 'Return Requested', description: 'The seller has been notified. Awaiting approval...' });
-        setReturnData(returnRequestData);
+        await updateStatus({ orderId: id, updates: { status: 'Return Requested', returnId } });
+        toast({ title: 'Return Requested' });
       }
-      
       setIsReturnDialogOpen(false);
       setReturnReason('');
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Return Request Failed' });
+      toast({ variant: 'destructive', title: 'Action Failed' });
     } finally {
       setIsProcessingReturn(false);
-    }
-  };
-
-  const handleProcessRefund = async () => {
-    if (!user || !order || !functions) return;
-    setIsProcessingAction(true);
-
-    try {
-      const processRefund = httpsCallable(functions, 'processRefund');
-      const result = await processRefund({ orderId: id });
-      
-      toast({ title: 'Refund Processed', description: 'Refund has been sent to the buyer.' });
-    } catch (error: any) {
-      console.error('Refund error:', error);
-      toast({ 
-        variant: 'destructive', 
-        title: 'Refund Failed',
-        description: getFriendlyErrorMessage(error)
-      });
-    } finally {
-      setIsProcessingAction(false);
     }
   };
 
@@ -389,45 +340,49 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
 
         <div className="grid lg:grid-cols-[1.5fr_1fr] gap-10">
           <div className="space-y-8">
+            {isBuyer && order.buyerCanCancel && order.status !== 'Shipped' && order.status !== 'Delivered' && order.status !== 'Cancelled' && (
+              <Card className="bg-red-600 text-white border-none shadow-2xl p-8 rounded-[2rem] animate-in zoom-in duration-500">
+                <div className="flex items-start gap-4">
+                  <div className="bg-white/20 p-3 rounded-full shrink-0">
+                    <AlertTriangle className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-2xl font-headline font-black uppercase tracking-tight">Late Shipping Protection</h3>
+                      <p className="font-bold text-white/90">The seller has missed the mandatory 2-business-day shipping window.</p>
+                    </div>
+                    <Button 
+                      onClick={handleCancelOrder}
+                      disabled={isProcessingAction}
+                      className="bg-white text-red-600 hover:bg-white/90 font-black h-14 rounded-xl px-8 shadow-xl uppercase text-sm w-full sm:w-auto"
+                    >
+                      {isProcessingAction ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                      Cancel Order & Get Refund
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             <Card className="border-none shadow-2xl bg-card rounded-[2rem] overflow-hidden">
               <CardContent className="p-10 space-y-16">
                 <div className="relative pt-12">
                    <div className="absolute top-1/2 left-0 right-0 h-2 bg-muted rounded-full -translate-y-1/2" />
-                   <div 
-                     className={cn(
-                       "absolute top-1/2 left-0 h-2 bg-accent rounded-full -translate-y-1/2 transition-all duration-1000 ease-in-out",
-                       progressWidthClass
-                     )}
-                   />
-                   <div 
-                     className={cn(
-                       "absolute top-1/2 -translate-x-1/2 -translate-y-[85%] transition-all duration-1000 ease-in-out z-20",
-                       progressLeftClass
-                     )}
-                   >
+                   <div className={cn("absolute top-1/2 left-0 h-2 bg-accent rounded-full -translate-y-1/2 transition-all duration-1000", progressWidthClass)} />
+                   <div className={cn("absolute top-1/2 -translate-x-1/2 -translate-y-[85%] transition-all duration-1000 z-20", progressLeftClass)}>
                      <div className="bg-accent text-white p-3 rounded-xl shadow-lg">
                         {isGiveaway ? <Gift className="w-8 h-8" /> : <Truck className="w-8 h-8" />}
                      </div>
                    </div>
-
                    <div className="relative flex justify-between">
-                     {STEPS.map((step) => {
-                       const isCompleted = currentStep >= step.id;
-                       return (
-                         <div key={step.id} className="flex flex-col items-center gap-4 z-10">
-                            <div className={cn(
-                              "w-12 h-12 rounded-full border-4 flex items-center justify-center transition-all duration-500",
-                              isCompleted ? "bg-accent border-accent text-white shadow-lg" : "bg-white border-muted text-muted-foreground"
-                            )}>
-                              <step.icon className="w-5 h-5" />
-                            </div>
-                            <span className={cn(
-                              "text-[10px] font-black uppercase tracking-widest text-center max-w-[80px]",
-                              isCompleted ? "text-primary" : "text-muted-foreground"
-                            )}>{step.label}</span>
-                         </div>
-                       );
-                     })}
+                     {STEPS.map((step) => (
+                       <div key={step.id} className="flex flex-col items-center gap-4 z-10">
+                          <div className={cn("w-12 h-12 rounded-full border-4 flex items-center justify-center transition-all duration-500", currentStep >= step.id ? "bg-accent border-accent text-white shadow-lg" : "bg-white border-muted text-muted-foreground")}>
+                            <step.icon className="w-5 h-5" />
+                          </div>
+                          <span className={cn("text-[10px] font-black uppercase tracking-widest text-center max-w-[80px]", currentStep >= step.id ? "text-primary" : "text-muted-foreground")}>{step.label}</span>
+                       </div>
+                     ))}
                    </div>
                 </div>
 
@@ -437,454 +392,71 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <Zap className="w-5 h-5 text-accent" />
-                          <h3 className="font-black uppercase text-sm tracking-widest">Dealer Control</h3>
-                        </div>
-                        <div className="flex items-center gap-2 bg-accent/10 border border-accent/20 px-3 py-1.5 rounded-full">
-                          <Clock className="w-3.5 h-3.5 text-accent" />
-                          <span className="text-[9px] font-black uppercase text-accent tracking-widest">Must Ship in 48h</span>
+                          <h3 className="font-black uppercase text-sm tracking-widest">Dealer Control Panel</h3>
                         </div>
                       </div>
-
-                      {/* Status Progression Buttons */}
-                      <div className="bg-white/5 border border-white/10 p-6 rounded-xl space-y-4">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                          <Truck className="w-3 h-3" /> Order Status
-                        </h4>
-                        <div className="grid grid-cols-2 gap-3">
-                          {order.status === 'Confirmed' && (
-                            <Button 
-                              onClick={() => handleUpdateStatus('Processing')}
-                              className="bg-accent text-white hover:bg-accent/90 h-12 rounded-lg font-black uppercase text-[9px] col-span-2"
-                              disabled={isProcessingAction}
-                            >
-                              {isProcessingAction ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Package className="w-4 h-4 mr-2" />}
-                              Start Processing
-                            </Button>
-                          )}
-                          
-                          {order.status === 'Processing' && (
-                            <Button 
-                              onClick={handleGenerateLabel}
-                              className="bg-accent text-white hover:bg-accent/90 h-12 rounded-lg font-black uppercase text-[9px]"
-                              disabled={isGeneratingLabel}
-                            >
-                              {isGeneratingLabel ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Printer className="w-4 h-4 mr-2" />}
-                              Gen Label
-                            </Button>
-                          )}
-
-                          {order.status === 'Processing' && order.trackingNumber && (
-                            <Button 
-                              onClick={() => handleUpdateStatus('Shipped')}
-                              className="bg-green-600 text-white hover:bg-green-700 h-12 rounded-lg font-black uppercase text-[9px]"
-                              disabled={isProcessingAction}
-                            >
-                              {isProcessingAction ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Truck className="w-4 h-4 mr-2" />}
-                              Mark Shipped
-                            </Button>
-                          )}
-
-                          {(order.status === 'Confirmed' || order.status === 'Processing') && (
-                            <Button 
-                              variant="outline" 
-                              onClick={handleCancelOrder} 
-                              className="border-white/20 text-white hover:bg-red-600 hover:border-red-600 h-12 rounded-lg font-black uppercase text-[9px]"
-                              disabled={isProcessingAction}
-                            >
-                              <XCircle className="w-4 h-4 mr-2" />
-                              Cancel
-                            </Button>
-                          )}
-                        </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {order.status === 'Confirmed' && (
+                          <Button onClick={() => handleUpdateStatus('Processing')} className="bg-accent text-white h-14 rounded-xl font-black uppercase text-xs" disabled={isProcessingAction}>Start Processing</Button>
+                        )}
+                        {order.status === 'Processing' && !order.trackingNumber && (
+                          <Button onClick={handleGenerateLabel} className="bg-accent text-white h-14 rounded-xl font-black uppercase text-xs" disabled={isGeneratingLabel}>
+                            {isGeneratingLabel ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Printer className="w-4 h-4 mr-2" />} Generate Label
+                          </Button>
+                        )}
+                        {order.status === 'Processing' && order.trackingNumber && (
+                          <Button onClick={() => handleUpdateStatus('Shipped')} className="bg-green-600 text-white h-14 rounded-xl font-black uppercase text-xs" disabled={isProcessingAction}>Mark as Shipped</Button>
+                        )}
                       </div>
-                      
-                      {/* Label Generation */}
-                      {order.status !== 'Shipped' && order.status !== 'Delivered' && !order.trackingNumber && (
-                        <Button 
-                          onClick={handleGenerateLabel} 
-                          className="w-full bg-accent text-white hover:bg-accent/90 h-14 rounded-xl font-black uppercase gap-2"
-                          disabled={isGeneratingLabel}
-                        >
-                          {isGeneratingLabel ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}
-                          Generate Shippo Label
-                        </Button>
-                      )}
-
                       {order.trackingNumber && (
-                        <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-2">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Tracking Info</p>
-                          <div className="flex items-center justify-between">
+                        <div className="p-4 bg-white/5 rounded-xl border border-white/10 flex justify-between items-center">
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Active Tracking</p>
                             <code className="text-sm font-mono text-cyan-400 font-bold">{order.trackingNumber}</code>
-                            <Badge variant="outline" className="border-cyan-400/30 text-cyan-400 text-[8px]">{order.carrier || 'USPS'}</Badge>
                           </div>
+                          <Badge variant="outline" className="border-cyan-400/30 text-cyan-400 uppercase font-black text-[8px]">{order.carrier || 'Carrier'}</Badge>
                         </div>
                       )}
+                    </div>
+                  )}
 
-                      <div className="bg-white/5 border border-white/10 p-6 rounded-xl space-y-4">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                          <Sparkles className="w-3 h-3" /> Dealer fulfillment tip
-                        </h4>
-                        <p className="text-xs font-bold leading-relaxed text-zinc-400 italic">
-                          "Shipping within 48 hours is mandatory. Prompt fulfillment boosts your feedback rating and ensures your listings get priority visibility on the home page."
-                        </p>
+                  {isBuyer && order.status === 'Delivered' && !hasReviewed && (
+                    <div className="bg-accent/5 border-2 border-dashed border-accent/20 p-8 rounded-2xl flex flex-col items-center text-center space-y-6">
+                      <div className="space-y-2">
+                        <h3 className="text-2xl font-black uppercase tracking-tight">Package Received</h3>
+                        <p className="text-sm text-muted-foreground font-medium italic">Help the community by rating @{order.sellerName}.</p>
                       </div>
-
-                      {order.status === 'Return Requested' && (
-                        <div className="bg-orange-950 border border-orange-900/50 p-6 rounded-xl space-y-4">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-orange-400 flex items-center gap-2">
-                            <RotateCcw className="w-3 h-3" /> Return Request
-                          </h4>
-                          <div className="space-y-3">
-                            <div>
-                              <p className="text-[9px] text-orange-400/70 uppercase font-bold tracking-wide mb-1">Buyer's Reason:</p>
-                              <p className="text-sm text-orange-100 font-medium">{returnData?.reason || 'Return request pending...'}</p>
-                            </div>
-                            <div className="flex gap-3">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    onClick={() => handleUpdateStatus('Return Approved')}
-                                    className="flex-1 bg-green-600 text-white hover:bg-green-700 h-12 rounded-lg font-black uppercase text-[9px]"
-                                    disabled={isProcessingAction}
-                                  >
-                                    {isProcessingAction ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-                                    Approve Return
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="text-xs font-bold">Approve the return and buyer will ship item back</TooltipContent>
-                              </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    onClick={() => handleUpdateStatus('Delivered')}
-                                    className="flex-1 bg-red-600 text-white hover:bg-red-700 h-12 rounded-lg font-black uppercase text-[9px]"
-                                    disabled={isProcessingAction}
-                                  >
-                                    <XCircle className="w-4 h-4 mr-2" />
-                                    Deny
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="text-xs font-bold">Reject return request and order stays completed</TooltipContent>
-                              </Tooltip>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {order.status === 'Return Requested' && (
-                        <div className="bg-orange-950/50 border border-orange-900/30 p-6 rounded-xl space-y-3">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-orange-300 flex items-center gap-2">
-                            <Sparkles className="w-3 h-3" /> Return Best Practices
-                          </h4>
-                          <ul className="space-y-2 text-[11px] text-orange-200/80 font-medium">
-                            <li className="flex gap-2">
-                              <span className="text-orange-400 font-black">→</span>
-                              <span><strong>Accept returns</strong> to protect your seller rating and maintain buyer trust</span>
-                            </li>
-                            <li className="flex gap-2">
-                              <span className="text-orange-400 font-black">→</span>
-                              <span><strong>Fast refunds</strong> often result in positive feedback even for returns</span>
-                            </li>
-                            <li className="flex gap-2">
-                              <span className="text-orange-400 font-black">→</span>
-                              <span><strong>Disputed returns</strong> can impact your tier status and search visibility</span>
-                            </li>
-                            <li className="flex gap-2">
-                              <span className="text-orange-400 font-black">→</span>
-                              <span><strong>Communicate</strong> return address details promptly via messages</span>
-                            </li>
-                          </ul>
-                        </div>
-                      )}
-
-                      {order.status === 'Return Shipped' && (
-                        <div className="bg-blue-950 border border-blue-900/50 p-6 rounded-xl space-y-4">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 flex items-center gap-2">
-                            <Truck className="w-3 h-3" /> Item Return Shipping
-                          </h4>
-                          <p className="text-sm text-blue-100 font-medium">The buyer has shipped the item back. Awaiting receipt.</p>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button 
-                                onClick={handleProcessRefund}
-                                className="w-full bg-green-600 text-white hover:bg-green-700 h-12 rounded-lg font-black uppercase text-[9px]"
-                                disabled={isProcessingAction}
-                              >
-                                {isProcessingAction ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-                                Confirm Received & Process Refund
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs font-bold">Verify item received and issue refund immediately via Stripe</TooltipContent>
-                          </Tooltip>
-                        </div>
-                      )}
-
-                      {order.status === 'Return Shipped' && (
-                        <div className="bg-blue-950/50 border border-blue-900/30 p-6 rounded-xl space-y-3">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-300 flex items-center gap-2">
-                            <Sparkles className="w-3 h-3" /> Refund Best Practices
-                          </h4>
-                          <ul className="space-y-2 text-[11px] text-blue-200/80 font-medium">
-                            <li className="flex gap-2">
-                              <span className="text-blue-400 font-black">→</span>
-                              <span><strong>Process immediately</strong> when item is received for best buyer experience</span>
-                            </li>
-                            <li className="flex gap-2">
-                              <span className="text-blue-400 font-black">→</span>
-                              <span><strong>Quick refunds</strong> often convert returns into positive 5-star reviews</span>
-                            </li>
-                            <li className="flex gap-2">
-                              <span className="text-blue-400 font-black">→</span>
-                              <span><strong>Buyer retention</strong> is 2x higher when refunds are handled smoothly</span>
-                            </li>
-                            <li className="flex gap-2">
-                              <span className="text-blue-400 font-black">→</span>
-                              <span><strong>Your reputation</strong> is worth more than any single sale</span>
-                            </li>
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {isBuyer && (
-                    <div className="space-y-6">
-                      {order.trackingNumber && (
-                        <div className="bg-zinc-950 text-white p-8 rounded-2xl space-y-4">
-                          <div className="flex items-center gap-3">
-                            <Truck className="w-5 h-5 text-accent" />
-                            <h3 className="font-black uppercase text-sm tracking-widest">In Transit</h3>
-                          </div>
-                          <p className="text-xs font-bold text-zinc-400 uppercase">Tracking Number: <span className="text-white ml-2">{order.trackingNumber}</span></p>
-                          <Button asChild variant="outline" className="w-full border-white/20 text-white hover:bg-white/10 h-12 rounded-xl font-black uppercase text-[10px] gap-2">
-                            <Link href="#">Track on Carrier Website <ExternalLink className="w-3 h-3" /></Link>
-                          </Button>
-                        </div>
-                      )}
-
-                      {order.buyerCanCancel && order.status !== 'Shipped' && order.status !== 'Delivered' && isBuyer && (
-                        <div className="bg-gradient-to-r from-red-500 to-red-600 p-8 rounded-2xl border-2 border-red-700 space-y-4 shadow-xl">
-                          <div className="flex items-center gap-3">
-                            <div className="bg-white/20 p-3 rounded-full">
-                              <AlertTriangle className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                              <h3 className="text-xl font-black uppercase tracking-tight text-white">Late Shipping - You Can Cancel</h3>
-                              <p className="text-sm text-white/90 font-medium">Seller has not provided carrier acceptance within 2 business days</p>
-                            </div>
-                          </div>
-                          <div className="bg-white/10 border-2 border-white/30 p-6 rounded-xl">
-                            <p className="text-sm text-white font-bold leading-relaxed mb-4">
-                              The seller was required to get this package <span className="underline">received by USPS/UPS/FedEx</span> within 2 business days of your payment. Since they missed this mandatory deadline, you are eligible for immediate cancellation with a full refund.
-                            </p>
-                            <ul className="text-xs text-white/90 font-medium space-y-2 list-disc pl-5 mb-4">
-                              <li>Full refund will be processed via Stripe within 3-5 business days</li>
-                              <li>The seller will receive penalties including tier downgrade and higher fees</li>
-                              <li>This is a zero-tolerance policy to ensure fast, reliable service for buyers</li>
-                            </ul>
-                          </div>
-                          <Button 
-                            onClick={handleCancelOrder}
-                            disabled={isProcessingAction}
-                            className="w-full bg-white text-red-600 hover:bg-white/90 h-16 rounded-xl font-black text-lg uppercase tracking-wide shadow-lg"
-                          >
-                            {isProcessingAction ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <XCircle className="w-5 h-5 mr-2" />}
-                            Cancel Order & Get Full Refund
-                          </Button>
-                        </div>
-                      )}
-
-                      {order.status === 'Confirmed' && (
-                        <div className="bg-zinc-50 p-8 rounded-2xl border-2 border-dashed flex flex-col items-center gap-4 text-center">
-                          <h3 className="font-black uppercase text-sm">Change of heart?</h3>
-                          <p className="text-xs text-muted-foreground font-medium">You can cancel your order before the seller begins processing it.</p>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                onClick={handleCancelOrder}
-                                className="rounded-xl font-bold gap-2 text-red-600 border-red-200 hover:bg-red-50"
-                                disabled={isProcessingAction}
-                              >
-                                <XCircle className="w-4 h-4" /> Cancel Order
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs font-bold">Cancel before seller starts processing for full refund</TooltipContent>
-                          </Tooltip>
-                        </div>
-                      )}
-
-                      {order.status === 'Shipped' && (
-                        <div className="bg-zinc-50 dark:bg-zinc-900 border-2 border-dashed p-8 rounded-2xl text-center space-y-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <Truck className="w-5 h-5 text-accent" />
-                            <h3 className="text-lg font-black uppercase tracking-tighter">On Its Way</h3>
-                          </div>
-                          <p className="text-sm font-medium text-muted-foreground">Tracking your package automatically. You'll be notified when delivered.</p>
-                          <p className="text-xs text-muted-foreground italic">Delivery status updates automatically from the carrier.</p>
-                        </div>
-                      )}
-
-                      {order.status === 'Delivered' && !hasReviewed && (
-                        <div className="bg-accent/5 border-2 border-dashed border-accent/20 p-8 rounded-2xl flex flex-col items-center text-center space-y-4">
-                          <div className="bg-accent/10 p-4 rounded-full"><CheckCircle2 className="w-8 h-8 text-accent" /></div>
-                          <h3 className="text-xl font-black uppercase tracking-tighter">✓ Carrier Delivered</h3>
-                          <p className="text-sm text-muted-foreground font-medium max-w-sm">
-                            {order.carrierDeliveryDate ? `Package confirmed delivered on ${new Date(order.carrierDeliveryDate).toLocaleDateString()}` : 'Your package has been delivered.'}
-                          </p>
-                          <p className="text-xs text-muted-foreground italic">Help the community by rating your experience with @{order.sellerName}.</p>
-                          <div className="flex gap-3">
-                            <Button onClick={() => setIsReviewOpen(true)} className="bg-accent text-white font-black rounded-xl px-10 h-14 uppercase tracking-widest shadow-lg">Rate Seller</Button>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="outline" onClick={() => setIsReturnDialogOpen(true)} className="rounded-xl h-14 px-6 font-bold border-2 gap-2"><RotateCcw className="w-4 h-4" /> Request Return</Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-xs font-bold">Start return process if item not as described or damaged</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </div>
-                      )}
-
-                      {order.status === 'Return Requested' && (
-                        <div className="bg-orange-50 border-2 border-orange-200 p-8 rounded-2xl space-y-4">
-                          <div className="flex items-center gap-2">
-                            <RotateCcw className="w-5 h-5 text-orange-600" />
-                            <h3 className="text-lg font-black uppercase tracking-tighter text-orange-700">Return Requested</h3>
-                          </div>
-                          <p className="text-sm text-orange-700 font-medium">Your return request has been sent to the seller. They will review it shortly.</p>
-                          <p className="text-xs text-orange-600 italic">You'll receive a notification once they approve or deny your request.</p>
-                        </div>
-                      )}
-
-                      {order.status === 'Return Approved' && (
-                        <div className="bg-blue-50 border-2 border-blue-200 p-8 rounded-2xl space-y-4">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-5 h-5 text-blue-600" />
-                            <h3 className="text-lg font-black uppercase tracking-tighter text-blue-700">Return Approved</h3>
-                          </div>
-                          <p className="text-sm text-blue-700 font-medium">Great! The seller approved your return. Please package and ship the item back.</p>
-                          <div className="bg-white p-4 rounded-xl border border-blue-200 space-y-2">
-                            <p className="text-xs font-bold text-blue-900 uppercase">Return Address (to be provided by seller):</p>
-                            <p className="text-xs text-blue-700 font-medium">Check your messages for return shipping instructions.</p>
-                          </div>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button onClick={() => setIsReturnDialogOpen(true)} variant="outline" className="w-full rounded-xl h-12 font-black border-blue-200 gap-2">
-                                <Truck className="w-4 h-4" /> Mark as Shipped Back
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs font-bold">Provide tracking number for return shipment</TooltipContent>
-                          </Tooltip>
-                        </div>
-                      )}
-
-                      {order.status === 'Return Shipped' && (
-                        <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 p-8 rounded-2xl space-y-4">
-                          <div className="flex items-center gap-2">
-                            <Truck className="w-5 h-5 text-blue-600" />
-                            <h3 className="text-lg font-black uppercase tracking-tighter text-blue-700">Item On Way Back</h3>
-                          </div>
-                          <p className="text-sm text-blue-700 font-medium">The seller has received your return shipment. They'll verify the item and process your refund.</p>
-                          <p className="text-xs text-blue-600 italic">Refunds typically process within 3-5 business days.</p>
-                        </div>
-                      )}
-
-                      {order.status === 'Refunded' && (
-                        <div className="bg-green-50 border-2 border-green-200 p-8 rounded-2xl space-y-4">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-5 h-5 text-green-600" />
-                            <h3 className="text-lg font-black uppercase tracking-tighter text-green-700">Refund Processed</h3>
-                          </div>
-                          <p className="text-sm text-green-700 font-medium">${order.price?.toFixed(2)} has been refunded to your account.</p>
-                          <p className="text-xs text-green-600 italic">Please allow 3-5 business days for the funds to appear in your account.</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {hasReviewed && (
-                    <div className="bg-green-50 border-2 border-dashed border-green-200 p-8 rounded-2xl text-center">
-                      <CheckCircle2 className="w-10 h-10 text-green-600 mx-auto mb-3" />
-                      <p className="text-green-900 font-black uppercase tracking-widest text-sm">Review Submitted!</p>
+                      <div className="flex gap-3 w-full max-w-xs">
+                        <Button onClick={handleReviewClick} className="flex-1 bg-accent text-white font-black rounded-xl h-14 uppercase text-xs">Rate Seller</Button>
+                        <Button variant="outline" onClick={() => setIsReturnDialogOpen(true)} className="flex-1 rounded-xl h-14 font-black border-2 text-xs">Return</Button>
+                      </div>
                     </div>
                   )}
                 </div>
               </CardContent>
             </Card>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card className="border-none shadow-sm bg-card p-6 space-y-4">
-                 <div className="flex items-center gap-3">
-                    <div className="bg-accent/10 p-3 rounded-xl"><MapPin className="w-6 h-6 text-accent" /></div>
-                    <h4 className="font-black text-sm uppercase">Destination</h4>
-                 </div>
-                 <p className="text-xs text-muted-foreground leading-relaxed font-bold uppercase">
-                   Verified Shipping Address<br />
-                   {order.shippingAddress?.street || 'TBD'}<br />
-                   {order.shippingAddress?.city}, {order.shippingAddress?.state} {order.shippingAddress?.zip}
-                 </p>
-              </Card>
-              <Card className="border-none shadow-sm bg-card p-6 space-y-4">
-                 <div className="flex items-center gap-3">
-                    <div className="bg-accent/10 p-3 rounded-xl"><ShieldAlert className="w-6 h-6 text-accent" /></div>
-                    <h4 className="font-black text-sm uppercase">Order Management</h4>
-                 </div>
-                 <div className="space-y-2">
-                    <Button 
-                      variant="link" 
-                      onClick={() => setIsDisputeOpen(true)}
-                      className="p-0 h-auto text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-red-600 transition-colors"
-                    >
-                      <AlertTriangle className="w-3 h-3 mr-1.5" />
-                      Open Dispute
-                    </Button>
-                    <p className="text-[9px] text-muted-foreground font-bold uppercase leading-tight">
-                      Disputes are handled by the staff moderation team. Ensure you have messaged the {isBuyer ? 'seller' : 'buyer'} first.
-                    </p>
-                 </div>
-              </Card>
-            </div>
           </div>
 
           <aside className="space-y-8">
             <Card className="border-none shadow-2xl bg-zinc-950 text-white rounded-[2rem] overflow-hidden">
                <CardHeader className="p-8 pb-0">
-                 <h3 className="text-xl font-headline font-black uppercase tracking-tighter">Order Summary</h3>
+                 <h3 className="text-xl font-headline font-black uppercase tracking-tighter">Manifest</h3>
                </CardHeader>
                <CardContent className="p-8 space-y-8">
-                  <div className="relative aspect-square rounded-xl overflow-hidden border border-white/10">
-                     {order.imageUrl ? (
-                       <Image src={order.imageUrl} alt={order.listingTitle} fill className="object-cover" />
-                     ) : (
-                       <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                         <Package className="w-16 h-16" />
-                       </div>
-                     )}
+                  <div className="relative aspect-square rounded-xl overflow-hidden border border-white/10 bg-zinc-900">
+                     <Image src={order.imageUrl || '/defaultbroken.jpg'} alt={order.listingTitle} fill className="object-cover" />
                   </div>
                   <div className="space-y-2">
-                     <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                       {isGiveaway ? 'Prize' : 'Item'}
-                     </p>
-                     <h4 className="text-2xl font-black leading-tight">{order.listingTitle}</h4>
-                     <p className="text-sm font-bold text-accent">
-                       {isGiveaway ? 'Free Prize' : `Total Paid: $${order.price?.toLocaleString()}`}
-                     </p>
+                     <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Asset Title</p>
+                     <h4 className="text-2xl font-black leading-tight tracking-tight">{order.listingTitle}</h4>
+                     <p className="text-sm font-bold text-accent">${order.price?.toLocaleString()}</p>
                   </div>
                   <Separator className="bg-white/10" />
                   <div className="space-y-4">
-                     <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{isBuyer ? 'Seller' : 'Buyer'} Details</p>
+                     <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{isBuyer ? 'Seller' : 'Buyer'}</p>
                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-black">
-                          {(isBuyer ? order.sellerName : (order.buyerName || 'Collector'))?.[0] || '?'}
-                        </div>
-                        <div>
-                           <p className="text-sm font-black">@{isBuyer ? order.sellerName : (order.buyerName || 'Collector')}</p>
-                           <Button asChild variant="link" className="p-0 h-auto text-[10px] text-zinc-500 font-bold uppercase tracking-widest hover:text-white">
-                             <Link href={`/messages/${[order.buyerUid, order.sellerUid].sort().join('_')}`} className="flex items-center gap-1.5">
-                               <MessageSquare className="w-3 h-3" /> Send Message
-                             </Link>
-                           </Button>
-                        </div>
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-black">{(isBuyer ? order.sellerName : order.buyerName)?.[0] || '?'}</div>
+                        <p className="text-sm font-black uppercase tracking-tight">@{isBuyer ? order.sellerName : order.buyerName}</p>
                      </div>
                   </div>
                </CardContent>
@@ -894,116 +466,33 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
       </main>
 
       <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-white dark:bg-zinc-900">
-          <div className="bg-primary dark:bg-accent p-8 text-white dark:text-zinc-900">
-             <h2 className="text-3xl font-headline font-black uppercase tracking-tight">Review Seller</h2>
-             <p className="text-white/60 dark:text-zinc-700 text-sm font-medium">Rate your experience with this transaction.</p>
+        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl">
+          <div className="bg-primary p-8 text-white">
+             <h2 className="text-3xl font-headline font-black uppercase tracking-tight italic">Rate Experience</h2>
           </div>
-          <div className="p-8 space-y-8 dark:bg-zinc-900">
+          <div className="p-8 space-y-8">
             <div className="flex justify-center gap-4">
               {[1, 2, 3, 4, 5].map((s) => (
-                <button key={s} type="button" title={`Rate ${s} star${s > 1 ? 's' : ''}`} aria-label={`Rate ${s} star${s > 1 ? 's' : ''}`} onClick={() => setRating(s)} className="transition-transform active:scale-90">
+                <button key={s} onClick={() => setRating(s)} className="transition-transform active:scale-90" title={`Rate ${s} star${s > 1 ? 's' : ''}`}> 
                   <Star className={cn("w-10 h-10", s <= rating ? "text-yellow-500 fill-current" : "text-muted")} />
                 </button>
               ))}
             </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest">Feedback</Label>
-              <Textarea 
-                placeholder="Was the item as described? Was the seller reliable?" 
-                className="min-h-[120px] rounded-xl border-2 dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-4">
-              <Button variant="outline" onClick={() => setIsReviewOpen(false)} className="flex-1 rounded-xl h-14 font-black dark:border-zinc-700 dark:hover:bg-zinc-800">Cancel</Button>
-              <Button 
-                onClick={handleReviewSubmit} 
-                disabled={isSubmittingReview}
-                className="flex-1 bg-accent text-white font-black rounded-xl h-14 shadow-lg"
-              >
-                {isSubmittingReview ? "Submitting..." : "Submit Review"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isDisputeOpen} onOpenChange={setIsDisputeOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-white dark:bg-zinc-900">
-          <div className="bg-red-600 p-8 text-white">
-             <h2 className="text-3xl font-headline font-black uppercase tracking-tight">Open Dispute</h2>
-             <p className="text-white/70 text-sm font-medium">This will alert the platform staff to mediate.</p>
-          </div>
-          <div className="p-8 space-y-6 dark:bg-zinc-900">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest">Reason for Dispute</Label>
-              <Textarea 
-                placeholder="Describe the issue in detail. If the item was not received or arrived damaged, provide specific information..." 
-                className="min-h-[150px] rounded-xl border-2 dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700"
-                value={disputeReason}
-                onChange={(e) => setDisputeReason(e.target.value)}
-              />
-            </div>
-            <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-xl border border-amber-100 dark:border-amber-900/50 flex gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-[10px] text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
-                The transaction funds will be placed on hold until a moderator resolves the case. Ensure you provide all necessary proof if contacted.
-              </p>
-            </div>
-            <div className="flex gap-4">
-              <Button variant="outline" onClick={() => setIsDisputeOpen(false)} className="flex-1 rounded-xl h-14 font-black dark:border-zinc-700 dark:hover:bg-zinc-800">Cancel</Button>
-              <Button 
-                onClick={handleOpenDispute} 
-                disabled={isProcessingAction || !disputeReason}
-                className="flex-1 bg-red-600 text-white font-black rounded-xl h-14 shadow-lg"
-              >
-                {isProcessingAction ? "Processing..." : "Open Dispute"}
-              </Button>
-            </div>
+            <Textarea placeholder="Share your experience..." className="min-h-[120px] rounded-xl border-2 font-medium" value={comment} onChange={(e) => setComment(e.target.value)} />
+            <Button onClick={handleReviewSubmit} disabled={isSubmittingReview} className="w-full bg-accent text-white font-black rounded-xl h-16 shadow-lg uppercase text-sm">Post Review</Button>
           </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isReturnDialogOpen} onOpenChange={setIsReturnDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-white dark:bg-zinc-900">
+        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl">
           <div className="bg-orange-600 p-8 text-white">
-             <h2 className="text-3xl font-headline font-black uppercase tracking-tight">
-               {order.status === 'Return Approved' ? 'Ship Return' : 'Request Return'}
-             </h2>
-             <p className="text-white/70 text-sm font-medium">
-               {order.status === 'Return Approved' ? 'Provide tracking info for the returned item.' : 'Let the seller know why you want to return this item.'}
-             </p>
+             <h2 className="text-3xl font-headline font-black uppercase tracking-tight italic">Return Protocol</h2>
           </div>
-          <div className="p-8 space-y-6 dark:bg-zinc-900">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest">
-                {order.status === 'Return Approved' ? 'Tracking Number' : 'Return Reason'}
-              </Label>
-              <Textarea 
-                placeholder={order.status === 'Return Approved' ? 'Enter your return shipping tracking number...' : 'Tell the seller why you need to return this item. Examples: Item not as described, item damaged, wrong item received, changed mind...'} 
-                className="min-h-[120px] rounded-xl border-2 dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700"
-                value={returnReason}
-                onChange={(e) => setReturnReason(e.target.value)}
-              />
-            </div>
-            <div className="bg-orange-50 dark:bg-orange-950/30 p-4 rounded-xl border border-orange-100 dark:border-orange-900/50 flex gap-3">
-              <RotateCcw className="w-5 h-5 text-orange-600 dark:text-orange-500 shrink-0 mt-0.5" />
-              <p className="text-[10px] text-orange-900 dark:text-orange-200 leading-relaxed font-medium">
-                {order.status === 'Return Approved' ? 'Once received by the seller, they\'ll verify the item and process your refund.' : 'Once submitted, the seller has 48 hours to approve or deny your return request. Approved returns must be shipped within 14 days.'}
-              </p>
-            </div>
-            <div className="flex gap-4">
-              <Button variant="outline" onClick={() => { setIsReturnDialogOpen(false); setReturnReason(''); }} className="flex-1 rounded-xl h-14 font-black dark:border-zinc-700 dark:hover:bg-zinc-800">Cancel</Button>
-              <Button 
-                onClick={handleReturnSubmit} 
-                disabled={isProcessingReturn || !returnReason.trim()}
-                className="flex-1 bg-orange-600 text-white font-black rounded-xl h-14 shadow-lg"
-              >
-                {isProcessingReturn ? "Processing..." : order.status === 'Return Approved' ? "Confirm Shipped" : "Request Return"}
-              </Button>
-            </div>
+          <div className="p-8 space-y-6">
+            <Label className="text-[10px] font-black uppercase tracking-widest">{order.status === 'Return Approved' ? 'Carrier Tracking' : 'Reason for Return'}</Label>
+            <Textarea placeholder="Describe the issue..." className="min-h-[120px] rounded-xl border-2 font-medium" value={returnReason} onChange={(e) => setReturnReason(e.target.value)} />
+            <Button onClick={handleReturnSubmit} disabled={isProcessingReturn || !returnReason.trim()} className="w-full bg-orange-600 text-white font-black rounded-xl h-16 uppercase text-sm">Confirm Protocol</Button>
           </div>
         </DialogContent>
       </Dialog>

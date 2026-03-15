@@ -1,0 +1,43 @@
+@font-face {
+  font-family: 'RIFLCD';
+  src: url('/fonts/rif.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+
+.iso24-title-block {
+  font-family: 'RIFLCD', Arial, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+  margin: 0;
+  padding: 0;
+  display: block;
+}
+
+.iso24-title-in {
+  color: #fff;
+  font-size: 5em;
+  margin-bottom: -0.2em;
+}
+
+.iso24-title-search {
+  color: #ff0000;
+  font-size: 11em;
+  font-weight: 900;
+  line-height: 0.85;
+  margin: 0;
+  padding: 0;
+}
+
+.iso24-title-of {
+  color: #fff;
+  font-size: 3.2em;
+  margin-top: -0.2em;
+}
+
+.iso24-title-dt {
+  vertical-align: middle;
+  margin-left: 0.2em;
+}

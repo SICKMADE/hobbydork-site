@@ -11,13 +11,14 @@ export type UserDoc = {
   email: string;
   emailVerified: boolean;
   displayName: string;
+  username: string;
   role: string;
   status: UserStatus;
   isSeller: boolean;
   sellerStatus: string;
   storeId?: string;
   avatar?: string;
-  about?: string;
+  bio?: string;
   notifyMessages: boolean;
   notifyOrders: boolean;
   notifyISO24: boolean;
@@ -31,6 +32,7 @@ export type UserDoc = {
   updatedAt: import('firebase/firestore').Timestamp | any;
   oneAccountAcknowledged: boolean;
   blockedUsers: string[];
+  ownedPremiumProducts: string[];
   shippingAddress?: {
     name?: string;
     address1?: string;
@@ -48,13 +50,14 @@ const EMPTY_USERDOC: UserDoc = {
   email: "",
   emailVerified: false,
   displayName: "",
+  username: "",
   role: "USER",
   status: "ACTIVE",
   isSeller: false,
   sellerStatus: "NONE",
   storeId: "",
   avatar: undefined,
-  about: "",
+  bio: "",
   notifyMessages: true,
   notifyOrders: true,
   notifyISO24: true,
@@ -67,6 +70,7 @@ const EMPTY_USERDOC: UserDoc = {
   shippingAddress: undefined,
   oneAccountAcknowledged: false,
   blockedUsers: [],
+  ownedPremiumProducts: [],
   createdAt: undefined as any,
   updatedAt: undefined as any,
 };
@@ -90,10 +94,6 @@ type AuthContextType = {
   refreshProfile: () => Promise<UserDoc | void>;
 };
 
-/**
- * useAuth is a wrapper around the Firebase provider's useUser hook.
- * It provides a familiar interface while using the centralized auth system.
- */
 export function useAuth(): AuthContextType {
   const { user, isUserLoading } = useUser();
   const { auth, firestore: db } = useFirebase();
@@ -142,8 +142,7 @@ export function useAuth(): AuthContextType {
         isSeller: false,
         sellerStatus: 'NONE',
         storeId: '',
-        // Don't set avatar field - let getRandomAvatar handle it dynamically
-        about: '',
+        bio: '',
         notifyMessages: true,
         notifyOrders: true,
         notifyISO24: true,
@@ -157,14 +156,11 @@ export function useAuth(): AuthContextType {
         updatedAt: serverTimestamp(),
         oneAccountAcknowledged: false,
         blockedUsers: [],
+        ownedPremiumProducts: [],
       });
 
       if (cred.user) {
-        const actionCodeSettings = {
-          url: 'https://hobbydork.com/login',
-          handleCodeInApp: false,
-        };
-        await sendEmailVerification(cred.user, actionCodeSettings);
+        await sendEmailVerification(cred.user);
       }
 
       return cred;
@@ -200,52 +196,12 @@ export function useAuth(): AuthContextType {
     }
 
     try {
-      const actionCodeSettings = {
-        url: 'https://hobbydork.com/login',
-        handleCodeInApp: false,
-      };
-      await sendEmailVerification(current, actionCodeSettings);
+      await sendEmailVerification(current);
     } catch (e: any) {
-      const code = String(e?.code ?? '');
-      const continueUrl = 'https://hobbydork.com/verify-email';
-
-      const domainHelpMessage =
-        `Resend blocked by Firebase domain settings. ` +
-        `In Firebase Console → Authentication → Settings → Authorized domains, add your site domain (e.g. hobbydork.com and www.hobbydork.com). ` +
-        `Then set Vercel env NEXT_PUBLIC_SITE_URL=https://hobbydork.com and redeploy.` +
-        (continueUrl ? ` (Continue URL: ${continueUrl})` : '');
-
-      if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri') {
-        try {
-          await sendEmailVerification(current);
-          return;
-        } catch (e2: any) {
-          const code2 = String(e2?.code ?? '');
-          if (code2 === 'auth/too-many-requests') {
-            throw new Error('Too many attempts. Please wait a bit and try again.');
-          }
-
-          if (code2 === 'auth/unauthorized-continue-uri' || code2 === 'auth/invalid-continue-uri') {
-            throw new Error(`${domainHelpMessage} (Firebase: ${code2})`);
-          }
-
-          throw new Error(e2?.message ?? 'Could not resend verification email.');
-        }
-      }
-
-      if (code === 'auth/too-many-requests') {
-        throw new Error('Too many attempts. Please wait a bit and try again.');
-      }
-
-      if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri') {
-        throw new Error(`${domainHelpMessage} (Firebase: ${code})`);
-      }
-
-      throw new Error(e?.message ?? 'Could not resend verification email.');
+      throw e;
     }
   }, [auth]);
 
-  // Use ref to memoize the return object - only create new object if dependencies change
   const authRef = useRef<AuthContextType | null>(null);
   
   if (!authRef.current ||
@@ -270,28 +226,4 @@ export function useAuth(): AuthContextType {
   }
 
   return authRef.current as AuthContextType;
-}
-
-// Utility: Check all sellers for overdue unshipped orders and flag their profile
-export async function flagOverdueSellers() {
-  const db = getFirestore();
-  // Cleaned: find overdue paid orders
-  const ordersRef = collection(db, 'orders');
-  const now = Date.now();
-  const twoBusinessDaysMs = 2 * 24 * 60 * 60 * 1000;
-  const q = query(ordersRef, where('state', '==', 'PAID'));
-  const snap = await getDocs(q);
-  const overdueSellers = new Set<string>();
-  snap.forEach(docSnap => {
-    const data = docSnap.data();
-    const created = data.createdAt?.seconds ? data.createdAt.seconds * 1000 : new Date(data.createdAt).getTime();
-    if (now - created > twoBusinessDaysMs && typeof data.sellerUid === 'string') {
-      overdueSellers.add(data.sellerUid);
-    }
-  });
-  // Flag each seller profile
-  for (const sellerUid of overdueSellers) {
-    const userRef = doc(db, 'users', sellerUid);
-    await updateDoc(userRef, { hasOverdueShipments: true });
-  }
 }

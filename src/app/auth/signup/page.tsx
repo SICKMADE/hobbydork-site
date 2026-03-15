@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useAuth, useFirestore } from "@/firebase";
-import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
-import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
 
 export default function SignupPage() {
   const [username, setUsername] = useState("");
@@ -24,40 +24,52 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    // Check Firebase initialization
+    
     if (!db || !auth) {
       setError("Database not initialized. Please try again later.");
       setLoading(false);
       return;
     }
+
     try {
-      // Check username uniqueness
-      const q = query(collection(db, "user_profiles"), where("username", "==", username));
-      const snap = await getDocs(q);
       if (!username.match(/^[a-zA-Z0-9_]{3,20}$/)) {
         setError("Username must be 3-20 characters, letters, numbers, or underscores.");
+        setLoading(false);
         return;
       }
-      if (!email.match(/^[^@]+@[^@]+\.[^@]+$/)) {
-        setError("Invalid email address.");
-        return;
-      }
-      if (snap.size > 0) {
+
+      // Check username uniqueness
+      const usernameQuery = query(collection(db, "usernames"), where("__name__", "==", username.toLowerCase()));
+      const usernameSnap = await getDocs(usernameQuery);
+      if (!usernameSnap.empty) {
         setError("Username is already taken.");
+        setLoading(false);
         return;
       }
 
       const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(cred.user, { displayName: username });
       await sendEmailVerification(cred.user);
 
-      await addDoc(collection(db, "user_profiles"), {
+      // Create main user document in 'users' collection
+      await setDoc(doc(db, "users", cred.user.uid), {
         uid: cred.user.uid,
-        username,
+        username: username.toLowerCase(),
         email,
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
         shippingAddress: null,
         isSeller: false,
-        verified: false,
+        sellerStatus: 'NONE',
+        role: 'USER',
+        status: 'ACTIVE',
+        emailVerified: false,
+        ownedPremiumProducts: [],
+      });
+
+      // Reserve username
+      await setDoc(doc(db, "usernames", username.toLowerCase()), {
+        uid: cred.user.uid
       });
 
       toast({ title: "Signup successful!", description: "Please verify your email." });
@@ -76,7 +88,7 @@ export default function SignupPage() {
         <Input
           placeholder="Username"
           value={username}
-          onChange={e => setUsername(e.target.value)}
+          onChange={e => setUsername(e.target.value.toLowerCase())}
           required
           className="bg-background text-foreground dark:bg-background dark:text-foreground border-input focus-visible:ring-accent"
         />
@@ -97,7 +109,7 @@ export default function SignupPage() {
           className="bg-background text-foreground dark:bg-background dark:text-foreground border-input focus-visible:ring-accent"
         />
         {error && <div className="text-destructive font-bold text-sm">{error}</div>}
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button type="submit" disabled={loading} className="w-full h-12 bg-accent text-white font-black uppercase rounded-xl shadow-lg">
           {loading ? "Signing Up..." : "Sign Up"}
         </Button>
       </form>

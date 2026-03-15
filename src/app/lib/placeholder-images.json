@@ -2,10 +2,46 @@
 {
   "placeholderImages": [
     {
+      "id": "default-listing",
+      "description": "The mandatory fallback for listings without an image.",
+      "imageUrl": "/defaultbroken.jpg",
+      "imageHint": "placeholder listing"
+    },
+    {
       "id": "default-banner",
       "description": "The standard community banner for new storefronts.",
       "imageUrl": "/hobbydork-banner-default.png",
       "imageHint": "store banner"
+    },
+    {
+      "id": "ad-feed",
+      "description": "Advertisement for the global listing feed.",
+      "imageUrl": "/feed.jpg",
+      "imageHint": "marketplace feed"
+    },
+    {
+      "id": "ad-drop",
+      "description": "Advertisement for live community drops.",
+      "imageUrl": "/drop.jpg",
+      "imageHint": "giveaway drop"
+    },
+    {
+      "id": "ad-iso24",
+      "description": "Advertisement for the 24-hour request feed.",
+      "imageUrl": "/iso24.jpg",
+      "imageHint": "item search"
+    },
+    {
+      "id": "ad-giveaway",
+      "description": "Advertisement for seller giveaways.",
+      "imageUrl": "/give.jpg",
+      "imageHint": "free prize"
+    },
+    {
+      "id": "ad-live",
+      "description": "Advertisement for real-time auctions.",
+      "imageUrl": "/live.jpg",
+      "imageHint": "live auction"
     }
   ]
 }

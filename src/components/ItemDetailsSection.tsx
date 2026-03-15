@@ -55,8 +55,16 @@ export const ItemDetailsSection: React.FC<ItemDetailsSectionProps> = ({
       <div className="space-y-2">
         <Label className="text-xs font-black uppercase tracking-widest">Pricing Model</Label>
         <RadioGroup value={type} className="flex gap-2" onValueChange={setType}>
-          <div className="flex items-center space-x-2 border-2 rounded-xl p-4 flex-1 cursor-pointer hover:bg-secondary/50 transition-colors"><RadioGroupItem value="bin" id="bin" /><Label htmlFor="bin" className="cursor-pointer font-bold">Buy It Now</Label></div>
-          <div className="flex items-center space-x-2 border-2 rounded-xl p-4 flex-1 cursor-pointer hover:bg-secondary/50 transition-colors"><RadioGroupItem value="auction" id="auction" /><Label htmlFor="auction" className="cursor-pointer font-bold">Auction</Label></div>
+          <RadioGroupItem value="bin" id="bin">
+            <div className="flex items-center space-x-2 border-2 rounded-xl p-4 flex-1 cursor-pointer hover:bg-secondary/50 transition-colors">
+              <Label htmlFor="bin" className="cursor-pointer font-bold">Buy It Now</Label>
+            </div>
+          </RadioGroupItem>
+          <RadioGroupItem value="auction" id="auction">
+            <div className="flex items-center space-x-2 border-2 rounded-xl p-4 flex-1 cursor-pointer hover:bg-secondary/50 transition-colors">
+              <Label htmlFor="auction" className="cursor-pointer font-bold">Auction</Label>
+            </div>
+          </RadioGroupItem>
         </RadioGroup>
       </div>
     </div>

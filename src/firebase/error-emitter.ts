@@ -7,7 +7,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
  */
 export interface AppEvents {
   'permission-error': FirestorePermissionError;
-  [key: string]: unknown;
 }
 
 // A generic type for a callback function.
@@ -17,7 +16,7 @@ type Callback<T> = (data: T) => void;
  * A strongly-typed pub/sub event emitter.
  * It uses a generic type T that extends a record of event names to payload types.
  */
-function createEventEmitter<T extends Record<string, unknown>>() {
+function createEventEmitter<T extends Record<string, any>>() {
   // The events object stores arrays of callbacks, keyed by event name.
   // The types ensure that a callback for a specific event matches its payload type.
   const events: { [K in keyof T]?: Array<Callback<T[K]>> } = {};
@@ -38,7 +37,7 @@ function createEventEmitter<T extends Record<string, unknown>>() {
     /**
      * Unsubscribe from an event.
      * @param eventName The name of the event to unsubscribe from.
-    * Cleaned: removed callback removal note
+     * @param callback The specific callback to remove.
      */
     off<K extends keyof T>(eventName: K, callback: Callback<T[K]>) {
       if (!events[eventName]) {

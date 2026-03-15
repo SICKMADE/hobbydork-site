@@ -1,5 +1,6 @@
+
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore, collection, query, where, getDocs, orderBy, limit, startAfter } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { initializeApp, getApps } from 'firebase/app';
 import { rateLimit, createRateLimitResponse, getRateLimitForPath } from '@/lib/rate-limit';
 
@@ -29,18 +30,17 @@ export async function GET(request: NextRequest) {
     // Query parameters
     const search = searchParams.get('q')?.toLowerCase() || '';
     const category = searchParams.get('category') || '';
-    const minPrice = searchParams.get('minPrice') ? parseInt(searchParams.get('minPrice')!) : 0;
-    const maxPrice = searchParams.get('maxPrice') ? parseInt(searchParams.get('maxPrice')!) : 999999999;
+    const minPrice = searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : 0;
+    const maxPrice = searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : 999999999;
     const condition = searchParams.get('condition') || '';
-    // Grading parameter removed
-    const sortBy = searchParams.get('sort') || 'newest'; // newest, price-low, price-high, trending
-    const page = parseInt(searchParams.get('page') || '1');
+    const sortBy = searchParams.get('sort') || 'newest';
     const pageSize = 20;
 
     const db = getFirestore(app);
     const listingsRef = collection(db, 'listings');
 
-    // Build query constraints
+    // Firestore Rule: If using a range filter, the first orderBy must be on the same field.
+    // Query: status == Active AND price >= min AND price <= max
     const constraints: any[] = [
       where('status', '==', 'Active'),
       where('price', '>=', minPrice),
@@ -55,23 +55,14 @@ export async function GET(request: NextRequest) {
       constraints.push(where('condition', '==', condition));
     }
 
-    // Grading constraint removed
-
-    // Sort
+    // Determine orderBy constraints to respect Firestore range filtering rules
     let orderByConstraint: any[] = [];
-    switch (sortBy) {
-      case 'price-low':
-        orderByConstraint = [orderBy('price', 'asc')];
-        break;
-      case 'price-high':
-        orderByConstraint = [orderBy('price', 'desc')];
-        break;
-      case 'trending':
-        orderByConstraint = [orderBy('viewCount', 'desc')];
-        break;
-      case 'newest':
-      default:
-        orderByConstraint = [orderBy('createdAt', 'desc')];
+    
+    // Since 'price' is used in a range filter, it MUST be the first orderBy field
+    orderByConstraint.push(orderBy('price', sortBy === 'price-high' ? 'desc' : 'asc'));
+    
+    if (sortBy === 'newest') {
+      orderByConstraint.push(orderBy('createdAt', 'desc'));
     }
 
     // Execute query
@@ -91,15 +82,18 @@ export async function GET(request: NextRequest) {
         type: data.type,
         currentBid: data.currentBid,
         createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
+        description: data.description,
+        tags: data.tags || [],
       };
     });
 
-    // Filter by search term (title + description)
+    // Filter by search term locally for title/description (full-text search simulation)
     if (search) {
       results = results.filter(
         (item: any) =>
           item.title.toLowerCase().includes(search) ||
-          (item.description?.toLowerCase() || '').includes(search)
+          (item.description?.toLowerCase() || '').includes(search) ||
+          item.tags.some((t: string) => t.toLowerCase().includes(search))
       );
     }
 
@@ -110,7 +104,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       results,
       hasMore,
-      page,
       pageSize,
       total: results.length,
     });

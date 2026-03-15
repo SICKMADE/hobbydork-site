@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, deleteDoc, query, collection, where, getDocs, writeBatch } from 'firebase/firestore';
 import { deleteUser } from 'firebase/auth';
 import { getRandomAvatar, filterProfanity } from '@/lib/utils';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
@@ -72,7 +72,6 @@ export default function SettingsPage() {
     if (profile) {
       if (profile.shippingAddress) setAddress(profile.shippingAddress);
       setBio(profile.bio || '');
-      // Only load photoURL if it's a real uploaded image (data URL ONLY), not external URLs
       const isCustomPhoto = profile.photoURL && profile.photoURL.startsWith('data:');
       setPhotoURL(isCustomPhoto ? profile.photoURL : '');
       if (profile.notifications) setNotifications(profile.notifications);
@@ -93,19 +92,15 @@ export default function SettingsPage() {
     setIsSavingProfile(true);
 
     const sanitizedBio = filterProfanity(bio);
-
-    // Only save photoURL if it's a custom uploaded image (data: URL only)
     const data: any = { 
       bio: sanitizedBio, 
       updatedAt: serverTimestamp() 
     };
     
-    // Only include photoURL if it's a real uploaded data: URL
-    // If photoURL is empty or not a data: URL, explicitly set to null to remove bad data
     if (photoURL && photoURL.startsWith('data:')) {
       data.photoURL = photoURL;
     } else if (!photoURL) {
-      data.photoURL = null; // Remove old bad data, will use randomized avatar
+      data.photoURL = null;
     }
     
     const userRef = doc(db, 'users', user.uid);
@@ -115,6 +110,11 @@ export default function SettingsPage() {
         setIsSavingProfile(false);
       })
       .catch(() => {
+        toast({
+          variant: 'destructive',
+          title: 'Profile Update Failed',
+          description: 'Could not update your profile. Please try again.'
+        });
         setIsSavingProfile(false);
       });
   };
@@ -130,6 +130,11 @@ export default function SettingsPage() {
         setIsSavingAddress(false);
       })
       .catch(() => {
+        toast({
+          variant: 'destructive',
+          title: 'Address Update Failed',
+          description: 'Could not update your address. Please try again.'
+        });
         setIsSavingAddress(false);
       });
   };
@@ -145,6 +150,11 @@ export default function SettingsPage() {
         setIsSavingNotifications(false);
       })
       .catch(() => {
+        toast({
+          variant: 'destructive',
+          title: 'Notification Update Failed',
+          description: 'Could not update your notification preferences. Please try again.'
+        });
         setIsSavingNotifications(false);
       });
   };
@@ -167,7 +177,6 @@ export default function SettingsPage() {
     return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>;
   }
 
-  // Only use custom uploaded photo if set, otherwise always use randomized avatar
   const effectiveAvatar = photoURL || getRandomAvatar(user?.uid);
 
   return (
@@ -187,7 +196,6 @@ export default function SettingsPage() {
             <TabsTrigger value="account" className="rounded-lg px-8 h-10 font-bold shrink-0">Account</TabsTrigger>
           </TabsList>
 
-          {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
             <Card className="rounded-xl border">
               <CardContent className="p-5 sm:p-8 space-y-6 sm:space-y-8">
@@ -200,8 +208,7 @@ export default function SettingsPage() {
                         <Camera className="w-8 h-8 text-white" />
                       </label>
                     </div>
-                    <label htmlFor="photo-upload" className="sr-only">Upload profile photo</label>
-                    <input id="photo-upload" type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                    <input id="photo-upload" type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} title="Upload profile photo" placeholder="Choose a photo" />
                     <Button variant="outline" size="sm" className="w-full h-8 rounded-lg font-bold text-[10px] uppercase tracking-wider" onClick={() => document.getElementById('photo-upload')?.click()}>
                       <Camera className="w-3 h-3 mr-1.5" /> Change Photo
                     </Button>
@@ -227,7 +234,6 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
 
-          {/* Address Tab */}
           <TabsContent value="address" className="space-y-6">
             <Card className="rounded-xl border">
               <CardContent className="p-5 sm:p-8 space-y-6">
@@ -257,7 +263,6 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
 
-          {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-6">
             <Card className="rounded-xl border">
               <CardContent className="p-5 sm:p-8 space-y-6">
@@ -321,7 +326,6 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
 
-          {/* Account Tab */}
           <TabsContent value="account" className="space-y-6">
             <Card className="rounded-xl border">
               <CardContent className="p-5 sm:p-8 space-y-6">
@@ -338,7 +342,6 @@ export default function SettingsPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Delete Account Dialog */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent className="sm:max-w-[440px] rounded-2xl">
             <DialogHeader>
@@ -353,13 +356,7 @@ export default function SettingsPage() {
               </div>
             </DialogHeader>
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">All your data will be permanently deleted including:</p>
-              <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                <li>• Profile information</li>
-                <li>• Orders and transaction history</li>
-                <li>• Saved addresses</li>
-                <li>• Account settings</li>
-              </ul>
+              <p className="text-sm text-muted-foreground">All your data will be permanently deleted.</p>
               <div className="flex gap-2 pt-4">
                 <Button variant="outline" className="flex-1 h-10" onClick={() => setIsDeleteDialogOpen(false)}>
                   Cancel

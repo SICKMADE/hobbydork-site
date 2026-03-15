@@ -1,4 +1,3 @@
-
 'use client';
 
 import { use, useState, useEffect } from 'react';
@@ -13,18 +12,18 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Star, 
-  ShieldCheck,
+  ShieldCheck, 
   ArrowRight,
   MessageSquare,
   Heart,
-  Send,
   Loader2,
   Clock,
   Ghost,
   Users,
-  Image as ImageIcon,
   CheckCircle2,
-  Medal
+  Medal,
+  RotateCcw,
+  ShieldAlert
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -33,9 +32,9 @@ import { cn, getRandomAvatar, filterProfanity } from '@/lib/utils';
 import type { Listing, Giveaway } from '@/lib/mock-data';
 import { isListingExpired } from '@/lib/mock-data';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, orderBy, addDoc, serverTimestamp, setDoc, deleteDoc, getDoc, updateDoc, increment, limit } from 'firebase/firestore';
+import { doc, collection, query, where, orderBy, addDoc, serverTimestamp, setDoc, deleteDoc, getDoc, updateDoc, limit } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function ShopPage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
@@ -43,32 +42,36 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
   const { user } = useUser();
   const db = useFirestore();
 
-  // Relist handler must be defined at the top level
-  const handleRelist = async (listing: Listing) => {
-    toast({ title: 'Relist', description: `Relist action for ${listing.title} coming soon!` });
-  };
-
   const [newPostContent, setNewPostContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [followerCount, setFollowerCount] = useState(0);
   const [isFollowLoading, setIsFollowLoading] = useState(true);
 
   const storeRef = useMemoFirebase(() => db ? doc(db, 'storefronts', username) : null, [db, username]);
   const { data: storeData, isLoading: storeLoading } = useDoc(storeRef);
 
-  // Fetch current user's profile for avatar
-  const currentUserProfileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
-  const { data: currentUserProfile } = useDoc(currentUserProfileRef);
+  const profileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
+  const { data: currentUserProfile } = useDoc(profileRef);
 
-  // Fetch seller's user profile to get tier
-  const sellerUsersQuery = useMemoFirebase(() => db ? query(collection(db, 'users'), where('username', '==', username), limit(1)) : null, [db, username]);
+  const sellerUsersQuery = useMemoFirebase(() => db ? query(collection(db, 'users'), where('username', '==', username.toLowerCase()), limit(1)) : null, [db, username]);
   const { data: sellerUsers } = useCollection(sellerUsersQuery);
   const sellerProfile = sellerUsers?.[0];
 
-  const listingsQuery = useMemoFirebase(() => db ? query(collection(db, 'listings'), where('seller', '==', username)) : null, [db, username]);
-  const giveawaysQuery = useMemoFirebase(() => db ? query(collection(db, 'giveaways'), where('seller', '==', username)) : null, [db, username]);
-  const reviewsQuery = useMemoFirebase(() => db ? query(collection(db, 'reviews'), where('sellerId', '==', username)) : null, [db, username]);
+  const listingsQuery = useMemoFirebase(() => {
+    if (!db || !sellerProfile?.uid) return null;
+    return query(collection(db, 'listings'), where('listingSellerId', '==', sellerProfile.uid));
+  }, [db, sellerProfile?.uid]);
+
+  const giveawaysQuery = useMemoFirebase(() => {
+    if (!db || !sellerProfile?.uid) return null;
+    return query(collection(db, 'giveaways'), where('sellerId', '==', sellerProfile.uid));
+  }, [db, sellerProfile?.uid]);
+
+  const reviewsQuery = useMemoFirebase(() => {
+    if (!db || !sellerProfile?.uid) return null;
+    return query(collection(db, 'reviews'), where('sellerId', '==', sellerProfile.uid));
+  }, [db, sellerProfile?.uid]);
+
   const postsQuery = useMemoFirebase(() => db ? query(collection(db, 'storefronts', username, 'posts'), orderBy('timestamp', 'desc')) : null, [db, username]);
 
   const { data: listings } = useCollection<Listing>(listingsQuery as any);
@@ -76,17 +79,12 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
   const { data: reviews } = useCollection(reviewsQuery);
   const { data: posts } = useCollection(postsQuery);
 
-  // Filter listings based on visibility and ownership
   const visibleListings = listings?.filter(listing => {
-    // Owner can see all listings (Visible and Invisible)
-    const isOwner = user?.uid === listing.sellerId;
+    const isOwner = user?.uid === listing.listingSellerId;
     if (isOwner) return true;
-    
-    // Non-owners can only see Visible listings
     return listing.visibility === 'Visible';
   }) || [];
 
-  // Check Follow Status
   useEffect(() => {
     if (!db || !user || !username) {
       setIsFollowLoading(false);
@@ -134,17 +132,23 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
     e.preventDefault();
     if (!newPostContent.trim() || !user || !db || !storeRef) return;
 
+    if (!user.emailVerified || currentUserProfile?.status !== 'ACTIVE') {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Verification Required', 
+        description: 'You must verify your email and have an active profile to post updates.' 
+      });
+      return;
+    }
+
     setIsPosting(true);
     const sanitized = filterProfanity(newPostContent);
-
-    // Only use custom photo if it's a data: URL (real file upload)
-    const isCustomPhoto = currentUserProfile?.photoURL && currentUserProfile.photoURL.startsWith('data:');
-    const avatarUrl = isCustomPhoto ? currentUserProfile.photoURL : getRandomAvatar(user.uid);
+    const avatarUrl = currentUserProfile?.photoURL?.startsWith('data:') ? currentUserProfile.photoURL : getRandomAvatar(user.uid);
 
     const postData = {
       content: sanitized,
       authorId: user.uid,
-      authorName: user.displayName || username,
+      authorName: currentUserProfile?.username || user.displayName || username,
       authorAvatar: avatarUrl,
       timestamp: serverTimestamp(),
       likes: 0
@@ -153,31 +157,41 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
     try {
       await addDoc(collection(db, 'storefronts', username, 'posts'), postData);
       setNewPostContent('');
-      toast({ title: 'Post Published!', description: 'Your followers have been notified.' });
+      toast({ title: 'Post Published!' });
     } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Post Failed',
+        description: 'Could not publish your post. Please try again.'
+      });
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: `storefronts/${username}/posts`,
         operation: 'create',
         requestResourceData: postData
-      } satisfies SecurityRuleContext));
+      }));
     } finally {
       setIsPosting(false);
     }
   };
 
-  if (storeLoading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-accent" /></div>;
-  }
+  const handleRelist = async (listing: Listing) => {
+    if (!db) return;
+    try {
+      const ref = doc(db, 'listings', listing.id);
+      await updateDoc(ref, {
+        status: 'Active',
+        visibility: 'Visible',
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+        updatedAt: serverTimestamp()
+      });
+      toast({ title: 'Item Relisted' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Relist Failed' });
+    }
+  };
 
-  if (!storeData) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <Ghost className="w-12 h-12 text-muted-foreground" />
-        <h1 className="text-xl font-black uppercase">Store Not Found</h1>
-        <Button asChild variant="outline"><Link href="/">Back Home</Link></Button>
-      </div>
-    );
-  }
+  if (storeLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-accent" /></div>;
+  if (!storeData) return <div className="min-h-screen flex flex-col items-center justify-center gap-4"><Ghost className="w-12 h-12 text-muted-foreground" /><h1 className="text-xl font-black uppercase">Store Not Found</h1><Button asChild variant="outline"><Link href="/">Back Home</Link></Button></div>;
 
   const isOwner = user?.uid === storeData.ownerUid;
   const appliedTheme = storeData?.theme || 'Default';
@@ -187,343 +201,120 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
   const isHobbyShop = appliedTheme === 'Hobby Shop Theme';
   const avatarUrl = storeData.avatarUrl || getRandomAvatar(username);
 
-  // Split listings into active and expired
-  const activeListings = listings?.filter((listing) => !isListingExpired(listing));
+  const activeListings = visibleListings?.filter((listing) => !isListingExpired(listing));
   const expiredListings = listings?.filter((listing) => isListingExpired(listing));
 
+  const urbanTabTriggerClass = cn(
+    "px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest relative transition-all",
+    isUrban && "text-white/60 data-[state=active]:text-white data-[state=active]:bg-transparent",
+    isUrban && "data-[state=active]:after:content-[''] data-[state=active]:after:absolute data-[state=active]:after:inset-x-1 data-[state=active]:after:inset-y-1 data-[state=active]:after:border-[3px] data-[state=active]:after:border-white/90 data-[state=active]:after:rounded-[48%_52%_50%_50%/45%_55%_55%_45%] data-[state=active]:after:rotate-[-2deg] data-[state=active]:after:pointer-events-none data-[state=active]:after:blur-[1.2px]",
+  );
+
   return (
-    <div className={cn(
-      "min-h-screen bg-background transition-colors duration-500",
-      isNeonSyndicate && "bg-zinc-950",
-      isComicBook && "comic-dots bg-white"
-    )}>
+    <div className={cn("min-h-screen bg-background transition-colors duration-500", isNeonSyndicate && "bg-zinc-950", isComicBook && "comic-dots bg-white", isUrban && "bg-[url('/brick-wall.png')] bg-repeat bg-[size:250px]")}>
       <Navbar />
-      
-      <div className={cn(
-        "relative w-full h-48 md:h-80 overflow-hidden bg-slate-900",
-        isComicBook && "border-b-[8px] border-black",
-        isNeonSyndicate && "border-b border-cyan-500/20",
-        isUrban && "border-b-4 border-slate-900",
-        isHobbyShop && "border-b-4 border-[#5d4037]"
-      )}>
-        <Image 
-          src={storeData.bannerUrl || '/hobbydork-banner-default.png'} 
-          alt={`${username} banner`} 
-          fill 
-          className="object-cover" 
-          priority
-        />
+      <div className={cn("relative w-full h-48 md:h-80 overflow-hidden bg-slate-900", isComicBook && "border-b-[8px] border-black", isNeonSyndicate && "border-b border-cyan-500/20", isUrban && "border-b-4 border-slate-900", isHobbyShop && "border-b-4 border-[#5d4037]")}>
+        <Image src={storeData.bannerUrl || '/hobbydork-banner-default.png'} alt={`${username} banner`} fill className="object-cover" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
       </div>
 
       <section className="container mx-auto px-4 max-w-6xl -mt-12 md:-mt-20 relative z-20 pb-8">
-        <div className={cn(
-          "flex flex-col md:flex-row gap-6 md:gap-8 items-center justify-between p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl transition-all duration-500",
-          isComicBook ? "bg-white border-[6px] border-black rounded-none shadow-[15px_15px_0px_#000]" : 
-          isNeonSyndicate ? "bg-zinc-900/80 backdrop-blur-xl border border-cyan-500/30" : 
-          isUrban ? "bg-slate-100 border-4 border-slate-900 rounded-none shadow-[10px_10px_0px_#000]" : 
-          isHobbyShop ? "bg-[#355e3b] border-4 border-white/10 text-white" : 
-          "bg-card border"
-        )}>
+        <div className={cn("flex flex-col md:flex-row gap-6 md:gap-8 items-center justify-between p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl transition-all", isComicBook ? "bg-white border-[6px] border-black rounded-none shadow-[15px_15px_0px_#000]" : isNeonSyndicate ? "bg-zinc-900/80 backdrop-blur-xl border border-cyan-500/30" : isUrban ? "bg-slate-100 border-4 border-slate-900 rounded-none shadow-[10px_10px_0px_#000]" : isHobbyShop ? "bg-[#355e3b] border-4 border-white/10 text-white" : "bg-card border")}>
             <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 text-center md:text-left">
-               <div className={cn(
-                 "w-24 h-24 md:w-40 md:h-40 rounded-2xl md:rounded-3xl overflow-hidden border-4 border-white shadow-xl relative shrink-0 bg-zinc-100",
-                 isComicBook && "border-4 border-black rounded-none shadow-[8px_8px_0px_#000]",
-                 isUrban && "border-4 border-slate-900 rounded-none"
-               )}>
+               <div className={cn("w-24 h-24 md:w-40 md:h-40 rounded-2xl md:rounded-3xl overflow-hidden border-4 border-white shadow-xl relative shrink-0 bg-zinc-100", isComicBook && "border-4 border-black rounded-none shadow-[8px_8px_0px_#000]", isUrban && "border-4 border-slate-900 rounded-none")}>
                   <Image src={avatarUrl} alt={username} fill className="object-cover" />
                 </div>
                 <div className="space-y-2 md:space-y-3">
                   <div className="flex items-center justify-center md:justify-start gap-2 md:gap-3 flex-wrap">
-                    <h1 className={cn(
-                      "text-xl sm:text-2xl md:text-5xl font-headline font-black uppercase tracking-tighter",
-                      isComicBook ? "text-black bg-yellow-400 border-4 border-black px-3 py-1" : 
-                      isNeonSyndicate ? "text-white italic tracking-[0.1em] drop-shadow-[0_0_10px_cyan]" : 
-                      isUrban ? "text-slate-950 font-mono" : 
-                      isHobbyShop ? "text-white" : "text-primary"
-                    )}>
-                      {username}
-                    </h1>
-                    <ShieldCheck className={cn(
-                      "w-6 h-6 md:w-8 md:h-8",
-                      isNeonSyndicate ? "text-cyan-400" : isHobbyShop ? "text-white" : "text-primary"
-                    )} />
-                    {sellerProfile?.sellerTier && (
-                      <Badge className={cn(
-                        "gap-1.5 font-black uppercase text-[9px] md:text-[10px] tracking-widest",
-                        sellerProfile.sellerTier === 'Platinum' ? "bg-purple-600" :
-                        sellerProfile.sellerTier === 'Gold' ? "bg-yellow-600" :
-                        sellerProfile.sellerTier === 'Silver' ? "bg-slate-400" :
-                        "bg-orange-600"
-                      )}>
-                        <Medal className="w-3.5 h-3.5" />
-                        {sellerProfile.sellerTier}
-                      </Badge>
-                    )}
+                    <h1 className={cn("text-xl sm:text-2xl md:text-5xl font-headline font-black uppercase tracking-tighter", isComicBook ? "text-black bg-yellow-400 border-4 border-black px-3 py-1" : isNeonSyndicate ? "text-white italic tracking-[0.1em] drop-shadow-[0_0_10px_cyan]" : isUrban ? "text-slate-950 font-['Graffiti'] text-4xl md:text-7xl lowercase" : isHobbyShop ? "text-white" : "text-primary")}>{username}</h1>
+                    <ShieldCheck className={cn("w-6 h-6 md:w-8 md:h-8", isNeonSyndicate ? "text-cyan-400" : isHobbyShop ? "text-white" : "text-primary")} />
+                    {sellerProfile?.sellerTier && <Badge className="gap-1.5 font-black uppercase text-[9px] md:text-[10px] tracking-widest"><Medal className="w-3.5 h-3.5" />{sellerProfile.sellerTier}</Badge>}
                   </div>
-                  <p className={cn(
-                    "font-bold text-xs md:text-sm uppercase tracking-widest",
-                    isNeonSyndicate ? "text-cyan-400/60" : isHobbyShop ? "text-white/70" : "text-muted-foreground"
-                  )}>
-                    {storeData?.tagline || 'Verified hobbydork Dealer'}
-                  </p>
-                  <div className="flex items-center justify-center md:justify-start gap-4 md:gap-6 text-[9px] md:text-[10px] font-black uppercase">
-                    <span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500" /> 5.0 Rating</span>
-                    <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> {storeData?.totalSales || 0} Sales</span>
-                  </div>
-                  {sellerProfile && (
-                    <div className="flex items-center justify-center md:justify-start gap-3 mt-2">
-                      <Badge variant="outline" className={cn(
-                        "gap-1.5 font-black uppercase text-[8px] md:text-[9px] tracking-widest border-2",
-                        (sellerProfile.onTimeShippingRate || 1) >= 0.95 
-                          ? "bg-green-50 dark:bg-green-950/20 border-green-500 text-green-700 dark:text-green-300"
-                          : "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-500 text-yellow-700 dark:text-yellow-300"
-                      )}>
-                        <Clock className="w-3 h-3" />
-                        {Math.round((sellerProfile.onTimeShippingRate || 1) * 100)}% On-Time Shipping
-                      </Badge>
-                      {(sellerProfile.lateShipmentsLast30d || 0) === 0 && (
-                        <Badge variant="outline" className="gap-1.5 font-black uppercase text-[8px] md:text-[9px] tracking-widest border-2 bg-blue-50 dark:bg-blue-950/20 border-blue-500 text-blue-700 dark:text-blue-300">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Fast Shipper
-                        </Badge>
-                      )}
-                    </div>
-                  )}
+                  <p className={cn("font-bold text-xs md:text-sm uppercase tracking-widest", isNeonSyndicate ? "text-cyan-400/60" : isHobbyShop ? "text-white/70" : "text-muted-foreground")}>{storeData?.tagline || 'Verified Dealer'}</p>
+                  <div className="flex items-center justify-center md:justify-start gap-4 md:gap-6 text-[9px] md:text-[10px] font-black uppercase"><span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500" /> 5.0 Rating</span><span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> {storeData?.totalSales || 0} Sales</span></div>
                 </div>
             </div>
             <div className="flex items-center gap-4 w-full md:w-auto">
               {!isOwner && (
-                <Button 
-                  onClick={handleFollowToggle}
-                  disabled={isFollowLoading}
-                  className={cn(
-                    "font-black px-8 md:px-12 h-12 md:h-14 uppercase tracking-[0.2em] rounded-xl md:rounded-2xl shadow-xl transition-all active:scale-95 w-full md:w-auto",
-                    isFollowing ? "bg-zinc-200 text-zinc-600 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600" : (
-                      isComicBook ? "bg-black text-white rounded-none border-4 border-black" : 
-                      isNeonSyndicate ? "bg-cyan-500 text-zinc-950 rounded-none italic shadow-[0_0_20px_rgba(34,211,238,0.4)]" : 
-                      isUrban ? "bg-orange-600 text-white rounded-none border-b-4 border-r-4 border-slate-950" : 
-                      isHobbyShop ? "bg-white text-[#355e3b] rounded-none" : 
-                      "bg-primary text-white dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
-                    )
-                  )}
-                >
-                  {isFollowing ? 'Following' : 'Follow Shop'}
-                </Button>
+                <div className="flex gap-2 w-full md:w-auto">
+                  <Button onClick={handleFollowToggle} disabled={isFollowLoading} className={cn("font-black px-8 md:px-12 h-12 md:h-14 uppercase tracking-[0.2em] rounded-xl md:rounded-2xl shadow-xl transition-all active:scale-95 flex-1 md:flex-none", isFollowing ? "bg-zinc-200 text-zinc-600" : "bg-primary text-white")}>{isFollowing ? 'Following' : 'Follow'}</Button>
+                  <Button asChild variant="outline" className="h-12 md:h-14 rounded-xl md:rounded-2xl border-2 font-black uppercase text-[10px] gap-2 px-6"><Link href={`/messages?seller=${username}`}><MessageSquare className="w-4 h-4" /> Message</Link></Button>
+                </div>
               )}
-              {isOwner && (
-                <Button asChild variant="outline" className="rounded-xl font-black h-12 px-8 uppercase text-[10px] tracking-widest border-2">
-                  <Link href="/seller/settings">Edit Shop Appearance</Link>
-                </Button>
-              )}
+              {isOwner && <Link href="/seller/settings" className="w-full sm:w-auto"><Button className="w-full sm:w-auto px-6 md:px-8 h-12 md:h-14 font-black uppercase tracking-widest rounded-xl border-2 text-[10px]">Edit Shop Appearance</Button></Link>}
             </div>
         </div>
       </section>
 
       <main className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
-        {giveaways && giveaways.length > 0 && (
-          <div className="mb-8 md:mb-12">
-            <div className={cn(
-              "rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-10 relative overflow-hidden shadow-2xl transition-all duration-500 bg-zinc-950 text-white",
-              isComicBook ? "bg-white border-[6px] border-black rounded-none text-black" : 
-              isNeonSyndicate ? "border border-cyan-500/40 shadow-[0_0_40px_rgba(34,211,238,0.1)]" : 
-              isUrban ? "bg-slate-900 border-4 border-slate-700 rounded-none" : 
-              isHobbyShop ? "bg-[#5d4037] rounded-none border-4 border-white/10" : ""
-            )}>
-              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8">
-                <div className="space-y-2 md:space-y-4 text-center md:text-left">
-                  <Badge className="bg-accent text-white uppercase font-black tracking-widest text-[8px] md:text-[9px]">Active Drop</Badge>
-                  <h2 className="text-2xl md:text-5xl font-headline font-black uppercase italic tracking-tighter leading-tight md:leading-none">{giveaways[0].title}</h2>
-                </div>
-                <Button asChild className="h-14 md:h-16 px-8 md:px-12 rounded-xl md:rounded-2xl transition-all shadow-2xl text-lg md:text-xl uppercase italic bg-white text-zinc-950 hover:bg-accent hover:text-white w-full md:w-auto">
-                  <Link href={`/giveaways/${giveaways[0].id}`}>
-                    Enter Drop <ArrowRight className="ml-2 w-5 h-5" />
-                  </Link>
-                </Button>
-              </div>
+        <Tabs defaultValue="listings" className="space-y-6 md:space-y-10">
+          <TabsList className={cn("p-1 h-12 md:h-14 border w-full sm:w-auto justify-start flex-nowrap scrollbar-hide", isUrban ? "bg-black/60 border-white/20 rounded-none" : "rounded-xl md:rounded-2xl bg-muted")}>
+            <TabsTrigger value="listings" className={urbanTabTriggerClass}>listings</TabsTrigger>
+            {isOwner && <TabsTrigger value="expired" className={urbanTabTriggerClass}>expired</TabsTrigger>}
+            <TabsTrigger value="giveaways" className={urbanTabTriggerClass}>giveaways</TabsTrigger>
+            <TabsTrigger value="feed" className={urbanTabTriggerClass}>feed</TabsTrigger>
+            <TabsTrigger value="reviews" className={urbanTabTriggerClass}>reviews</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="listings">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 gap-y-24 md:gap-x-4 md:gap-y-32">
+              {activeListings && activeListings.length > 0 ? (activeListings.map((l) => <ListingCard key={l.id} listing={l} theme={appliedTheme} />)) : (<div className="col-span-full py-20 text-center border-4 border-dashed rounded-[2rem] text-zinc-400 font-black uppercase text-sm">No active listings</div>)}
             </div>
-          </div>
-        )}
-
-<Tabs defaultValue="listings" className="space-y-6 md:space-y-10">
-  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-    <TabsList className="p-1 h-12 md:h-14 rounded-xl md:rounded-2xl border overflow-x-auto w-full sm:w-auto justify-start flex-nowrap scrollbar-hide">
-      <TabsTrigger value="listings" className="px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest">Listings</TabsTrigger>
-      {isOwner && (
-        <TabsTrigger
-          value="expired"
-          className={
-            cn(
-              "px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest",
-              isComicBook && "bg-white border-4 border-black rounded-none shadow-[8px_8px_0px_#000] data-[state=active]:bg-yellow-400 data-[state=active]:text-black",
-              isNeonSyndicate && "bg-zinc-900 border border-cyan-500/20 rounded-none shadow-[0_0_20px_rgba(34,211,238,0.05)] data-[state=active]:bg-cyan-500 data-[state=active]:text-zinc-950 italic",
-              isUrban && "bg-slate-100 border-4 border-slate-900 rounded-none shadow-[10px_10px_0px_#000] data-[state=active]:bg-orange-600 data-[state=active]:text-white",
-              isHobbyShop && "bg-[#355e3b] border-4 border-white/10 text-white rounded-none shadow-2xl data-[state=active]:bg-white data-[state=active]:text-[#355e3b]",
-            )
-          }
-        >
-          Expired Listings
-        </TabsTrigger>
-      )}
-      <TabsTrigger value="giveaways" className="px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest">Giveaways</TabsTrigger>
-      <TabsTrigger value="feed" className="px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest">Feed</TabsTrigger>
-      <TabsTrigger value="reviews" className="px-6 md:px-8 h-full font-black uppercase text-[9px] md:text-[10px] tracking-widest">Reviews</TabsTrigger>
-    </TabsList>
-    {isOwner && (
-      <Link href="/listings/create" className="w-full sm:w-auto">
-        <Button className="w-full sm:w-auto px-6 md:px-8 h-12 md:h-14 rounded-xl md:rounded-2xl font-black uppercase text-[9px] md:text-[10px] tracking-widest">
-          + Create Listing
-        </Button>
-      </Link>
-    )}
-  </div>
-
-  <TabsContent value="listings">
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-      {visibleListings && visibleListings.length > 0 ? (
-        visibleListings.map((listing) => <ListingCard key={listing.id} listing={listing} theme={appliedTheme} />)
-      ) : (
-        <div className="col-span-full py-20 text-center border-4 border-dashed rounded-[2rem] border-zinc-100 text-zinc-400">
-          <p className="font-black uppercase text-sm">No active listings</p>
-        </div>
-      )}
-    </div>
-  </TabsContent>
+          </TabsContent>
 
           {isOwner && (
             <TabsContent value="expired">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                {expiredListings && expiredListings.length > 0 ? (
-                  expiredListings.map((listing) => (
-                    <div key={listing.id} className="relative">
-                      <ListingCard listing={listing} theme={appliedTheme} />
-                      <div
-                        className="absolute top-2 right-2 z-20 flex pointer-events-none"
-                      >
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleRelist(listing)}
-                          className="!pointer-events-auto !rounded-lg !px-4 !py-1.5 !text-xs !font-bold !shadow-md !bg-white !text-black !border border-zinc-200 hover:!bg-zinc-100 focus-visible:!ring-2 focus-visible:!ring-accent focus-visible:!ring-offset-2"
-                          style={{ minWidth: 64 }}
-                          aria-label={`Relist ${listing.title}`}
-                        >
-                          Relist
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="col-span-full py-20 text-center border-4 border-dashed rounded-[2rem] border-zinc-100 text-zinc-400">
-                    <p className="font-black uppercase text-sm">No expired listings</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 gap-y-24 md:gap-x-4 md:gap-y-32">
+                {expiredListings?.map((l) => (
+                  <div key={l.id} className="relative group">
+                    <ListingCard listing={l} theme={appliedTheme} />
+                    <div className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity"><Button size="sm" onClick={() => handleRelist(l)} className="bg-green-600 hover:bg-green-700 text-white uppercase text-[10px] font-black"><RotateCcw className="w-3 h-3 mr-1" /> Relist</Button></div>
                   </div>
-                )}
+                ))}
               </div>
             </TabsContent>
           )}
 
           <TabsContent value="giveaways">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {giveaways && giveaways.length > 0 ? (
-                giveaways.map((giveaway) => <GiveawayCard key={giveaway.id} giveaway={giveaway} theme={appliedTheme} />)
-              ) : (
-                <div className="col-span-full py-20 text-center border-4 border-dashed rounded-[2rem] border-zinc-100 text-zinc-400">
-                  <p className="font-black uppercase text-sm">No active drops</p>
-                </div>
-              )}
+              {giveaways?.map((g) => <GiveawayCard key={g.id} giveaway={g} theme={appliedTheme} />)}
             </div>
           </TabsContent>
 
           <TabsContent value="feed">
-            <div className="max-w-3xl mx-auto space-y-6 md:space-y-10">
+            <div className="max-w-3xl mx-auto space-y-6">
               {isOwner && (
-                <Card className="p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border-none shadow-xl">
-                  <form onSubmit={handleCreatePost} className="space-y-4">
-                    <div className="flex gap-3 md:gap-4">
-                      <Avatar className="w-10 h-10 border shadow-sm">
-                        <AvatarImage src={(currentUserProfile?.photoURL && currentUserProfile.photoURL.startsWith('data:')) ? currentUserProfile.photoURL : getRandomAvatar(user?.uid)} />
-                        <AvatarFallback>{(user?.displayName || 'C')[0]}</AvatarFallback>
-                      </Avatar>
-                      <Textarea 
-                        placeholder="What's happening in your shop today?"
-                        value={newPostContent}
-                        onChange={(e) => setNewPostContent(e.target.value)}
-                        className="min-h-[100px] rounded-xl md:rounded-2xl border-2 font-medium"
-                      />
+                <Card className="p-4 md:p-6 rounded-[1.5rem] md:rounded-[2.5rem] border-none shadow-xl">
+                  {user && !user.emailVerified ? (
+                    <div className="flex items-center justify-center p-8 bg-muted/20 rounded-2xl border-2 border-dashed gap-3 text-muted-foreground font-black uppercase text-xs">
+                      <ShieldAlert className="w-5 h-5 text-accent" /> Verify email to post updates
                     </div>
-                    <div className="flex justify-end">
-                      <Button type="submit" disabled={isPosting || !newPostContent.trim()} className="h-10 md:h-12 px-6 md:px-8 font-black uppercase tracking-widest bg-accent text-white">
-                        {isPosting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Post Update"}
-                      </Button>
-                    </div>
-                  </form>
+                  ) : (
+                    <form onSubmit={handleCreatePost} className="space-y-4">
+                      <Textarea placeholder="What's happening in your shop?" value={newPostContent} onChange={(e) => setNewPostContent(e.target.value)} className="min-h-[100px] rounded-xl border-2 font-medium" />
+                      <div className="flex justify-end"><Button type="submit" disabled={isPosting || !newPostContent.trim()} className="font-black uppercase bg-accent text-white">{isPosting ? <Loader2 className="animate-spin" /> : "Post Update"}</Button></div>
+                    </form>
+                  )}
                 </Card>
               )}
-
-              <div className="space-y-4 md:space-y-6">
-                {!posts || posts.length === 0 ? (
-                  <div className="py-12 md:py-20 text-center border-4 border-dashed rounded-[1.5rem] md:rounded-[2.5rem] border-zinc-100 bg-zinc-50/50 space-y-4 md:space-y-6">
-                    <Ghost className="w-8 md:w-10 h-8 md:h-10 text-zinc-300 mx-auto" />
-                    <div className="space-y-2 max-w-sm mx-auto px-6">
-                      <h3 className="font-headline font-black uppercase text-lg md:text-xl text-primary">The Vault is Quiet</h3>
-                      <p className="text-xs md:text-sm font-medium leading-relaxed text-muted-foreground">Be the first to start the conversation!</p>
-                    </div>
+              {posts?.map(post => (
+                <Card key={post.id} className="p-4 md:p-6 rounded-[1.5rem] bg-card border-none shadow-lg">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Avatar className="w-8 md:w-10 h-8 md:h-10 border-2 border-white"><AvatarImage src={post.authorAvatar || getRandomAvatar(post.authorId)} /><AvatarFallback>{post.authorName[0]}</AvatarFallback></Avatar>
+                    <div><p className="font-black text-xs md:text-sm">@{post.authorName}</p><p className="text-[8px] text-zinc-400 font-black uppercase"><Clock className="w-3 h-3" /> {post.timestamp?.toDate ? new Date(post.timestamp.toDate()).toLocaleDateString() : 'Just now'}</p></div>
                   </div>
-                ) : posts.map(post => {
-                  // Only use custom photo if it's a data: URL (real file upload)
-                  const isCustomAvatar = post.authorAvatar && post.authorAvatar.startsWith('data:');
-                  const displayAvatar = isCustomAvatar ? post.authorAvatar : getRandomAvatar(post.authorId);
-
-                  return (
-                  <Card key={post.id} className="p-4 md:p-6 border-none shadow-lg bg-card rounded-[1.5rem] md:rounded-[2rem]">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-8 md:w-10 h-8 md:h-10 border-2 border-white">
-                          <AvatarImage src={displayAvatar} />
-                          <AvatarFallback>{post.authorName[0]}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-black text-xs md:text-sm text-primary">@{post.authorName}</p>
-                          <p className="text-[8px] md:text-[9px] font-black uppercase text-zinc-400 flex items-center gap-1"><Clock className="w-3 h-3" /> {post.timestamp?.toDate ? post.timestamp.toDate().toLocaleDateString() : 'Just now'}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-sm md:text-base leading-relaxed mb-4 md:mb-6 font-medium">{post.content}</p>
-                    <div className="flex gap-4 md:gap-6 border-t pt-4 border-zinc-100">
-                      <button className="flex items-center gap-2 text-[9px] md:text-[10px] font-black uppercase text-muted-foreground hover:text-accent"><Heart className="w-3.5 h-3.5" /> {post.likes || 0} Likes</button>
-                      <button className="flex items-center gap-2 text-[9px] md:text-[10px] font-black uppercase text-muted-foreground hover:text-primary"><MessageSquare className="w-3.5 h-3.5" /> Reply</button>
-                    </div>
-                  </Card>
-                  );
-                })}
-              </div>
+                  <p className="text-sm md:text-base leading-relaxed font-medium">"{post.content}"</p>
+                </Card>
+              ))}
             </div>
           </TabsContent>
 
           <TabsContent value="reviews">
-            <div className="max-w-3xl mx-auto space-y-4 md:space-y-6">
-              {!reviews || reviews.length === 0 ? (
-                <div className="py-12 md:py-20 text-center border-4 border-dashed rounded-[1.5rem] md:rounded-[2.5rem] border-zinc-100 text-zinc-400">
-                  <p className="font-black uppercase text-xs md:text-sm">No reviews yet</p>
-                </div>
-              ) : reviews.map(review => (
-                <Card key={review.id} className="p-6 md:p-8 space-y-4 border-none shadow-lg rounded-[1.5rem] md:rounded-[2rem] bg-white dark:bg-zinc-900">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 md:gap-4">
-                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl overflow-hidden shadow-sm relative bg-zinc-100 dark:bg-zinc-800">
-                        <Image src={getRandomAvatar(review.buyerId)} alt="Buyer" fill className="object-cover" />
-                      </div>
-                      <div>
-                        <p className="font-black uppercase text-[10px] md:text-xs dark:text-zinc-200">@{review.buyerName || review.buyerId}</p>
-                        <p className="text-[8px] md:text-[9px] font-black uppercase text-zinc-400 dark:text-zinc-500">Verified Collector</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-0.5 text-yellow-500">{Array.from({ length: 5 }).map((_, s) => <Star key={s} className="w-3 md:w-4 h-3 md:h-4 fill-current" />)}</div>
-                  </div>
-                  <p className="italic font-medium text-base md:text-lg leading-relaxed text-zinc-700 dark:text-zinc-300">"{review.comment}"</p>
-                  <div className="flex items-center gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                    <Badge variant="secondary" className="text-[7px] md:text-[8px] font-black uppercase tracking-widest h-5 px-2 dark:bg-zinc-800 dark:text-zinc-200">{review.listingTitle}</Badge>
-                  </div>
+            <div className="max-w-3xl mx-auto space-y-4">
+              {reviews?.map(r => (
+                <Card key={r.id} className="p-6 space-y-4 border-none shadow-lg rounded-[1.5rem] bg-white">
+                  <div className="flex items-center justify-between"><div className="flex items-center gap-3"><p className="font-black uppercase text-[10px]">@{r.buyerName}</p></div><div className="flex gap-0.5 text-yellow-500">{Array.from({ length: 5 }).map((_, s) => <Star key={s} className="w-3 h-3 fill-current" />)}</div></div>
+                  <p className="italic font-medium text-base">"{r.comment}"</p>
                 </Card>
               ))}
             </div>

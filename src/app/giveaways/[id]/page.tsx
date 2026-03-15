@@ -6,30 +6,23 @@ import { GIVEAWAYS } from '@/lib/mock-data';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
   Gift, 
-  Timer, 
-  Users, 
   Trophy, 
-  ShieldCheck, 
   ArrowLeft, 
-  Share2, 
-  Store,
-  CheckCircle2,
   Loader2,
-  UserPlus,
+  CheckCircle2,
   Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { functions } from '@/firebase/client';
-import { doc, updateDoc, increment, collection, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, increment, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
@@ -68,7 +61,6 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
     });
   }, [db, user, giveaway]);
 
-  // Check if already entered
   useEffect(() => {
     if (!db || !user || !id) return;
     const entryRef = doc(db, 'giveaways', id, 'giveawayEntries', user.uid);
@@ -105,11 +97,10 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
     const entryData = {
       userId: user.uid,
       userName: user.displayName || 'Anonymous',
-      isFollowing: true, // Required by rules
+      isFollowing: true,
       timestamp: serverTimestamp()
     };
 
-    // Correct path as per firestore.rules: /giveaways/{giveawayId}/giveawayEntries/{uid}
     const entryRef = doc(db, 'giveaways', id, 'giveawayEntries', user.uid);
 
     setDoc(entryRef, entryData)
@@ -117,7 +108,7 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
         updateDoc(giveawayRef, { entriesCount: increment(1) });
         setHasEntered(true);
         setIsEntering(false);
-        toast({ title: 'Entry Confirmed!', description: 'You have been entered into the live drop. Good luck!' });
+        toast({ title: 'Entry Confirmed!', description: 'You have been entered into the live drop.' });
       })
       .catch(async (error) => {
         const permissionError = new FirestorePermissionError({
@@ -139,28 +130,19 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
       const result: any = await drawWinner({ giveawayId: id });
       
       if (result.data.winner) {
-        toast({ 
-          title: '🎉 Winner Drawn!', 
-          description: `Congratulations to ${result.data.winner.userName}!` 
-        });
+        toast({ title: '🎉 Winner Drawn!', description: `Congratulations to ${result.data.winner.userName}!` });
       } else {
-        toast({ 
-          title: 'Giveaway Ended', 
-          description: 'No entries were submitted for this giveaway.' 
-        });
+        toast({ title: 'Giveaway Ended', description: 'No entries were submitted.' });
       }
     } catch (error: any) {
-      toast({ 
-        variant: 'destructive', 
-        title: 'Error', 
-        description: getFriendlyErrorMessage(error)
-      });
+      toast({ variant: 'destructive', title: 'Error', description: getFriendlyErrorMessage(error) });
     } finally {
       setIsDrawingWinner(false);
     }
   };
 
-  const isSeller = user && giveaway && (user.uid === giveaway.seller || user.displayName === giveaway.sellerName);
+  // ALIGNED: check seller UID against user UID
+  const isSellerOwner = user && giveaway && (user.uid === giveaway.sellerId || user.uid === giveaway.seller);
 
   return (
     <>
@@ -184,11 +166,9 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
           </div>
 
           <div className="space-y-10">
-            <div className="space-y-5">
-              <h1 className="text-3xl md:text-5xl font-headline font-black leading-[0.9] uppercase italic tracking-tighter text-primary">
-                {giveaway.title}
-              </h1>
-            </div>
+            <h1 className="text-3xl md:text-5xl font-headline font-black leading-[0.9] uppercase italic tracking-tighter text-primary">
+              {giveaway.title}
+            </h1>
 
             <Card className="border-none shadow-2xl bg-card overflow-hidden rounded-[2.5rem]">
               <CardContent className="p-10 space-y-8">
@@ -196,38 +176,34 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
                   <div className="bg-zinc-100 p-8 rounded-2xl text-center border-2 border-dashed">
                     <Trophy className="w-12 h-12 text-zinc-400 mx-auto mb-3" />
                     <h3 className="font-black text-xl uppercase text-zinc-500">Drop Concluded</h3>
-                    {giveaway.winnerName && (
-                      <p className="text-sm font-bold text-muted-foreground mt-2">Winner: {giveaway.winnerName}</p>
-                    )}
+                    {giveaway.winnerName && <p className="text-sm font-bold text-muted-foreground mt-2">Winner: {giveaway.winnerName}</p>}
                   </div>
-                ) : isSeller ? (
-                  <Button 
-                    onClick={handleDrawWinner} 
-                    disabled={isDrawingWinner}
-                    className="w-full h-20 text-2xl font-black rounded-2xl shadow-2xl active:scale-95 transition-all uppercase italic tracking-tighter bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-                  >
-                    {isDrawingWinner ? <Loader2 className="w-6 h-6 animate-spin" /> : (
-                      <>
-                        <Sparkles className="w-6 h-6 mr-2" />
-                        Draw Winner Now
-                      </>
-                    )}
-                  </Button>
+                ) : isSellerOwner ? (
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-black uppercase text-center text-muted-foreground tracking-widest">You are the host</p>
+                    <Button 
+                      onClick={handleDrawWinner} 
+                      disabled={isDrawingWinner}
+                      className="w-full h-20 text-2xl font-black rounded-2xl shadow-xl uppercase italic tracking-tighter bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+                    >
+                      {isDrawingWinner ? <Loader2 className="animate-spin" /> : <><Sparkles className="mr-2" /> Draw Winner</>}
+                    </Button>
+                  </div>
                 ) : !hasEntered ? (
                   <Button 
                     onClick={handleEnter} 
                     disabled={isEntering}
                     className={cn(
-                      "w-full h-20 text-2xl font-black rounded-2xl shadow-2xl active:scale-95 transition-all uppercase italic tracking-tighter",
-                      !isFollowing ? "bg-zinc-300 text-zinc-500 cursor-not-allowed" : "bg-zinc-950 hover:bg-zinc-800 text-white"
+                      "w-full h-20 text-2xl font-black rounded-2xl shadow-2xl uppercase italic tracking-tighter",
+                      !isFollowing ? "bg-zinc-300 text-zinc-500 cursor-not-allowed" : "bg-zinc-950 text-white hover:bg-zinc-800"
                     )}
                   >
-                    {isEntering ? <Loader2 className="w-6 h-6 animate-spin" /> : !isFollowing ? 'Follow Seller to Enter' : 'Enter Drop Now'}
+                    {isEntering ? <Loader2 className="animate-spin" /> : !isFollowing ? 'Follow Seller to Enter' : 'Enter Drop Now'}
                   </Button>
                 ) : (
-                  <div className="bg-green-50 dark:bg-green-900/20 border-4 border-dashed border-green-200 dark:border-green-800 p-8 rounded-2xl text-center animate-in zoom-in duration-500">
+                  <div className="bg-green-50 dark:bg-green-900/20 border-4 border-dashed border-green-200 p-8 rounded-2xl text-center">
                     <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-3" />
-                    <h3 className="font-black text-2xl text-green-900 dark:text-green-100 uppercase">You're Entered!</h3>
+                    <h3 className="font-black text-2xl text-green-900 uppercase">You're Entered!</h3>
                   </div>
                 )}
               </CardContent>

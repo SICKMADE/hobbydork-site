@@ -6,9 +6,12 @@ import type {
   Query,
   QuerySnapshot,
   DocumentData,
+  FirestoreError,
 } from 'firebase/firestore';
 import { onSnapshot } from 'firebase/firestore';
 import { useUser } from '@/firebase/provider';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 type WithId<T = DocumentData> = T & { id: string };
 
@@ -18,16 +21,24 @@ type UseCollectionResult<T> = {
   error: string | null;
 };
 
+// Internal helper to extract path for error reporting
+interface InternalQuery {
+  _query: {
+    path: {
+      canonicalString: () => string;
+    };
+  };
+}
+
 export function useCollection<T = DocumentData>(
-  queryRef: Query<T> | null | undefined,
+  memoizedTargetRefOrQuery: Query<T> | null | undefined,
 ): UseCollectionResult<T> {
-  const { user, isUserLoading: authLoading } = useUser();
+  const { isUserLoading: authLoading } = useUser();
   const [data, setData] = useState<WithId<T>[] | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(!!queryRef);
+  const [isLoading, setIsLoading] = useState<boolean>(!!memoizedTargetRefOrQuery);
   const [error, setError] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
-  // Delay subscription until auth is settled
   useEffect(() => {
     if (authLoading) {
       setAuthReady(false);
@@ -38,15 +49,9 @@ export function useCollection<T = DocumentData>(
   }, [authLoading]);
 
   useEffect(() => {
-    // 🔒 HARD GATES — prevent subscription unless ready
     if (!authReady) return;
-    if (!user) {
-      setData(null);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
-    if (!queryRef) {
+    
+    if (!memoizedTargetRefOrQuery) {
       setData(null);
       setIsLoading(false);
       setError(null);
@@ -59,7 +64,7 @@ export function useCollection<T = DocumentData>(
     let unsub = null;
     try {
       unsub = onSnapshot(
-        queryRef as Query<T>,
+        memoizedTargetRefOrQuery as Query<T>,
         (snap: QuerySnapshot<T>) => {
           const docs: WithId<T>[] = snap.docs.map((d) => ({
             id: d.id,
@@ -68,16 +73,42 @@ export function useCollection<T = DocumentData>(
           setData(docs);
           setIsLoading(false);
         },
-        (err) => {
-          // IMPORTANT: do NOT throw here – just store the error
-          console.error('Firestore useCollection error', err);
-          setError(getFriendlyErrorMessage(err));
+        async (serverError: FirestoreError) => {
+          if (serverError.code === 'permission-denied') {
+            let path = "";
+            try {
+              // Standard resolution for CollectionReference
+              if ((memoizedTargetRefOrQuery as any).path) {
+                path = (memoizedTargetRefOrQuery as any).path;
+              } else {
+                // Resolution for Query / CollectionGroup
+                const internal = memoizedTargetRefOrQuery as unknown as InternalQuery;
+                const internalPath = internal._query?.path?.canonicalString?.() || "";
+                // Collection group queries have an empty path root in canonicalString
+                if (!internalPath || internalPath === "/") {
+                  // Try to find the collection ID for better reporting
+                  const colId = (memoizedTargetRefOrQuery as any)._query?.collectionGroup || "unknown";
+                  path = `[CollectionGroup: ${colId}]`;
+                } else {
+                  path = internalPath;
+                }
+              }
+            } catch (e) {
+              path = "firestore/query";
+            }
+            const contextualError = new FirestorePermissionError({
+              operation: 'list',
+              path,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+          }
+
+          setError(getFriendlyErrorMessage(serverError));
           setIsLoading(false);
         },
       );
     } catch (e: unknown) {
-      // onSnapshot can throw synchronously for invalid queries/targets; capture that
-      console.error('Firestore onSnapshot failed to subscribe', e);
+      console.error('Firestore onSnapshot subscription error:', e);
       setError(getFriendlyErrorMessage(e));
       setIsLoading(false);
       return;
@@ -89,7 +120,7 @@ export function useCollection<T = DocumentData>(
         } catch {}
       }
     };
-  }, [queryRef, user, authReady]);
+  }, [memoizedTargetRefOrQuery, authReady]);
 
   return { data, isLoading, error };
 }

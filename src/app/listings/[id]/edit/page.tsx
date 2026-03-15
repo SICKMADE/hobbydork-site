@@ -62,8 +62,8 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     if (!listing || !user) return;
 
-    // Check if user is the seller
-    if (listing.sellerId !== user.uid) {
+    // Check if user is the seller using the synchronized listingSellerId field
+    if (listing.listingSellerId !== user.uid) {
       toast({ variant: 'destructive', title: 'Access Denied', description: 'You can only edit your own listings.' });
       router.push(`/listings/${id}`);
       return;
@@ -170,7 +170,6 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
     setIsCalculatingShipping(true);
     try {
       // Placeholder for actual shipping calculation
-      // In production, call Shippo API
       const rate = parseFloat(weight) * 2 + (parseFloat(length) + parseFloat(width) + parseFloat(height)) * 0.1;
       setCalculatedShippingCost(Math.round(rate * 100) / 100);
       toast({ title: 'Calculated', description: `Shipping cost: $${Math.round(rate * 100) / 100}` });
@@ -211,13 +210,10 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
         width: shippingType === 'Paid' ? parseFloat(width) || null : null,
         height: shippingType === 'Paid' ? parseFloat(height) || null : null,
         shippingCost: calculatedShippingCost || null,
-        quantity: type === 'bin' ? Math.max(1, parseInt(quantity) || 1) : null, // Stock tracking for Buy It Now
+        quantity: type === 'bin' ? Math.max(1, parseInt(quantity) || 1) : null,
         imageUrl: imageUrl,
         updatedAt: serverTimestamp()
       };
-
-      // Note: Type cannot be changed after creation
-      // expiresAt and other temporal fields are immutable
 
       await updateDoc(listingRef, updateData);
       toast({ title: 'Updated!', description: 'Your listing has been updated successfully.' });
@@ -339,8 +335,6 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
                 </Select>
               </div>
             </div>
-
-            {/* Grading section removed */}
 
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest">Tags</Label>
@@ -551,7 +545,6 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
             )}
           </section>
 
-          {/* Submit Button */}
           <Button
             type="submit"
             disabled={isSubmitting}

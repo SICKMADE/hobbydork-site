@@ -48,7 +48,7 @@ function ThemePreview({ themeName }: { themeName: string }) {
       "w-full aspect-[16/10] rounded-xl shadow-inner flex items-center justify-center p-4 transition-all duration-500 overflow-hidden relative border",
       isNeonSyndicate ? 'bg-zinc-950 border-cyan-500/30' : 
       isComicBook ? 'bg-white border-[4px] border-black rounded-none comic-dots' : 
-      isUrban ? 'bg-slate-100 border-2 border-slate-300' : 
+      isUrban ? "bg-[url('/brick-wall.png')] bg-repeat bg-[size:100px] border-2 border-slate-300" : 
       isHobbyShop ? 'bg-[#355e3b] border-4 border-white/10 shadow-lg' :
       'bg-zinc-50 border-zinc-100'
     )}>
@@ -67,6 +67,7 @@ function ThemePreview({ themeName }: { themeName: string }) {
                  "h-16 rounded overflow-hidden flex flex-col", 
                  isComicBook ? "bg-white border-2 border-black shadow-[4px_4px_0px_#000]" : 
                  isHobbyShop ? "bg-white border border-white/30" : 
+                 isUrban ? "bg-black border-t border-r-2 border-b-2 border-l border-white outline outline-1 outline-white outline-offset-2" : 
                  isNeonSyndicate ? "bg-zinc-900 border border-cyan-500/20" : 'bg-white border'
                )}>
                  <div className="h-8 w-full relative bg-muted/20 flex items-center justify-center">
@@ -120,7 +121,9 @@ export default function HobbydorkStore() {
       });
       const data = await response.json();
       if (data.url) {
-        router.push(data.url);
+        // CRITICAL FIX: Use window.location.href for external Stripe redirects
+        // This prevents the "blank skeleton" error caused by Next.js router interception.
+        window.location.href = data.url;
       } else {
         throw new Error('Checkout failed');
       }

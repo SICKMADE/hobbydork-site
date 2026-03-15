@@ -1,69 +1,3 @@
-// Blind Bidder Auction Types
-export type BlindBidAuction = {
-    id: string;
-    sellerUid: string;
-    title: string;
-    description: string;
-    imageUrl?: string | null;
-    createdAt: Timestamp;
-    endsAt: Timestamp;
-    status: 'OPEN' | 'CLOSED' | 'REVEALED' | 'CANCELLED';
-    flatFeePaid: boolean;
-    winnerUid?: string;
-    winningBidId?: string;
-    stripePaymentIntentId?: string;
-};
-
-export type BlindBid = {
-    id: string;
-    auctionId: string;
-    bidderUid: string;
-    amount: number;
-    createdAt: Timestamp;
-    status: 'PENDING' | 'WINNER' | 'LOSER' | 'CANCELLED';
-    stripePaymentIntentId?: string;
-};
-export type SellerApplication = {
-    applicationId: string;
-    ownerUid: string;
-    ownerEmail?: string | null;
-    ownerDisplayName?: string | null;
-    notes?: string | null;
-    social?: {
-        instagram?: string | null;
-        facebook?: string | null;
-        twitter?: string | null;
-        tiktok?: string | null;
-        website?: string | null;
-        other?: string | null;
-    };
-    sellerAgreementAccepted?: boolean;
-    status: 'PENDING' | 'APPROVED' | 'REJECTED';
-    createdAt?: { toDate: () => Date } | null;
-    updatedAt?: { toDate: () => Date } | null;
-};
-export type Iso24Post = {
-    id: string;
-    title?: string;
-    description?: string;
-    category?: string;
-    imageUrl?: string;
-    ownerUid?: string;
-    status?: string;
-    createdAt?: Timestamp;
-    expiresAt?: Timestamp;
-};
-// Notification type for new notification system
-export type Notification = {
-    id: string;
-    type: 'MESSAGE' | 'ORDER' | 'SYSTEM' | 'GENERIC';
-    title: string;
-    body: string;
-    createdAt: import('firebase/firestore').Timestamp;
-    read: boolean;
-    relatedId?: string;
-};
-
 import { Timestamp } from "firebase/firestore";
 
 export type UserStatus = 'ACTIVE' | 'LIMITED' | 'SUSPENDED';
@@ -84,10 +18,6 @@ export type User = {
     emailVerified: boolean;
     oneAccountAcknowledged: boolean;
     stripeTermsAgreed: boolean;
-    notifyMessages: boolean;
-    notifyOrders: boolean;
-    notifyISO24: boolean;
-    notifySpotlight: boolean;
     blockedUsers: string[];
     stripeAccountId?: string | null;
     shippingAddress?: {
@@ -99,26 +29,23 @@ export type User = {
         zip?: string;
         country?: string;
     };
-    // Seller Tier System
+    sellerStatus?: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
     sellerTier?: "BRONZE" | "SILVER" | "GOLD";
     onTimeShippingRate?: number;
     completedOrders?: number;
-    disputesLast30d?: number;
-    disputesLast60d?: number;
     lateShipmentsLast30d?: number;
     lateShipmentsLast60d?: number;
     lastTierChange?: Timestamp;
 };
 
 export type Store = {
-  id?: string;
   storeId: string;
   ownerUid: string;
   storeName: string;
   slug: string;
   about: string;
   avatarUrl: string;
-    storeImageUrl?: string | null;
+  storeImageUrl?: string | null;
   ratingAverage: number;
   ratingCount: number;
   itemsSold: number;
@@ -132,153 +59,85 @@ export type Store = {
 export type Condition = "NEW" | "LIKE_NEW" | "VERY_GOOD" | "GOOD" | "FAIR" | "POOR";
 export type ListingState = "DRAFT" | "ACTIVE" | "HIDDEN" | "SOLD";
 
-
 export type Listing = {
-    sellerTier: string;
-    sellerUid: any;
-    id: string; // Document ID
-    listingId: string;
-    storeId: string;
-    ownerUid: string;
+    id: string; 
+    listingSellerId: string;
     title: string;
     category: string;
     description: string;
     price: number;
-    condition: Condition;
-    quantityTotal: number;
-    quantityAvailable: number;
+    condition: string;
     state: ListingState;
     tags: string[];
-    imageUrls: string[];
-    primaryImageUrl: string | null;
+    imageUrl: string;
+    imageUrls?: string[];
     createdAt: Timestamp;
     updatedAt: Timestamp;
-    featured?: boolean; // Whether this listing is featured/promoted
-    sellerName?: string; // Seller display name
-    sellerAvatar?: string; // Seller avatar URL
-    rating?: number; // Seller/store rating (1-5)
-    views?: number; // Optional: number of views for popularity sorting
+    sellerName?: string;
+    sellerTier?: string;
+    type: 'Auction' | 'Buy It Now';
+    currentBid?: number;
+    bidCount?: number;
+    endsAt?: any;
+    expiresAt?: any;
+    winnerUid?: string | null;
+    winningBid?: number | null;
+    paymentStatus?: 'PENDING' | 'PAID' | null;
+    quantity?: number;
+    sellerOnVacation?: boolean;
 };
-
-export type OrderState = "PENDING_PAYMENT" | "PAYMENT_SENT" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "CANCELLED";
-
-export type ShippingAddress = {
-    name: string;
-    address1: string;
-    address2?: string | null;
-    city: string;
-    state: string;
-    zip: string;
-    country: string;
-}
 
 export type Order = {
     id: string;
-    orderId: string;
     buyerUid: string;
     sellerUid: string;
-    storeId: string;
-    items: { 
-            listingId: string;
-            title: string;
-            quantity: number;
-            pricePerUnit: number;
-    }[];
-    totalPrice: number;
-    state: OrderState;
-    buyerShippingAddress: ShippingAddress | null;
-    paymentMethod: "STRIPE";
-    paymentIdentifier: string;
-    trackingNumber: string | null;
-    trackingCarrier: string | null;
-    cancelReason: string | null;
+    listingId: string;
+    listingTitle: string;
+    price: number;
+    status: string;
+    imageUrl?: string;
+    trackingNumber?: string | null;
+    carrier?: string | null;
     createdAt: Timestamp;
     updatedAt: Timestamp;
-    reviewId?: string; // ID of the review associated with this order
+    buyerCanCancel?: boolean;
+    buyerName?: string;
+    sellerName?: string;
+    length?: number;
+    width?: number;
+    height?: number;
+    weight?: number;
+    shippingAddress?: any;
+};
+
+export type ISO24Post = {
+    id: string;
+    uid: string;
+    userName: string;
+    title: string;
+    category: string;
+    budget: number;
+    description: string;
+    status: 'Searching' | 'Found';
+    postedAt: Timestamp;
 };
 
 export type CommunityMessage = {
-    id: string; // Document ID from useCollection
-    messageId: string;
-    senderUid: string;
+    id: string;
+    senderId: string;
+    senderName: string;
     text: string;
-    createdAt: Timestamp;
+    avatarUrl?: string;
+    timestamp: Timestamp;
 };
 
-export type ISO24 = {
-    id: string;
-    // Cleaned: removed back-compat note
-    ownerUid?: string;
-    creatorUid?: string;
-    userUid?: string;
-    title: string;
-    category?: string;
-    description: string;
-    imageUrl?: string | null;
-    createdAt?: Timestamp;
-    expiresAt?: Timestamp;
-    // Cleaned: removed ISO24 note
-    status?: 'OPEN' | 'CLOSED' | 'ACTIVE' | 'EXPIRED' | string;
-}
-
-
-// Cleaned: removed notification types note
-
 export type Review = {
-    reviewId: string;
-    orderId: string;
-    storeId: string;
-    sellerUid: string;
+    id: string;
+    sellerId: string;
     buyerUid: string;
     buyerName: string;
-    buyerAvatar: string;
-    rating: number; // 1-5
+    rating: number; 
     comment: string;
-    createdAt: Timestamp;
-}
-
-export type SpotlightSlot = {
-    slotId: string;
-    storeId: string;
-    ownerUid: string;
-    startAt: Timestamp;
-    endAt: Timestamp;
-    active: boolean;
-}
-
-export type Conversation = {
-    conversationId: string;
-    participantUids: string[];
-    lastMessageText: string;
-    lastMessageAt: Timestamp;
-    createdAt: Timestamp;
-}
-
-export type Message = {
-    messageId: string;
-    senderUid: string;
-    text: string;
-    createdAt: Timestamp;
-    readBy: string[];
-}
-
-export type WatchlistItem = {
-    listingId: string;
-    addedAt: Timestamp;
-}
-
-export type FavoriteStoreItem = {
-    storeId: string;
-    addedAt: Timestamp;
-}
-
-export type Report = {
-    reportId: string;
-    reporterUid: string;
-    targetType: "USER" | "LISTING" | "ORDER";
-    targetId: string;
-    reason: string;
-    details: string;
-    createdAt: Timestamp;
-    status: "OPEN" | "REVIEWED" | "RESOLVED";
-}
+    listingTitle: string;
+    timestamp: Timestamp;
+};

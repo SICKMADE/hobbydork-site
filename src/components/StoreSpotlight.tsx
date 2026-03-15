@@ -3,25 +3,24 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { FeaturedStore } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Star, ShieldCheck, Store, Package } from 'lucide-react';
+import { Star, ShieldCheck, Crown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { TierBadge } from '@/components/TierBadge';
 import { getRandomAvatar } from '@/lib/utils';
 
 interface StoreSpotlightProps {
-  store: FeaturedStore;
+  store: any;
 }
 
 export default function StoreSpotlight({ store }: StoreSpotlightProps) {
   const username = store?.username || 'Collector';
   const tagline = store?.tagline || 'Verified hobbydork Dealer';
-  const avatarUrl = store?.avatarUrl || getRandomAvatar(username);
-  const bannerUrl = store?.bannerUrl || '/hobbydork-banner-default.jpg';
+  const avatarUrl = store?.avatar || getRandomAvatar(username);
+  const bannerUrl = store?.bannerUrl || '/hobbydork-banner-default.png';
   const totalSales = store?.totalSales || 0;
-  const tier = store?.tier;
+  
+  // Note: Featured items would ideally be fetched from the dealer's top listings
   const featuredItems = store?.featuredItems || [];
 
   return (
@@ -50,7 +49,6 @@ export default function StoreSpotlight({ store }: StoreSpotlightProps) {
                 <Badge className="bg-accent text-accent-foreground border-none font-bold uppercase tracking-widest text-[8px] px-2 h-4">
                   Spotlight
                 </Badge>
-                {tier && <TierBadge tier={tier} className="h-4 text-[8px] px-2" />}
               </div>
               <h3 className="text-xl md:text-2xl font-headline font-black text-white flex items-center gap-2 truncate">
                 {username}
@@ -73,15 +71,15 @@ export default function StoreSpotlight({ store }: StoreSpotlightProps) {
         <p className="text-muted-foreground text-xs font-medium italic mb-4 line-clamp-1">"{tagline}"</p>
         <div className="grid grid-cols-3 gap-3">
           {featuredItems.length > 0 ? (
-            featuredItems.slice(0, 3).map((img, idx) => (
+            featuredItems.slice(0, 3).map((img: string, idx: number) => (
               <div key={idx} className="relative aspect-square rounded-lg overflow-hidden shadow-sm group/item bg-zinc-100">
-                <Image src={img} alt="Featured" fill className="object-cover transition-transform group-hover/item:scale-110" />
+                <Image src={img || '/defaultbroken.jpg'} alt="Featured" fill className="object-cover transition-transform group-hover/item:scale-110" />
               </div>
             ))
           ) : (
             [1, 2, 3].map((i) => (
-              <div key={i} className="aspect-square rounded-lg border-2 border-dashed border-muted flex items-center justify-center">
-                <Package className="w-4 h-4 text-muted opacity-30" />
+              <div key={i} className="relative aspect-square rounded-lg border-2 border-dashed border-muted flex items-center justify-center bg-muted/10">
+                <Image src="/defaultbroken.jpg" alt="Placeholder" fill className="object-cover opacity-20" />
               </div>
             ))
           )}

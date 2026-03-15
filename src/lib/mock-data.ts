@@ -1,3 +1,4 @@
+
 export type Category = 'Watches' | 'Cards' | 'Coins' | 'Toys' | 'Stamps' | 'Comics' | 'Other';
 export type SellerTier = 'Bronze' | 'Silver' | 'Gold';
 
@@ -10,6 +11,7 @@ export interface Listing {
   imageUrl: string;
   seller: string;
   sellerId?: string;
+  listingSellerId?: string;
   sellerName?: string;
   buyer?: string;
   status: 'Active' | 'Sold' | 'Ended';
@@ -84,12 +86,26 @@ export const CATEGORIES: Category[] = ['Watches', 'Cards', 'Coins', 'Toys', 'Sta
 
 export const LISTINGS: Listing[] = [
   {
+    id: 'wolverine-1',
+    title: 'Wolverine #1 (1982) - Signed by Chris Claremont',
+    description: 'First solo Wolverine series. CGC 9.8 white pages. Iconic Frank Miller cover art. Essential grail for any X-Men fan.',
+    price: 4500,
+    category: 'Comics',
+    imageUrl: 'https://picsum.photos/seed/wolverine1/600/800',
+    seller: 'Logan_Fan_X',
+    status: 'Active',
+    type: 'Buy It Now',
+    tags: ['wolverine', 'marvel', 'signed', 'grail'],
+    createdAt: new Date(),
+    condition: 'Like New'
+  },
+  {
     id: '1',
     title: 'Vintage Rolex Submariner 5513',
     description: 'Beautifully aged patina, recently serviced. Rare meters first dial.',
     price: 12500,
     category: 'Watches',
-    imageUrl: '',
+    imageUrl: 'https://picsum.photos/seed/submariner/600/800',
     seller: 'TimeKeeper_88',
     status: 'Active',
     type: 'Buy It Now',
@@ -102,7 +118,7 @@ export const LISTINGS: Listing[] = [
     description: 'One of the holy grails of Pokemon card collecting. Flawless condition.',
     price: 50000,
     category: 'Cards',
-    imageUrl: '',
+    imageUrl: 'https://picsum.photos/seed/pikachu/600/800',
     seller: 'CardKing_JP',
     status: 'Active',
     type: 'Auction',
@@ -118,7 +134,7 @@ export const LISTINGS: Listing[] = [
     description: 'PCGS MS65. Key date Morgan Dollar. Stunning luster and original surfaces.',
     price: 180000,
     category: 'Coins',
-    imageUrl: '',
+    imageUrl: 'https://picsum.photos/seed/morgan/600/800',
     seller: 'Numismatist_Supreme',
     status: 'Active',
     type: 'Auction',
@@ -135,7 +151,7 @@ export const GIVEAWAYS: Giveaway[] = [
     id: 'g1',
     title: 'Silver Age Comic Mystery Box',
     description: 'Win a curated selection of 5 Silver Age comic books in high grade!',
-    imageUrl: '',
+    imageUrl: 'https://picsum.photos/seed/comicbox/800/600',
     seller: 'TimeKeeper_88',
     status: 'Active',
     endsAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 5),
@@ -168,28 +184,28 @@ export const PREMIUM_PRODUCTS: PremiumProduct[] = [
     id: 'p2',
     name: 'Neon Syndicate Theme',
     description: 'Recommended: A cyberpunk-luxe aesthetic with electric cyan glows and obsidian glass panels.',
-    price: 69,
+    price: 9.99,
     category: 'Utility'
   },
   {
     id: 'p3',
     name: 'Urban Theme',
     description: 'Give your shop a gritty, industrial billboard look for that street-collector vibe.',
-    price: 39,
+    price: 9.99,
     category: 'Utility'
   },
   {
     id: 'p4',
     name: 'Comic Book Theme',
     description: 'Gritty Noir aesthetic with newsprint halftone dots, heavy ink outlines, and 2D shadows.',
-    price: 59,
+    price: 9.99,
     category: 'Utility'
   },
   {
     id: 'p5',
     name: 'Hobby Shop Theme',
     description: 'Capture the local retail vibe with Field Grass backgrounds and professional Graded Slab listings.',
-    price: 49,
+    price: 9.99,
     category: 'Utility'
   },
   {

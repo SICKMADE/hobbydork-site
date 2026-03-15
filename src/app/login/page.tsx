@@ -6,7 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShieldCheck, Zap, Loader2, Mail, Lock, UserPlus, LogIn } from 'lucide-react';
+import { 
+  ShieldCheck, 
+  Zap, 
+  Loader2, 
+  Mail, 
+  Lock, 
+  UserPlus, 
+  LogIn,
+  KeyRound,
+  ArrowRight
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/firebase';
 import { 
@@ -14,11 +24,21 @@ import {
   signInWithPopup, 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
-  sendEmailVerification
+  sendEmailVerification,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { useState } from 'react';
 import Image from 'next/image';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter
+} from "@/components/ui/dialog";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,8 +46,11 @@ export default function LoginPage() {
   const auth = useAuth();
   
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
   const handleGoogleLogin = async () => {
     if (!auth) return;
@@ -102,6 +125,30 @@ export default function LoginPage() {
     }
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!auth || !resetEmail) return;
+    setIsResetting(true);
+
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      toast({
+        title: "Reset Email Sent",
+        description: `Check ${resetEmail} for password reset instructions.`
+      });
+      setIsResetDialogOpen(false);
+      setResetEmail('');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: "Request Failed",
+        description: getFriendlyErrorMessage(error)
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8 animate-in fade-in zoom-in duration-500">
@@ -132,10 +179,16 @@ export default function LoginPage() {
           <CardContent className="p-5 sm:p-8 -mt-8">
             <Tabs defaultValue="login" className="space-y-6 sm:space-y-8">
               <TabsList className="grid w-full grid-cols-2 h-12 sm:h-14 bg-muted rounded-2xl p-1.5 shadow-inner mt-6">
-                <TabsTrigger value="login" className="rounded-xl font-black uppercase text-[10px] tracking-widest text-white data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-red-700">
+                <TabsTrigger 
+                  value="login" 
+                  className="rounded-xl font-black uppercase text-[10px] tracking-widest text-zinc-500 dark:text-zinc-400 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-red-700 dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-red-700 transition-all"
+                >
                   Sign In
                 </TabsTrigger>
-                <TabsTrigger value="register" className="rounded-xl font-black uppercase text-[10px] tracking-widest text-white data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-red-700">
+                <TabsTrigger 
+                  value="register" 
+                  className="rounded-xl font-black uppercase text-[10px] tracking-widest text-zinc-500 dark:text-zinc-400 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-red-700 dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-red-700 transition-all"
+                >
                   Join Now
                 </TabsTrigger>
               </TabsList>
@@ -158,7 +211,16 @@ export default function LoginPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password-signin" className="text-[10px] font-black uppercase tracking-widest ml-1">Password</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password-signin" className="text-[10px] font-black uppercase tracking-widest ml-1">Password</Label>
+                      <button 
+                        type="button"
+                        onClick={() => setIsResetDialogOpen(true)}
+                        className="text-[9px] font-black uppercase text-accent hover:underline tracking-widest"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input 
@@ -253,6 +315,57 @@ export default function LoginPage() {
           hobbydork standard security protocol
         </p>
       </div>
+
+      <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl">
+          <div className="bg-[#222222] p-8 text-white">
+            <div className="bg-accent/20 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
+              <KeyRound className="w-6 h-6 text-accent" />
+            </div>
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-headline font-black uppercase italic tracking-tight">Recovery Mode</DialogTitle>
+              <DialogDescription className="text-white/60 font-medium pt-1">
+                Enter your email to receive a secure password reset link.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="p-8 space-y-6 bg-card">
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest ml-1">Account Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    id="reset-email"
+                    type="email" 
+                    placeholder="collector@hobbydork.com" 
+                    className="pl-11 h-12 rounded-xl border-2 font-medium bg-white text-black"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <Button 
+                type="submit" 
+                disabled={isResetting || !resetEmail}
+                className="w-full h-14 bg-accent text-white hover:bg-accent/90 font-black rounded-xl shadow-xl transition-all active:scale-95 gap-2"
+              >
+                {isResetting ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
+                Send Reset Link
+              </Button>
+            </form>
+            <div className="text-center">
+              <button 
+                onClick={() => setIsResetDialogOpen(false)}
+                className="text-[10px] font-black uppercase text-muted-foreground hover:text-primary tracking-widest"
+              >
+                Back to Login
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

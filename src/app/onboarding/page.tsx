@@ -29,14 +29,12 @@ export default function Onboarding() {
     const checkStatusAndProfile = async () => {
       if (!user || !db || !auth) return;
 
-      // Force a reload to ensure we have the absolute latest verification status from Firebase Auth
       try {
         await reload(user);
       } catch (e) {
         console.error("Auth reload failed", e);
       }
 
-      // Final check: If still not verified after reload, send back
       if (!auth.currentUser?.emailVerified) {
         router.push('/verify-email');
         return;
@@ -45,8 +43,7 @@ export default function Onboarding() {
       try {
         const docRef = doc(db, 'users', user.uid);
         const docSnap = await getDoc(docRef);
-        // If user already has a handle, they shouldn't be here
-        if (docSnap.exists() && docSnap.data().username) {
+        if (docSnap.exists() && docSnap.data()?.username) {
           router.push('/dashboard');
         } else {
           setIsChecking(false);
@@ -63,7 +60,7 @@ export default function Onboarding() {
         checkStatusAndProfile();
       }
     }
-  }, [user, authLoading, db, auth]);
+  }, [user, authLoading, db, auth, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +73,6 @@ export default function Onboarding() {
       return;
     }
 
-    // Check for profanity in username
     const filteredUsername = filterProfanity(cleanUsername);
     if (filteredUsername.includes('*')) {
       toast({ 
@@ -90,7 +86,6 @@ export default function Onboarding() {
     setIsSubmitting(true);
 
     try {
-      // 1. Uniqueness check via Username Registry
       const usernameRef = doc(db, 'usernames', cleanUsername);
       const usernameSnap = await getDoc(usernameRef);
       
@@ -104,28 +99,21 @@ export default function Onboarding() {
         return;
       }
 
-      // 2. Prepare atomic write batch
       const batch = writeBatch(db);
-      
-      // Reserve the username
       batch.set(usernameRef, { uid: user.uid });
 
-      // Create the user profile
       const userRef = doc(db, 'users', user.uid);
       const profileData = {
         uid: user.uid,
         username: cleanUsername,
         storeId: cleanUsername,
         email: user.email,
-        // CRITICAL: Force this to true since they passed the auth gate
-        // This ensures Security Rules (which check the doc) allow access immediately
         emailVerified: true, 
         role: 'USER',
         status: 'ACTIVE',
         isSeller: false,
         sellerStatus: 'NONE',
-        premiumItems: [],
-        // Don't set photoURL - let it use randomized avatar from getRandomAvatar(uid)
+        ownedPremiumProducts: [],
         displayName: user.displayName || cleanUsername,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -134,13 +122,10 @@ export default function Onboarding() {
       };
 
       batch.set(userRef, profileData, { merge: true });
-      
-      // 3. Commit the batch
       await batch.commit();
       
       toast({ title: "Identity Secured!", description: `Welcome to hobbydork, @${cleanUsername}!` });
       
-      // Small delay to allow Firestore cache to catch up before redirecting to dashboard
       setTimeout(() => {
         router.push('/dashboard');
       }, 500);

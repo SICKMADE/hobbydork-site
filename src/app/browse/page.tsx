@@ -30,7 +30,7 @@ import type { Listing, Category } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 
-function ListingsContent() {
+function BrowseContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const db = useFirestore();
@@ -70,10 +70,8 @@ function ListingsContent() {
     if (!listings) return [];
     let result = [...listings] as Listing[];
 
-    // Filter out expired and vacation mode listings
-    result = result.filter(l => !isListingExpired(l) && !(l as any).sellerOnVacation);
+    result = result.filter(l => !isListingExpired(l));
 
-    // Only filter out sold listings if showSold is false
     if (!showSold) {
       result = result.filter(l => l.status !== 'Sold');
     }
@@ -128,7 +126,7 @@ function ListingsContent() {
         params.set(key, val);
       }
     });
-    router.push(`/listings?${params.toString()}`);
+    router.push(`/browse?${params.toString()}`);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -143,7 +141,7 @@ function ListingsContent() {
     setShowSold(false);
     setPriceRange([0, 50000]);
     setCondition('all');
-    router.push('/listings');
+    router.push('/browse');
   };
 
   return (
@@ -155,7 +153,7 @@ function ListingsContent() {
           <div className="max-w-5xl mx-auto bg-[#333333] rounded-b-2xl p-6 md:p-10 shadow-2xl text-white space-y-6">
             <div className="text-center">
               <h1 className="text-3xl md:text-6xl font-headline font-black tracking-tighter uppercase leading-[0.9] text-white">
-                Scan the <span className="text-accent italic">Archives.</span>
+                Scan the <span className="text-accent italic">Grails.</span>
               </h1>
             </div>
 
@@ -163,7 +161,7 @@ function ListingsContent() {
               <div className="flex items-center gap-2">
                 <div className="relative group flex-1">
                   <Input 
-                    placeholder="Search catalog..." 
+                    placeholder="Search grails..." 
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     className="h-10 md:h-11 rounded-xl border-2 border-accent bg-white font-black text-sm md:text-base focus-visible:ring-accent focus-visible:border-accent transition-all placeholder:text-zinc-400 text-black shadow-none"
@@ -171,7 +169,6 @@ function ListingsContent() {
                 </div>
                 <Button 
                   type="submit"
-                  aria-label="Search"
                   className="h-10 md:h-11 w-10 md:w-11 rounded-xl bg-accent text-white hover:bg-white hover:text-black transition-all p-0 flex items-center justify-center shrink-0 shadow-lg active:scale-95 border-2 border-accent"
                 >
                   <SearchIcon className="w-5 h-5 md:w-6 md:h-6" />
@@ -371,10 +368,10 @@ function ListingsContent() {
   );
 }
 
-export default function ListingsPage() {
+export default function BrowsePage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="w-12 h-12 animate-spin text-accent" /></div>}>
-      <ListingsContent />
+      <BrowseContent />
     </Suspense>
   );
 }

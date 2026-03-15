@@ -1,4 +1,3 @@
-      'use client';
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -28,7 +27,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection, query, where, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, where, orderBy, limit, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/firebase/client';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
@@ -36,10 +35,6 @@ import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
-/**
- * DashboardContent - Only rendered once user is verified and active.
- * This prevents permission errors by ensuring queries only fire for authorized users.
- */
 function DashboardContent({ profile, user }: { profile: any, user: any }) {
   const { toast } = useToast();
   const db = useFirestore();
@@ -51,12 +46,10 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [isCalculatingTier, setIsCalculatingTier] = useState(false);
 
-  // Define seller status first (needs to be before queries that use it)
   const isSeller = profile?.isSeller && profile?.sellerStatus === 'APPROVED';
   const username = profile?.username || 'Collector';
   const shopUrl = `hobbydork.com/shop/${username}`;
 
-  // Security Rule Alignment: Only query if user is ACTIVE and verified
   const ordersQuery = useMemoFirebase(() => query(
     collection(db!, 'orders'), 
     where('buyerUid', '==', user.uid), 
@@ -74,11 +67,10 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
   const { data: orders } = useCollection(ordersQuery);
   const { data: sales } = useCollection(salesQuery);
 
-  // Fetch invisible listings for seller
   const draftListingsQuery = useMemoFirebase(() => 
     isSeller ? query(
       collection(db!, 'listings'),
-      where('sellerId', '==', user.uid),
+      where('listingSellerId', '==', user.uid),
       where('visibility', '==', 'Invisible'),
       orderBy('createdAt', 'desc')
     ) : null
@@ -86,11 +78,8 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
 
   const { data: draftListings } = useCollection(draftListingsQuery);
 
-  // Calculate earnings
   const completedSales = sales?.filter(s => ['Delivered', 'Shipped'].includes(s.status)) || [];
-  const refundedSales = sales?.filter(s => s.status === 'Refunded') || [];
   const lifetimeEarnings = completedSales.reduce((acc, s) => acc + (s.price || 0), 0);
-  const refundedAmount = refundedSales.reduce((acc, s) => acc + (s.price || 0), 0);
   const pendingPayout = completedSales.filter(s => s.status === 'Shipped').reduce((acc, s) => acc + (s.price || 0), 0);
 
   const handleOpenPayoutHistory = async () => {
@@ -143,7 +132,7 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
       setIsWithdrawalOpen(false);
       toast({ title: 'Withdrawal request submitted' });
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Could not submit withdrawal request' });
+      toast({ variant: 'destructive', title: 'Could not submit withdrawal request', description: 'Please try again.' });
     } finally {
       setIsSubmittingWithdrawal(false);
     }
@@ -164,7 +153,6 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
-      {/* Header Section */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b">
         <div>
           <h1 className="text-2xl sm:text-3xl font-headline font-black uppercase tracking-tight italic">Dashboard</h1>
@@ -191,44 +179,14 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
         )}
       </div>
 
-      {/* Tabs */}
-
-      {/* Desktop Tabs */}
       <Tabs defaultValue="collector" className="w-full">
-        <TabsList className="dashboard-tabs bg-muted p-1 h-14 rounded-xl px-2 mb-8 flex-nowrap overflow-x-auto justify-start md:justify-center scrollbar-hide hidden sm:flex" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <TabsList className="dashboard-tabs bg-muted p-1 h-14 rounded-xl px-2 mb-8 flex-nowrap overflow-x-auto justify-start md:justify-center scrollbar-hide hidden sm:flex">
           <TabsTrigger value="collector" className="rounded-lg px-8 h-10 font-bold shrink-0">Collector Hub</TabsTrigger>
           {isSeller && <TabsTrigger value="dealer" className="rounded-lg px-8 h-10 font-bold shrink-0">Seller Hub</TabsTrigger>}
           {isSeller && <TabsTrigger value="sales" className="rounded-lg px-8 h-10 font-bold shrink-0">Sales & Shipping</TabsTrigger>}
           {isSeller && <TabsTrigger value="payouts" className="rounded-lg px-8 h-10 font-bold shrink-0">Payouts</TabsTrigger>}
         </TabsList>
 
-        {/* Mobile Bottom Tabs */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t flex sm:hidden justify-around h-16 shadow-lg">
-          <TabsTrigger value="collector" className="flex flex-col items-center justify-center flex-1 h-full font-bold text-xs focus:outline-none data-[state=active]:text-accent">
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 8h2v-2H7v2zm0-4h2v-2H7v2zm0-4h2V7H7v2zm4 8h2v-2h-2v2zm0-4h2v-2h-2v2zm0-4h2V7h-2v2zm4 8h2v-2h-2v2zm0-4h2v-2h-2v2zm0-4h2V7h-2v2z"/></svg>
-            Collector
-          </TabsTrigger>
-          {isSeller && (
-            <TabsTrigger value="dealer" className="flex flex-col items-center justify-center flex-1 h-full font-bold text-xs focus:outline-none data-[state=active]:text-accent">
-              <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21V7a2 2 0 0 0-2-2h-4V3a1 1 0 0 0-2 0v2H6a2 2 0 0 0-2 2v14"/></svg>
-              Seller
-            </TabsTrigger>
-          )}
-          {isSeller && (
-            <TabsTrigger value="sales" className="flex flex-col items-center justify-center flex-1 h-full font-bold text-xs focus:outline-none data-[state=active]:text-accent">
-              <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 17v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M16 11V7a4 4 0 0 0-8 0v4"/></svg>
-              Sales
-            </TabsTrigger>
-          )}
-          {isSeller && (
-            <TabsTrigger value="payouts" className="flex flex-col items-center justify-center flex-1 h-full font-bold text-xs focus:outline-none data-[state=active]:text-accent">
-              <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 8c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/></svg>
-              Payouts
-            </TabsTrigger>
-          )}
-        </div>
-
-        {/* Collector Tab */}
         <TabsContent value="collector" className="space-y-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="p-5 rounded-xl border bg-gradient-to-br from-card to-card/50">
@@ -274,7 +232,6 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
           </div>
         </TabsContent>
 
-        {/* Seller Tab */}
         {isSeller && (
           <TabsContent value="dealer" className="space-y-10">
             <div className="space-y-4">
@@ -311,37 +268,14 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
                   </div>
                 </div>
                 
-                {(profile?.lateShipmentsLast30d || 0) > 0 && (
-                  <div className="bg-red-50 dark:bg-red-950/20 border-2 border-red-500/30 rounded-xl p-4 mb-4">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-xs font-black uppercase text-red-900 dark:text-red-100 mb-1">⚠️ Late Shipping Alert</p>
-                        <p className="text-xs font-bold text-red-800/80 dark:text-red-200/80 mb-2">
-                          You have {profile?.lateShipmentsLast30d} late shipment{(profile?.lateShipmentsLast30d || 0) > 1 ? 's' : ''} in the last 30 days. Buyers canceled these orders and you lost the sales.
-                        </p>
-                        <p className="text-xs font-bold text-red-900 dark:text-red-100">
-                          Late shipments lower your tier, increase your fees, and damage your reputation. Get packages to the carrier within 2 business days.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 <div className="pt-4 border-t">
                   <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-3">Tier Levels</p>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {[
-                      { tier: 'Bronze', desc: 'New' },
-                      { tier: 'Silver', desc: '50+ sales' },
-                      { tier: 'Gold', desc: '200+ sales' },
-                      { tier: 'Platinum', desc: 'Elite' }
-                    ].map(benefit => (
-                      <div key={benefit.tier} className={`p-3 rounded-lg border ${
-                        profile?.sellerTier === benefit.tier ? 'bg-accent/10 border-accent' : 'bg-muted/30 border-muted'
+                    {['Bronze', 'Silver', 'Gold', 'Platinum'].map(tier => (
+                      <div key={tier} className={`p-3 rounded-lg border ${
+                        profile?.sellerTier === tier ? 'bg-accent/10 border-accent' : 'bg-muted/30 border-muted'
                       }`}>
-                        <p className="font-bold text-sm mb-1">{benefit.tier}</p>
-                        <p className="text-xs text-muted-foreground font-medium">{benefit.desc}</p>
+                        <p className="font-bold text-sm mb-1">{tier}</p>
                       </div>
                     ))}
                   </div>
@@ -358,7 +292,6 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
               </Button>
             </div>
 
-            {/* Invisible Listings */}
             {draftListings && draftListings.length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -378,7 +311,7 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <Badge variant={listing.visibility === 'Draft' ? 'secondary' : 'outline'} className="text-[9px] font-black uppercase">
+                          <Badge variant="outline" className="text-[9px] font-black uppercase">
                             {listing.visibility}
                           </Badge>
                         </div>
@@ -386,7 +319,7 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
                         <p className="text-xs text-muted-foreground font-medium">${listing.price?.toLocaleString()}</p>
                       </div>
                       <Button asChild size="sm" className="rounded-lg font-bold h-8 px-3 text-[10px] uppercase shrink-0">
-                        <Link href={`/listings/${listing.id}`}>Edit</Link>
+                        <Link href={`/listings/${listing.id}/edit`}>Edit</Link>
                       </Button>
                     </Card>
                   ))}
@@ -403,21 +336,6 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
                 <Package className="w-5 h-5 text-accent" />
                 <h2 className="text-lg font-black uppercase tracking-tight">Sales & Shipping</h2>
               </div>
-
-              <Card className="p-4 sm:p-5 rounded-xl border-2 border-blue-500/30 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20">
-                <div className="flex items-start gap-3">
-                  <Package className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="font-black uppercase text-sm mb-2 text-blue-900 dark:text-blue-100">⚡ Shipping Rule</h3>
-                    <p className="text-xs font-bold text-blue-800/90 dark:text-blue-200/90 leading-relaxed mb-2">
-                      Orders must be <span className="underline">received by carrier within 2 business days</span> of payment (excluding weekends/holidays). Carrier acceptance scan is required.
-                    </p>
-                    <p className="text-[10px] font-black uppercase text-blue-900 dark:text-blue-100 tracking-wider">
-                      Late orders can be canceled by buyers and may lower your seller tier
-                    </p>
-                  </div>
-                </div>
-              </Card>
 
               <div className="space-y-3">
                 {sales && sales.length > 0 ? sales.map(sale => (
@@ -456,25 +374,12 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <Card className="p-6 rounded-xl border bg-gradient-to-br from-card to-card/50">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Lifetime</p>
-                      <p className="text-3xl font-black text-accent">${lifetimeEarnings.toFixed(2)}</p>
-                    </div>
-                    <div className="bg-accent/10 p-3 rounded-xl"><Wallet className="w-6 h-6 text-accent" /></div>
-                  </div>
-                  <p className="text-sm text-muted-foreground font-medium">Total from completed sales</p>
+                  <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Lifetime</p>
+                  <p className="text-3xl font-black text-accent">${lifetimeEarnings.toFixed(2)}</p>
                 </Card>
-
                 <Card className="p-6 rounded-xl border bg-gradient-to-br from-card to-card/50">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Pending</p>
-                      <p className="text-3xl font-black text-accent">${pendingPayout.toFixed(2)}</p>
-                    </div>
-                    <div className="bg-accent/10 p-3 rounded-xl"><Package className="w-6 h-6 text-accent" /></div>
-                  </div>
-                  <p className="text-sm text-muted-foreground font-medium">3-day hold for protection</p>
+                  <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Pending</p>
+                  <p className="text-3xl font-black text-accent">${pendingPayout.toFixed(2)}</p>
                 </Card>
               </div>
 
@@ -482,134 +387,60 @@ function DashboardContent({ profile, user }: { profile: any, user: any }) {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-black uppercase text-base tracking-wider text-primary mb-1">Stripe Connect</h3>
-                    <p className="text-sm text-muted-foreground font-medium">Manage payouts & withdrawals</p>
+                    <p className="text-sm text-muted-foreground font-medium">Manage payouts</p>
                   </div>
-                  <Badge className="bg-green-100 text-green-700 font-black uppercase text-xs px-3 py-1">Connected</Badge>
+                  <Badge className="bg-green-100 text-green-700 font-black uppercase text-xs">Connected</Badge>
                 </div>
                 <div className="flex gap-3">
-                  <Button variant="outline" size="default" className="flex-1 rounded-lg h-11 font-bold uppercase text-sm" onClick={handleOpenPayoutHistory}>
-                    History
-                  </Button>
-                  <Button size="default" className="flex-1 rounded-lg h-11 font-bold uppercase text-sm" onClick={() => setIsWithdrawalOpen(true)}>
-                    Withdraw
-                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={handleOpenPayoutHistory}>History</Button>
+                  <Button className="flex-1" onClick={() => setIsWithdrawalOpen(true)}>Withdraw</Button>
                 </div>
               </Card>
-
-              <div className="space-y-3">
-                <h3 className="font-black uppercase text-xs tracking-wider text-muted-foreground">Recent Transactions</h3>
-                {completedSales && completedSales.length > 0 ? (
-                  <div className="space-y-2">
-                    {completedSales.slice(0, 8).map(tx => (
-                      <Card key={tx.id} className="p-4 rounded-xl border hover:border-accent/50 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <code className="text-xs font-mono font-bold text-muted-foreground">#{tx.id.substring(0, 8).toUpperCase()}</code>
-                              <Badge 
-                                variant="outline" 
-                                className={`text-[9px] font-black uppercase ${
-                                  tx.status === 'Delivered' ? 'bg-green-100 text-green-700 border-green-200' :
-                                  tx.status === 'Refunded' ? 'bg-red-100 text-red-700 border-red-200' :
-                                  'bg-blue-100 text-blue-700 border-blue-200'
-                                }`}
-                              >
-                                {tx.status}
-                              </Badge>
-                            </div>
-                            <p className="text-sm font-bold text-muted-foreground truncate">@{tx.buyerName || 'Collector'}</p>
-                          </div>
-                          <p className="text-base font-black text-accent shrink-0">${(tx.price || 0).toFixed(2)}</p>
-                          <Button asChild size="sm" variant="ghost" className="h-8 px-3 text-xs font-bold rounded-lg shrink-0">
-                            <Link href={`/orders/${tx.id}`}>View</Link>
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <Card className="p-10 text-center border-2 border-dashed rounded-xl">
-                    <Wallet className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm font-bold text-muted-foreground">No transactions yet</p>
-                  </Card>
-                )}
-              </div>
             </div>
           </TabsContent>
         )}
       </Tabs>
 
-        <Dialog open={isPayoutHistoryOpen} onOpenChange={setIsPayoutHistoryOpen}>
-          <DialogContent className="sm:max-w-[540px] p-0 overflow-hidden rounded-2xl">
-            <div className="p-6 border-b">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-black uppercase tracking-tight">Payout History</DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground">Recent Stripe payouts</DialogDescription>
-              </DialogHeader>
-            </div>
-            <div className="p-6 space-y-2 max-h-[400px] overflow-y-auto">
-              {isLoadingPayouts ? (
-                <div className="py-8 text-center">
-                  <Loader2 className="w-5 h-5 animate-spin text-accent mx-auto mb-2" />
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground">Loading</p>
+      <Dialog open={isPayoutHistoryOpen} onOpenChange={setIsPayoutHistoryOpen}>
+        <DialogContent className="sm:max-w-[540px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black uppercase">Payout History</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            {isLoadingPayouts ? (
+              <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+            ) : payoutHistory.length === 0 ? (
+              <p className="text-center text-muted-foreground">No history yet</p>
+            ) : (
+              payoutHistory.map((payout) => (
+                <div key={payout.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <p className="text-sm font-black text-accent">${(payout.amount / 100).toFixed(2)}</p>
+                  <Badge variant="outline" className="text-[8px] font-black uppercase">{payout.status}</Badge>
                 </div>
-              ) : payoutHistory.length === 0 ? (
-                <div className="p-8 text-center border-2 border-dashed rounded-xl">
-                  <p className="text-sm font-bold text-muted-foreground">No history yet</p>
-                </div>
-              ) : (
-                payoutHistory.map((payout) => (
-                  <Card key={payout.id} className="p-3 rounded-lg border">
-                    <div className="flex items-center justify-between gap-3">
-                      <code className="text-[9px] font-mono font-bold text-muted-foreground">#{payout.id?.substring(0, 10)?.toUpperCase()}</code>
-                      <p className="text-sm font-black text-accent">${((payout.amount || 0) / 100).toFixed(2)}</p>
-                      <Badge variant="outline" className="text-[8px] font-black uppercase">{payout.status || 'pending'}</Badge>
-                    </div>
-                  </Card>
-                ))
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
-        <Dialog open={isWithdrawalOpen} onOpenChange={setIsWithdrawalOpen}>
-          <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden rounded-2xl">
-            <div className="p-6 border-b">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-black uppercase tracking-tight">Withdraw Funds</DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground">Request payout from available balance</DialogDescription>
-              </DialogHeader>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground mb-1">Available Balance</p>
-                <p className="text-2xl font-black text-accent">${pendingPayout.toFixed(2)}</p>
-              </div>
-
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground mb-2">Amount (USD)</p>
-                <Input
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  value={withdrawalAmount}
-                  onChange={(e) => setWithdrawalAmount(e.target.value)}
-                  className="h-11 rounded-lg font-bold"
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" className="flex-1 h-10 rounded-lg font-bold" onClick={() => setIsWithdrawalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button className="flex-1 h-10 rounded-lg font-bold" onClick={handleRequestWithdrawal} disabled={isSubmittingWithdrawal}>
-                  {isSubmittingWithdrawal ? 'Submitting...' : 'Submit'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+      <Dialog open={isWithdrawalOpen} onOpenChange={setIsWithdrawalOpen}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black uppercase">Withdraw Funds</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              type="number"
+              value={withdrawalAmount}
+              onChange={(e) => setWithdrawalAmount(e.target.value)}
+              placeholder="Amount"
+            />
+            <Button className="w-full" onClick={handleRequestWithdrawal} disabled={isSubmittingWithdrawal}>
+              {isSubmittingWithdrawal ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -626,59 +457,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!isVerificationComplete) return;
-    
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-    
-    if (!user.emailVerified) {
-      router.push('/verify-email');
-      return;
-    }
-    
-    // Only redirect to onboarding if we've confirmed profile doesn't exist
-    if (!profile) {
-      router.push('/onboarding');
-      return;
-    }
-    
-    // Only redirect if profile exists but has no username
-    if (profile && !profile.username) {
-      router.push('/onboarding');
-      return;
-    }
-  }, [user, profile, isVerificationComplete]);
+    if (!user) router.push('/login');
+    else if (!user.emailVerified) router.push('/verify-email');
+    else if (!profile?.username) router.push('/onboarding');
+  }, [user, profile, isVerificationComplete, router]);
 
-  if (!isVerificationComplete) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-accent" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Opening Vault</p>
-      </div>
-    );
-  }
-
-  // Identity Gate: Prevent query firing if not verified/active
-  if (!user || !profile || !user.emailVerified || profile.status !== 'ACTIVE') {
-    if (user && !user.emailVerified) {
-      return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <Card className="max-w-md w-full p-8 text-center space-y-6 rounded-[2rem]">
-            <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto">
-              <Mail className="w-8 h-8 text-accent" />
-            </div>
-            <h2 className="text-2xl font-headline font-black uppercase italic">Identity Verification Required</h2>
-            <p className="text-muted-foreground">Please verify your email address to access your collector dashboard.</p>
-            <Button asChild className="w-full h-12 bg-accent text-accent-foreground rounded-xl">
-              <Link href="/verify-email">Go to Verification</Link>
-            </Button>
-          </Card>
-        </div>
-      );
-    }
-    return null;
-  }
+  if (!isVerificationComplete) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
+  if (!user || !profile || !user.emailVerified) return null;
 
   return (
     <div className="min-h-screen bg-background text-foreground">

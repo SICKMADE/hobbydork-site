@@ -11,11 +11,11 @@ import { Search, Sparkles, ArrowLeft, Info, Loader2, Clock } from 'lucide-react'
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
-import { useFirestore, useUser } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
 export default function CreateISORequest() {
@@ -25,6 +25,9 @@ export default function CreateISORequest() {
   const { user } = useUser();
   const [loading, setLoading] = useState(false);
 
+  const profileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+
   // Form State
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
@@ -33,25 +36,33 @@ export default function CreateISORequest() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !user) {
+    if (!db || !user || !profile) {
       toast({ variant: 'destructive', title: 'Auth Required', description: 'Sign in to post requests.' });
       return;
     }
 
-    setLoading(loading);
+    if (!user.emailVerified || profile?.status !== 'ACTIVE') {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Action Restricted', 
+        description: 'You must verify your email and have an active profile to post search requests.' 
+      });
+      return;
+    }
 
+    setLoading(true);
+
+    // ALIGNED: Using 'uid' as defined in backend.json ISO24Post entity
     const isoData = {
       title,
-      userId: user.uid,
-      userName: user.displayName || 'Anonymous Collector',
+      uid: user.uid,
+      userName: profile.username || 'Anonymous Collector',
       postedAt: serverTimestamp(),
       category,
       budget: parseFloat(budget),
       description,
       status: 'Searching'
     };
-
-    setLoading(true);
 
     addDoc(collection(db, 'iso24Posts'), isoData)
       .then(() => {

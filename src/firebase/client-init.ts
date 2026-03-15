@@ -35,13 +35,8 @@ export function getFirebase() {
   const app = getFirebaseApp();
   _auth = _auth || getAuth(app);
   _db = _db || getFirestore(app);
+  
   if (typeof window !== "undefined") {
-    // Only enable IndexedDB persistence in production, not on localhost
-    if (typeof location !== 'undefined' && location.hostname !== "localhost") {
-      import('firebase/firestore').then(({ enableIndexedDbPersistence }) => {
-        enableIndexedDbPersistence(_db!).catch(() => {});
-      });
-    }
     try {
       _functions = _functions || getFunctions(app, "us-central1");
     } catch (e) {
@@ -50,6 +45,7 @@ export function getFirebase() {
   } else {
     _functions = null;
   }
+  
   return {
     firebaseApp: app,
     firestore: _db,
@@ -57,6 +53,3 @@ export function getFirebase() {
     functions: _functions,
   };
 }
-
-
-// Cleaned: removed legacy exports note

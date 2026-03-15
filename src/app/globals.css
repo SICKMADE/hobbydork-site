@@ -26,6 +26,35 @@
   border: 2px solid #ef4444 !important;
   box-shadow: 0 2px 8px 0 #0004 !important;
 }
+
+/* Mobile Safe Area Padding Support */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom);
+    height: calc(4rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Scrollbar Hide Utility */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  /* scrollbar-width: none; Only works in Firefox */
+  /* For Chrome/Safari/Edge */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@font-face {
+  font-family: 'Graffiti';
+  src: url('/Graffiti.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -62,9 +91,9 @@
   }
 
   .dark {
-    --background: 0 0% 13%;
+    --background: 0 0% 8%;
     --foreground: 210 20% 98%;
-    --card: 0 0% 8%;
+    --card: 0 0% 10%;
     --card-foreground: 210 20% 98%;
     --popover: 222 6% 8%;
     --popover-foreground: 210 20% 98%;
@@ -72,17 +101,17 @@
     --primary-foreground: 222 6% 10%;
     --secondary: 222 6% 14%;
     --secondary-foreground: 210 20% 98%;
-    --muted: 0 0% 18%;
+    --muted: 0 0% 15%;
     --muted-foreground: 215 16% 75%;
     --accent: 0 100% 37.6%;
     --accent-foreground: 210 20% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 20% 98%;
-    --border: 0 0% 40%;
-    --input: 0 0% 40%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
     --ring: 210 20% 98%;
 
-    --sidebar-background: 0 0% 15%;
+    --sidebar-background: 0 0% 12%;
     --sidebar-foreground: 215 20% 90%;
     --sidebar-primary: 210 20% 98%;
     --sidebar-primary-foreground: 222 6% 10%;
@@ -115,62 +144,14 @@
   background-size: 10px 10px;
 }
 
-.glass-panel {
-  @apply bg-white/10 dark:bg-card/10 border border-border/20 shadow-sm backdrop-blur-none;
-}
-
-/* Fix white-on-white issues for forms in dark mode */
-/* Aggressive dark mode fix for all light backgrounds and text */
 .dark input,
-.dark textarea,
-.dark select,
-.dark .bg-white,
-.dark .bg-white\/5,
-.dark .bg-white\/10,
-.dark .bg-white\/20,
-.dark .bg-white\/50,
-.dark .bg-white\/90,
-.dark .bg-zinc-50,
-.dark .bg-zinc-100,
-.dark .bg-card,
-.dark .bg-card\/50,
-.dark .bg-muted,
-.dark .bg-secondary,
-.dark .bg-secondary\/10,
-.dark .bg-secondary\/50 {
-  background-color: #23272f !important;
-  color: #f3f3f3 !important;
-  border-color: #444 !important;
-}
-.dark .border-zinc-100,
-.dark .border-zinc-200,
-.dark .border-accent\/20 {
-  border-color: #444 !important;
-}
-.dark .text-zinc-950,
-.dark .text-primary,
-.dark .text-black {
-  color: #f3f3f3 !important;
-}
-
-/* Highlight selected shipping option in dark mode */
-.dark .bg-white.border-accent.shadow-lg,
-.dark .bg-white.border-accent {
-  background-color: #23272f !important;
-  border-color: #ef4444 !important; /* Red-500 from Tailwind */
-  box-shadow: 0 2px 8px 0 #0004;
+.dark textarea {
+  background-color: #1a1a1a !important;
+  color: #fff !important;
 }
 
 .premium-card {
   @apply transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 rounded-2xl;
-}
-
-.noir-shadow {
-  box-shadow: 12px 12px 0px 0px rgba(0,0,0,1);
-}
-
-.noir-shadow-sm {
-  box-shadow: 6px 6px 0px 0px rgba(0,0,0,1);
 }
 
 ::-webkit-scrollbar {

@@ -1,27 +1,34 @@
+
 'use client';
 
 import { Suspense, useEffect, useState, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, ArrowRight, ShoppingBag, Loader2, Crown } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ShoppingBag, Loader2, Crown, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, updateDoc, serverTimestamp, arrayUnion, query, collection, where, limit, getDocs, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const sessionId = searchParams?.get('session_id');
   const itemId = searchParams?.get('item_id');
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
+  const db = useFirestore();
   const { toast } = useToast();
+  
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const fulfillmentStarted = useRef(false);
 
   useEffect(() => {
-    // Simulate verifying the session
+    // Basic verification handshake delay to simulate processing
     const timer = setTimeout(() => {
+      if (!sessionId) {
+        setError("Invalid session data. If your payment was successful, please check your dashboard in a few minutes.");
+      }
       setLoading(false);
     }, 1500);
     return () => clearTimeout(timer);
@@ -29,36 +36,74 @@ function SuccessContent() {
 
   useEffect(() => {
     const fulfillPremiumItem = async () => {
-      if (!itemId || fulfillmentStarted.current) return;
+      // Gate: must have all services, not loading, and not already fulfilled
+      // itemId must exist and be a string to avoid .startsWith crash
+      if (!itemId || typeof itemId !== 'string' || !user || !db || fulfillmentStarted.current || loading || isUserLoading) return;
       
       fulfillmentStarted.current = true;
       
-      // Prototype Persistence: Save owned items to localStorage
-      const ownedItems = JSON.parse(localStorage.getItem('hobbydork_owned_items') || '[]');
-      if (!ownedItems.includes(itemId)) {
-        ownedItems.push(itemId);
-        localStorage.setItem('hobbydork_owned_items', JSON.stringify(ownedItems));
+      try {
+        // Handle premium products (Spotlights, Themes starting with 'p')
+        if (itemId.startsWith('p')) {
+          const userRef = doc(db, 'users', user.uid);
+          
+          // 1. Add theme/item to user vault atomically
+          await updateDoc(userRef, {
+            ownedPremiumProducts: arrayUnion(itemId),
+            updatedAt: serverTimestamp()
+          });
+
+          // 2. Specialized Logic: Weekly Spotlight (p1)
+          if (itemId === 'p1') {
+            const storeQuery = query(collection(db, 'storefronts'), where('ownerUid', '==', user.uid), limit(1));
+            const storeSnap = await getDocs(storeQuery);
+            if (!storeSnap.empty) {
+              const expiration = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+              await updateDoc(storeSnap.docs[0].ref, {
+                isSpotlighted: true,
+                spotlightUntil: Timestamp.fromDate(expiration),
+                updatedAt: serverTimestamp()
+              });
+            }
+          }
+
+          toast({
+            title: "Upgrade Active!",
+            description: "Your purchase has been applied to your permanent vault.",
+          });
+        }
+      } catch (error) {
+        console.error("Auto-fulfillment warning:", error);
+        // We don't block the UI here as the backend webhook will likely catch it
       }
-      
-      toast({
-        title: "Upgrade Active!",
-        description: "Your purchase has been applied to your profile.",
-      });
     };
 
-    if (!loading) {
-      fulfillPremiumItem();
-    }
-  }, [loading, itemId, toast]);
+    fulfillPremiumItem();
+  }, [loading, isUserLoading, itemId, user, db, toast]);
 
-  if (loading) {
+  if (loading || isUserLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-6">
         <Loader2 className="w-12 h-12 animate-spin text-accent" />
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-headline font-black uppercase italic">Verifying Payment...</h2>
-          <p className="text-muted-foreground font-medium">Processing your transaction securely.</p>
+          <h2 className="text-2xl font-headline font-black uppercase italic">Verifying Transaction...</h2>
+          <p className="text-muted-foreground font-medium">Securing your collectibles protocol.</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-md mx-auto py-20 px-4 text-center space-y-6">
+        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
+          <AlertCircle className="w-10 h-10" />
+        </div>
+        <h1 className="text-3xl font-headline font-black uppercase">Verification Fault</h1>
+        <p className="text-muted-foreground font-medium">{error}</p>
+        <Button asChild variant="outline" className="w-full h-14 rounded-xl font-black uppercase">
+          <Link href="/dashboard">Return to Dashboard</Link>
+        </Button>
       </div>
     );
   }
@@ -78,27 +123,27 @@ function SuccessContent() {
         <h1 className="text-5xl font-headline font-black italic tracking-tighter uppercase leading-none">
           {isPremiumProduct ? 'Upgrade Secured!' : 'Payment Complete!'}
         </h1>
-        <p className="text-xl text-muted-foreground font-medium max-w-md mx-auto">
+        <p className="text-xl text-muted-foreground font-medium max-w-md mx-auto leading-relaxed">
           {isPremiumProduct 
-            ? 'Your premium shop upgrade is now active. Check your Store Customization settings.' 
-            : 'Your payment was processed successfully. The item is now yours.'}
+            ? 'Your premium shop upgrade is now active. Check your Store Customization settings to apply your changes.' 
+            : 'Your payment was processed successfully. The item is now being prepared for fulfillment.'}
         </p>
       </div>
 
       <div className="bg-muted/30 p-8 rounded-[2.5rem] border-2 border-dashed border-muted-foreground/20 space-y-2">
-        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Transaction ID</p>
-        <code className="text-sm font-mono font-bold text-primary">{sessionId}</code>
+        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Transaction Node ID</p>
+        <code className="text-sm font-mono font-bold text-primary break-all">{sessionId}</code>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-        <Button asChild className="h-16 px-10 bg-accent hover:bg-accent/90 text-white rounded-2xl font-black text-lg gap-2 shadow-xl shadow-accent/20">
+        <Button asChild className="h-16 px-10 bg-accent hover:bg-accent/90 text-white rounded-2xl font-black text-lg gap-2 shadow-xl shadow-accent/20 transition-all active:scale-95">
           <Link href="/dashboard">
             {isPremiumProduct ? 'Visit Dashboard' : 'Track Order'} <ArrowRight className="w-5 h-5" />
           </Link>
         </Button>
-        <Button asChild variant="outline" className="h-16 px-10 rounded-2xl font-black text-lg gap-2 border-2">
+        <Button asChild variant="outline" className="h-16 px-10 rounded-2xl font-black text-lg gap-2 border-2 transition-all hover:bg-zinc-50">
           <Link href="/">
-            <ShoppingBag className="w-5 h-5" /> Continue Browsing
+            <ShoppingBag className="w-5 h-5" /> Back to Catalog
           </Link>
         </Button>
       </div>
@@ -112,8 +157,9 @@ export default function CheckoutSuccessPage() {
       <Navbar />
       <main className="container mx-auto">
         <Suspense fallback={
-          <div className="flex justify-center py-32">
+          <div className="flex flex-col items-center justify-center py-32 gap-6">
             <Loader2 className="w-12 h-12 animate-spin text-accent" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading success protocol...</p>
           </div>
         }>
           <SuccessContent />

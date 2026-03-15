@@ -6,10 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { 
   Camera, 
-  Sparkles, 
   Loader2, 
   X, 
   Gift, 
@@ -17,17 +15,14 @@ import {
   ArrowLeft,
   Monitor,
   ShieldCheck,
-  Users,
-  Mail,
-  ShieldAlert
+  CheckCircle2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, Timestamp } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import Link from 'next/link';
 import { filterProfanity } from '@/lib/utils';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
@@ -43,37 +38,50 @@ export default function CreateGiveaway() {
   const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
+  
   const [photo, setPhoto] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [prizeValue, setPrizeValue] = useState('');
   const [endsAt, setEndsAt] = useState('');
 
-  const isDemo = typeof window !== 'undefined' && localStorage.getItem('hobbydork_demo_mode') === 'true';
-  
-  // Rule Check Alignment: emailVerified == true && status == ACTIVE
-  const isVerified = !!(profile?.emailVerified && profile?.status === 'ACTIVE');
-  // Rule Check Alignment: isSeller == true
-  const isSeller = !!(profile?.isSeller || isDemo);
-  const isSuspended = profile?.status === 'BANNED' || profile?.status === 'SUSPENDED';
+  useEffect(() => {
+    const savedDraft = localStorage.getItem('hobbydork_giveaway_draft');
+    if (savedDraft) {
+      try {
+        const data = JSON.parse(savedDraft);
+        setTitle(data.title || '');
+        setDescription(data.description || '');
+        setPrizeValue(data.prizeValue || '');
+        setEndsAt(data.endsAt || '');
+        toast({ title: "Draft Restored", description: "Unsaved changes recovered." });
+      } catch (e) {
+        console.error("Draft recovery failed");
+      }
+    }
+    setIsDraftLoaded(true);
+  }, [toast]);
 
   useEffect(() => {
-    if (!authLoading && !profileLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, authLoading, profileLoading]);
+    if (!isDraftLoaded) return;
+    const timer = setTimeout(() => {
+      const draft = { title, description, prizeValue, endsAt };
+      localStorage.setItem('hobbydork_giveaway_draft', JSON.stringify(draft));
+      setLastSaved(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [title, description, prizeValue, endsAt, isDraftLoaded]);
 
   const startCamera = async () => {
     setShowCamera(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      setHasCameraPermission(true);
       if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (error) {
-      setHasCameraPermission(false);
       toast({ variant: 'destructive', title: 'Camera Access Denied' });
     }
   };
@@ -96,130 +104,76 @@ export default function CreateGiveaway() {
     setShowCamera(false);
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setPhoto(reader.result as string);
-      reader.readAsDataURL(file);
-    }
+  const uploadPhotoToStorage = async (dataUri: string): Promise<string> => {
+    const storage = getStorage();
+    const fileName = `giveawayImages/${user!.uid}/${Date.now()}.jpg`;
+    const storageRef = ref(storage, fileName);
+    const response = await fetch(dataUri);
+    const blob = await response.blob();
+    await uploadBytes(storageRef, blob);
+    return await getDownloadURL(storageRef);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db || !title || !prizeValue || !endsAt || !photo) return;
 
-    if (!isVerified || !isSeller) {
-      toast({ variant: 'destructive', title: "Security Gate Triggered", description: "You must be a verified dealer to host drops." });
+    if (!profile?.isSeller || profile?.status !== 'ACTIVE') {
+      toast({ variant: 'destructive', title: 'Action Denied', description: 'Only active verified sellers can launch giveaways.' });
       return;
     }
 
     setIsSubmitting(true);
 
-    const sanitizedTitle = filterProfanity(title);
-    const sanitizedDescription = filterProfanity(description);
+    try {
+      const sanitizedTitle = filterProfanity(title);
+      const sanitizedDescription = filterProfanity(description);
+      const imageUrl = await uploadPhotoToStorage(photo);
 
-    const dropData = {
-      title: sanitizedTitle,
-      description: sanitizedDescription,
-      prizeValue: parseFloat(prizeValue),
-      endsAt: new Date(endsAt),
-      imageUrl: photo,
-      seller: profile?.username || user.uid,
-      sellerId: user.uid, // Security Rules: request.resource.data.sellerId == uid()
-      sellerName: profile?.username || 'Collector',
-      status: 'Active',
-      entriesCount: 0,
-      createdAt: serverTimestamp(),
-    };
-    
-    addDoc(collection(db, 'giveaways'), dropData)
-      .then(() => {
-        toast({ title: 'Live Drop Launched!' });
-        router.push('/dashboard');
-      })
-      .catch(async (error) => {
-        toast({
-          variant: 'destructive',
-          title: 'Giveaway Creation Failed',
-          description: getFriendlyErrorMessage(error)
-        });
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: 'giveaways',
-          operation: 'create',
-          requestResourceData: dropData,
-        } satisfies SecurityRuleContext));
-        setIsSubmitting(false);
-      });
+      // ALIGNED SCHEMA: 'seller' and 'sellerId' are consistently the user's UID
+      const dropData = {
+        title: sanitizedTitle,
+        description: sanitizedDescription,
+        prizeValue: parseFloat(prizeValue),
+        endsAt: Timestamp.fromDate(new Date(endsAt)),
+        imageUrl: imageUrl,
+        seller: user.uid,
+        sellerId: user.uid, 
+        sellerName: profile?.username || 'Collector',
+        status: 'Active',
+        entriesCount: 0,
+        createdAt: serverTimestamp(),
+      };
+      
+      await addDoc(collection(db, 'giveaways'), dropData);
+      localStorage.removeItem('hobbydork_giveaway_draft');
+      toast({ title: 'Live Drop Launched!' });
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Launch Failed', description: getFriendlyErrorMessage(error) || 'Could not launch the drop. Please try again.' });
+      setIsSubmitting(false);
+    }
   };
 
-  if (authLoading || profileLoading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-accent" /></div>;
-  }
-
-  if (isSuspended) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main className="container mx-auto px-4 py-32 text-center max-w-lg space-y-8">
-          <div className="w-20 h-20 bg-red-100 rounded-[2.5rem] flex items-center justify-center mx-auto">
-            <ShieldAlert className="w-10 h-10 text-red-600" />
-          </div>
-          <h1 className="text-4xl font-headline font-black uppercase italic tracking-tight">Account Restricted</h1>
-          <p className="text-muted-foreground font-medium">Your current status prevents you from hosting community drops.</p>
-          <Button asChild variant="outline" className="h-14 px-10 rounded-xl font-black uppercase">
-            <Link href="/help">Help Center</Link>
-          </Button>
-        </main>
-      </div>
-    );
-  }
-
-  if (!isVerified) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main className="container mx-auto px-4 py-32 text-center max-w-lg space-y-8">
-          <div className="w-20 h-20 bg-accent/10 rounded-[2.5rem] flex items-center justify-center mx-auto">
-            <Mail className="w-10 h-10 text-accent" />
-          </div>
-          <h1 className="text-4xl font-headline font-black uppercase italic tracking-tight">Verify Identity</h1>
-          <p className="text-muted-foreground font-medium">Email verification and an active profile are required to host live drops on hobbydork.</p>
-          <Button asChild className="h-14 px-10 rounded-xl font-black uppercase tracking-widest bg-accent text-accent-foreground shadow-xl">
-            <Link href="/verify-email">Go to Verification</Link>
-          </Button>
-        </main>
-      </div>
-    );
-  }
-
-  if (!isSeller) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main className="container mx-auto px-4 py-32 text-center max-w-lg space-y-8">
-          <div className="w-20 h-20 bg-accent/10 rounded-[2.5rem] flex items-center justify-center mx-auto">
-            <Zap className="w-10 h-10 text-accent" />
-          </div>
-          <h1 className="text-4xl font-headline font-black uppercase italic tracking-tight">Become a Dealer</h1>
-          <p className="text-muted-foreground font-medium">Complete shop onboarding to unlock the community drops feature.</p>
-          <Button asChild className="h-14 px-10 rounded-xl font-black uppercase tracking-widest bg-accent text-accent-foreground shadow-xl">
-            <Link href="/seller/onboarding">Start Onboarding</Link>
-          </Button>
-        </main>
-      </div>
-    );
-  }
+  if (authLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 py-12 max-w-4xl">
-        <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 font-black uppercase tracking-widest"><ArrowLeft className="w-4 h-4" /> Back to Hub</Link>
-        <header className="mb-10 space-y-2">
-          <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase mb-2"><Zap className="w-3 h-3" /> Seller Tool</div>
-          <h1 className="text-4xl font-headline font-black italic uppercase tracking-tighter">Launch Live Drop</h1>
-          <p className="text-muted-foreground font-medium">Create a community giveaway to reward your followers.</p>
+        <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 font-black uppercase tracking-widest"><ArrowLeft className="w-4 h-4" /> Back</Link>
+        
+        <header className="mb-10 flex justify-between items-end">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase mb-2"><Zap className="w-3 h-3" /> Seller Tool</div>
+            <h1 className="text-4xl font-headline font-black italic uppercase tracking-tighter text-primary leading-none">Launch Live Drop</h1>
+          </div>
+          {lastSaved && (
+            <div className="flex items-center gap-2 text-[9px] font-black uppercase text-muted-foreground bg-muted px-3 py-1.5 rounded-full mb-2">
+              <CheckCircle2 className="w-3 h-3 text-green-500" />
+              Draft Saved {lastSaved}
+            </div>
+          )}
         </header>
 
         <form onSubmit={handleSubmit} className="grid gap-12 lg:grid-cols-[1fr_350px]">
@@ -230,7 +184,7 @@ export default function CreateGiveaway() {
                 {photo ? (
                   <div className="relative aspect-video rounded-[2rem] overflow-hidden border-4 border-zinc-100 shadow-2xl group">
                     <Image src={photo} alt="Prize" fill className="object-cover" />
-                    <button type="button" title="Remove prize photo" aria-label="Remove prize photo" onClick={() => setPhoto(null)} className="absolute top-4 right-4 bg-zinc-950/50 text-white rounded-full p-2 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10"><X className="w-4 h-4" /></button>
+                    <button type="button" onClick={() => setPhoto(null)} className="absolute top-4 right-4 bg-zinc-950/50 text-white rounded-full p-2 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10" title="Remove photo"><X className="w-4 h-4" /></button>
                   </div>
                 ) : showCamera ? (
                   <div className="relative aspect-video rounded-[2rem] overflow-hidden bg-black border-4 border-accent shadow-2xl">
@@ -239,15 +193,19 @@ export default function CreateGiveaway() {
                       <Button type="button" onClick={capturePhoto} className="bg-white text-zinc-950 rounded-full h-14 px-8 font-black uppercase tracking-widest">Snap Photo</Button>
                       <Button type="button" variant="outline" onClick={stopCamera} className="bg-white/10 text-white border-white/20 backdrop-blur-md rounded-full h-14 w-14 p-0"><X className="w-6 h-6" /></Button>
                     </div>
-                    {hasCameraPermission === false && (
-                      <div className="absolute inset-0 flex items-center justify-center p-6 bg-black/80"><Alert variant="destructive"><AlertTitle>Camera Required</AlertTitle></Alert></div>
-                    )}
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     <label className="aspect-video border-4 border-dashed rounded-[2rem] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent transition-all group">
                       <Camera className="w-10 h-10 text-muted-foreground" /><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Upload</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                      <input type="file" accept="image/*" className="hidden" onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => setPhoto(reader.result as string);
+                          reader.readAsDataURL(file);
+                        }
+                      }} />
                     </label>
                     <button type="button" onClick={startCamera} className="aspect-video border-4 border-dashed rounded-[2rem] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent transition-all group">
                       <Monitor className="w-10 h-10 text-muted-foreground" /><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Live Cam</span>
@@ -260,16 +218,22 @@ export default function CreateGiveaway() {
             <section className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="title" className="text-xs font-black uppercase tracking-widest">Prize Title</Label>
-                <Input id="title" placeholder="e.g. 1977 Star Wars Series 1 Wax Pack" className="h-14 rounded-2xl border-2 font-bold" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                <Input placeholder="e.g. 1977 Star Wars Series 1 Wax Pack" className="h-14 rounded-2xl border-2 font-bold" value={title} onChange={e => setTitle(e.target.value)} required />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="value" className="text-xs font-black uppercase tracking-widest">Estimated Value ($)</Label>
-                  <div className="relative"><span className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black text-xl">$</span><Input id="value" type="number" placeholder="0.00" className="pl-10 h-14 rounded-2xl border-2 text-xl font-black" value={prizeValue} onChange={(e) => setPrizeValue(e.target.value)} required /></div>
+                  <Label className="text-xs font-black uppercase tracking-widest">Estimated Value ($)</Label>
+                  <Input type="number" placeholder="0.00" className="h-14 rounded-2xl border-2 text-xl font-black" value={prizeValue} onChange={e => setPrizeValue(e.target.value)} required />
                 </div>
-                <div className="space-y-2"><Label htmlFor="endsAt" className="text-xs font-black uppercase tracking-widest">End Date & Time</Label><Input id="endsAt" type="datetime-local" className="h-14 rounded-2xl border-2 font-bold" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} required /></div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest">End Date & Time</Label>
+                  <Input type="datetime-local" className="h-14 rounded-2xl border-2 font-bold" value={endsAt} onChange={e => setEndsAt(e.target.value)} required />
+                </div>
               </div>
-              <div className="space-y-2"><Label htmlFor="description" className="text-xs font-black uppercase tracking-widest">Description</Label><Textarea id="description" placeholder="Why is this a must-have?" className="min-h-[150px] rounded-2xl border-2 font-medium" value={description} onChange={(e) => setDescription(e.target.value)} required /></div>
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest">Description</Label>
+                <Textarea placeholder="Why is this a must-have?" className="min-h-[150px] rounded-2xl border-2 font-medium" value={description} onChange={e => setDescription(e.target.value)} required />
+              </div>
             </section>
 
             <Button type="submit" disabled={isSubmitting} className="w-full bg-accent text-accent-foreground font-black h-20 text-2xl rounded-2xl shadow-xl shadow-accent/20 uppercase italic tracking-tighter">
@@ -278,31 +242,15 @@ export default function CreateGiveaway() {
           </div>
 
           <aside className="space-y-6">
-            <div className="bg-card/50 border-accent/20 border-2 p-8 rounded-[2.5rem] shadow-2xl sticky top-24">
+            <div className="bg-zinc-950 text-white p-8 rounded-[2.5rem] shadow-2xl sticky top-24">
               <h3 className="font-headline font-black text-xl mb-6 uppercase italic tracking-tighter flex items-center gap-2"><Gift className="w-5 h-5 text-accent" /> Drop Policy</h3>
               <ul className="space-y-8">
                 <li className="space-y-2">
                   <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase">
-                    <Users className="w-3 h-3" /> Follower Requirement
-                  </div>
-                  <p className="text-xs font-bold leading-relaxed text-muted-foreground">
-                    Only collectors following your shop can enter. Use drops to reward your most loyal fans and grow your reach.
-                  </p>
-                </li>
-                <li className="space-y-2">
-                  <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase">
                     <ShieldCheck className="w-3 h-3" /> Fair Play
                   </div>
-                  <p className="text-xs font-bold leading-relaxed text-muted-foreground">
-                    Winners are selected randomly by the system. Sellers are expected to ship prizes within the standard 2-business-day window.
-                  </p>
-                </li>
-                <li className="space-y-2">
-                  <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase">
-                    <Sparkles className="w-3 h-3" /> Engagement Tip
-                  </div>
-                  <p className="text-xs font-bold leading-relaxed text-muted-foreground">
-                    Announce your drop in the Community Chat 1 hour before launching to maximize entry volume.
+                  <p className="text-[11px] font-bold leading-relaxed text-white/60">
+                    Winners are selected randomly. Sellers must ship prizes within the 2-day window.
                   </p>
                 </li>
               </ul>

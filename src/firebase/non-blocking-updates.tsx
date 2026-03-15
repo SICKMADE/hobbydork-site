@@ -72,7 +72,7 @@ export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) 
 
 
 /**
- * Cleaned: initiates a deleteDoc operation for a document reference.
+ * Initiates a deleteDoc operation for a document reference.
  * Does NOT await the write operation internally.
  */
 export function deleteDocumentNonBlocking(docRef: DocumentReference) {
@@ -82,7 +82,7 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
         'permission-error',
         new FirestorePermissionError({
           path: docRef.path,
-          operation: 'delete', // Cleaned: operation type
+          operation: 'delete',
         })
       )
     });
