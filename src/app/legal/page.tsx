@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -39,8 +40,8 @@ All sellers agree that every item listed for sale on the Platform must be receiv
 2.3 LATE SHIPMENT CONSEQUENCES
 Sellers who fail to meet the 2-day shipping requirement acknowledge and accept the following automatic consequences:
    (a) Buyers may cancel orders with one-click and receive automatic full refunds
-   (b) Seller tier downgrade (loss of all tier benefits and fee reductions)
-   (c) Increased seller fees on all subsequent listings (tier reset to Tier 1)
+   (b) Seller tier downgrade (loss of hearts, reset to 1 Heart status)
+   (c) Increased seller fees on all subsequent listings (tier reset to Base)
    (d) Public reputation record impact (visible to all marketplace users)
    (e) Potential account suspension after repeated violations
    (f) Ineligibility for seller protection features
@@ -96,7 +97,7 @@ Payment confirmation constitutes the date and time when Stripe processes the tra
 All prices are in USD unless otherwise stated. hobbydork reserves the right to cancel transactions if pricing errors are discovered. Sellers warrant that items are in their inventory and available as described at time of sale. If an item becomes unavailable after purchase, seller must notify buyer immediately and full refund must be issued.
 
 4.4 FEES & COMMISSIONS
-hobbydork charges seller transaction fees (Tier 1: 8%, Tier 2: 6%, Tier 3: 4%) plus payment processing fees (2.9% + $0.30 per transaction). Tier placement is determined by shipping compliance, rating history, and sales volume. Fees are automatically deducted from seller payouts.
+hobbydork charges seller transaction fees (1 Heart: 8%, 2 Hearts: 6%, 3 Hearts: 4%) plus payment processing fees (2.9% + $0.30 per transaction). Status is determined by shipping compliance and sales volume. Fees are automatically deducted from seller payouts.
 
 4.5 SELLER PAYOUTS
 Seller payouts are processed weekly via ACH transfer to verified bank account. Seller warrants that all banking information is accurate. hobbydork is not liable for misdirected funds due to incorrect account information provided by seller.
@@ -118,13 +119,13 @@ The following items are prohibited and result in automatic account suspension: w
 5.4 ACCURATE DESCRIPTIONS & PHOTOS
 Sellers agree to provide accurate, complete descriptions and representative photographs. Descriptions must include condition assessment, all defects, grading information (if applicable), and material facts that would affect buyer decision-making. Misleading descriptions may result in account suspension.
 
-5.5 SELLER TIER SYSTEM
-Tier placement is automatically calculated based on:
-   - Tier 1 (8% fees): 0% late shipment rate
-   - Tier 2 (6% fees): <5% late shipment rate + 50+ completed orders + 4.5+ average rating
-   - Tier 3 (4% fees): <2% late shipment rate + 200+ completed orders + 4.7+ average rating
+5.5 SELLER HEALTH PROTOCOL (HEARTS)
+Dealer status is automatically calculated based on real-time performance nodes:
+   - 1 HEART (8% fees): Default entry status.
+   - 2 HEARTS (6% fees): 20+ completed orders AND 90%+ on-time rate AND ≤ 5 late shipments.
+   - 3 HEARTS (4% fees): 100+ completed orders AND 97%+ on-time rate AND ≤ 1 late shipment.
 
-Tier status is recalculated monthly. Violation of 2-day shipping requirement immediately downgrades seller to Tier 1.
+Status is recalculated upon every transaction event. Violation of 2-day shipping requirement immediately results in damage to node health, resetting the seller to 1 Heart.
     `,
   },
   {

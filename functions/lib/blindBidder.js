@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.submitBlindBid = exports.createBlindBidAuction = exports.processEndedBlindBidAuctions = exports.adminRerunBlindBidAuction = exports.setBlindBidAuctionImage = void 0;
+exports.submitBlindBid = exports.createBlindBidAuction = exports.processEndedBlindBidAuctions = exports.adminRerunBlindBidAuction = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const firebaseAdmin_1 = require("./firebaseAdmin");
@@ -11,26 +11,6 @@ const stripe_1 = __importDefault(require("stripe"));
 const params_1 = require("firebase-functions/params");
 const stripeSecret = (0, params_1.defineSecret)("STRIPE_SECRET");
 // Update auction imageUrl after creation
-exports.setBlindBidAuctionImage = (0, https_1.onCall)(async (request) => {
-    const uid = request.auth?.uid;
-    if (!uid)
-        throw new https_1.HttpsError("unauthenticated", "Auth required");
-    const auctionId = request.data.auctionId;
-    const imageUrl = request.data.imageUrl;
-    if (!auctionId || !imageUrl) {
-        throw new https_1.HttpsError("invalid-argument", "Missing auctionId or imageUrl");
-    }
-    const auctionRef = firebaseAdmin_1.db.collection("blindBidAuctions").doc(auctionId);
-    const auctionSnap = await auctionRef.get();
-    if (!auctionSnap.exists)
-        throw new https_1.HttpsError("not-found", "Auction not found");
-    const auction = auctionSnap.data();
-    if (!auction || auction.sellerUid !== uid) {
-        throw new https_1.HttpsError("permission-denied", "Only the seller can update the image");
-    }
-    await auctionRef.update({ imageUrl });
-    return { success: true };
-});
 // Admin callable function to rerun an auction
 exports.adminRerunBlindBidAuction = (0, https_1.onCall)(async (request) => {
     const uid = request.auth?.uid;

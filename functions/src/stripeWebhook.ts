@@ -18,6 +18,12 @@ const THEME_PRODUCT_TO_NAME: Record<string, string> = {
 export const stripeWebhook = onRequest(
   { secrets: [STRIPE_SECRET, STRIPE_WEBHOOK_SECRET] },
   async (req, res) => {
+    // --- Stripe rawBody check for debugging ---
+    if (!req.rawBody) {
+      console.error("Stripe webhook: req.rawBody is missing!", { headers: req.headers });
+      res.status(400).send("No webhook payload provided.");
+      return;
+    }
     const stripeSecret = process.env.STRIPE_SECRET;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!stripeSecret) {
@@ -47,11 +53,17 @@ export const stripeWebhook = onRequest(
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
+
       const productId = session.metadata?.productId;
       const buyerId = session.metadata?.buyerId;
 
       // Premium product purchase automation (current flow)
       if (productId && buyerId) {
+        if (!buyerId) {
+          console.error("buyerId is missing for premium product purchase", { session });
+          res.status(400).send("buyerId missing");
+          return;
+        }
         const userRef = db.collection("users").doc(buyerId);
         await userRef.set(
           {
@@ -68,6 +80,9 @@ export const stripeWebhook = onRequest(
             const storeDoc = storeSnap.docs[0];
             const storeData = storeDoc.data() as any;
             const spotlightStoreId = storeData?.id || storeDoc.id;
+            if (!spotlightStoreId) {
+              console.error("spotlightStoreId is missing for spotlight purchase", { storeData, storeDocId: storeDoc.id });
+            }
             const now = admin.firestore.Timestamp.now();
             const endAt = admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
 

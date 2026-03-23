@@ -79,7 +79,7 @@ export default function ReportIssuePage() {
               <h1 className="text-4xl font-headline font-black uppercase italic">Report Filed</h1>
               <p className="text-muted-foreground font-medium">Thank you for helping us maintain hobbydork. Our staff will investigate this issue immediately.</p>
             </div>
-            <Button asChild className="h-14 px-10 rounded-2xl font-black uppercase tracking-widest">
+            <Button asChild className="h-14 px-10 rounded-2xl font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90">
               <Link href="/help">Return to Help Center</Link>
             </Button>
           </div>
@@ -97,21 +97,21 @@ export default function ReportIssuePage() {
         </Link>
 
         <header className="mb-12 space-y-2">
-          <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase">
+          <div className="flex items-center gap-2 text-primary font-black tracking-widest text-[10px] uppercase">
             <ShieldAlert className="w-3 h-3" /> System Support
           </div>
-          <h1 className="text-4xl font-headline font-black uppercase italic tracking-tighter">Report Issue</h1>
+          <h1 className="text-4xl font-headline font-black uppercase italic tracking-tighter text-primary">Report Issue</h1>
           <p className="text-muted-foreground font-medium">Encountered a bug or suspicious behavior? Let us know.</p>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-8 lg:gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_350px] gap-8 lg:gap-12">
           <Card className="border-none shadow-2xl bg-card rounded-[2rem] overflow-hidden">
             <CardContent className="p-8 md:p-10 space-y-8">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Issue Type</Label>
+                  <Label htmlFor="issue-type-select" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Issue Type</Label>
                   <Select value={type} onValueChange={setType}>
-                    <SelectTrigger className="h-14 rounded-2xl border-2 font-bold text-lg">
+                    <SelectTrigger id="issue-type-select" className="h-14 rounded-2xl border-2 font-bold text-lg bg-white text-zinc-950 focus-visible:ring-primary">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -125,34 +125,36 @@ export default function ReportIssuePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Subject</Label>
+                  <Label htmlFor="issue-subject-input" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Subject</Label>
                   <Input 
+                    id="issue-subject-input"
                     placeholder="Short summary of the issue"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     required
-                    className="h-14 rounded-2xl border-2 font-bold"
+                    className="h-14 rounded-2xl border-2 font-bold bg-white text-zinc-950 focus-visible:ring-primary shadow-sm"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Detailed Description</Label>
+                  <Label htmlFor="issue-description-textarea" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Detailed Description</Label>
                   <Textarea 
+                    id="issue-description-textarea"
                     placeholder="Please provide as much detail as possible..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     required
-                    className="min-h-[200px] rounded-2xl border-2 font-medium"
+                    className="min-h-[200px] rounded-2xl border-2 font-medium bg-white text-zinc-950 focus-visible:ring-primary shadow-sm"
                   />
                 </div>
 
                 <Button 
                   type="submit" 
                   disabled={isSubmitting || !subject || !description}
-                  className="w-full h-16 bg-accent text-white font-black text-xl rounded-2xl shadow-xl shadow-accent/20 uppercase italic tracking-tighter transition-all active:scale-95"
+                  className="w-full h-16 bg-primary text-primary-foreground hover:bg-primary/90 font-black text-xl rounded-2xl shadow-xl shadow-primary/20 uppercase italic tracking-tighter transition-all active:scale-95"
                 >
                   {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center gap-3">
                       <Send className="w-5 h-5" />
                       Submit Report
                     </div>
@@ -165,11 +167,11 @@ export default function ReportIssuePage() {
           <aside className="space-y-6">
             <div className="bg-zinc-950 text-white p-8 rounded-[2.5rem] shadow-2xl sticky top-24">
               <h3 className="font-headline font-black text-xl mb-6 uppercase italic tracking-tighter flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-accent" /> Guidelines
+                <Sparkles className="w-5 h-5 text-primary" /> Guidelines
               </h3>
               <ul className="space-y-8">
                 <li className="space-y-2">
-                  <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase">
+                  <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase">
                     <Bug className="w-3 h-3" /> Bugs
                   </div>
                   <p className="text-[11px] font-bold leading-relaxed text-white/60">
@@ -177,7 +179,7 @@ export default function ReportIssuePage() {
                   </p>
                 </li>
                 <li className="space-y-2">
-                  <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase">
+                  <div className="flex items-center gap-3 text-primary font-black text-[10px] uppercase">
                     <ShieldAlert className="w-3 h-3" /> Safety
                   </div>
                   <p className="text-[11px] font-bold leading-relaxed text-white/60">
@@ -185,7 +187,7 @@ export default function ReportIssuePage() {
                   </p>
                 </li>
                 <li className="space-y-2">
-                  <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase">
+                  <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase">
                     <MessageSquare className="w-3 h-3" /> Feedback
                   </div>
                   <p className="text-[11px] font-bold leading-relaxed text-white/60">
@@ -193,6 +195,13 @@ export default function ReportIssuePage() {
                   </p>
                 </li>
               </ul>
+              <div className="pt-6 border-t border-white/10 mt-6">
+                <Button asChild variant="outline" className="w-full h-12 rounded-xl font-black uppercase tracking-widest gap-2 !text-white !border-white bg-transparent hover:bg-white/10">
+                  <Link href="/legal-hub">
+                    📚 Legal & Policies
+                  </Link>
+                </Button>
+              </div>
             </div>
           </aside>
         </div>

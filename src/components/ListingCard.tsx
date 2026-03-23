@@ -1,45 +1,18 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Clock, Tag, Zap, AlertCircle, ShieldCheck, Medal } from 'lucide-react';
+import { Clock, Zap, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Listing, isListingExpired } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface ListingCardProps {
   listing: Listing;
   theme?: string;
-}
-
-import styles from './ListingCard.module.css';
-
-function SprayDrip({ color = "white" }: { color?: string }) {
-  // Map color to a CSS class
-  const colorClass =
-    color === 'white' ? styles.sprayWhite :
-    color === 'black' ? styles.sprayBlack :
-    color === 'accent' ? styles.sprayAccent :
-    styles.sprayWhite;
-  return (
-    <div className={"absolute bottom-[-1px] left-0 right-0 flex justify-around items-start pointer-events-none z-30 px-6 translate-y-full h-8 " + colorClass}>
-      <div className="flex flex-col items-center opacity-60 translate-x-[-15px]">
-        <div className={styles.sprayDrip1} />
-        <div className={styles.sprayDrip2} />
-      </div>
-      <div className="flex flex-col items-center opacity-30 mt-1 translate-x-4">
-        <div className={styles.sprayDrip3} />
-        <div className={styles.sprayDrip4} />
-      </div>
-      <div className="flex flex-col items-center opacity-50 mt-0.5 translate-x-12">
-        <div className={styles.sprayDrip5} />
-        <div className={styles.sprayDrip6} />
-      </div>
-    </div>
-  );
 }
 
 export default function ListingCard({ listing, theme }: ListingCardProps) {
@@ -49,10 +22,14 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
   const isComicBook = theme === 'Comic Book Theme';
   const isNeonSyndicate = theme === 'Neon Syndicate Theme';
   const isUrban = theme === 'Urban Theme';
-  const isHobbyShop = theme === 'Hobby Shop Theme';
+  const isGameTheme = theme === 'NES ORIGINAL THEME';
+  const isGlitchProtocol = theme === 'Glitch Protocol Theme';
+  const isVoidShard = theme === 'Void Shard Theme';
+  const isHacked = theme === 'HACKED THEME';
 
   const [timeLeft, setTimeLeft] = useState('');
   const [isEnded, setIsEnded] = useState(false);
+  const [imgSrc, setImgSrc] = useState<string>('');
 
   useEffect(() => {
     if (!isAuction || !listing.endsAt) return;
@@ -88,80 +65,107 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
     }
   }, [isAuction, listing]);
 
+  useEffect(() => {
+    setImgSrc(listing.imageUrl?.trim() || '/defaultbroken.jpg');
+  }, [listing.imageUrl]);
+
   const price = (listing.currentBid || listing.price || 0).toLocaleString();
   const seller = listing.sellerName || listing.seller || 'Collector';
-  
-  // ALIGNED: strictly use listingSellerId as defined in backend blueprint
-  const sellerUid = listing.listingSellerId;
-  
-  const defaultListingImage = PlaceHolderImages.find(img => img.id === 'default-listing')?.imageUrl || '/defaultbroken.jpg';
-  const listingImageUrl = listing.imageUrl?.trim() || defaultListingImage;
 
   return (
-    <Link href={`/listings/${listing.id}`} className="block h-full">
+    <Link href={`/listings/${listing.id}`} title={`View ${listing.title}`} className="block h-full">
       <Card className={cn(
-        "group transition-all duration-500 border-none h-full flex flex-col p-2 relative",
-        isComicBook && "bg-white border-[3px] border-black rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black",
+        "group transition-all duration-500 border-none h-full flex flex-col p-1 md:p-1.5 relative",
+        isComicBook && "bg-white dark:bg-zinc-900 border-[2px] border-black rounded-none shadow-[3px_3px_0px_0px_#000] dark:shadow-[3px_3px_0px_0px_#fff] text-black dark:text-white",
         isNeonSyndicate && "bg-zinc-900 border border-cyan-500/20 rounded-none text-white",
-        isUrban && "bg-black rounded-none text-white border-none overflow-visible",
-        isHobbyShop && "bg-white rounded-[1.2rem] shadow-xl p-0",
-        (!isComicBook && !isNeonSyndicate && !isUrban && !isHobbyShop) && "bg-card rounded-xl shadow-sm hover:shadow-lg overflow-hidden",
+        isUrban && "bg-white dark:bg-zinc-900 border-[4px] md:border-[6px] border-zinc-950 dark:border-zinc-800 rounded-none text-zinc-950 dark:text-white shadow-[6px_6px_0px_rgba(0,0,0,0.2)] hover:translate-y-[-4px]",
+        isGameTheme && "bg-[#eeeeee] dark:bg-zinc-800 border-[2px] md:border-[3px] border-black rounded-none text-black dark:text-white shadow-[3px_3px_0_0_#000]",
+        isGlitchProtocol && "bg-zinc-950 border-2 border-red-600 rounded-none text-white animate-crt shadow-[0_0_15px_rgba(220,38,38,0.1)]",
+        isVoidShard && "bg-zinc-950 border-2 border-violet-500/20 rounded-none text-white",
+        isHacked && "bg-black border border-[#00FF41] rounded-none text-[#00FF41] font-mono",
+        (!isComicBook && !isNeonSyndicate && !isUrban && !isGameTheme && !isGlitchProtocol && !isVoidShard && !isHacked) && "bg-zinc-50/80 dark:bg-zinc-800/60 backdrop-blur-sm rounded-lg shadow-sm hover:shadow-lg overflow-hidden border border-border/50",
         (isEnded || listing.status === 'Sold') && "opacity-80 grayscale-[0.5]"
       )}>
-        {isUrban && (
-          <>
-            <div className="absolute inset-0 border-2 border-white/90 rounded-none pointer-events-none z-20" />
-            <SprayDrip />
-          </>
-        )}
-
-        <div className="relative aspect-[3/4] overflow-hidden bg-zinc-100 rounded-lg">
+        <div className={cn(
+          "relative aspect-[3/4] overflow-hidden bg-zinc-100 dark:bg-zinc-900 rounded-md",
+          (isUrban || isGameTheme || isGlitchProtocol || isVoidShard || isHacked) && "rounded-none border-b-2 border-white/10",
+          isUrban && "border-b-[4px] md:border-b-[6px] border-zinc-950 dark:border-zinc-800",
+          isHacked && "border-[#00FF41]/30",
+          isGlitchProtocol && "border-red-600/30",
+          isGameTheme && "border-black border-b-[2px] md:border-b-[3px]"
+        )}>
           <Image 
-            src={listingImageUrl} 
+            src={imgSrc} 
             alt={listing.title}
             fill
-            className="object-cover transition-transform duration-1000 group-hover:scale-110"
-            data-ai-hint="listing photo"
+            data-ai-hint="premium collectibles"
+            onError={() => setImgSrc('/defaultbroken.jpg')}
+            className={cn(
+              "object-cover transition-transform duration-1000 group-hover:scale-110",
+              isUrban && "brightness-[0.9] group-hover:brightness-100 contrast-125",
+              isHacked && "grayscale brightness-[0.7]",
+              isGlitchProtocol && "scale-105 contrast-125 animate-crt",
+              isGameTheme && "contrast-110"
+            )}
           />
           
-          <Badge className="absolute top-2 left-2 text-[7px] uppercase font-black px-1.5 py-0.5 border-none shadow-xl bg-background/90 text-foreground">
+          <Badge className={cn(
+            "absolute top-1 left-1 md:top-1.5 md:left-1.5 text-[5px] md:text-[6px] uppercase font-black px-1 py-0.5 border-none shadow-xl",
+            isUrban ? "bg-zinc-950 text-white rounded-none tracking-[0.2em] skew-x-[-15deg]" :
+            isHacked ? "bg-[#00FF41] text-black rounded-none" : 
+            isGameTheme ? "bg-black text-white rounded-none tracking-[0.1em] font-black" :
+            isGlitchProtocol ? "bg-white text-red-600 rounded-none animate-pulse" :
+            "bg-background/90 dark:bg-zinc-950/90 text-foreground dark:text-white"
+          )}>
             {listing.category}
           </Badge>
 
           {isAuction && (
             <Badge className={cn(
-              "absolute top-2 right-2 text-[7px] font-black px-1.5 py-0.5 border-none shadow-xl uppercase",
-              isEnded ? "bg-zinc-500" : "bg-red-600 text-white animate-pulse"
+              "absolute top-1 right-1 md:top-1.5 md:right-1.5 text-[5px] md:text-[6px] font-black px-1 py-0.5 border-none shadow-xl uppercase",
+              isUrban ? "bg-red-600 text-white rounded-none italic skew-x-[-15deg]" :
+              isHacked ? "bg-red-600 text-white rounded-none" : 
+              isGameTheme ? "bg-red-600 text-white rounded-none" :
+              isGlitchProtocol ? "bg-red-600 text-white rounded-none animate-rgb" :
+              "bg-red-600 text-white"
             )}>
-              <Zap className="w-2 h-2 mr-1" /> AUCTION
+              {isGameTheme ? 'LIVE' : 'AUCTION'}
             </Badge>
           )}
         </div>
         
-        <CardContent className="p-2 flex-1 flex flex-col relative z-10">
-          <h3 className="font-headline font-black line-clamp-1 leading-tight uppercase text-xs sm:text-sm mb-1">
+        <CardContent className="p-1 md:p-1.5 flex-1 flex flex-col relative z-10 overflow-hidden">
+          <h3 className={cn(
+            "font-headline font-black line-clamp-1 leading-tight uppercase text-[9px] md:text-[11px] mb-0.5",
+            isUrban && "lowercase font-black tracking-tighter text-sm md:text-base leading-[0.9]",
+            isGameTheme && "text-black dark:text-white tracking-[0.05em] font-black text-[10px] md:text-[12px]",
+            isHacked && "font-mono text-[#00FF41] tracking-tighter",
+            isGlitchProtocol && "text-red-600 italic font-mono animate-rgb"
+          )}>
             {listing.title}
           </h3>
           
-          <div className="flex items-center gap-1.5 mb-2">
-            <span className="text-[8px] font-black uppercase text-muted-foreground truncate">@{seller}</span>
-            {listing.sellerTier && (
-              <Badge className="h-3.5 px-1.5 text-[6px] font-black uppercase bg-accent text-white border-none">
-                {listing.sellerTier}
-              </Badge>
-            )}
+          <div className="flex items-center gap-1 mb-1">
+            <span className={cn(
+              "text-[6px] md:text-[7px] font-black uppercase text-muted-foreground truncate",
+              isUrban && "text-zinc-400 dark:text-zinc-500 lowercase font-black tracking-widest",
+              isGameTheme && "text-black/40 dark:text-white/40",
+              isHacked && "text-[#00FF41]/40 font-mono",
+              isGlitchProtocol && "text-white/40 font-mono"
+            )}>@{seller}</span>
           </div>
 
           <div className="mt-auto flex justify-between items-end">
-            <div className="space-y-0.5">
-              <p className="text-[7px] uppercase font-black text-muted-foreground">{isAuction ? 'Bid' : 'Price'}</p>
-              <p className="text-sm font-black">${price}</p>
+            <div className="space-y-0">
+              <p className="text-[5px] md:text-[6px] uppercase font-black text-muted-foreground">Price</p>
+              <p className={cn(
+                "text-[10px] md:text-xs font-black", 
+                isUrban && "text-zinc-950 dark:text-white font-black text-base md:text-xl leading-none border-l-[4px] md:border-l-[6px] border-accent pl-1.5 md:pl-2 mt-0.5",
+                isGameTheme && "text-black dark:text-white bg-white dark:bg-zinc-950 border border-black dark:border-white/20 px-1 py-0.5 text-xs md:text-sm tracking-tighter font-black",
+                isHacked && "text-[#00FF41] font-mono text-xs md:text-sm",
+                isGlitchProtocol && "text-white bg-red-600 px-1 font-mono text-[10px] md:text-xs animate-rgb"
+              )}>${price}</p>
             </div>
-            {isAuction && !isEnded && (
-              <div className="flex items-center gap-1 text-[7px] font-black px-1.5 py-0.5 uppercase bg-accent/10 text-accent rounded-full">
-                <Clock className="w-2 h-2" /><span>{timeLeft}</span>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>

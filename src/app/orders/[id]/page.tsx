@@ -1,9 +1,8 @@
-
 'use client';
 
 import { use, useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -31,19 +30,19 @@ import {
   FileText,
   ExternalLink,
   Printer,
-  Sparkles
+  Sparkles,
+  Lock,
+  CreditCard
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { doc, collection, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, collection, addDoc, serverTimestamp, updateDoc, getDoc } from 'firebase/firestore';
 import { httpsCallable, getFunctions } from 'firebase/functions';
 
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 export default function OrderTracking({ params }: { params: Promise<{ id: string }> }) {
@@ -68,6 +67,7 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
   const [returnReason, setReturnReason] = useState('');
   const [isProcessingReturn, setIsProcessingReturn] = useState(false);
+  const [imgSrc, setImgSrc] = useState<string>('/defaultbroken.jpg');
 
   const orderRef = useMemoFirebase(() => id && db ? doc(db, 'orders', id) : null, [db, id]);
   const { data: order, isLoading: loading } = useDoc(orderRef);
@@ -79,6 +79,10 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
     else if (order.status === 'Shipped') setCurrentStep(3);
     else if (order.status === 'Delivered') setCurrentStep(4);
     else if (order.status?.startsWith('Return')) setCurrentStep(4);
+    
+    if (order.imageUrl) {
+      setImgSrc(order.imageUrl);
+    }
   }, [order]);
 
   if (loading) {
@@ -205,35 +209,6 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
     }
   };
 
-  const handleOpenDispute = async () => {
-    if (!db || !user || !order || !disputeReason || !functions) return;
-    setIsProcessingAction(true);
-
-    const reportData = {
-      reporterUid: user.uid,
-      reporterName: user.displayName || 'User',
-      reportedId: id,
-      reportedName: `Order Dispute: ${order.listingTitle}`,
-      reason: 'Order Dispute',
-      details: disputeReason,
-      type: 'Order',
-      status: 'PENDING',
-      timestamp: serverTimestamp()
-    };
-
-    try {
-      await addDoc(collection(db, 'reports'), reportData);
-      const updateStatus = httpsCallable(functions, 'updateOrderStatus');
-      await updateStatus({ orderId: id, updates: { status: 'Disputed' } });
-      toast({ title: "Dispute Opened" });
-      setIsDisputeOpen(false);
-    } catch (e) {
-      toast({ variant: 'destructive', title: "Failed to open dispute" });
-    } finally {
-      setIsProcessingAction(false);
-    }
-  };
-
   const handleReviewSubmit = async () => {
     if (!db || !user || !order) return;
     setIsSubmittingReview(true);
@@ -259,10 +234,6 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
       toast({ variant: 'destructive', title: "Review Failed" });
       setIsSubmittingReview(false);
     }
-  };
-
-  const handleReviewClick = () => {
-    setIsReviewOpen(true);
   };
 
   const handleReturnSubmit = async () => {
@@ -412,9 +383,9 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
                         <div className="p-4 bg-white/5 rounded-xl border border-white/10 flex justify-between items-center">
                           <div className="space-y-1">
                             <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Active Tracking</p>
-                            <code className="text-sm font-mono text-cyan-400 font-bold">{order.trackingNumber}</code>
+                            <code className="text-sm font-mono text-red-400 font-bold">{order.trackingNumber}</code>
                           </div>
-                          <Badge variant="outline" className="border-cyan-400/30 text-cyan-400 uppercase font-black text-[8px]">{order.carrier || 'Carrier'}</Badge>
+                          <Badge variant="outline" className="border-red-400/30 text-red-400 uppercase font-black text-[8px]">{order.carrier || 'Carrier'}</Badge>
                         </div>
                       )}
                     </div>
@@ -423,11 +394,11 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
                   {isBuyer && order.status === 'Delivered' && !hasReviewed && (
                     <div className="bg-accent/5 border-2 border-dashed border-accent/20 p-8 rounded-2xl flex flex-col items-center text-center space-y-6">
                       <div className="space-y-2">
-                        <h3 className="text-2xl font-black uppercase tracking-tight">Package Received</h3>
+                        <h3 className="text-2xl font-black uppercase tracking-tight italic">Package Received</h3>
                         <p className="text-sm text-muted-foreground font-medium italic">Help the community by rating @{order.sellerName}.</p>
                       </div>
                       <div className="flex gap-3 w-full max-w-xs">
-                        <Button onClick={handleReviewClick} className="flex-1 bg-accent text-white font-black rounded-xl h-14 uppercase text-xs">Rate Seller</Button>
+                        <Button onClick={() => setIsReviewOpen(true)} className="flex-1 bg-accent text-white font-black rounded-xl h-14 uppercase text-xs">Rate Seller</Button>
                         <Button variant="outline" onClick={() => setIsReturnDialogOpen(true)} className="flex-1 rounded-xl h-14 font-black border-2 text-xs">Return</Button>
                       </div>
                     </div>
@@ -440,11 +411,17 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
           <aside className="space-y-8">
             <Card className="border-none shadow-2xl bg-zinc-950 text-white rounded-[2rem] overflow-hidden">
                <CardHeader className="p-8 pb-0">
-                 <h3 className="text-xl font-headline font-black uppercase tracking-tighter">Manifest</h3>
+                 <h3 className="text-xl font-headline font-black uppercase tracking-tighter italic">Manifest</h3>
                </CardHeader>
                <CardContent className="p-8 space-y-8">
                   <div className="relative aspect-square rounded-xl overflow-hidden border border-white/10 bg-zinc-900">
-                     <Image src={order.imageUrl || '/defaultbroken.jpg'} alt={order.listingTitle} fill className="object-cover" />
+                     <Image 
+                        src={imgSrc} 
+                        alt={order.listingTitle} 
+                        fill 
+                        className="object-cover" 
+                        onError={() => setImgSrc('/defaultbroken.jpg')}
+                      />
                   </div>
                   <div className="space-y-2">
                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Asset Title</p>
@@ -473,7 +450,7 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
           <div className="p-8 space-y-8">
             <div className="flex justify-center gap-4">
               {[1, 2, 3, 4, 5].map((s) => (
-                <button key={s} onClick={() => setRating(s)} className="transition-transform active:scale-90" title={`Rate ${s} star${s > 1 ? 's' : ''}`}> 
+                <button key={s} title={`Rate ${s} stars`} aria-label={`Rate ${s} stars`} onClick={() => setRating(s)} className="transition-transform active:scale-90">
                   <Star className={cn("w-10 h-10", s <= rating ? "text-yellow-500 fill-current" : "text-muted")} />
                 </button>
               ))}
@@ -486,13 +463,13 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
 
       <Dialog open={isReturnDialogOpen} onOpenChange={setIsReturnDialogOpen}>
         <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl">
-          <div className="bg-orange-600 p-8 text-white">
+          <div className="bg-red-600 p-8 text-white">
              <h2 className="text-3xl font-headline font-black uppercase tracking-tight italic">Return Protocol</h2>
           </div>
           <div className="p-8 space-y-6">
             <Label className="text-[10px] font-black uppercase tracking-widest">{order.status === 'Return Approved' ? 'Carrier Tracking' : 'Reason for Return'}</Label>
             <Textarea placeholder="Describe the issue..." className="min-h-[120px] rounded-xl border-2 font-medium" value={returnReason} onChange={(e) => setReturnReason(e.target.value)} />
-            <Button onClick={handleReturnSubmit} disabled={isProcessingReturn || !returnReason.trim()} className="w-full bg-orange-600 text-white font-black rounded-xl h-16 uppercase text-sm">Confirm Protocol</Button>
+            <Button onClick={handleReturnSubmit} disabled={isProcessingReturn || !returnReason.trim()} className="w-full bg-red-600 text-white font-black rounded-xl h-16 uppercase text-sm">Confirm Protocol</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -1,9 +1,42 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateSellerTier = exports.denyWithdrawal = exports.approveWithdrawal = exports.processRefund = exports.updateOrderStatus = exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = exports.createAuctionFeeCheckoutSession = exports.getStripeAccount = exports.drawGiveawayWinner = exports.onCreateGiveaway = exports.endExpiredGiveaways = exports.closeAuction = exports.placeBid = exports.createAuction = exports.dailySellerEnforcement = exports.shippoWebhook = exports.stripeWebhook = exports.setBlindBidAuctionImage = exports.submitBlindBid = exports.createBlindBidAuction = exports.getStripePayouts = void 0;
+exports.moderateListingOnWrite = exports.calculateSellerTier = exports.denyWithdrawal = exports.approveWithdrawal = exports.processRefund = exports.cancelLateOrder = exports.updateOrderStatus = exports.finalizeSeller = exports.createStripeOnboarding = exports.createCheckoutSession = exports.createAuctionFeeCheckoutSession = exports.getStripeAccount = exports.drawGiveawayWinner = exports.onCreateGiveaway = exports.endExpiredGiveaways = exports.closeListingAuctions = exports.closeAuction = exports.placeBid = exports.createAuction = exports.dailySellerEnforcement = exports.shippoWebhook = exports.stripeWebhook = exports.submitBlindBid = exports.createBlindBidAuction = exports.getStripePayouts = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const firebaseAdmin_1 = require("./firebaseAdmin");
 const stripe_1 = __importDefault(require("stripe"));
@@ -13,8 +46,6 @@ Object.defineProperty(exports, "getStripePayouts", { enumerable: true, get: func
 var blindBidder_1 = require("./blindBidder");
 Object.defineProperty(exports, "createBlindBidAuction", { enumerable: true, get: function () { return blindBidder_1.createBlindBidAuction; } });
 Object.defineProperty(exports, "submitBlindBid", { enumerable: true, get: function () { return blindBidder_1.submitBlindBid; } });
-var blindBidder_2 = require("./blindBidder");
-Object.defineProperty(exports, "setBlindBidAuctionImage", { enumerable: true, get: function () { return blindBidder_2.setBlindBidAuctionImage; } });
 var stripeWebhook_1 = require("./stripeWebhook");
 Object.defineProperty(exports, "stripeWebhook", { enumerable: true, get: function () { return stripeWebhook_1.stripeWebhook; } });
 var shippoWebhook_1 = require("./shippoWebhook");
@@ -25,6 +56,7 @@ var auctions_1 = require("./auctions");
 Object.defineProperty(exports, "createAuction", { enumerable: true, get: function () { return auctions_1.createAuction; } });
 Object.defineProperty(exports, "placeBid", { enumerable: true, get: function () { return auctions_1.placeBid; } });
 Object.defineProperty(exports, "closeAuction", { enumerable: true, get: function () { return auctions_1.closeAuction; } });
+Object.defineProperty(exports, "closeListingAuctions", { enumerable: true, get: function () { return auctions_1.closeListingAuctions; } });
 var giveaway_1 = require("./giveaway");
 Object.defineProperty(exports, "endExpiredGiveaways", { enumerable: true, get: function () { return giveaway_1.endExpiredGiveaways; } });
 Object.defineProperty(exports, "onCreateGiveaway", { enumerable: true, get: function () { return giveaway_1.onCreateGiveaway; } });
@@ -33,8 +65,6 @@ const functions = __importStar(require("firebase-functions"));
 // ...existing code...
 // Use environment variable for Stripe secret, fallback to functions.config for legacy support
 const stripeSecretParam = (0, params_1.defineSecret)("STRIPE_SECRET");
-const config = typeof functions.config === "object" ? functions.config : {};
-const stripeSecret = stripeSecretParam.value() || process.env.STRIPE_SECRET || process.env.STRIPE_SECRET_KEY || (config.stripe && config.stripe.secret);
 /* ================= HELPERS ================= */
 function getStripeInstance() {
     // Access secret inside the function, not at module load time (Firebase v2 requirement)
@@ -230,7 +260,7 @@ exports.createStripeOnboarding = (0, https_1.onCall)({ secrets: [stripeSecretPar
     const link = await stripe.accountLinks.create({
         account: accountId,
         refresh_url: `${appBaseUrl}/onboarding/terms`,
-        return_url: `${appBaseUrl}/seller/onboarding?step=5`,
+        return_url: `${appBaseUrl}/seller/onboarding?step=6`,
         type: "account_onboarding",
     });
     return { url: link.url };
@@ -239,28 +269,42 @@ exports.createStripeOnboarding = (0, https_1.onCall)({ secrets: [stripeSecretPar
 exports.finalizeSeller = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, async (request) => {
     const stripe = getStripeInstance();
     const uid = requireAuth(request);
+    // Validate Firestore path inputs
+    if (!uid || typeof uid !== "string" || uid.includes("..") || uid.includes("/")) {
+        console.error("Invalid UID for Firestore path", { uid });
+        throw new https_1.HttpsError("invalid-argument", "Invalid UID for Firestore path");
+    }
     const userRef = firebaseAdmin_1.db.collection("users").doc(uid);
     const snap = await userRef.get();
     const user = snap.data();
     if (!user?.stripeAccountId) {
+        console.error("Stripe not connected", { uid, user });
         throw new https_1.HttpsError("failed-precondition", "Stripe not connected");
     }
     const account = await stripe.accounts.retrieve(user.stripeAccountId);
     if (!account.details_submitted || !account.charges_enabled) {
+        console.error("Stripe onboarding incomplete", { uid, stripeAccountId: user.stripeAccountId, account });
         throw new https_1.HttpsError("failed-precondition", "Stripe onboarding incomplete");
     }
-    const displayName = user.ownerDisplayName || user.displayName || "";
-    const storeId = displayName
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
+    const username = user.username;
+    if (!username || typeof username !== "string" || username.includes("..") || username.includes("/")) {
+        console.error("Invalid username for Firestore path", { username });
+        throw new https_1.HttpsError("failed-precondition", "Username (handle) missing or invalid");
+    }
+    // Ensure user is marked as verified and seller for Firestore rules
+    await userRef.update({
+        emailVerified: true,
+        status: "ACTIVE",
+        isSeller: true,
+    });
+    const storeId = username;
     const storeRef = firebaseAdmin_1.db.collection("storefronts").doc(storeId);
     const storeSnap = await storeRef.get();
     if (!storeSnap.exists) {
         await storeRef.set({
             id: storeId,
             ownerUid: uid,
-            displayName,
+            displayName: username,
             createdAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
             avatar: user.photoURL || "/hobbydork-head.png",
             status: "ACTIVE",
@@ -277,10 +321,11 @@ exports.finalizeSeller = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, a
     await firebaseAdmin_1.db.collection("sellerApprovals").add({
         uid,
         email: user.email,
-        displayName,
+        displayName: username,
         approvedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
         stripeAccountId: user.stripeAccountId,
     });
+    console.log("finalizeSeller success", { uid, storeId });
     return { ok: true, storeId };
 });
 /* ================= SECURE ORDER STATUS UPDATE ================= */
@@ -297,6 +342,9 @@ exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
             "shippingLabelUrl",
             "estimatedDelivery",
             "feedback",
+            "returnTrackingNumber",
+            "returnId",
+            "carrier",
             "updatedAt"
         ];
         const updateKeys = Object.keys(updates);
@@ -370,7 +418,11 @@ exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
  * Process refund for an order
  * Called when seller confirms return receipt and initiates refund
  */
-exports.processRefund = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, async (request) => {
+/**
+ * Cancel late order - Buyer can cancel if seller hasn't shipped within 2 business days
+ * Automatically refunds buyer and penalizes seller
+ */
+exports.cancelLateOrder = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, async (request) => {
     try {
         const uid = requireAuth(request);
         const { orderId } = request.data;
@@ -383,15 +435,21 @@ exports.processRefund = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, as
         if (!order) {
             throw new https_1.HttpsError("not-found", "Order not found");
         }
-        // Only seller can process refund
-        if (order.sellerUid !== uid) {
-            throw new https_1.HttpsError("permission-denied", "Only seller can process refund");
+        // Only buyer can cancel their own order
+        if (order.buyerUid !== uid) {
+            throw new https_1.HttpsError("permission-denied", "Only buyer can cancel this order");
         }
-        // Check if order is in Return Shipped status
-        if (order.status !== "Return Shipped") {
-            throw new https_1.HttpsError("failed-precondition", "Order must be in Return Shipped status");
+        // Check if order is eligible for cancellation
+        // Allow if: (1) Order is still in Confirmed status (early cancel) OR (2) buyerCanCancel flag is set (late cancel)
+        const isEarlyCancel = order.status === "Confirmed";
+        const isLateCancel = order.buyerCanCancel === true;
+        if (!isEarlyCancel && !isLateCancel) {
+            throw new https_1.HttpsError("failed-precondition", "Order is not eligible for cancellation. Buyers can cancel before processing starts or if seller fails to ship within 2 business days.");
         }
-        // Get the payment intent ID from Stripe metadata
+        // Can only cancel orders that haven't shipped yet
+        if (order.status === "SHIPPED" || order.status === "DELIVERED" || order.status === "CANCELLED" || order.status === "REFUNDED") {
+            throw new https_1.HttpsError("failed-precondition", "Order cannot be cancelled in current status");
+        }
         const stripe = getStripeInstance();
         if (!order.stripePaymentIntentId) {
             throw new https_1.HttpsError("failed-precondition", "No payment intent found for this order");
@@ -399,8 +457,106 @@ exports.processRefund = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, as
         // Retrieve the payment intent to get the charge ID
         const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId, {
             expand: ['charges']
+        });
+        if (!paymentIntent.charges || !paymentIntent.charges.data || paymentIntent.charges.data.length === 0) {
+            throw new https_1.HttpsError("failed-precondition", "No charge found for this payment intent");
+        }
+        const chargeId = paymentIntent.charges.data[0].id;
+        const refundAmount = Math.round(order.price * 100); // Convert to cents
+        // Create full refund in Stripe
+        const refund = await stripe.refunds.create({
+            charge: chargeId,
+            amount: refundAmount,
+            reason: 'requested_by_customer',
+            metadata: {
+                orderId: orderId,
+                cancellationReason: 'Late shipping - seller failed to ship within 48 hours'
+            }
+        });
+        if (refund.status !== "succeeded") {
+            throw new https_1.HttpsError("internal", "Refund processing failed");
+        }
+        const cancellationReason = isEarlyCancel
+            ? "Buyer cancelled before seller started processing"
+            : "Late shipping - no tracking after 2 business days";
+        // Update order status to Cancelled with refund info
+        await orderRef.update({
+            status: "CANCELLED",
+            cancelledBy: "buyer",
+            cancellationReason,
+            refundId: refund.id,
+            refundAmount: order.price,
+            refundDate: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
+            cancelledAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp()
+        });
+        // Send notifications
+        await sendNotification(order.buyerUid, "ORDER", "Order Cancelled & Refunded", `Order #${orderId.substring(0, 8)} has been cancelled. Your refund of $${order.price} will appear in 3-5 business days.`, orderId);
+        const sellerNotificationTitle = isLateCancel ? "Order Cancelled for Late Shipping" : "Order Cancelled";
+        const sellerNotificationMessage = isLateCancel
+            ? `Order #${orderId.substring(0, 8)} was cancelled by the buyer due to late shipping. This affects your seller rating.`
+            : `Order #${orderId.substring(0, 8)} was cancelled by the buyer.`;
+        await sendNotification(order.sellerUid, "ORDER", sellerNotificationTitle, sellerNotificationMessage, orderId);
+        // Log the cancellation
+        const auditAction = isLateCancel ? "order-cancelled-late-shipping" : "order-cancelled-by-buyer";
+        await logAudit(auditAction, {
+            orderId,
+            buyerId: uid,
+            sellerId: order.sellerUid,
+            amount: order.price,
+            stripeRefundId: refund.id,
+            reason: cancellationReason,
+            timestamp: new Date().toISOString()
+        });
+        return { ok: true, refundId: refund.id, message: "Order cancelled and refund processed" };
+    }
+    catch (error) {
+        await logError(error instanceof Error ? error : String(error), { function: "cancelLateOrder" });
+        throw error;
+    }
+});
+exports.processRefund = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, async (request) => {
+    try {
+        // Log the incoming request for debugging
+        console.log("processRefund request", {
+            auth: request.auth,
+            data: request.data
+        });
+        const uid = requireAuth(request);
+        const { orderId } = request.data || {};
+        if (!orderId || typeof orderId !== "string" || orderId.includes("..") || orderId.includes("/")) {
+            console.error("Invalid or missing orderId", { orderId });
+            throw new https_1.HttpsError("invalid-argument", "Valid orderId required");
+        }
+        const orderRef = firebaseAdmin_1.db.collection("orders").doc(orderId);
+        const orderSnap = await orderRef.get();
+        const order = orderSnap.data();
+        if (!order) {
+            console.error("Order not found", { orderId });
+            throw new https_1.HttpsError("not-found", "Order not found");
+        }
+        // Only seller can process refund
+        if (order.sellerUid !== uid) {
+            console.error("Permission denied: not seller", { orderId, sellerUid: order.sellerUid, uid });
+            throw new https_1.HttpsError("permission-denied", "Only seller can process refund");
+        }
+        // Check if order is in Return Shipped status
+        if (order.status !== "Return Shipped") {
+            console.error("Order not in Return Shipped status", { orderId, status: order.status });
+            throw new https_1.HttpsError("failed-precondition", "Order must be in Return Shipped status");
+        }
+        // Get the payment intent ID from Stripe metadata
+        const stripe = getStripeInstance();
+        if (!order.stripePaymentIntentId) {
+            console.error("No payment intent for order", { orderId });
+            throw new https_1.HttpsError("failed-precondition", "No payment intent found for this order");
+        }
+        // Retrieve the payment intent to get the charge ID
+        const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId, {
+            expand: ['charges']
         }); // Cast to any to access expanded charges
         if (!paymentIntent.charges || !paymentIntent.charges.data || paymentIntent.charges.data.length === 0) {
+            console.error("No charge found for payment intent", { orderId, paymentIntent });
             throw new https_1.HttpsError("failed-precondition", "No charge found for this payment intent");
         }
         const chargeId = paymentIntent.charges.data[0].id;
@@ -415,6 +571,7 @@ exports.processRefund = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, as
             }
         });
         if (refund.status !== "succeeded") {
+            console.error("Refund processing failed", { orderId, refund });
             throw new https_1.HttpsError("internal", "Refund processing failed");
         }
         // Update order status to Refunded
@@ -436,9 +593,11 @@ exports.processRefund = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, as
             stripeRefundId: refund.id,
             timestamp: new Date().toISOString()
         });
+        console.log("processRefund success", { orderId, refundId: refund.id });
         return { ok: true, refundId: refund.id };
     }
     catch (error) {
+        console.error("processRefund error", error);
         await logError(error instanceof Error ? error : String(error), { function: "processRefund" });
         throw error;
     }
@@ -446,24 +605,33 @@ exports.processRefund = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, as
 /* ================= APPROVE WITHDRAWAL ================= */
 exports.approveWithdrawal = (0, https_1.onCall)({ secrets: [stripeSecretParam] }, async (request) => {
     try {
+        // Log the incoming request for debugging
+        console.log("approveWithdrawal request", {
+            auth: request.auth,
+            data: request.data
+        });
         const uid = requireAuth(request);
-        const { payoutRequestId } = request.data;
-        if (!payoutRequestId) {
-            throw new https_1.HttpsError("invalid-argument", "Payout request ID required");
+        const { payoutRequestId } = request.data || {};
+        if (!payoutRequestId || typeof payoutRequestId !== "string" || payoutRequestId.includes("..") || payoutRequestId.includes("/")) {
+            console.error("Invalid or missing payoutRequestId", { payoutRequestId });
+            throw new https_1.HttpsError("invalid-argument", "Valid payoutRequestId required");
         }
         // Verify user is admin
         const adminSnap = await firebaseAdmin_1.db.collection("users").doc(uid).get();
         const admin = adminSnap.data();
         if (!admin || (admin.role !== "ADMIN" && admin.role !== "MODERATOR")) {
+            console.error("Permission denied: not admin/moderator", { uid, role: admin?.role });
             throw new https_1.HttpsError("permission-denied", "Only admins can approve withdrawals");
         }
         const payoutRef = firebaseAdmin_1.db.collection("payoutRequests").doc(payoutRequestId);
         const payoutSnap = await payoutRef.get();
         const payout = payoutSnap.data();
         if (!payout) {
+            console.error("Payout request not found", { payoutRequestId });
             throw new https_1.HttpsError("not-found", "Payout request not found");
         }
         if (payout.status !== "PENDING") {
+            console.error("Payout request not pending", { payoutRequestId, status: payout.status });
             throw new https_1.HttpsError("failed-precondition", "Only PENDING requests can be approved");
         }
         const stripe = getStripeInstance();
@@ -505,9 +673,11 @@ exports.approveWithdrawal = (0, https_1.onCall)({ secrets: [stripeSecretParam] }
             approvedBy: uid,
             timestamp: new Date().toISOString()
         });
+        console.log("approveWithdrawal success", { payoutRequestId, transferId: transfer.id });
         return { ok: true, transferId: transfer.id };
     }
     catch (error) {
+        console.error("approveWithdrawal error", error);
         await logError(error instanceof Error ? error : String(error), { function: "approveWithdrawal" });
         throw error;
     }
@@ -564,9 +734,18 @@ exports.denyWithdrawal = (0, https_1.onCall)(async (request) => {
 /* ================= CALCULATE SELLER TIER ================= */
 exports.calculateSellerTier = (0, https_1.onCall)(async (request) => {
     try {
+        // Log the incoming request for debugging
+        console.log("calculateSellerTier request", {
+            auth: request.auth,
+            data: request.data
+        });
         const uid = requireAuth(request);
         const { sellerId } = request.data || {};
         const targetSellerId = sellerId || uid;
+        if (!targetSellerId || typeof targetSellerId !== "string" || targetSellerId.includes("..") || targetSellerId.includes("/")) {
+            console.error("Invalid or missing sellerId", { sellerId, targetSellerId });
+            throw new https_1.HttpsError("invalid-argument", "Valid sellerId required");
+        }
         // Fetch all orders for this seller
         const ordersSnap = await firebaseAdmin_1.db
             .collection("orders")
@@ -637,6 +816,7 @@ exports.calculateSellerTier = (0, https_1.onCall)(async (request) => {
             },
             timestamp: new Date().toISOString()
         });
+        console.log("calculateSellerTier success", { targetSellerId, tier });
         return {
             ok: true,
             tier,
@@ -648,7 +828,56 @@ exports.calculateSellerTier = (0, https_1.onCall)(async (request) => {
         };
     }
     catch (error) {
+        console.error("calculateSellerTier error", error);
         await logError(error instanceof Error ? error : String(error), { function: "calculateSellerTier" });
         throw error;
     }
+});
+exports.moderateListingOnWrite = functions.firestore
+    .document("listings/{listingId}")
+    .onWrite(async (change, context) => {
+    const after = change.after.exists ? change.after.data() : null;
+    if (!after)
+        return null;
+    const title = String(after.title || "");
+    const description = String(after.description || "");
+    const combinedText = `${title} ${description}`.toLowerCase();
+    const tags = Array.isArray(after.tags) ? after.tags : [];
+    const reasons = [];
+    if (/(https?:\/\/|www\.|t\.me|telegram|whatsapp|dm me|text me|contact me)/i.test(combinedText)) {
+        reasons.push("external-contact");
+    }
+    if (/(.)\1{6,}/.test(combinedText)) {
+        reasons.push("repeated-characters");
+    }
+    if (tags.length > 20) {
+        reasons.push("excessive-tags");
+    }
+    const alphaChars = title.replace(/[^A-Za-z]/g, "");
+    const uppercaseChars = alphaChars.replace(/[^A-Z]/g, "");
+    if (alphaChars.length >= 20 && uppercaseChars.length / alphaChars.length > 0.7) {
+        reasons.push("excessive-uppercase");
+    }
+    const nextModerationStatus = reasons.length > 0 ? "FLAGGED" : "APPROVED";
+    const shouldHide = reasons.length > 0;
+    const moderationUnchanged = after.moderationStatus === nextModerationStatus &&
+        JSON.stringify(after.moderationReasons || []) === JSON.stringify(reasons) &&
+        (!shouldHide || after.visibility === "Invisible");
+    if (moderationUnchanged) {
+        return null;
+    }
+    const patch = {
+        moderationStatus: nextModerationStatus,
+        moderationReasons: reasons,
+        moderatedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
+    };
+    if (shouldHide) {
+        patch.visibility = "Invisible";
+    }
+    await change.after.ref.update(patch);
+    if (shouldHide && after.sellerId) {
+        await sendNotification(String(after.sellerId), "LISTING_MODERATION", "Listing flagged for review", "Your listing was temporarily hidden while moderation reviews it.", context.params.listingId);
+    }
+    return null;
 });

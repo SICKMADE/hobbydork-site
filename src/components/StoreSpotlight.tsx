@@ -1,91 +1,112 @@
-
 'use client';
 
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Star, ShieldCheck, Crown } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Crown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { getRandomAvatar } from '@/lib/utils';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, limit } from 'firebase/firestore';
 
 interface StoreSpotlightProps {
   store: any;
 }
 
 export default function StoreSpotlight({ store }: StoreSpotlightProps) {
+  const db = useFirestore();
   const username = store?.username || 'Collector';
   const tagline = store?.tagline || 'Verified hobbydork Dealer';
-  const avatarUrl = store?.avatar || getRandomAvatar(username);
-  const bannerUrl = store?.bannerUrl || '/hobbydork-banner-default.png';
-  const totalSales = store?.totalSales || 0;
   
-  // Note: Featured items would ideally be fetched from the dealer's top listings
-  const featuredItems = store?.featuredItems || [];
+  // Calculate initial avatar to prevent empty string src error on hydration
+  const ownerUid = store?.ownerUid || store?.id;
+  const initialPhoto = store?.photoURL || store?.avatar;
+  const initialAvatar = (initialPhoto && (initialPhoto.startsWith('http') || initialPhoto.startsWith('data:')))
+    ? initialPhoto
+    : getRandomAvatar(ownerUid);
+
+  const [bannerSrc, setBannerSrc] = useState('/hobbydork-banner-default.jpg');
+  const [avatarSrc, setAvatarSrc] = useState<string>(initialAvatar);
+
+  // Check for Vault Unlock status
+  const sellerUserQuery = useMemoFirebase(() => {
+    if (!db || !store?.ownerUid) return null;
+    return query(collection(db, 'users'), where('uid', '==', store.ownerUid), limit(1));
+  }, [db, store?.ownerUid]);
+  
+  const { data: sellerUsers } = useCollection(sellerUserQuery);
+  const sellerProfile = sellerUsers?.[0];
+
+  useEffect(() => {
+    if (store?.bannerUrl) {
+      setBannerSrc(store.bannerUrl);
+    }
+    
+    // Identity Lock: Sync with latest profile data
+    const currentOwnerUid = store?.ownerUid || store?.id;
+    const rawPhoto = store?.photoURL || store?.avatar || sellerProfile?.photoURL;
+    
+    const finalAvatar = (rawPhoto && (rawPhoto.startsWith('http') || rawPhoto.startsWith('data:')))
+      ? rawPhoto
+      : getRandomAvatar(currentOwnerUid);
+      
+    setAvatarSrc(finalAvatar);
+  }, [store, sellerProfile?.photoURL]);
 
   return (
-    <Card className="overflow-hidden border-none shadow-xl bg-card group h-full flex flex-col">
-      <div className="relative aspect-[21/9] overflow-hidden bg-slate-900">
+    <Card className="overflow-hidden border-none shadow-2xl bg-card group h-full flex flex-col hover:scale-[1.02] transition-all duration-500 ring-1 ring-white/5">
+      <div className="relative h-28 md:h-36 overflow-hidden bg-slate-900 shrink-0">
         <Image 
-          src={bannerUrl} 
-          alt={`${username} spotlight banner`} 
+          src={bannerSrc} 
+          alt="" 
           fill 
-          className="object-cover transition-transform duration-700 group-hover:scale-105"
+          onError={() => setBannerSrc('/hobbydork-banner-default.jpg')}
+          className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-[0.8] contrast-125"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/40 to-transparent" />
-        
-        <div className="absolute inset-0 flex items-center px-6">
-          <div className="flex gap-4 items-center w-full">
-            <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden border-4 border-white dark:border-zinc-800 shadow-2xl shrink-0 bg-zinc-100">
-              <Image 
-                src={avatarUrl} 
-                alt={username} 
-                fill 
-                className="object-cover" 
-              />
-            </div>
-            <div className="flex-1 min-w-0 space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge className="bg-accent text-accent-foreground border-none font-bold uppercase tracking-widest text-[8px] px-2 h-4">
-                  Spotlight
-                </Badge>
-              </div>
-              <h3 className="text-xl md:text-2xl font-headline font-black text-white flex items-center gap-2 truncate">
-                {username}
-                <ShieldCheck className="w-4 h-4 text-accent shrink-0" />
-              </h3>
-              <p className="text-white/70 text-[10px] font-bold flex items-center gap-2">
-                <Star className="w-3 h-3 fill-accent text-accent" /> {totalSales} Sold
-              </p>
-            </div>
-            <Button asChild size="sm" className="hidden sm:flex bg-card text-foreground hover:bg-card/90 font-black px-4 rounded-full h-10 text-xs shrink-0 border-2">
-              <Link href={`/shop/${username}`}>
-                Visit
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 to-transparent" />
+        <Badge className="absolute top-3 left-3 bg-accent text-white border-none font-black uppercase text-[7px] tracking-[0.2em] px-2 py-1 shadow-2xl animate-pulse">
+          SPOTLIGHT_NODE
+        </Badge>
       </div>
       
-      <CardContent className="p-4 bg-secondary/5 flex-1 flex flex-col">
-        <p className="text-muted-foreground text-xs font-medium italic mb-4 line-clamp-1">"{tagline}"</p>
-        <div className="grid grid-cols-3 gap-3">
-          {featuredItems.length > 0 ? (
-            featuredItems.slice(0, 3).map((img: string, idx: number) => (
-              <div key={idx} className="relative aspect-square rounded-lg overflow-hidden shadow-sm group/item bg-zinc-100">
-                <Image src={img || '/defaultbroken.jpg'} alt="Featured" fill className="object-cover transition-transform group-hover/item:scale-110" />
-              </div>
-            ))
-          ) : (
-            [1, 2, 3].map((i) => (
-              <div key={i} className="relative aspect-square rounded-lg border-2 border-dashed border-muted flex items-center justify-center bg-muted/10">
-                <Image src="/defaultbroken.jpg" alt="Placeholder" fill className="object-cover opacity-20" />
-              </div>
-            ))
-          )}
+      <CardContent className="px-4 pb-6 pt-0 flex-1 flex flex-col items-center text-center -mt-12 md:-mt-16 relative z-10">
+        <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-[2rem] overflow-hidden border-4 border-white dark:border-zinc-800 shadow-2xl bg-zinc-100 mb-4 transition-transform group-hover:rotate-2">
+          <Image 
+            src={avatarSrc} 
+            alt={username} 
+            fill 
+            onError={() => setAvatarSrc(getRandomAvatar(store?.ownerUid || store?.id))}
+            className="object-cover" 
+          />
         </div>
-        <Button asChild variant="outline" className="w-full mt-4 h-10 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest sm:hidden">
-          <Link href={`/shop/${username}`}>Visit Storefront</Link>
+        
+        <div className="space-y-1 mb-4 w-full">
+          <div className="flex flex-col items-center gap-1.5">
+            <h3 className="text-sm md:text-xl font-headline font-black text-primary dark:text-white flex items-center justify-center gap-1.5 uppercase italic tracking-tighter">
+              {username}
+              <ShieldCheck className="w-4 h-4 md:w-6 md:h-6 text-accent" />
+            </h3>
+            {sellerProfile?.vaultUnlocked && (
+              <Badge variant="outline" className="border-amber-500/40 text-amber-600 bg-amber-500/5 text-[7px] font-black uppercase tracking-[0.2em] h-5 gap-1">
+                <Crown className="w-2.5 h-2.5" /> LEGACY_NODE
+              </Badge>
+            )}
+          </div>
+          <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-60">
+            {(store?.totalSales || 0).toLocaleString()} DEPLOYMENTS_COMPLETED
+          </p>
+        </div>
+
+        <p className="text-[10px] md:text-xs text-muted-foreground font-medium italic mb-6 line-clamp-2 px-2 leading-relaxed">
+          "{tagline}"
+        </p>
+
+        <Button asChild variant="outline" className="w-full mt-auto h-12 rounded-xl border-4 font-black text-[10px] uppercase tracking-widest hover:bg-primary hover:text-white transition-all gap-3 group/btn shadow-lg">
+          <Link href={`/shop/${username}`}>
+            Enter Storefront <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+          </Link>
         </Button>
       </CardContent>
     </Card>

@@ -6,26 +6,22 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { 
-  Edit3, 
-  MapPin, 
   Save, 
   Loader2, 
   Camera,
   X,
   Trash2,
-  AlertTriangle,
-  Bell
+  AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, serverTimestamp, deleteDoc, query, collection, where, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { deleteUser } from 'firebase/auth';
-import { getRandomAvatar, filterProfanity } from '@/lib/utils';
+import { getRandomAvatar } from '@/lib/utils';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -42,7 +38,6 @@ export default function SettingsPage() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const [bio, setBio] = useState('');
   const [photoURL, setPhotoURL] = useState('');
 
   const [notifications, setNotifications] = useState({
@@ -71,7 +66,6 @@ export default function SettingsPage() {
   useEffect(() => {
     if (profile) {
       if (profile.shippingAddress) setAddress(profile.shippingAddress);
-      setBio(profile.bio || '');
       const isCustomPhoto = profile.photoURL && profile.photoURL.startsWith('data:');
       setPhotoURL(isCustomPhoto ? profile.photoURL : '');
       if (profile.notifications) setNotifications(profile.notifications);
@@ -91,9 +85,7 @@ export default function SettingsPage() {
     if (!db || !user) return;
     setIsSavingProfile(true);
 
-    const sanitizedBio = filterProfanity(bio);
     const data: any = { 
-      bio: sanitizedBio, 
       updatedAt: serverTimestamp() 
     };
     
@@ -106,15 +98,10 @@ export default function SettingsPage() {
     const userRef = doc(db, 'users', user.uid);
     setDoc(userRef, data, { merge: true })
       .then(() => {
-        toast({ title: 'Profile Updated' });
+        toast({ title: 'Identity Updated' });
         setIsSavingProfile(false);
       })
       .catch(() => {
-        toast({
-          variant: 'destructive',
-          title: 'Profile Update Failed',
-          description: 'Could not update your profile. Please try again.'
-        });
         setIsSavingProfile(false);
       });
   };
@@ -130,11 +117,6 @@ export default function SettingsPage() {
         setIsSavingAddress(false);
       })
       .catch(() => {
-        toast({
-          variant: 'destructive',
-          title: 'Address Update Failed',
-          description: 'Could not update your address. Please try again.'
-        });
         setIsSavingAddress(false);
       });
   };
@@ -150,11 +132,6 @@ export default function SettingsPage() {
         setIsSavingNotifications(false);
       })
       .catch(() => {
-        toast({
-          variant: 'destructive',
-          title: 'Notification Update Failed',
-          description: 'Could not update your notification preferences. Please try again.'
-        });
         setIsSavingNotifications(false);
       });
   };
@@ -184,13 +161,13 @@ export default function SettingsPage() {
       <Navbar />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <header className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-headline font-black uppercase italic">Settings</h1>
-          <p className="text-sm text-muted-foreground font-medium">@{user?.email?.split('@')[0]}</p>
+          <h1 className="text-2xl sm:text-3xl font-headline font-black uppercase italic">Account Settings</h1>
+          <p className="text-sm text-muted-foreground font-medium">@{profile?.username || user?.email?.split('@')[0]}</p>
         </header>
 
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="bg-muted p-1 h-14 rounded-xl px-2 mb-8 flex-nowrap overflow-x-auto justify-start md:justify-start">
-            <TabsTrigger value="profile" className="rounded-lg px-8 h-10 font-bold shrink-0">Profile</TabsTrigger>
+            <TabsTrigger value="profile" className="rounded-lg px-8 h-10 font-bold shrink-0">Identity</TabsTrigger>
             <TabsTrigger value="address" className="rounded-lg px-8 h-10 font-bold shrink-0">Address</TabsTrigger>
             <TabsTrigger value="notifications" className="rounded-lg px-8 h-10 font-bold shrink-0">Notifications</TabsTrigger>
             <TabsTrigger value="account" className="rounded-lg px-8 h-10 font-bold shrink-0">Account</TabsTrigger>
@@ -201,16 +178,17 @@ export default function SettingsPage() {
               <CardContent className="p-5 sm:p-8 space-y-6 sm:space-y-8">
                 <div className="flex flex-col md:flex-row gap-6 md:gap-10 items-start">
                   <div className="space-y-3 w-full md:w-auto flex flex-col items-center md:items-start">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Photo</Label>
+                    <Label htmlFor="account-photo-upload" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Identity Icon</Label>
                     <div className="relative w-32 h-32 rounded-2xl bg-muted overflow-hidden border-2 border-border shadow-sm group">
                       <Image src={effectiveAvatar} alt="Avatar" fill className="object-cover" />
-                      <label htmlFor="photo-upload" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                        <Camera className="w-8 h-8 text-white" />
+                      <label htmlFor="account-photo-upload" className="absolute inset-0 bg-white border-2 border-accent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-2xl">
+                        <Camera className="w-8 h-8 text-zinc-950" />
                       </label>
                     </div>
-                    <input id="photo-upload" type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} title="Upload profile photo" placeholder="Choose a photo" />
-                    <Button variant="outline" size="sm" className="w-full h-8 rounded-lg font-bold text-[10px] uppercase tracking-wider" onClick={() => document.getElementById('photo-upload')?.click()}>
-                      <Camera className="w-3 h-3 mr-1.5" /> Change Photo
+                    <label htmlFor="account-photo-upload" className="sr-only">Upload account photo</label>
+                    <input id="account-photo-upload" type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                    <Button variant="outline" size="sm" className="w-full h-8 rounded-lg font-bold text-[10px] uppercase tracking-wider" onClick={() => document.getElementById('account-photo-upload')?.click()}>
+                      <Camera className="w-3 h-3 mr-1.5 text-zinc-950" /> Change Photo
                     </Button>
                     {photoURL && (
                       <Button variant="ghost" size="sm" onClick={() => setPhotoURL('')} className="w-full text-xs font-bold text-red-600 uppercase h-8 hover:bg-red-50">
@@ -219,14 +197,11 @@ export default function SettingsPage() {
                     )}
                   </div>
                   
-                  <div className="flex-1 w-full space-y-6">
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest">Bio</Label>
-                      <Textarea placeholder="Tell us about yourself..." value={bio} onChange={(e) => setBio(e.target.value)} className="min-h-[100px] rounded-lg border text-sm" />
-                    </div>
-                    <Button onClick={handleSaveProfile} disabled={isSavingProfile} className="bg-accent text-accent-foreground font-black h-10 px-6 rounded-lg gap-2">
+                  <div className="flex-1 w-full space-y-6 pt-6 md:pt-10">
+                    <p className="text-sm text-muted-foreground font-medium italic">Manage your public identity icon. This is used for your collector profile and shop storefront.</p>
+                    <Button onClick={handleSaveProfile} disabled={isSavingProfile} className="bg-primary text-primary-foreground dark:text-zinc-950 font-black h-10 px-6 rounded-lg gap-2 shadow-sm">
                       {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      {isSavingProfile ? 'Saving...' : 'Save'}
+                      {isSavingProfile ? 'Saving...' : 'Save Profile Image'}
                     </Button>
                   </div>
                 </div>
@@ -239,25 +214,25 @@ export default function SettingsPage() {
               <CardContent className="p-5 sm:p-8 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2 md:col-span-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest">Street</Label>
-                    <Input placeholder="123 Main St" className="h-10 rounded-lg border" value={address.street} onChange={(e) => setAddress({...address, street: e.target.value})} />
+                    <Label htmlFor="addr-street-input" className="text-[10px] font-black uppercase tracking-widest">Street Address</Label>
+                    <Input id="addr-street-input" placeholder="123 Main St" className="h-10 rounded-lg border" value={address.street} onChange={(e) => setAddress({...address, street: e.target.value})} />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest">City</Label>
-                    <Input placeholder="City" className="h-10 rounded-lg border" value={address.city} onChange={(e) => setAddress({...address, city: e.target.value})} />
+                    <Label htmlFor="addr-city-input" className="text-[10px] font-black uppercase tracking-widest">City</Label>
+                    <Input id="addr-city-input" placeholder="City" className="h-10 rounded-lg border" value={address.city} onChange={(e) => setAddress({...address, city: e.target.value})} />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest">State</Label>
-                    <Input placeholder="CA" className="h-10 rounded-lg border uppercase" value={address.state} onChange={(e) => setAddress({...address, state: e.target.value})} />
+                    <Label htmlFor="addr-state-input" className="text-[10px] font-black uppercase tracking-widest">State / Province</Label>
+                    <Input id="addr-state-input" placeholder="CA" className="h-10 rounded-lg border uppercase" value={address.state} onChange={(e) => setAddress({...address, state: e.target.value})} />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest">ZIP Code</Label>
-                    <Input placeholder="12345" className="h-10 rounded-lg border" value={address.zip} onChange={(e) => setAddress({...address, zip: e.target.value})} />
+                    <Label htmlFor="addr-zip-input" className="text-[10px] font-black uppercase tracking-widest">ZIP / Postal Code</Label>
+                    <Input id="addr-zip-input" placeholder="12345" className="h-10 rounded-lg border" value={address.zip} onChange={(e) => setAddress({...address, zip: e.target.value})} />
                   </div>
                 </div>
-                <Button onClick={handleSaveAddress} disabled={isSavingAddress} className="bg-accent text-accent-foreground font-black h-10 px-6 rounded-lg gap-2">
+                <Button onClick={handleSaveAddress} disabled={isSavingAddress} className="bg-primary text-primary-foreground dark:text-zinc-950 font-black h-10 px-6 rounded-lg gap-2 shadow-sm">
                   {isSavingAddress ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {isSavingAddress ? 'Saving...' : 'Save'}
+                  {isSavingAddress ? 'Saving...' : 'Save Address'}
                 </Button>
               </CardContent>
             </Card>
@@ -268,59 +243,53 @@ export default function SettingsPage() {
               <CardContent className="p-5 sm:p-8 space-y-6">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between py-3 border-b">
-                    <div>
-                      <p className="font-bold text-sm">Order Updates</p>
+                    <div className="space-y-0.5">
+                      <Label htmlFor="switch-notif-orders" className="font-bold text-sm">Order Updates</Label>
                       <p className="text-xs text-muted-foreground">Get notified about order status changes</p>
                     </div>
                     <Switch 
+                      id="switch-notif-orders"
                       checked={notifications.orderUpdates} 
                       onCheckedChange={(checked) => setNotifications({...notifications, orderUpdates: checked})} 
                     />
                   </div>
                   <div className="flex items-center justify-between py-3 border-b">
-                    <div>
-                      <p className="font-bold text-sm">Messages</p>
+                    <div className="space-y-0.5">
+                      <Label htmlFor="switch-notif-messages" className="font-bold text-sm">Messages</Label>
                       <p className="text-xs text-muted-foreground">Notifications for new messages</p>
                     </div>
                     <Switch 
+                      id="switch-notif-messages"
                       checked={notifications.messages} 
                       onCheckedChange={(checked) => setNotifications({...notifications, messages: checked})} 
                     />
                   </div>
                   <div className="flex items-center justify-between py-3 border-b">
-                    <div>
-                      <p className="font-bold text-sm">Tier Changes</p>
+                    <div className="space-y-0.5">
+                      <Label htmlFor="switch-notif-tiers" className="font-bold text-sm">Tier Changes</Label>
                       <p className="text-xs text-muted-foreground">Get notified when your seller tier changes</p>
                     </div>
                     <Switch 
+                      id="switch-notif-tiers"
                       checked={notifications.tierChanges} 
                       onCheckedChange={(checked) => setNotifications({...notifications, tierChanges: checked})} 
                     />
                   </div>
-                  <div className="flex items-center justify-between py-3 border-b">
-                    <div>
-                      <p className="font-bold text-sm">Promotions & News</p>
-                      <p className="text-xs text-muted-foreground">Marketing emails and special offers</p>
-                    </div>
-                    <Switch 
-                      checked={notifications.promotions} 
-                      onCheckedChange={(checked) => setNotifications({...notifications, promotions: checked})} 
-                    />
-                  </div>
                   <div className="flex items-center justify-between py-3">
-                    <div>
-                      <p className="font-bold text-sm">Email Notifications</p>
+                    <div className="space-y-0.5">
+                      <Label htmlFor="switch-notif-emails" className="font-bold text-sm">Email Notifications</Label>
                       <p className="text-xs text-muted-foreground">Receive notifications via email</p>
                     </div>
                     <Switch 
+                      id="switch-notif-emails"
                       checked={notifications.emailNotifications} 
                       onCheckedChange={(checked) => setNotifications({...notifications, emailNotifications: checked})} 
                     />
                   </div>
                 </div>
-                <Button onClick={handleSaveNotifications} disabled={isSavingNotifications} className="bg-accent text-accent-foreground font-black h-10 px-6 rounded-lg gap-2">
+                <Button onClick={handleSaveNotifications} disabled={isSavingNotifications} className="bg-primary text-primary-foreground dark:text-zinc-950 font-black h-10 px-6 rounded-lg gap-2 shadow-sm">
                   {isSavingNotifications ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {isSavingNotifications ? 'Saving...' : 'Save'}
+                  {isSavingNotifications ? 'Saving...' : 'Save Preferences'}
                 </Button>
               </CardContent>
             </Card>

@@ -11,7 +11,7 @@ import type {
 import { onSnapshot } from 'firebase/firestore';
 import { useUser } from '@/firebase/provider';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 type WithId<T = DocumentData> = T & { id: string };
 
@@ -24,9 +24,10 @@ type UseCollectionResult<T> = {
 // Internal helper to extract path for error reporting
 interface InternalQuery {
   _query: {
-    path: {
+    path?: {
       canonicalString: () => string;
     };
+    collectionGroup?: string;
   };
 }
 
@@ -77,18 +78,17 @@ export function useCollection<T = DocumentData>(
           if (serverError.code === 'permission-denied') {
             let path = "";
             try {
-              // Standard resolution for CollectionReference
-              if ((memoizedTargetRefOrQuery as any).path) {
-                path = (memoizedTargetRefOrQuery as any).path;
+              const queryObj = memoizedTargetRefOrQuery as any;
+              
+              if (queryObj.path) {
+                path = queryObj.path;
               } else {
-                // Resolution for Query / CollectionGroup
                 const internal = memoizedTargetRefOrQuery as unknown as InternalQuery;
                 const internalPath = internal._query?.path?.canonicalString?.() || "";
-                // Collection group queries have an empty path root in canonicalString
-                if (!internalPath || internalPath === "/") {
-                  // Try to find the collection ID for better reporting
-                  const colId = (memoizedTargetRefOrQuery as any)._query?.collectionGroup || "unknown";
-                  path = `[CollectionGroup: ${colId}]`;
+                
+                if (!internalPath || internalPath === "/" || internalPath.length < 2) {
+                  const colGroup = internal._query?.collectionGroup || "unknown_group";
+                  path = `[CollectionGroup: ${colGroup}]`;
                 } else {
                   path = internalPath;
                 }
@@ -96,10 +96,12 @@ export function useCollection<T = DocumentData>(
             } catch (e) {
               path = "firestore/query";
             }
+
             const contextualError = new FirestorePermissionError({
               operation: 'list',
               path,
-            });
+            } satisfies SecurityRuleContext);
+
             errorEmitter.emit('permission-error', contextualError);
           }
 

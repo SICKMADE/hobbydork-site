@@ -6,24 +6,6 @@ import { defineSecret } from "firebase-functions/params";
 const stripeSecret = defineSecret("STRIPE_SECRET");
 
 // Update auction imageUrl after creation
-export const setBlindBidAuctionImage = onCall(async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Auth required");
-  const auctionId = request.data.auctionId;
-  const imageUrl = request.data.imageUrl;
-  if (!auctionId || !imageUrl) {
-    throw new HttpsError("invalid-argument", "Missing auctionId or imageUrl");
-  }
-  const auctionRef = db.collection("blindBidAuctions").doc(auctionId);
-  const auctionSnap = await auctionRef.get();
-  if (!auctionSnap.exists) throw new HttpsError("not-found", "Auction not found");
-  const auction = auctionSnap.data();
-  if (!auction || auction.sellerUid !== uid) {
-    throw new HttpsError("permission-denied", "Only the seller can update the image");
-  }
-  await auctionRef.update({ imageUrl });
-  return { success: true };
-});
 
 
 // Admin callable function to rerun an auction

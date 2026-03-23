@@ -12,7 +12,6 @@ export function cn(...inputs: ClassValue[]) {
 export function filterProfanity(text: string): string {
   if (!text) return text;
 
-  // A representative list of restricted words (expanded in production)
   const forbiddenWords = [
     'fuck', 'shit', 'asshole', 'bitch', 'bastard', 'cunt', 'dick', 'pussy', 
     'nigger', 'faggot', 'retard', 'slut', 'whore', 'porn', 'adult', 'sex'
@@ -28,32 +27,20 @@ export function filterProfanity(text: string): string {
 }
 
 /**
- * Returns a stable randomized avatar path from the /public/avatars folder
- * based on a provided seed (e.g., username or uid).
- * Filenames are hobbydork-head1.png through hobbydork-head10.png
+ * Returns a stable randomized avatar path from the local public/avatars folder.
+ * Uses a seed (UID or username) to pick one of 10 heads.
+ * This is the SINGLE SOURCE OF TRUTH for default avatars.
  */
 export function getRandomAvatar(seed?: string) {
-  const avatars = [
-    '/avatars/hobbydork-head1.png',
-    '/avatars/hobbydork-head2.png',
-    '/avatars/hobbydork-head3.png',
-    '/avatars/hobbydork-head4.png',
-    '/avatars/hobbydork-head5.png',
-    '/avatars/hobbydork-head6.png',
-    '/avatars/hobbydork-head7.png',
-    '/avatars/hobbydork-head8.png',
-    '/avatars/hobbydork-head9.png',
-    '/avatars/hobbydork-head10.png',
-  ];
+  if (!seed || seed.trim() === '') return "/avatars/hobbydork-head1.png";
   
-  if (!seed || seed.trim() === '') return avatars[0];
-
-  // Simple string hashing to get a consistent index for the same seed
+  // Create a simple hash from the seed string to pick a stable avatar
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     hash = seed.charCodeAt(i) + ((hash << 5) - hash);
   }
   
-  const index = Math.abs(hash) % avatars.length;
-  return avatars[index];
+  // Map hash to a range of 1-10 corresponding to local assets in /public/avatars/
+  const index = Math.abs(hash % 10) + 1;
+  return `/avatars/hobbydork-head${index}.png`;
 }

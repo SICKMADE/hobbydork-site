@@ -6,11 +6,10 @@ import Navbar from '@/components/Navbar';
 import { useUser, useDoc, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { httpsCallable } from 'firebase/functions';
-import { getFunctions } from 'firebase/functions';
-import { cn } from '@/lib/utils';
+import { httpsCallable, getFunctions } from 'firebase/functions';
+import Image from 'next/image';
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -25,11 +24,16 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [imgSrc, setImgSrc] = useState<string>('/defaultbroken.jpg');
 
   const listingRef = listingId && db ? doc(db, 'listings', listingId) : null;
   const { data: listing } = useDoc(listingRef);
-  const checkoutAmountCents = amountFromQuery > 0 ? amountFromQuery : Math.round((listing?.price || 0) * 100);
-  const checkoutAmountDollars = checkoutAmountCents / 100;
+  
+  // Total logic: (Item Price OR Bid) + Listing Shipping Cost
+  const itemAmountCents = amountFromQuery > 0 ? amountFromQuery : Math.round((listing?.price || 0) * 100);
+  const shippingAmountCents = Math.round((listing?.shippingCost || 0) * 100);
+  const totalAmountCents = itemAmountCents + shippingAmountCents;
+  
   const isAuctionWinner = !!(user && listing?.winnerUid === user.uid && listing?.paymentStatus === 'PENDING');
 
   useEffect(() => {
@@ -39,6 +43,12 @@ function CheckoutContent() {
     }
     setLoading(false);
   }, [user, router]);
+
+  useEffect(() => {
+    if (listing?.imageUrl) {
+      setImgSrc(listing.imageUrl);
+    }
+  }, [listing]);
 
   const handleCheckout = async () => {
     if (!listing || !user || !db) return;
@@ -54,7 +64,6 @@ function CheckoutContent() {
     try {
       const orderId = existingOrderId || `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // Call createCheckoutSession cloud function
       const functions = getFunctions();
       const createCheckoutSession = httpsCallable(functions, 'createCheckoutSession');
       
@@ -62,7 +71,7 @@ function CheckoutContent() {
         orderId,
         listingId: listing.id,
         listingTitle: listing.title,
-        amountCents: checkoutAmountCents,
+        amountCents: totalAmountCents,
         appBaseUrl: typeof window !== 'undefined' ? window.location.origin : 'https://hobbydork.com',
       });
 
@@ -91,7 +100,7 @@ function CheckoutContent() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <main className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-accent" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </main>
       </div>
     );
@@ -101,11 +110,9 @@ function CheckoutContent() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <main className="container mx-auto px-4 py-12 max-w-2xl">
-          <div className="bg-red-50 dark:bg-red-950/20 border-2 border-red-200 dark:border-red-800 p-6 rounded-2xl text-center">
-            <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400 mx-auto mb-3" />
-            <p className="text-red-800 dark:text-red-200 font-semibold">Listing not found</p>
-          </div>
+        <main className="container mx-auto px-4 py-12 max-w-2xl text-center">
+          <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground font-black uppercase">Listing not found</p>
         </main>
       </div>
     );
@@ -114,52 +121,56 @@ function CheckoutContent() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-2 sm:px-4 py-6 max-w-2xl">
-        <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-lg">
-          <div className="bg-gradient-to-r from-accent to-accent/80 p-4 sm:p-6 md:p-8 text-white">
-            <h1 className="text-xl sm:text-3xl md:text-4xl font-headline font-black uppercase tracking-tight">Checkout</h1>
+      <main className="container mx-auto px-4 py-12 max-w-2xl">
+        <div className="bg-card rounded-[2.5rem] border-none shadow-2xl overflow-hidden">
+          <div className="bg-primary p-10 text-primary-foreground">
+            <h1 className="text-3xl font-headline font-black uppercase italic tracking-tight">Securing Asset</h1>
+            <p className="text-primary-foreground/60 font-medium mt-1">Finalizing trade protocol via Stripe Connect.</p>
           </div>
-          <div className="p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8">
-            <div className="space-y-3 sm:space-y-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0 p-3 sm:p-4 bg-muted/30 rounded-xl border border-dashed border-muted-foreground/20">
-                <div className="flex-1">
-                  <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-1 sm:mb-2">Item</p>
-                  <p className="font-black text-base sm:text-lg">{listing.title}</p>
-</div>
-<div className="text-right">
-  <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-2">Price</p>
-  <p className="font-black text-2xl text-accent">${checkoutAmountDollars.toLocaleString()}</p>
-</div>
+          
+          <div className="p-10 space-y-10">
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 pb-6 border-b border-dashed">
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-muted border">
+                  <Image 
+                    src={imgSrc} 
+                    alt={listing.title} 
+                    fill 
+                    className="object-cover" 
+                    onError={() => setImgSrc('/defaultbroken.jpg')}
+                  />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Asset</p>
+                  <h3 className="text-xl font-black">{listing.title}</h3>
+                </div>
+                <p className="text-xl font-black">${(itemAmountCents / 100).toLocaleString()}</p>
               </div>
 
-              <div className="p-3 sm:p-4 bg-secondary/10 rounded-xl border border-border">
-                <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-1 sm:mb-2">Seller</p>
-                <p className="font-bold text-sm">@{listing.sellerName || listing.seller}</p>
+              <div className="flex justify-between items-center text-sm font-bold text-muted-foreground">
+                <p className="uppercase tracking-widest text-[10px]">Carrier Protocol (Shipping)</p>
+                <p>{shippingAmountCents > 0 ? `$${(shippingAmountCents / 100).toFixed(2)}` : 'FREE'}</p>
               </div>
 
-              {/* Item Condition Section */}
-              {/* Grading condition section removed */}
+              <div className="bg-zinc-50 p-6 rounded-2xl flex justify-between items-center">
+                <p className="font-black uppercase tracking-widest text-xs">Total Due</p>
+                <p className="text-3xl font-black text-primary">${(totalAmountCents / 100).toLocaleString()}</p>
+              </div>
             </div>
 
-            {error && (
-              <div className="bg-red-50 dark:bg-red-950/20 border-2 border-red-200 dark:border-red-800 p-3 sm:p-4 rounded-xl">
-                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-              </div>
-            )}
+            <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl border border-green-100">
+              <ShieldCheck className="w-5 h-5 text-green-600" />
+              <p className="text-xs font-bold text-green-800">Your payment is held in escrow until delivery is verified.</p>
+            </div>
+
+            {error && <p className="text-red-600 font-black uppercase text-[10px] text-center italic">{error}</p>}
 
             <Button 
-  onClick={handleCheckout} 
-  disabled={processing || (listing.type === 'Auction' && !isAuctionWinner)}
-  className="w-full h-14 bg-accent hover:bg-accent/90 text-white font-black uppercase text-lg shadow-xl rounded-xl transition-all"
->
-              {processing ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Processing...
-                </>
-              ) : (
-                `Proceed to Payment - $${checkoutAmountDollars.toLocaleString()}`
-              )}
+              onClick={handleCheckout} 
+              disabled={processing || (listing.type === 'Auction' && !isAuctionWinner)}
+              className="w-full h-20 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-2xl rounded-2xl shadow-xl uppercase italic tracking-tighter"
+            >
+              {processing ? <Loader2 className="animate-spin" /> : "Initiate Checkout"}
             </Button>
           </div>
         </div>
@@ -170,11 +181,7 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-accent" />
-      </div>
-    }>
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>}>
       <CheckoutContent />
     </Suspense>
   );

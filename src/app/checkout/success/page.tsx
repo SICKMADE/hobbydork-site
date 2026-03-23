@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Suspense, useEffect, useState, useRef } from 'react';
@@ -37,14 +36,13 @@ function SuccessContent() {
   useEffect(() => {
     const fulfillPremiumItem = async () => {
       // Gate: must have all services, not loading, and not already fulfilled
-      // itemId must exist and be a string to avoid .startsWith crash
-      if (!itemId || typeof itemId !== 'string' || !user || !db || fulfillmentStarted.current || loading || isUserLoading) return;
+      if (!itemId || !user || !db || fulfillmentStarted.current || loading || isUserLoading) return;
       
       fulfillmentStarted.current = true;
       
       try {
         // Handle premium products (Spotlights, Themes starting with 'p')
-        if (itemId.startsWith('p')) {
+        if (itemId.toString().startsWith('p')) {
           const userRef = doc(db, 'users', user.uid);
           
           // 1. Add theme/item to user vault atomically
@@ -108,7 +106,7 @@ function SuccessContent() {
     );
   }
 
-  const isPremiumProduct = itemId?.startsWith('p');
+  const isPremiumProduct = itemId?.toString().startsWith('p');
 
   return (
     <div className="max-w-2xl mx-auto py-20 px-4 text-center space-y-10 animate-in zoom-in duration-500">

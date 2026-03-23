@@ -2,7 +2,6 @@
 
 import { use, useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
-import { GIVEAWAYS } from '@/lib/mock-data';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,10 +18,10 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { functions } from '@/firebase/client';
-import { doc, updateDoc, increment, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
@@ -42,9 +41,7 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
     return doc(db, 'giveaways', id);
   }, [db, id]);
 
-  const { data: firestoreGiveaway, isLoading: loading } = useDoc(giveawayRef);
-  const mockGiveaway = GIVEAWAYS.find(g => g.id === id);
-  const giveaway = firestoreGiveaway || mockGiveaway;
+  const { data: giveaway, isLoading: loading } = useDoc(giveawayRef);
 
   useEffect(() => {
     if (!db || !user || !giveaway) {
@@ -103,20 +100,19 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
 
     const entryRef = doc(db, 'giveaways', id, 'giveawayEntries', user.uid);
 
+    // Backend Trigger (onGiveawayEntryCreated) handles the entriesCount increment
     setDoc(entryRef, entryData)
       .then(() => {
-        updateDoc(giveawayRef, { entriesCount: increment(1) });
         setHasEntered(true);
         setIsEntering(false);
         toast({ title: 'Entry Confirmed!', description: 'You have been entered into the live drop.' });
       })
       .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: `giveaways/${id}/giveawayEntries/${user.uid}`,
           operation: 'create',
           requestResourceData: entryData,
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+        } satisfies SecurityRuleContext));
         setIsEntering(false);
       });
   };
@@ -141,14 +137,13 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
     }
   };
 
-  // ALIGNED: check seller UID against user UID
   const isSellerOwner = user && giveaway && (user.uid === giveaway.sellerId || user.uid === giveaway.seller);
 
   return (
     <>
       <Navbar />
       <main className="container mx-auto px-4 py-8 max-w-7xl">
-        <Link href={`/shop/${giveaway.sellerName || giveaway.seller}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 font-black uppercase tracking-widest">
+        <Link href={`/shop/${giveaway.sellerName || giveaway.seller}`} title="Back to dealer shop" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 font-black uppercase tracking-widest">
           <ArrowLeft className="w-4 h-4" />
           Back to {giveaway.sellerName || giveaway.seller}'s shop
         </Link>
@@ -156,7 +151,7 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
         <div className="grid lg:grid-cols-[1.3fr_1fr] gap-12 md:gap-16">
           <div className="space-y-8">
             <div className="relative aspect-video rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-              <Image src={giveaway.imageUrl} alt={giveaway.title} fill className="object-cover" />
+              <Image src={giveaway.imageUrl || '/defaultbroken.jpg'} alt={giveaway.title} fill className="object-cover" />
               <div className="absolute top-8 left-8">
                 <Badge className="bg-zinc-950 text-white border-none px-6 py-3 text-xl font-black shadow-2xl uppercase tracking-tighter">
                   <Gift className="w-6 h-6 mr-3 text-zinc-400" /> LIVE DROP
@@ -184,6 +179,7 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
                     <Button 
                       onClick={handleDrawWinner} 
                       disabled={isDrawingWinner}
+                      title="Draw winner now"
                       className="w-full h-20 text-2xl font-black rounded-2xl shadow-xl uppercase italic tracking-tighter bg-gradient-to-r from-purple-600 to-pink-600 text-white"
                     >
                       {isDrawingWinner ? <Loader2 className="animate-spin" /> : <><Sparkles className="mr-2" /> Draw Winner</>}
@@ -193,6 +189,7 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
                   <Button 
                     onClick={handleEnter} 
                     disabled={isEntering}
+                    title="Enter this drop"
                     className={cn(
                       "w-full h-20 text-2xl font-black rounded-2xl shadow-2xl uppercase italic tracking-tighter",
                       !isFollowing ? "bg-zinc-300 text-zinc-500 cursor-not-allowed" : "bg-zinc-950 text-white hover:bg-zinc-800"

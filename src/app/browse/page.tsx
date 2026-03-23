@@ -150,7 +150,7 @@ function BrowseContent() {
       
       <header className="py-0">
         <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto bg-[#333333] rounded-b-2xl p-6 md:p-10 shadow-2xl text-white space-y-6">
+          <div className="max-w-5xl mx-auto bg-[#333333] rounded-b-2xl p-6 md:p-10 shadow-2xl text-white space-y-6 px-8 mx-8">
             <div className="text-center">
               <h1 className="text-3xl md:text-6xl font-headline font-black tracking-tighter uppercase leading-[0.9] text-white">
                 Scan the <span className="text-accent italic">Grails.</span>

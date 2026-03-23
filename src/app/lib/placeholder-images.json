@@ -2,46 +2,82 @@
 {
   "placeholderImages": [
     {
-      "id": "default-listing",
-      "description": "The mandatory fallback for listings without an image.",
-      "imageUrl": "/defaultbroken.jpg",
-      "imageHint": "placeholder listing"
+      "id": "vault-hero",
+      "description": "Tactical Vault Breach",
+      "imageUrl": "/banner/vault.jpg",
+      "imageHint": "vault door"
     },
     {
-      "id": "default-banner",
-      "description": "The standard community banner for new storefronts.",
+      "id": "social-hero",
+      "description": "Collectors Social Hub",
+      "imageUrl": "/banner/socialmarketplace.jpg",
+      "imageHint": "marketplace trade"
+    },
+    {
+      "id": "trade-hero",
+      "description": "Rare Collectibles Grid",
+      "imageUrl": "/banner/collectibles.jpg",
+      "imageHint": "vintage cards"
+    },
+    {
+      "id": "bounty-hero",
+      "description": "Viral Reward Drop",
+      "imageUrl": "/banner/viralbounty.jpg",
+      "imageHint": "gold prize"
+    },
+    {
+      "id": "store-banner-default",
+      "description": "Storefront Header",
       "imageUrl": "/hobbydork-banner-default.png",
-      "imageHint": "store banner"
+      "imageHint": "hobby shop"
     },
     {
-      "id": "ad-feed",
-      "description": "Advertisement for the global listing feed.",
-      "imageUrl": "/feed.jpg",
-      "imageHint": "marketplace feed"
+      "id": "iso-header",
+      "description": "ISO24 Feed Header",
+      "imageUrl": "/ISO.png",
+      "imageHint": "surveillance"
     },
     {
-      "id": "ad-drop",
-      "description": "Advertisement for live community drops.",
-      "imageUrl": "/drop.jpg",
-      "imageHint": "giveaway drop"
+      "id": "item-preview-1",
+      "description": "Vintage Item 1",
+      "imageUrl": "https://picsum.photos/seed/item1/200/200",
+      "imageHint": "vintage watch"
     },
     {
-      "id": "ad-iso24",
-      "description": "Advertisement for the 24-hour request feed.",
-      "imageUrl": "/iso24.jpg",
-      "imageHint": "item search"
+      "id": "item-preview-2",
+      "description": "Vintage Item 2",
+      "imageUrl": "https://picsum.photos/seed/item2/200/200",
+      "imageHint": "trading card"
     },
     {
-      "id": "ad-giveaway",
-      "description": "Advertisement for seller giveaways.",
-      "imageUrl": "/give.jpg",
-      "imageHint": "free prize"
+      "id": "item-preview-3",
+      "description": "Vintage Item 3",
+      "imageUrl": "https://picsum.photos/seed/item3/200/200",
+      "imageHint": "comic book"
     },
     {
-      "id": "ad-live",
-      "description": "Advertisement for real-time auctions.",
-      "imageUrl": "/live.jpg",
-      "imageHint": "live auction"
+      "id": "creed-hero",
+      "description": "The Collector Creed",
+      "imageUrl": "https://picsum.photos/seed/creed/800/1000",
+      "imageHint": "vintage cards"
+    },
+    {
+      "id": "error-fail",
+      "description": "System Failure",
+      "imageUrl": "https://picsum.photos/seed/fail/600/600",
+      "imageHint": "static glitch"
+    },
+    {
+      "id": "default-listing",
+      "description": "Premium Hobby Asset",
+      "imageUrl": "https://picsum.photos/seed/listing/600/800",
+      "imageHint": "premium collectibles"
+    },
+    {
+      "id": "fallback-broken",
+      "description": "Broken Asset Fallback",
+      "imageUrl": "/defaultbroken.jpg",
+      "imageHint": "system fault"
     }
   ]
 }

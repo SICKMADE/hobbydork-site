@@ -6,19 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  ShieldCheck, 
-  Zap, 
   Loader2, 
   Mail, 
   Lock, 
   UserPlus, 
   LogIn,
   KeyRound,
-  ArrowRight
+  ArrowRight,
+  User as UserIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { 
   GoogleAuthProvider, 
   signInWithPopup, 
@@ -27,28 +27,32 @@ import {
   sendEmailVerification,
   sendPasswordResetEmail
 } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp, getDoc, writeBatch } from 'firebase/firestore';
 import { useState } from 'react';
 import Image from 'next/image';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
+import { getRandomAvatar, filterProfanity } from '@/lib/utils';
+import Link from 'next/link';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogFooter
 } from "@/components/ui/dialog";
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const auth = useAuth();
+  const db = useFirestore();
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
@@ -61,12 +65,12 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      toast({ title: "Entry Granted", description: "Welcome to hobbydork." });
+      toast({ title: "Welcome", description: "Identity confirmed." });
 
       if (!user.emailVerified) {
         router.push('/verify-email');
       } else {
-        router.push('/onboarding');
+        router.push('/dashboard');
       }
     } catch (error: any) {
       toast({ 
@@ -81,13 +85,65 @@ export default function LoginPage() {
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !email || !password) return;
+    if (!auth || !db || !email || !password) return;
+    
+    if (!agreedToTerms) {
+      toast({ variant: 'destructive', title: "Agreement Required", description: "You must certify your age and agree to terms." });
+      return;
+    }
+
+    const cleanUsername = username.trim().toLowerCase();
+    if (cleanUsername.length < 3) {
+      toast({ variant: 'destructive', title: "Handle Too Short", description: "Must be at least 3 characters." });
+      return;
+    }
+
+    const filtered = filterProfanity(cleanUsername);
+    if (filtered.includes('*')) {
+      toast({ variant: 'destructive', title: "Invalid Handle", description: "This username contains restricted language." });
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
+      const usernameRef = doc(db, 'usernames', cleanUsername);
+      const usernameSnap = await getDoc(usernameRef);
+      
+      if (usernameSnap.exists()) {
+        toast({ variant: 'destructive', title: "Handle Taken", description: "Choose another unique identifier." });
+        setIsProcessing(false);
+        return;
+      }
+
       const result = await createUserWithEmailAndPassword(auth, email, password);
+      
+      const batch = writeBatch(db);
+      const userRef = doc(db, 'users', result.user.uid);
+      const photoURL = getRandomAvatar(result.user.uid);
+
+      batch.set(userRef, {
+        uid: result.user.uid,
+        username: cleanUsername,
+        storeId: cleanUsername,
+        email: email.toLowerCase(),
+        photoURL,
+        status: 'ACTIVE',
+        role: 'USER',
+        isSeller: false,
+        emailVerified: false,
+        agreedToTerms: true,
+        isOfAge: true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      batch.set(usernameRef, { uid: result.user.uid });
+
+      await batch.commit();
       await sendEmailVerification(result.user);
-      toast({ title: "Account Created", description: "Verification email sent. Please check your inbox." });
+
+      toast({ title: "Account Created", description: "Welcome @"+cleanUsername+". Please verify your email." });
       router.push('/verify-email');
     } catch (error: any) {
       toast({ 
@@ -107,12 +163,12 @@ export default function LoginPage() {
 
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: "Welcome Back", description: "Identity verified." });
+      toast({ title: "Welcome Back" });
       
       if (!result.user.emailVerified) {
         router.push('/verify-email');
       } else {
-        router.push('/onboarding');
+        router.push('/dashboard');
       }
     } catch (error: any) {
       toast({ 
@@ -134,7 +190,7 @@ export default function LoginPage() {
       await sendPasswordResetEmail(auth, resetEmail);
       toast({
         title: "Reset Email Sent",
-        description: `Check ${resetEmail} for password reset instructions.`
+        description: `Check ${resetEmail} for instructions.`
       });
       setIsResetDialogOpen(false);
       setResetEmail('');
@@ -163,47 +219,48 @@ export default function LoginPage() {
               priority 
             />
           </div>
-          <p className="text-muted-foreground font-black uppercase text-[10px] tracking-[0.3em]">Verified Social Marketplace</p>
+          <p className="text-muted-foreground font-black uppercase text-[10px] tracking-[0.2em]">The Social Marketplace for Collectors</p>
         </div>
 
-        <Card className="border-2 border-red-700 shadow-2xl rounded-[2.5rem] overflow-hidden bg-card">
-          <CardHeader className="bg-[#222222] rounded-t-[2.5rem] text-white p-5 sm:p-8 pb-10 sm:pb-12">
-            <CardTitle className="text-xl sm:text-2xl font-headline font-black italic uppercase tracking-tight">
-              Community Access
+        <Card className="border-2 border-primary/10 shadow-2xl rounded-[2.5rem] overflow-hidden bg-card">
+          <CardHeader className="bg-zinc-950 text-white dark:bg-card dark:text-white p-8 pb-12">
+            <CardTitle className="text-2xl font-headline font-black uppercase tracking-tight italic">
+              Sign In
             </CardTitle>
-            <CardDescription className="text-white/60 font-medium">
-              Join 500k collectors in the definitive trade hub.
+            <CardDescription className="text-white/60 dark:text-muted-foreground font-medium italic">
+              Access your dashboard and active trades.
             </CardDescription>
           </CardHeader>
           
-          <CardContent className="p-5 sm:p-8 -mt-8">
-            <Tabs defaultValue="login" className="space-y-6 sm:space-y-8">
-              <TabsList className="grid w-full grid-cols-2 h-12 sm:h-14 bg-muted rounded-2xl p-1.5 shadow-inner mt-6">
+          <CardContent className="p-8 -mt-8">
+            <Tabs defaultValue="login" className="space-y-8">
+              <TabsList className="grid w-full grid-cols-2 h-14 bg-muted rounded-2xl p-1.5 shadow-inner mt-6">
                 <TabsTrigger 
                   value="login" 
-                  className="rounded-xl font-black uppercase text-[10px] tracking-widest text-zinc-500 dark:text-zinc-400 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-red-700 dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-red-700 transition-all"
+                  className="rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:text-zinc-950 data-[state=active]:shadow-lg dark:data-[state=active]:bg-zinc-800 dark:data-[state=active]:text-white transition-all"
                 >
-                  Sign In
+                  Login
                 </TabsTrigger>
                 <TabsTrigger 
                   value="register" 
-                  className="rounded-xl font-black uppercase text-[10px] tracking-widest text-zinc-500 dark:text-zinc-400 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-red-700 dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-red-700 transition-all"
+                  className="rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:text-zinc-950 data-[state=active]:shadow-lg dark:data-[state=active]:bg-zinc-800 dark:data-[state=active]:text-white transition-all"
                 >
-                  Join Now
+                  Join
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="login" className="space-y-6 animate-in slide-in-from-left-4 duration-300">
+              <TabsContent value="login" className="space-y-6">
                 <form onSubmit={handleEmailSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email-signin" className="text-[10px] font-black uppercase tracking-widest ml-1">Email</Label>
+                    <Label htmlFor="login-email-input" className="text-[10px] font-black uppercase tracking-widest ml-1">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input 
-                        id="email-signin"
+                        id="login-email-input"
+                        name="email"
                         type="email" 
-                        placeholder="collector@hobbydork.com" 
-                        className="pl-11 h-12 rounded-xl border-2 font-medium bg-white text-black"
+                        placeholder="email@example.com" 
+                        className="pl-11 h-12 rounded-xl border-2 font-medium bg-background"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -212,22 +269,23 @@ export default function LoginPage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password-signin" className="text-[10px] font-black uppercase tracking-widest ml-1">Password</Label>
+                      <Label htmlFor="login-password-input" className="text-[10px] font-black uppercase tracking-widest ml-1">Password</Label>
                       <button 
                         type="button"
                         onClick={() => setIsResetDialogOpen(true)}
                         className="text-[9px] font-black uppercase text-accent hover:underline tracking-widest"
                       >
-                        Forgot Password?
+                        Forgot?
                       </button>
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input 
-                        id="password-signin"
+                        id="login-password-input"
+                        name="password"
                         type="password" 
                         placeholder="••••••••" 
-                        className="pl-11 h-12 rounded-xl border-2 font-medium bg-white text-black"
+                        className="pl-11 h-12 rounded-xl border-2 font-medium bg-background"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -237,25 +295,41 @@ export default function LoginPage() {
                   <Button 
                     type="submit" 
                     disabled={isProcessing}
-                    className="w-full h-14 bg-red-700 text-white hover:bg-red-800 font-black rounded-xl shadow-xl transition-all active:scale-95 gap-2"
+                    className="w-full h-14 bg-primary text-primary-foreground hover:bg-primary/90 font-black rounded-xl shadow-xl transition-all active:scale-95 gap-2"
                   >
                     {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
-                    Unlock My Vault
+                    Sign In
                   </Button>
                 </form>
               </TabsContent>
 
-              <TabsContent value="register" className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+              <TabsContent value="register" className="space-y-6">
                 <form onSubmit={handleEmailSignUp} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email-signup" className="text-[10px] font-black uppercase tracking-widest ml-1">Email</Label>
+                    <Label htmlFor="signup-username-input" className="text-[10px] font-black uppercase tracking-widest ml-1">Handle</Label>
+                    <div className="relative">
+                      <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input 
+                        id="signup-username-input"
+                        name="username"
+                        placeholder="username" 
+                        className="pl-11 h-12 rounded-xl border-2 font-bold bg-background"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email-input" className="text-[10px] font-black uppercase tracking-widest ml-1">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input 
-                        id="email-signup"
+                        id="signup-email-input"
+                        name="email"
                         type="email" 
-                        placeholder="collector@hobbydork.com" 
-                        className="pl-11 h-12 rounded-xl border-2 font-medium bg-white text-black"
+                        placeholder="email@example.com" 
+                        className="pl-11 h-12 rounded-xl border-2 font-medium bg-background"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -263,41 +337,62 @@ export default function LoginPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password-signup" className="text-[10px] font-black uppercase tracking-widest ml-1">Password</Label>
+                    <Label htmlFor="signup-password-input" className="text-[10px] font-black uppercase tracking-widest ml-1">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input 
-                        id="password-signup"
+                        id="signup-password-input"
+                        name="password"
                         type="password" 
-                        placeholder="Create a strong password" 
-                        className="pl-11 h-12 rounded-xl border-2 font-medium bg-white text-black"
+                        placeholder="Min 6 characters" 
+                        className="pl-11 h-12 rounded-xl border-2 font-medium bg-background"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
                       />
                     </div>
                   </div>
+
+                  <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl border border-dashed border-zinc-300">
+                    <Checkbox 
+                      id="signup-age-check" 
+                      checked={agreedToTerms} 
+                      onCheckedChange={(checked) => setAgreedToTerms(!!checked)}
+                      className="mt-1"
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="signup-age-check" className="text-[10px] font-black uppercase leading-tight cursor-pointer">
+                        I certify that I am 18 years of age or older.
+                      </Label>
+                      <p className="text-[9px] text-muted-foreground leading-tight">
+                        By joining, you agree to our <Link href="/terms" className="text-accent underline">Terms</Link>.
+                      </p>
+                    </div>
+                  </div>
+
                   <Button 
                     type="submit" 
-                    disabled={isProcessing}
-                    className="w-full h-14 bg-accent text-white hover:bg-accent/90 font-black rounded-xl shadow-xl transition-all active:scale-95 gap-2"
+                    disabled={isProcessing || !agreedToTerms}
+                    className="w-full h-14 bg-primary text-primary-foreground hover:bg-primary/90 font-black rounded-xl shadow-xl transition-all active:scale-95 gap-2 disabled:opacity-50"
                   >
                     {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />}
-                    Create Collector Account
+                    Sign Up
                   </Button>
                 </form>
               </TabsContent>
 
               <div className="relative py-4">
                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-dashed" /></div>
-                <div className="relative flex justify-center text-[10px] uppercase font-black"><span className="bg-card px-4 text-muted-foreground tracking-widest">Or social login</span></div>
+                <div className="relative flex justify-center text-[10px] uppercase font-black">
+                  <span className="bg-card px-4 text-muted-foreground tracking-widest">Social Gateway</span>
+                </div>
               </div>
 
               <Button 
                 onClick={handleGoogleLogin} 
                 disabled={isProcessing}
                 variant="outline"
-                className="w-full h-14 rounded-xl border-2 font-black uppercase text-[10px] tracking-widest hover:bg-zinc-50 transition-all gap-3"
+                className="w-full h-14 rounded-xl border-2 font-black uppercase text-[10px] tracking-widest hover:bg-muted transition-all gap-3"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -305,41 +400,42 @@ export default function LoginPage() {
                   <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                   <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
-                Continue with Google
+                Google Identity
               </Button>
             </Tabs>
           </CardContent>
         </Card>
 
         <p className="text-center text-[10px] font-black uppercase text-zinc-400 tracking-[0.2em]">
-          hobbydork standard security protocol
+          hobbydork secure authentication
         </p>
       </div>
 
       <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
         <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl">
-          <div className="bg-[#222222] p-8 text-white">
+          <div className="bg-zinc-950 p-8 text-white dark:bg-card dark:text-white transition-colors">
             <div className="bg-accent/20 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
               <KeyRound className="w-6 h-6 text-accent" />
             </div>
             <DialogHeader>
-              <DialogTitle className="text-2xl font-headline font-black uppercase italic tracking-tight">Recovery Mode</DialogTitle>
-              <DialogDescription className="text-white/60 font-medium pt-1">
-                Enter your email to receive a secure password reset link.
+              <DialogTitle className="text-2xl font-headline font-black uppercase italic tracking-tight">Reset Password</DialogTitle>
+              <DialogDescription className="text-zinc-400 dark:text-zinc-500 font-medium pt-1 italic">
+                Enter your email to receive a password reset link.
               </DialogDescription>
             </DialogHeader>
           </div>
           <div className="p-8 space-y-6 bg-card">
             <form onSubmit={handleResetPassword} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest ml-1">Account Email</Label>
+                <Label htmlFor="reset-email-input" className="text-[10px] font-black uppercase tracking-widest ml-1">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
-                    id="reset-email"
+                    id="reset-email-input"
+                    name="email"
                     type="email" 
-                    placeholder="collector@hobbydork.com" 
-                    className="pl-11 h-12 rounded-xl border-2 font-medium bg-white text-black"
+                    placeholder="email@example.com" 
+                    className="pl-11 h-12 rounded-xl border-2 font-medium bg-background"
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
                     required
@@ -349,7 +445,7 @@ export default function LoginPage() {
               <Button 
                 type="submit" 
                 disabled={isResetting || !resetEmail}
-                className="w-full h-14 bg-accent text-white hover:bg-accent/90 font-black rounded-xl shadow-xl transition-all active:scale-95 gap-2"
+                className="w-full h-14 bg-primary text-primary-foreground hover:bg-primary/90 font-black rounded-xl shadow-xl transition-all active:scale-95 gap-2"
               >
                 {isResetting ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
                 Send Reset Link

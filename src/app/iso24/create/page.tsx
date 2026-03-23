@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CATEGORIES } from '@/lib/mock-data';
-import { Search, Sparkles, ArrowLeft, Info, Loader2, Clock } from 'lucide-react';
+import { Clock, Info, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
@@ -28,7 +28,6 @@ export default function CreateISORequest() {
   const profileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
 
-  // Form State
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [budget, setBudget] = useState('');
@@ -52,7 +51,6 @@ export default function CreateISORequest() {
 
     setLoading(true);
 
-    // ALIGNED: Using 'uid' as defined in backend.json ISO24Post entity
     const isoData = {
       title,
       uid: user.uid,
@@ -75,12 +73,11 @@ export default function CreateISORequest() {
           title: 'Request Failed',
           description: getFriendlyErrorMessage(error)
         });
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: 'iso24Posts',
           operation: 'create',
           requestResourceData: isoData,
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+        }));
         setLoading(false);
       });
   };
@@ -90,27 +87,28 @@ export default function CreateISORequest() {
       <Navbar />
       <main className="container mx-auto px-4 py-12">
         <div className="max-w-2xl mx-auto">
-          <Link href="/iso24" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 font-black uppercase tracking-widest">
+          <Link href="/iso24" title="Back to ISO feed" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 font-black uppercase tracking-widest">
             <ArrowLeft className="w-4 h-4" /> Back to Feed
           </Link>
 
           <header className="mb-10 space-y-2">
-            <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase mb-2">
+            <div className="flex items-center gap-2 text-primary font-black tracking-widest text-[10px] uppercase mb-2">
               <Clock className="w-3 h-3" /> 24-Hour Active Search
             </div>
-            <h1 className="text-4xl font-headline font-black italic tracking-tighter uppercase leading-none">Post ISO Request</h1>
-            <p className="text-muted-foreground font-medium">What item are you hunting for today?</p>
+            <h1 className="text-4xl font-headline font-black italic tracking-tighter uppercase leading-none text-primary">Post ISO Request</h1>
+            <p className="text-muted-foreground font-medium italic">What item are you hunting for today?</p>
           </header>
 
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="title" className="text-[10px] font-black uppercase tracking-widest">Item Name</Label>
+                <Label htmlFor="iso-title-input" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Item Name</Label>
                 <Input 
-                  id="title" 
+                  id="iso-title-input" 
+                  name="title"
                   placeholder="e.g. 1978 Luke Skywalker Orange Hair Variant" 
                   required 
-                  className="h-14 rounded-2xl border-2 font-bold"
+                  className="h-14 rounded-2xl border-2 border-zinc-200 bg-white font-bold text-lg text-zinc-950 shadow-sm focus-visible:ring-primary placeholder:text-zinc-400"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
@@ -118,9 +116,9 @@ export default function CreateISORequest() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="category" className="text-[10px] font-black uppercase tracking-widest">Category</Label>
+                  <Label htmlFor="iso-category-select" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</Label>
                   <Select onValueChange={setCategory} value={category} required>
-                    <SelectTrigger className="h-14 rounded-2xl border-2 font-bold">
+                    <SelectTrigger className="h-14 rounded-xl border-2 border-zinc-200 bg-white font-black text-zinc-950 shadow-sm focus-visible:ring-primary" id="iso-category-select">
                       <SelectValue placeholder="Select Category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -131,13 +129,14 @@ export default function CreateISORequest() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="budget" className="text-[10px] font-black uppercase tracking-widest">Max Budget</Label>
+                  <Label htmlFor="iso-budget-input" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Max Budget</Label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black">$</span>
                     <Input 
-                      id="budget" 
+                      id="iso-budget-input" 
+                      name="budget"
                       type="number" 
-                      className="pl-8 h-14 rounded-2xl border-2 font-bold" 
+                      className="pl-8 h-14 rounded-2xl border-2 border-zinc-200 bg-white font-black text-lg text-zinc-950 shadow-sm focus-visible:ring-primary" 
                       placeholder="0.00" 
                       required 
                       value={budget}
@@ -148,11 +147,12 @@ export default function CreateISORequest() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-widest">Specific Requirements</Label>
+                <Label htmlFor="iso-description-textarea" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Specific Requirements</Label>
                 <Textarea 
-                  id="description" 
+                  id="iso-description-textarea" 
+                  name="description"
                   placeholder="Detail the condition, grading, or specific provenance you need..."
-                  className="min-h-[150px] rounded-2xl border-2 font-medium"
+                  className="min-h-[150px] rounded-2xl border-2 border-zinc-200 bg-white text-zinc-950 font-medium shadow-sm focus-visible:ring-primary placeholder:text-zinc-400"
                   required
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -160,10 +160,10 @@ export default function CreateISORequest() {
               </div>
             </div>
 
-            <div className="bg-accent/5 border-2 border-dashed border-accent/20 p-8 rounded-[2.5rem] flex gap-4">
-              <Info className="w-6 h-6 text-accent shrink-0 mt-1" />
+            <div className="bg-primary/5 border-2 border-dashed border-primary/20 p-8 rounded-[2.5rem] flex gap-4">
+              <Info className="w-6 h-6 text-primary shrink-0 mt-1" />
               <div className="text-xs space-y-2 leading-relaxed font-bold">
-                <p className="font-black text-accent uppercase tracking-widest">How it works</p>
+                <p className="font-black text-primary uppercase tracking-widest">How it works</p>
                 <p className="text-muted-foreground italic">Your request will be live for <span className="text-primary font-black">24 hours</span>. Sellers and other collectors will contact you directly via secure messaging. If you haven't found your item after a day, you can always repost your search.</p>
               </div>
             </div>
@@ -171,7 +171,7 @@ export default function CreateISORequest() {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full h-20 bg-red-600 dark:bg-red-600 text-white font-black text-2xl rounded-2xl shadow-2xl transition-all active:scale-95 uppercase italic tracking-tighter hover:bg-red-700 dark:hover:bg-red-700"
+              className="w-full h-20 bg-primary text-primary-foreground font-black text-2xl rounded-2xl shadow-2xl transition-all active:scale-95 uppercase italic tracking-tighter hover:bg-primary/90"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-3">

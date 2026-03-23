@@ -14,7 +14,7 @@ export function BottomNav() {
 
   const navItems = [
     { label: 'Home', href: '/', icon: Home },
-    { label: 'Catalog', href: '/listings', icon: ShoppingBag },
+    { label: 'Browse', href: '/listings', icon: ShoppingBag },
     { label: 'ISO24', href: '/iso24', icon: Search },
     { label: 'Chat', href: '/community-chat', icon: MessageSquare },
     { label: 'Hub', href: '/dashboard', icon: LayoutDashboard },

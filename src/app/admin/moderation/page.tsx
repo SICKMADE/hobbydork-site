@@ -1,55 +1,64 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ErrorBoundary } from './ErrorBoundary';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, ShieldAlert, Trash2, Check, X, Eye, AlertTriangle, Flag } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useUser, useFirestore, useCollection } from '@/firebase';
+import { Loader2, Trash2, Check, Eye, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 function ModerationDashboard() {
-  const { user } = useUser();
+  const { user: currentUser, isUserLoading: authLoading } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Check if user is admin
+  const profileRef = useMemoFirebase(() => currentUser && db ? doc(db, 'users', currentUser.uid) : null, [db, currentUser?.uid]);
+  const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
+
+  const isStaff = useMemo(() => {
+    if (!currentUser) return false;
+    if (profile?.role === 'ADMIN' || profile?.role === 'MODERATOR') return true;
+    if (currentUser.email?.toLowerCase().includes('admin')) return true;
+    if (currentUser.uid === 'admin-uid') return true;
+    return false;
+  }, [currentUser, profile]);
+
+  const isVerificationComplete = !authLoading && !profileLoading;
+
   useEffect(() => {
-    if (user?.email?.includes('admin') || user?.uid === 'admin-uid') {
-      setIsAdmin(true);
-    } else {
-      router.push('/');
+    if (isVerificationComplete && !isStaff) {
+      router.replace('/');
     }
-  }, [user, router]);
+  }, [isVerificationComplete, isStaff, router]);
 
-  // Fetch reported listings
   const reportsQuery = db
     ? query(collection(db, 'reports'), orderBy('timestamp', 'desc'))
     : null;
   const { data: reports, isLoading: reportsLoading } = useCollection(reportsQuery);
 
-  // Fetch flagged sellers
   const flaggedSellersQuery = db
     ? query(collection(db, 'users'), where('flags', '>', 0), orderBy('flags', 'desc'))
     : null;
   const { data: flaggedSellers, isLoading: sellersLoading } = useCollection(flaggedSellersQuery);
 
-  if (!isAdmin) {
+  if (!isVerificationComplete) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
+        <Loader2 className="w-10 h-10 animate-spin text-accent" />
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Authenticating Node...</p>
       </div>
     );
   }
+
+  if (!isStaff) return null;
 
   const handleRemoveListing = async (listingId: string, reportId: string) => {
     try {
@@ -84,6 +93,9 @@ function ModerationDashboard() {
       <Navbar />
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
+          <div className="flex items-center gap-2 text-red-600 font-black tracking-widest text-[10px] uppercase mb-2">
+            <ShieldAlert className="w-3 h-3" /> System Access
+          </div>
           <h1 className="text-4xl font-black text-primary uppercase tracking-tight mb-2">
             Moderation Dashboard
           </h1>
@@ -110,7 +122,7 @@ function ModerationDashboard() {
             ) : (
               <div className="grid gap-4">
                 {reports.map((report: any) => (
-                  <Card key={report.id} className="p-6 border shadow-sm rounded-2xl hover:shadow-md transition-shadow">
+                  <Card key={report.id} className="p-6 border shadow-sm rounded-2xl hover:shadow-md transition-all">
                     <div className="space-y-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-4 flex-1">
@@ -144,6 +156,8 @@ function ModerationDashboard() {
                           <Button
                             variant="outline"
                             size="sm"
+                            title="View target"
+                            aria-label="View target content"
                             className="gap-2 h-9 rounded-lg font-bold text-[10px] uppercase"
                             onClick={() => window.open(report.type === 'Listing' ? `/listings/${report.reportedId}` : `/orders/${report.reportedId}`)}
                           >
@@ -153,6 +167,8 @@ function ModerationDashboard() {
                             <Button
                               variant="destructive"
                               size="sm"
+                              title="Remove content"
+                              aria-label="Remove content"
                               className="gap-2 h-9 rounded-lg font-bold text-[10px] uppercase"
                               onClick={() => handleRemoveListing(report.reportedId, report.id)}
                             >
@@ -162,6 +178,8 @@ function ModerationDashboard() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            title="Resolve report"
+                            aria-label="Resolve report"
                             className="h-9 rounded-lg font-bold text-[10px] uppercase text-green-600 hover:bg-green-50"
                             onClick={() => handleResolveReport(report.id)}
                           >
@@ -203,7 +221,7 @@ function ModerationDashboard() {
                           </div>
                           <div className="text-right">
                             <p className="text-[10px] font-black uppercase text-red-600 tracking-widest">Violations</p>
-                            <p className="text-2xl font-black text-red-600">{seller.flags}</p>
+                            <p className="text-2xl font-black text-red-600">{seller.flags || 0}</p>
                           </div>
                         </div>
 
@@ -211,6 +229,8 @@ function ModerationDashboard() {
                           <Button
                             variant="outline"
                             size="sm"
+                            title="View store"
+                            aria-label="View store"
                             className="h-9 rounded-lg font-bold text-[10px] uppercase"
                             onClick={() => window.open(`/shop/${seller.username}`)}
                           >
@@ -219,6 +239,8 @@ function ModerationDashboard() {
                           <Button
                             variant="destructive"
                             size="sm"
+                            title="Suspend account"
+                            aria-label="Suspend account"
                             className="h-9 rounded-lg font-bold text-[10px] uppercase"
                             onClick={() => handleSuspendSeller(seller.id)}
                           >

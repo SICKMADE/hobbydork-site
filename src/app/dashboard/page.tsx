@@ -1,475 +1,536 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  PlusCircle, 
-  Copy, 
-  Loader2, 
-  Truck, 
-  Gift, 
+  LayoutDashboard, 
   Package, 
-  Settings,
+  Truck, 
+  TrendingUp, 
+  Medal, 
+  Settings, 
+  ChevronRight, 
+  Loader2, 
+  Zap, 
+  Wallet, 
+  Copy,
+  Clock,
+  CheckCircle2,
+  Terminal,
+  Activity,
+  BarChart3,
+  CreditCard,
+  Lock,
+  Cpu,
+  Ticket,
   Palette,
-  ShieldCheck,
-  Mail,
-  Wallet,
-  Medal,
-  Sparkles,
-  AlertCircle,
-  ShieldAlert
+  Heart,
+  Eye
 } from 'lucide-react';
-import Image from 'next/image';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { 
+  collection, 
+  query, 
+  orderBy, 
+  doc, 
+  updateDoc, 
+  limit,
+  where,
+  serverTimestamp,
+  getDocs
+} from 'firebase/firestore';
+import { httpsCallable, getFunctions } from 'firebase/functions';
 import Link from 'next/link';
+import Image from 'next/image';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection, query, where, orderBy, limit, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/firebase/client';
-import { getFriendlyErrorMessage } from '@/lib/friendlyError';
-import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import ListingCard from '@/components/ListingCard';
+import { TierBadge } from '@/components/TierBadge';
 
-function DashboardContent({ profile, user }: { profile: any, user: any }) {
+export default function Dashboard() {
   const { toast } = useToast();
+  const { user, isUserLoading: authLoading } = useUser();
   const db = useFirestore();
-  const [isPayoutHistoryOpen, setIsPayoutHistoryOpen] = useState(false);
-  const [isWithdrawalOpen, setIsWithdrawalOpen] = useState(false);
-  const [isLoadingPayouts, setIsLoadingPayouts] = useState(false);
-  const [isSubmittingWithdrawal, setIsSubmittingWithdrawal] = useState(false);
-  const [payoutHistory, setPayoutHistory] = useState<any[]>([]);
-  const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const functions = db ? getFunctions(db.app) : undefined;
+
+  const profileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
+  const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
+
+  // Queries
+  const ordersQuery = useMemoFirebase(() => user && db ? query(collection(db, 'orders'), where('buyerUid', '==', user.uid), orderBy('createdAt', 'desc')) : null, [db, user?.uid]);
+  const salesQuery = useMemoFirebase(() => user && db ? query(collection(db, 'orders'), where('sellerUid', '==', user.uid), orderBy('createdAt', 'desc')) : null, [db, user?.uid]);
+  const bountyEntriesQuery = useMemoFirebase(() => user && db ? query(collection(db, 'platformBountyEntries'), where('uid', '==', user.uid)) : null, [db, user?.uid]);
+  const watchlistQuery = useMemoFirebase(() => user && db ? query(collection(db, 'users', user.uid, 'watchlist'), orderBy('timestamp', 'desc')) : null, [db, user?.uid]);
+
+  const { data: orders, isLoading: ordersLoading } = useCollection(ordersQuery);
+  const { data: sales, isLoading: salesLoading } = useCollection(salesQuery);
+  const { data: bountyEntries } = useCollection(bountyEntriesQuery);
+  const { data: watchlist, isLoading: watchlistLoading } = useCollection(watchlistQuery);
+
   const [isCalculatingTier, setIsCalculatingTier] = useState(false);
+  const [isPayoutHistoryOpen, setIsPayoutHistoryOpen] = useState(false);
+  const [payoutHistory, setPayoutHistory] = useState<any[]>([]);
+  const [isLoadingPayouts, setIsLoadingPayouts] = useState(false);
 
-  const isSeller = profile?.isSeller && profile?.sellerStatus === 'APPROVED';
+  const isSeller = !!profile?.isSeller;
   const username = profile?.username || 'Collector';
-  const shopUrl = `hobbydork.com/shop/${username}`;
+  const shopUrl = `https://hobbydork.com/shop/${username}`;
 
-  const ordersQuery = useMemoFirebase(() => query(
-    collection(db!, 'orders'), 
-    where('buyerUid', '==', user.uid), 
-    orderBy('createdAt', 'desc'),
-    limit(20)
-  ), [db, user.uid]);
+  // Derived Stats
+  const lifetimeEarnings = useMemo(() => {
+    return sales?.filter(s => s.status === 'Delivered').reduce((acc, s) => acc + (s.price || 0), 0) || 0;
+  }, [sales]);
 
-  const salesQuery = useMemoFirebase(() => query(
-    collection(db!, 'orders'), 
-    where('sellerUid', '==', user.uid), 
-    orderBy('createdAt', 'desc'),
-    limit(20)
-  ), [db, user.uid]);
+  const pendingPayout = useMemo(() => {
+    return sales?.filter(s => s.status === 'Confirmed' || s.status === 'Shipped').reduce((acc, s) => acc + (s.price || 0), 0) || 0;
+  }, [sales]);
 
-  const { data: orders } = useCollection(ordersQuery);
-  const { data: sales } = useCollection(salesQuery);
-
-  const draftListingsQuery = useMemoFirebase(() => 
-    isSeller ? query(
-      collection(db!, 'listings'),
-      where('listingSellerId', '==', user.uid),
-      where('visibility', '==', 'Invisible'),
-      orderBy('createdAt', 'desc')
-    ) : null
-  , [db, user.uid, isSeller]);
-
-  const { data: draftListings } = useCollection(draftListingsQuery);
-
-  const completedSales = sales?.filter(s => ['Delivered', 'Shipped'].includes(s.status)) || [];
-  const lifetimeEarnings = completedSales.reduce((acc, s) => acc + (s.price || 0), 0);
-  const pendingPayout = completedSales.filter(s => s.status === 'Shipped').reduce((acc, s) => acc + (s.price || 0), 0);
-
-  const handleOpenPayoutHistory = async () => {
-    if (!profile?.stripeAccountId) {
-      toast({ variant: 'destructive', title: 'Stripe account not connected' });
-      return;
-    }
-
-    setIsLoadingPayouts(true);
-    setIsPayoutHistoryOpen(true);
-    try {
-      const getStripePayouts = httpsCallable(functions, 'getStripePayouts');
-      const result: any = await getStripePayouts({ accountId: profile.stripeAccountId });
-      setPayoutHistory(result?.data?.payouts || []);
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Failed to load payout history' });
-      setPayoutHistory([]);
-    } finally {
-      setIsLoadingPayouts(false);
-    }
-  };
-
-  const handleRequestWithdrawal = async () => {
-    const amount = Number(withdrawalAmount);
-    if (!db) return;
-
-    if (!amount || amount <= 0) {
-      toast({ variant: 'destructive', title: 'Enter a valid amount' });
-      return;
-    }
-
-    if (amount > pendingPayout) {
-      toast({ variant: 'destructive', title: 'Amount exceeds pending payout' });
-      return;
-    }
-
-    setIsSubmittingWithdrawal(true);
-    try {
-      await addDoc(collection(db, 'payoutRequests'), {
-        sellerUid: user.uid,
-        sellerUsername: username,
-        stripeAccountId: profile?.stripeAccountId || null,
-        amount,
-        status: 'PENDING',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+  // Chart Data Simulation (Mocking last 7 days of sales)
+  const chartData = useMemo(() => {
+    const data = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const dailySales = sales?.filter(s => {
+        const sDate = s.createdAt?.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
+        return sDate.toDateString() === d.toDateString();
       });
-
-      setWithdrawalAmount('');
-      setIsWithdrawalOpen(false);
-      toast({ title: 'Withdrawal request submitted' });
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Could not submit withdrawal request', description: 'Please try again.' });
-    } finally {
-      setIsSubmittingWithdrawal(false);
+      data.push({
+        date: dateStr,
+        revenue: dailySales?.reduce((acc, s) => acc + (s.price || 0), 0) || 0
+      });
     }
-  };
+    return data;
+  }, [sales]);
 
   const handleCalculateTier = async () => {
+    if (!functions) return;
     setIsCalculatingTier(true);
     try {
-      const calculateSellerTier = httpsCallable(functions, 'calculateSellerTier');
-      const result: any = await calculateSellerTier({});
-      toast({ title: `Tier Updated: ${result.data.tier}`, description: `You are now tier ${result.data.tier}!` });
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Tier Update Failed', description: getFriendlyErrorMessage(error) });
+      const calculateTier = httpsCallable(functions, 'calculateSellerTier');
+      await calculateTier({});
+      toast({ title: "Tier Updated", description: "Seller performance metrics synchronized." });
+    } catch (e) {
+      toast({ variant: 'destructive', title: "Update Failed" });
     } finally {
       setIsCalculatingTier(false);
     }
   };
 
-  return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-headline font-black uppercase tracking-tight italic">Dashboard</h1>
-          <p className="text-sm text-muted-foreground font-medium">@{username}</p>
-        </div>
-        
-        {isSeller && (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-lg w-full sm:w-auto overflow-hidden">
-              <code className="text-[11px] font-mono font-bold text-muted-foreground truncate">{shopUrl}</code>
-              <Button variant="ghost" size="icon" onClick={() => {navigator.clipboard.writeText(shopUrl); toast({title: 'Copied!'})}} className="h-7 w-7 hover:bg-accent/10 shrink-0">
-                <Copy className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button asChild variant="ghost" size="sm" className="h-7 px-3 text-[10px] font-bold uppercase hover:bg-accent/10 flex-1 sm:flex-initial">
-                <Link href={`/shop/${username}`}>View</Link>
-              </Button>
-              <Button asChild size="sm" className="h-7 px-3 text-[10px] font-bold uppercase gap-1 flex-1 sm:flex-initial">
-                <Link href="/seller/settings"><Palette className="w-3 h-3" />Edit</Link>
-              </Button>
-            </div>
-          </div>
-        )}
+  const handleOpenPayoutHistory = async () => {
+    if (!functions || !profile?.stripeAccountId) {
+      toast({ title: "Identity Required", description: "Complete Stripe onboarding to view payouts." });
+      return;
+    }
+    setIsPayoutHistoryOpen(true);
+    setIsLoadingPayouts(true);
+    try {
+      const getPayouts = httpsCallable(functions, 'getStripePayouts');
+      const result: any = await getPayouts({ accountId: profile.stripeAccountId });
+      setPayoutHistory(result.data.payouts || []);
+    } catch (e) {
+      toast({ variant: 'destructive', title: "Query Failed" });
+    } finally {
+      setIsLoadingPayouts(false);
+    }
+  };
+
+  if (authLoading || profileLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-accent" />
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading Dashboard...</p>
       </div>
+    );
+  }
 
-      <Tabs defaultValue="collector" className="w-full">
-        <TabsList className="dashboard-tabs bg-muted p-1 h-14 rounded-xl px-2 mb-8 flex-nowrap overflow-x-auto justify-start md:justify-center scrollbar-hide hidden sm:flex">
-          <TabsTrigger value="collector" className="rounded-lg px-8 h-10 font-bold shrink-0">Collector Hub</TabsTrigger>
-          {isSeller && <TabsTrigger value="dealer" className="rounded-lg px-8 h-10 font-bold shrink-0">Seller Hub</TabsTrigger>}
-          {isSeller && <TabsTrigger value="sales" className="rounded-lg px-8 h-10 font-bold shrink-0">Sales & Shipping</TabsTrigger>}
-          {isSeller && <TabsTrigger value="payouts" className="rounded-lg px-8 h-10 font-bold shrink-0">Payouts</TabsTrigger>}
-        </TabsList>
+  if (!user) return null;
 
-        <TabsContent value="collector" className="space-y-10">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="p-5 rounded-xl border bg-gradient-to-br from-card to-card/50">
-              <p className="text-[9px] font-black uppercase text-muted-foreground tracking-wider mb-2">Purchased</p>
-              <h3 className="text-2xl font-black">{orders?.length || 0}</h3>
-            </Card>
-            <Card className="p-5 rounded-xl border bg-gradient-to-br from-card to-card/50">
-              <p className="text-[9px] font-black uppercase text-muted-foreground tracking-wider mb-2">In Transit</p>
-              <h3 className="text-2xl font-black">{orders?.filter(o => o.status !== 'Delivered').length || 0}</h3>
-            </Card>
-            <Card className="p-5 rounded-xl border bg-gradient-to-br from-card to-card/50">
-              <p className="text-[9px] font-black uppercase text-muted-foreground tracking-wider mb-2">Total Spent</p>
-              <h3 className="text-2xl font-black">${orders?.reduce((acc, o) => acc + (o.price || 0), 0).toLocaleString()}</h3>
-            </Card>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Truck className="w-5 h-5 text-accent" />
-              <h2 className="text-lg font-black uppercase tracking-tight">Recent Orders</h2>
+  return (
+    <div className="min-h-screen bg-background text-foreground pb-20">
+      <Navbar />
+      <main className="container mx-auto px-4 py-6 md:py-10 max-w-7xl space-y-8 animate-in fade-in duration-500">
+        
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-border/50">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 text-accent font-black tracking-widest text-[8px] uppercase bg-accent/5 px-2 py-0.5 rounded-full border border-accent/10">
+                <Terminal className="w-2.5 h-2.5" /> USER_ID: {user.uid.substring(0, 8).toUpperCase()}
+              </div>
+              <Badge variant="outline" className="rounded-full border-accent text-accent font-black uppercase text-[7px] tracking-widest px-2 h-5">
+                ROLE: {isSeller ? 'SELLER' : 'COLLECTOR'}
+              </Badge>
             </div>
-            <div className="space-y-3">
-              {orders && orders.length > 0 ? orders.map(order => (
-                <Card key={order.id} className="p-4 flex items-center gap-4 rounded-xl border hover:border-accent/50 transition-colors">
-                  <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-muted border">
-                    {order.imageUrl ? <Image src={order.imageUrl} alt={order.listingTitle} fill className="object-cover" /> : <Package className="w-5 h-5 m-auto opacity-20" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <Badge variant="outline" className="mb-1 text-[9px] font-black uppercase">{order.status}</Badge>
-                    <h4 className="font-bold text-sm truncate">{order.listingTitle}</h4>
-                  </div>
-                  <Button asChild variant="outline" size="sm" className="rounded-lg font-bold h-8 px-3 text-[10px] uppercase shrink-0">
-                    <Link href={`/orders/${order.id}`}>Track</Link>
-                  </Button>
-                </Card>
-              )) : (
-                <Card className="p-10 text-center border-2 border-dashed rounded-xl">
-                  <Package className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm font-bold text-muted-foreground">No orders yet</p>
-                </Card>
-              )}
+            <div className="space-y-0.5">
+              <h1 className="text-2xl md:text-4xl font-headline font-black uppercase tracking-tighter italic leading-none">Collector Dashboard</h1>
+              <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Signed in as: <span className="text-primary">@{username}</span></p>
             </div>
           </div>
-        </TabsContent>
+          
+          {isSeller && (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="flex items-center gap-2 bg-muted/50 dark:bg-zinc-900/50 px-3 py-1.5 rounded-xl border border-border shadow-inner">
+                <code className="text-[9px] font-mono font-bold text-muted-foreground truncate max-w-[140px]">{shopUrl}</code>
+                <button 
+                  title="Copy shop URL"
+                  onClick={() => {navigator.clipboard.writeText(shopUrl); toast({title: 'URL Copied!'})}} 
+                  className="p-1 hover:bg-primary/10 rounded transition-colors shrink-0"
+                >
+                  <Copy className="w-2.5 h-2.5" />
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button asChild variant="outline" className="h-9 px-4 rounded-lg font-black uppercase text-[8px] tracking-widest border-2 flex-1 sm:flex-initial">
+                  <Link href={`/shop/${username}`}>View My Shop</Link>
+                </Button>
+                <Button asChild className="h-9 px-4 rounded-lg font-black uppercase text-[8px] tracking-widest gap-1.5 flex-1 sm:flex-initial bg-primary text-primary-foreground">
+                  <Link href="/seller/settings"><Palette className="w-3.5 h-3.5" />Settings</Link>
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
 
-        {isSeller && (
-          <TabsContent value="dealer" className="space-y-10">
+        {/* Action Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {!isSeller ? (
+            <Card className="relative overflow-hidden bg-zinc-950 border-2 border-zinc-800 rounded-[1.5rem] p-6 shadow-xl group transition-all hover:scale-[1.005]">
+              <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-4 text-center sm:text-left">
+                  <div className="bg-zinc-900 border border-red-600/50 text-red-600 p-3 rounded-2xl">
+                    <Lock className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-headline font-black uppercase italic text-white leading-none">Become a Seller</h3>
+                    <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-tight">Complete your profile to start listing items in the marketplace.</p>
+                  </div>
+                </div>
+                <Button asChild className="h-10 px-6 bg-white text-zinc-950 hover:bg-zinc-200 font-black uppercase rounded-xl shadow-lg w-full sm:w-auto text-[9px] gap-1.5 shrink-0">
+                  <Link href="/seller/onboarding">Start Selling <ChevronRight className="w-3.5 h-3.5" /></Link>
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <Card className="relative overflow-hidden bg-zinc-950 border-2 border-zinc-800 rounded-[1.5rem] p-6 shadow-xl group transition-all hover:scale-[1.005]">
+              <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-4 text-center sm:text-left">
+                  <div className="bg-accent text-white p-3 rounded-2xl shadow-lg">
+                    <Zap className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-headline font-black uppercase italic text-white leading-none">Active Bounties</h3>
+                    <div className="flex items-center justify-center sm:justify-start gap-2">
+                      <span className="text-[8px] font-black uppercase text-zinc-500">Tickets:</span>
+                      <span className="text-sm font-mono font-black text-accent">{String(bountyEntries?.length || 0).padStart(3, '0')}</span>
+                    </div>
+                  </div>
+                </div>
+                <Button asChild className="h-10 px-6 bg-accent text-white hover:bg-accent/90 font-black uppercase rounded-xl shadow-lg w-full sm:w-auto text-[9px] gap-1.5 border border-white/10 shrink-0">
+                  <Link href="/viral-bounty">Join Drops <ChevronRight className="w-3.5 h-3.5" /></Link>
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          <Card className="relative overflow-hidden bg-card border-2 border-zinc-100 dark:border-white/5 rounded-[1.5rem] p-6 shadow-lg group transition-all hover:border-accent/20">
+            <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4 text-center sm:text-left">
+                <div className="bg-muted p-3 rounded-2xl border border-border">
+                  <BarChart3 className="w-6 h-6 text-primary" />
+                </div>
+                <div className="space-y-0.5">
+                  <h3 className="text-lg font-headline font-black uppercase italic text-primary dark:text-white leading-none">AI Price Check</h3>
+                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight">On-demand market valuation tool.</p>
+                </div>
+              </div>
+              <Button asChild variant="outline" className="h-10 px-6 border-2 rounded-xl font-black uppercase text-[9px] w-full sm:w-auto shrink-0">
+                <Link href="/tools/price-check">Run Analysis</Link>
+              </Button>
+            </div>
+          </Card>
+        </div>
+
+        {/* Tab Modules */}
+        <Tabs defaultValue="orders" className="w-full">
+          <TabsList className="bg-muted p-1 h-12 rounded-xl px-1.5 mb-8 flex-nowrap overflow-x-auto justify-start md:justify-center scrollbar-hide flex border border-border/50">
+            <TabsTrigger value="orders" className="rounded-lg px-6 h-full font-black uppercase text-[9px] tracking-widest">My Orders</TabsTrigger>
+            <TabsTrigger value="watchlist" className="rounded-lg px-6 h-full font-black uppercase text-[9px] tracking-widest">Watchlist</TabsTrigger>
+            {isSeller && <TabsTrigger value="stats" className="rounded-lg px-6 h-full font-black uppercase text-[9px] tracking-widest">Seller Stats</TabsTrigger>}
+            {isSeller && <TabsTrigger value="sales" className="rounded-lg px-6 h-full font-black uppercase text-[9px] tracking-widest">My Sales</TabsTrigger>}
+            {isSeller && <TabsTrigger value="payouts" className="rounded-lg px-6 h-full font-black uppercase text-[9px] tracking-widest">Earnings</TabsTrigger>}
+          </TabsList>
+
+          <TabsContent value="orders" className="space-y-10">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                { label: 'ITEMS PURCHASED', val: orders?.length || 0, icon: Package },
+                { label: 'PENDING DELIVERY', val: orders?.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled').length || 0, icon: Truck },
+                { label: 'WATCHING', val: watchlist?.length || 0, icon: Eye }
+              ].map((box, i) => (
+                <Card key={i} className="p-6 rounded-2xl border bg-card shadow-sm hover:border-accent/20 transition-all">
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">{box.label}</p>
+                    <box.icon className="w-4 h-4 opacity-30" />
+                  </div>
+                  <h3 className="text-3xl font-headline font-black italic tracking-tighter">{box.val}</h3>
+                </Card>
+              ))}
+            </div>
+
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Medal className="w-5 h-5 text-accent" />
-                <h2 className="text-lg font-black uppercase tracking-tight">Seller Status</h2>
+                <Package className="w-4 h-4 text-accent" />
+                <h2 className="text-xl font-headline font-black uppercase tracking-tight italic">Order History</h2>
               </div>
-              
-              <Card className="p-4 sm:p-6 rounded-xl border bg-gradient-to-br from-accent/5 to-transparent">
-                <div className="flex items-start justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-                  <div>
-                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-1">Current Tier</p>
-                    <p className="text-3xl sm:text-4xl font-headline font-black italic">{profile?.sellerTier || 'Bronze'}</p>
-                  </div>
-                  <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-accent/20" />
-                </div>
-                
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-                  <div>
-                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Sales</p>
-                    <p className="text-xl sm:text-2xl font-black">{profile?.completedOrders || 0}</p>
-                  </div>
-                  <div className="col-span-2 sm:col-span-1">
-                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">On-Time Rate</p>
-                    <p className="text-xl sm:text-2xl font-black text-green-600">
-                      {profile?.onTimeShippingRate ? Math.round(profile.onTimeShippingRate * 100) : 100}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Late (30d)</p>
-                    <p className={`text-xl sm:text-2xl font-black ${
-                      (profile?.lateShipmentsLast30d || 0) > 0 ? 'text-red-600' : 'text-green-600'
-                    }`}>{profile?.lateShipmentsLast30d || 0}</p>
-                  </div>
-                </div>
-                
-                <div className="pt-4 border-t">
-                  <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-3">Tier Levels</p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {['Bronze', 'Silver', 'Gold', 'Platinum'].map(tier => (
-                      <div key={tier} className={`p-3 rounded-lg border ${
-                        profile?.sellerTier === tier ? 'bg-accent/10 border-accent' : 'bg-muted/30 border-muted'
-                      }`}>
-                        <p className="font-bold text-sm mb-1">{tier}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-
-              <Button 
-                onClick={handleCalculateTier} 
-                disabled={isCalculatingTier}
-                className="w-full font-bold h-10 rounded-lg text-[10px] uppercase gap-2 bg-red-600 hover:bg-red-700 text-white"
-              >
-                {isCalculatingTier ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                {isCalculatingTier ? 'Calculating...' : 'Refresh Tier'}
-              </Button>
-            </div>
-
-            {draftListings && draftListings.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Package className="w-5 h-5 text-muted-foreground" />
-                    <h2 className="text-lg font-black uppercase tracking-tight">Invisible Listings</h2>
-                  </div>
-                  <Badge variant="secondary" className="font-black uppercase text-[9px]">
-                    {draftListings.length}
-                  </Badge>
-                </div>
-                <div className="space-y-3">
-                  {draftListings.map(listing => (
-                    <Card key={listing.id} className="p-4 flex items-center gap-4 rounded-xl border hover:border-accent/50 transition-colors">
-                      <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-muted border">
-                        {listing.imageUrl ? <Image src={listing.imageUrl} alt={listing.title} fill className="object-cover" /> : <Package className="w-5 h-5 m-auto opacity-20" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline" className="text-[9px] font-black uppercase">
-                            {listing.visibility}
-                          </Badge>
-                        </div>
-                        <h4 className="font-bold text-sm truncate">{listing.title}</h4>
-                        <p className="text-xs text-muted-foreground font-medium">${listing.price?.toLocaleString()}</p>
-                      </div>
-                      <Button asChild size="sm" className="rounded-lg font-bold h-8 px-3 text-[10px] uppercase shrink-0">
-                        <Link href={`/listings/${listing.id}/edit`}>Edit</Link>
-                      </Button>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-          </TabsContent>
-        )}
-
-        {isSeller && (
-          <TabsContent value="sales" className="space-y-10">
-            <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <Package className="w-5 h-5 text-accent" />
-                <h2 className="text-lg font-black uppercase tracking-tight">Sales & Shipping</h2>
-              </div>
-
-              <div className="space-y-3">
-                {sales && sales.length > 0 ? sales.map(sale => (
-                  <Card key={sale.id} className="p-4 flex items-center gap-4 rounded-xl border hover:border-accent/50 transition-colors">
+              <div className="grid grid-cols-1 gap-3">
+                {ordersLoading ? (
+                  <div className="flex justify-center py-12"><Loader2 className="animate-spin text-accent" /></div>
+                ) : orders && orders.length > 0 ? orders.map(order => (
+                  <Card key={order.id} className="p-4 flex flex-col sm:flex-row items-center gap-4 rounded-xl border hover:border-accent transition-all bg-card shadow-sm">
                     <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-muted border">
-                      {sale.imageUrl ? <Image src={sale.imageUrl} alt={sale.listingTitle} fill className="object-cover" /> : <Package className="w-5 h-5 m-auto opacity-20" />}
+                      {order.imageUrl ? (
+                        <Image src={order.imageUrl} alt={order.listingTitle} fill className="object-cover" />
+                      ) : (
+                        <Package className="w-5 h-5 m-auto opacity-20" />
+                      )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="outline" className="text-[9px] font-black uppercase">{sale.status}</Badge>
-                        <span className="text-[9px] font-bold text-muted-foreground uppercase">@{sale.buyerName || 'Collector'}</span>
-                      </div>
-                      <h4 className="font-bold text-sm truncate">{sale.listingTitle}</h4>
+                    <div className="flex-1 min-w-0 text-center sm:text-left">
+                      <Badge variant="outline" className="mb-1 text-[7px] font-black uppercase border-accent text-accent tracking-widest h-4 px-2">
+                        {order.status || 'Confirmed'}
+                      </Badge>
+                      <h4 className="font-black text-sm truncate uppercase tracking-tight italic leading-tight">{order.listingTitle}</h4>
+                      <p className="text-[8px] font-bold text-zinc-400 mt-0.5 uppercase">ID: #{order.id.substring(0, 12).toUpperCase()}</p>
                     </div>
-                    <Button asChild size="sm" className="rounded-lg font-bold h-8 px-3 text-[10px] uppercase shrink-0">
-                      <Link href={`/orders/${sale.id}`}>Manage</Link>
+                    <Button asChild variant="outline" className="rounded-lg font-black h-9 px-6 text-[8px] uppercase shrink-0 border-2 hover:bg-primary hover:text-white transition-all w-full sm:w-auto">
+                      <Link href={`/orders/${order.id}`}>Track Item</Link>
                     </Button>
                   </Card>
                 )) : (
-                  <Card className="p-10 text-center border-2 border-dashed rounded-xl">
-                    <Package className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm font-bold text-muted-foreground">No sales yet</p>
+                  <Card className="p-16 text-center border-2 border-dashed rounded-[2rem] bg-zinc-50/50 dark:bg-white/5">
+                    <Package className="w-10 h-10 mx-auto mb-4 opacity-10" />
+                    <p className="text-xs font-black text-zinc-300 uppercase tracking-widest">No orders found.</p>
                   </Card>
                 )}
               </div>
             </div>
           </TabsContent>
-        )}
 
-        {isSeller && (
-          <TabsContent value="payouts" className="space-y-10">
-            <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-accent" />
-                <h2 className="text-lg font-black uppercase tracking-tight">Earnings</h2>
+          <TabsContent value="watchlist" className="space-y-6">
+            <div className="flex items-center gap-2 mb-6">
+              <Heart className="w-4 h-4 text-accent fill-current" />
+              <h2 className="text-xl font-headline font-black uppercase tracking-tight italic">My Watchlist</h2>
+            </div>
+            
+            {watchlistLoading ? (
+              <div className="flex justify-center py-20"><Loader2 className="animate-spin text-accent" /></div>
+            ) : !watchlist || watchlist.length === 0 ? (
+              <Card className="p-20 text-center border-2 border-dashed rounded-[2rem] bg-zinc-50/50 dark:bg-white/5">
+                <Heart className="w-10 h-10 mx-auto mb-4 opacity-10" />
+                <p className="text-xs font-black text-zinc-300 uppercase tracking-widest mb-4">You aren't watching any items yet.</p>
+                <Button asChild variant="outline" className="rounded-xl border-2 font-black uppercase text-[10px]">
+                  <Link href="/listings">Browse Listings</Link>
+                </Button>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
+                {watchlist.map(item => (
+                  <ListingCard 
+                    key={item.id} 
+                    listing={{
+                      id: item.listingId || item.id,
+                      title: item.title,
+                      price: item.price,
+                      imageUrl: item.imageUrl || '',
+                      seller: 'Dealer',
+                      category: 'Collectible',
+                      status: 'Active',
+                      type: 'Buy It Now',
+                      tags: [],
+                      createdAt: item.timestamp,
+                      listingSellerId: ''
+                    } as any} 
+                  />
+                ))}
               </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <Card className="p-6 rounded-xl border bg-gradient-to-br from-card to-card/50">
-                  <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Lifetime</p>
-                  <p className="text-3xl font-black text-accent">${lifetimeEarnings.toFixed(2)}</p>
-                </Card>
-                <Card className="p-6 rounded-xl border bg-gradient-to-br from-card to-card/50">
-                  <p className="text-xs font-black uppercase text-muted-foreground tracking-wider mb-2">Pending</p>
-                  <p className="text-3xl font-black text-accent">${pendingPayout.toFixed(2)}</p>
-                </Card>
-              </div>
+            )}
+          </TabsContent>
 
-              <Card className="p-6 rounded-xl border space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-black uppercase text-base tracking-wider text-primary mb-1">Stripe Connect</h3>
-                    <p className="text-sm text-muted-foreground font-medium">Manage payouts</p>
+          {isSeller && (
+            <TabsContent value="stats" className="space-y-10">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Heart className="w-4 h-4 text-red-600 fill-red-600" />
+                    <h2 className="text-xl font-headline font-black uppercase tracking-tight italic">Node Health</h2>
                   </div>
-                  <Badge className="bg-green-100 text-green-700 font-black uppercase text-xs">Connected</Badge>
+                  <Card className="p-8 rounded-[2rem] border-2 bg-card shadow-xl relative overflow-hidden">
+                    <div className="relative z-10 space-y-8">
+                      <div>
+                        <p className="text-[8px] font-black uppercase text-zinc-400 tracking-[0.2em] mb-1.5">CURRENT_LIFE</p>
+                        <TierBadge tier={profile?.sellerTier} className="scale-150 origin-left border-none shadow-none bg-transparent" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-6 border-t pt-6">
+                        <div>
+                          <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest mb-0.5">ON_TIME_RATE</p>
+                          <p className="text-2xl font-black text-green-600 tracking-tighter">{profile?.onTimeShippingRate ? Math.round(profile.onTimeShippingRate * 100) : 100}%</p>
+                        </div>
+                        <div>
+                          <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest mb-0.5">LATE_SHIPMENTS</p>
+                          <p className={cn("text-2xl font-black tracking-tighter", (profile?.lateShipmentsLast30d || 0) > 0 ? "text-red-600" : "text-green-600")}>{profile?.lateShipmentsLast30d || 0}</p>
+                        </div>
+                      </div>
+                      <Button onClick={handleCalculateTier} disabled={isCalculatingTier} className="w-full h-12 rounded-xl text-[9px] font-black uppercase tracking-widest gap-2 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-lg">
+                        {isCalculatingTier ? <Loader2 className="animate-spin" /> : <TrendingUp className="w-4 h-4" />} Restore Health Protocol
+                      </Button>
+                    </div>
+                  </Card>
                 </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" className="flex-1" onClick={handleOpenPayoutHistory}>History</Button>
-                  <Button className="flex-1" onClick={() => setIsWithdrawalOpen(true)}>Withdraw</Button>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-zinc-900" />
+                    <h2 className="text-xl font-headline font-black uppercase tracking-tight italic">Sales Activity</h2>
+                  </div>
+                  <Card className="p-6 h-[320px] rounded-[2rem] border shadow-lg flex flex-col">
+                    <div className="flex-1 w-full mt-2">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                          <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 8, fontWeight: '900', fill: '#999'}} />
+                          <YAxis hide />
+                          <Tooltip contentStyle={{borderRadius: '12px', border: '2px solid #000', backgroundColor: '#fff', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase'}} />
+                          <Line type="stepAfter" dataKey="revenue" stroke="#DC2626" strokeWidth={4} dot={{r: 4, fill: '#DC2626', strokeWidth: 2, stroke: '#fff'}} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="pt-4 border-t mt-auto flex items-center justify-between">
+                      <p className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em]">DAILY REVENUE (7 DAYS)</p>
+                      <Badge className="bg-zinc-100 dark:bg-zinc-800 text-zinc-950 dark:text-white border-none font-black text-[8px] uppercase">LATEST</Badge>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
+          )}
+
+          {isSeller && (
+            <TabsContent value="sales" className="space-y-10">
+              <div className="grid gap-3">
+                {salesLoading ? (
+                  <div className="flex justify-center py-12"><Loader2 className="animate-spin text-accent" /></div>
+                ) : sales && sales.length > 0 ? sales.map(sale => (
+                  <Card key={sale.id} className="p-4 flex flex-col sm:flex-row items-center gap-4 rounded-xl border shadow-sm">
+                    <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-muted border">
+                      {sale.imageUrl ? (
+                        <Image src={sale.imageUrl} alt={sale.listingTitle} fill className="object-cover" />
+                      ) : (
+                        <Package className="w-5 h-5 m-auto opacity-20" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 text-center sm:text-left">
+                      <Badge variant="outline" className="mb-1 text-[7px] font-black uppercase border-accent text-accent tracking-widest h-4 px-2">
+                        {sale.status}
+                      </Badge>
+                      <h4 className="font-black text-sm truncate uppercase tracking-tight italic leading-tight">{sale.listingTitle}</h4>
+                      <p className="text-[8px] font-bold text-zinc-400 mt-0.5 uppercase">Order ID: #{sale.id.substring(0, 8).toUpperCase()}</p>
+                    </div>
+                    <Button asChild size="sm" className="rounded-lg font-black h-10 px-6 text-[8px] uppercase shrink-0 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 transition-all shadow-md w-full sm:w-auto">
+                      <Link href={`/orders/${sale.id}`}>Manage Fulfillment</Link>
+                    </Button>
+                  </Card>
+                )) : (
+                  <Card className="p-16 text-center border-2 border-dashed rounded-[2rem] bg-zinc-50/50 dark:bg-white/5">
+                    <Cpu className="w-10 h-10 mx-auto mb-4 opacity-10" />
+                    <p className="text-xs font-black text-zinc-300 uppercase tracking-widest">No active sales.</p>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
+          )}
+
+          {isSeller && (
+            <TabsContent value="payouts" className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="p-8 rounded-[2rem] border bg-card shadow-lg relative group overflow-hidden">
+                  <p className="text-[8px] font-black uppercase text-muted-foreground tracking-[0.2em] mb-1">TOTAL REVENUE</p>
+                  <p className="text-4xl font-headline font-black text-primary dark:text-white italic tracking-tighter">${lifetimeEarnings.toFixed(2)}</p>
+                </Card>
+                <Card className="p-8 rounded-[2rem] border bg-card shadow-lg relative group overflow-hidden">
+                  <p className="text-[8px] font-black uppercase text-muted-foreground tracking-[0.2em] mb-1">PENDING PAYOUT</p>
+                  <p className="text-4xl font-headline font-black text-accent italic tracking-tighter">${pendingPayout.toFixed(2)}</p>
+                </Card>
+              </div>
+              
+              <Card className="relative overflow-hidden bg-zinc-950 text-white p-8 rounded-[2rem] border-none shadow-xl">
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+                  <div className="space-y-2 text-center md:text-left">
+                    <div className="flex items-center justify-center md:justify-start gap-2">
+                      <CreditCard className="w-4 h-4 text-[#635BFF]" />
+                      <h3 className="text-xl font-headline font-black uppercase italic tracking-tight">Stripe Payouts</h3>
+                    </div>
+                    <p className="text-zinc-400 font-medium italic text-[10px] max-w-sm">Secure payment infrastructure via Stripe Connect. Payouts are handled according to platform policy.</p>
+                  </div>
+                  <Button 
+                    onClick={handleOpenPayoutHistory} 
+                    className="w-full md:w-auto h-12 px-8 rounded-xl font-black uppercase tracking-widest text-[9px] bg-white text-zinc-950 hover:bg-zinc-200 shadow-lg border-none shrink-0"
+                  >
+                    View Payout History
+                  </Button>
                 </div>
               </Card>
+            </TabsContent>
+          )}
+        </Tabs>
+
+        {/* Payout History Dialog */}
+        <Dialog open={isPayoutHistoryOpen} onOpenChange={setIsPayoutHistoryOpen}>
+          <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-zinc-950">
+            <div className="bg-zinc-950 p-8 text-white border-b border-white/10">
+              <DialogTitle className="text-2xl font-headline font-black uppercase italic tracking-tighter">Transaction Ledger</DialogTitle>
             </div>
-          </TabsContent>
-        )}
-      </Tabs>
-
-      <Dialog open={isPayoutHistoryOpen} onOpenChange={setIsPayoutHistoryOpen}>
-        <DialogContent className="sm:max-w-[540px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-black uppercase">Payout History</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 max-h-[400px] overflow-y-auto">
-            {isLoadingPayouts ? (
-              <Loader2 className="w-5 h-5 animate-spin mx-auto" />
-            ) : payoutHistory.length === 0 ? (
-              <p className="text-center text-muted-foreground">No history yet</p>
-            ) : (
-              payoutHistory.map((payout) => (
-                <div key={payout.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <p className="text-sm font-black text-accent">${(payout.amount / 100).toFixed(2)}</p>
-                  <Badge variant="outline" className="text-[8px] font-black uppercase">{payout.status}</Badge>
+            <div className="p-6 space-y-2 max-h-[400px] overflow-y-auto scrollbar-hide">
+              {isLoadingPayouts ? (
+                <div className="py-16 text-center space-y-3">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-accent" />
+                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest">Fetching Stripe Records...</p>
                 </div>
-              ))
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isWithdrawalOpen} onOpenChange={setIsWithdrawalOpen}>
-        <DialogContent className="sm:max-w-[440px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-black uppercase">Withdraw Funds</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              type="number"
-              value={withdrawalAmount}
-              onChange={(e) => setWithdrawalAmount(e.target.value)}
-              placeholder="Amount"
-            />
-            <Button className="w-full" onClick={handleRequestWithdrawal} disabled={isSubmittingWithdrawal}>
-              {isSubmittingWithdrawal ? 'Submitting...' : 'Submit Request'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-export default function Dashboard() {
-  const router = useRouter();
-  const { user, isUserLoading: authLoading } = useUser();
-  const db = useFirestore();
-
-  const profileRef = useMemoFirebase(() => user && db ? doc(db, 'users', user.uid) : null, [db, user?.uid]);
-  const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
-
-  const isVerificationComplete = !authLoading && !profileLoading;
-
-  useEffect(() => {
-    if (!isVerificationComplete) return;
-    if (!user) router.push('/login');
-    else if (!user.emailVerified) router.push('/verify-email');
-    else if (!profile?.username) router.push('/onboarding');
-  }, [user, profile, isVerificationComplete, router]);
-
-  if (!isVerificationComplete) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
-  if (!user || !profile || !user.emailVerified) return null;
-
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Navbar />
-      <main className="container mx-auto px-4 py-8">
-        <DashboardContent profile={profile} user={user} />
+              ) : payoutHistory.length === 0 ? (
+                <div className="py-16 text-center bg-white/5 rounded-[1.5rem] border-2 border-dashed border-white/10">
+                  <p className="text-zinc-500 font-black uppercase text-[9px] tracking-widest">No records found.</p>
+                </div>
+              ) : (
+                payoutHistory.map((payout) => (
+                  <div key={payout.id} className="flex items-center justify-between p-4 border border-white/5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                    <div className="space-y-0.5">
+                      <p className="text-xl font-black text-white tracking-tighter">${(payout.amount / 100).toFixed(2)}</p>
+                      <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">ID: {payout.id.substring(0, 12).toUpperCase()}</p>
+                    </div>
+                    <Badge className="bg-green-600/20 text-green-500 border border-green-600/30 text-[8px] font-black uppercase tracking-widest px-3 h-6 rounded-full">
+                      {payout.status}
+                    </Badge>
+                  </div>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

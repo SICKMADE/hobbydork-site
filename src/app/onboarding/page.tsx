@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth } from '@/firebase';
-import { doc, setDoc, serverTimestamp, getDoc, writeBatch } from 'firebase/firestore';
+import { doc, serverTimestamp, getDoc, writeBatch } from 'firebase/firestore';
 import { reload } from 'firebase/auth';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { filterProfanity } from '@/lib/utils';
+import { filterProfanity, getRandomAvatar } from '@/lib/utils';
+import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
 export default function Onboarding() {
   const { user, isUserLoading: authLoading } = useUser();
@@ -30,11 +32,13 @@ export default function Onboarding() {
       if (!user || !db || !auth) return;
 
       try {
-        await reload(user);
+        // CRITICAL SYNC: Ensure we have latest verification status to catch link clicks
+        await reload(user).catch(() => {});
       } catch (e) {
-        console.error("Auth reload failed", e);
+        console.warn("User status reload failed", e);
       }
 
+      // Gate: Must be verified to pick a handle
       if (!auth.currentUser?.emailVerified) {
         router.push('/verify-email');
         return;
@@ -43,6 +47,7 @@ export default function Onboarding() {
       try {
         const docRef = doc(db, 'users', user.uid);
         const docSnap = await getDoc(docRef);
+        // If identity manifest already exists, skip to hub
         if (docSnap.exists() && docSnap.data()?.username) {
           router.push('/dashboard');
         } else {
@@ -69,7 +74,7 @@ export default function Onboarding() {
     const cleanUsername = username.trim().toLowerCase();
 
     if (cleanUsername.length < 3) {
-      toast({ variant: 'destructive', title: "Username Too Short", description: "Handles must be at least 3 characters." });
+      toast({ variant: 'destructive', title: "Handle Too Short", description: "Must be at least 3 characters." });
       return;
     }
 
@@ -77,8 +82,8 @@ export default function Onboarding() {
     if (filteredUsername.includes('*')) {
       toast({ 
         variant: 'destructive', 
-        title: "Invalid Handle", 
-        description: "Handle contains restricted language. Please choose another." 
+        title: "Forbidden Handle", 
+        description: "Restricted language detected. Choose another handle." 
       });
       return;
     }
@@ -92,22 +97,28 @@ export default function Onboarding() {
       if (usernameSnap.exists()) {
         toast({ 
           variant: 'destructive', 
-          title: "Handle Taken", 
-          description: "This username is already claimed by another collector." 
+          title: "Node Unavailable", 
+          description: "This handle is already synchronized with another node." 
         });
         setIsSubmitting(false);
         return;
       }
 
       const batch = writeBatch(db);
+      
+      // Step 1: Claim Handle
       batch.set(usernameRef, { uid: user.uid });
 
+      // Step 2: Initialize Identity Manifest
       const userRef = doc(db, 'users', user.uid);
+      const photoURL = getRandomAvatar(user.uid);
+
       const profileData = {
         uid: user.uid,
         username: cleanUsername,
-        storeId: cleanUsername,
+        storeId: cleanUsername, // Identity Lock: Username is the StoreID
         email: user.email,
+        photoURL,
         emailVerified: true, 
         role: 'USER',
         status: 'ACTIVE',
@@ -122,20 +133,21 @@ export default function Onboarding() {
       };
 
       batch.set(userRef, profileData, { merge: true });
+      
+      // Step 3: Atomic Sync
       await batch.commit();
       
-      toast({ title: "Identity Secured!", description: `Welcome to hobbydork, @${cleanUsername}!` });
+      toast({ title: "Identity Synchronized", description: `Welcome to the network, @${cleanUsername}.` });
       
       setTimeout(() => {
         router.push('/dashboard');
       }, 500);
 
     } catch (e: any) {
-      console.error("Onboarding error:", e);
       toast({ 
         variant: 'destructive', 
-        title: "Setup Failed", 
-        description: e.message || "An unexpected error occurred during profile creation." 
+        title: "Uplink Failed", 
+        description: getFriendlyErrorMessage(e)
       });
       setIsSubmitting(false);
     }
@@ -145,7 +157,7 @@ export default function Onboarding() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
         <Loader2 className="w-10 h-10 animate-spin text-accent" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Syncing Identity</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground">Syncing Identity...</p>
       </div>
     );
   }
@@ -154,33 +166,35 @@ export default function Onboarding() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8 animate-in fade-in zoom-in duration-500">
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-accent/10 rounded-3xl mb-4"><Sparkles className="w-8 h-8 md:w-10 md:h-10 text-accent" /></div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black italic tracking-tighter uppercase">Choose Your Handle</h1>
-          <p className="text-muted-foreground font-medium text-sm md:text-base">Your permanent identity on hobbydork.</p>
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-3xl mb-4 border-2 border-primary/20">
+            <Sparkles className="w-10 h-10 text-primary" />
+          </div>
+          <h1 className="text-3xl md:text-4xl font-headline font-black italic tracking-tighter uppercase leading-none">Identity Sequence</h1>
+          <p className="text-muted-foreground font-medium">Choose your permanent network handle.</p>
         </div>
 
-        <Card className="border-none shadow-2xl rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden">
-          <CardHeader className="bg-primary dark:bg-accent text-white dark:text-zinc-900 p-5 sm:p-6 md:p-8">
+        <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden">
+          <CardHeader className="bg-primary text-primary-foreground p-8">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-lg md:text-xl font-black italic uppercase tracking-tight">Identity Setup</CardTitle>
-              <ShieldCheck className="w-5 h-5 text-accent" />
+              <CardTitle className="text-xl font-black italic uppercase tracking-tight leading-none">Setup Profile</CardTitle>
+              <ShieldCheck className="w-6 h-6 text-accent" />
             </div>
           </CardHeader>
-          <CardContent className="p-6 md:p-8 pt-10 space-y-6">
+          <CardContent className="p-8 pt-10 space-y-8">
             <Alert className="bg-amber-50 border-amber-200 text-amber-900 rounded-2xl">
               <AlertCircle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-xs font-bold uppercase tracking-tight">Username cannot be changed later.</AlertDescription>
+              <AlertDescription className="text-[10px] font-black uppercase tracking-tight">Warning: Handles are locked once confirmed.</AlertDescription>
             </Alert>
 
             <form id="onboarding-form" onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Username</Label>
+                <Label htmlFor="username" className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Stencil Handle</Label>
                 <div className="relative">
-                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black text-xl">@</span>
+                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black text-2xl">@</span>
                   <Input 
                     id="username" 
                     placeholder="handle" 
-                    className="pl-12 h-14 md:h-16 rounded-xl md:rounded-2xl border-2 text-lg md:text-xl font-black" 
+                    className="pl-12 h-16 rounded-2xl border-2 text-xl font-black focus-visible:ring-primary shadow-sm" 
                     value={username} 
                     onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))} 
                     required 
@@ -191,14 +205,14 @@ export default function Onboarding() {
               </div>
             </form>
           </CardContent>
-          <CardFooter className="p-6 md:p-8 bg-zinc-50 border-t flex flex-col gap-4">
-            <Button type="submit" form="onboarding-form" disabled={isSubmitting || !username.trim()} className="w-full h-14 md:h-16 bg-accent hover:bg-accent/90 text-white rounded-xl md:rounded-2xl font-black text-lg md:text-xl shadow-xl active:scale-95">
+          <CardFooter className="p-8 bg-zinc-50 border-t">
+            <Button type="submit" form="onboarding-form" disabled={isSubmitting || !username.trim()} className="w-full h-16 bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl font-black text-xl shadow-xl active:scale-95 transition-all">
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                  Securing Vault...
+                  Securing Node...
                 </>
-              ) : "Confirm Handle"}
+              ) : "Confirm Node Handle"}
             </Button>
           </CardFooter>
         </Card>

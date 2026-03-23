@@ -52,6 +52,12 @@ const THEME_PRODUCT_TO_NAME = {
     p5: "Hobby Shop Theme",
 };
 exports.stripeWebhook = (0, https_1.onRequest)({ secrets: [STRIPE_SECRET, STRIPE_WEBHOOK_SECRET] }, async (req, res) => {
+    // --- Stripe rawBody check for debugging ---
+    if (!req.rawBody) {
+        console.error("Stripe webhook: req.rawBody is missing!", { headers: req.headers });
+        res.status(400).send("No webhook payload provided.");
+        return;
+    }
     const stripeSecret = process.env.STRIPE_SECRET;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!stripeSecret) {
@@ -85,6 +91,11 @@ exports.stripeWebhook = (0, https_1.onRequest)({ secrets: [STRIPE_SECRET, STRIPE
         const buyerId = session.metadata?.buyerId;
         // Premium product purchase automation (current flow)
         if (productId && buyerId) {
+            if (!buyerId) {
+                console.error("buyerId is missing for premium product purchase", { session });
+                res.status(400).send("buyerId missing");
+                return;
+            }
             const userRef = db.collection("users").doc(buyerId);
             await userRef.set({
                 ownedPremiumProducts: admin.firestore.FieldValue.arrayUnion(productId),
@@ -97,6 +108,9 @@ exports.stripeWebhook = (0, https_1.onRequest)({ secrets: [STRIPE_SECRET, STRIPE
                     const storeDoc = storeSnap.docs[0];
                     const storeData = storeDoc.data();
                     const spotlightStoreId = storeData?.id || storeDoc.id;
+                    if (!spotlightStoreId) {
+                        console.error("spotlightStoreId is missing for spotlight purchase", { storeData, storeDocId: storeDoc.id });
+                    }
                     const now = admin.firestore.Timestamp.now();
                     const endAt = admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
                     const slotRef = db.collection("spotlightSlots").doc();
@@ -275,19 +289,43 @@ exports.stripeWebhook = (0, https_1.onRequest)({ secrets: [STRIPE_SECRET, STRIPE
                 paymentIntentId: session.payment_intent,
                 buyerUid: buyerUid,
             });
-            // If we have listing ID, get seller info and mark listing as sold
+            // If we have listing ID, get seller info and finalize listing state
             if (listingId) {
                 const listingSnap = await db.collection("listings").doc(listingId).get();
                 const listingData = listingSnap.data();
                 const sellerUid = listingData?.sellerId;
                 const listingTitle = listingData?.title;
-                // Mark listing as sold
+                // Mark listing sold / decrement stock
                 if (listingSnap.exists) {
-                    await db.collection("listings").doc(listingId).update({
-                        sold: true,
-                        soldAt: admin.firestore.FieldValue.serverTimestamp(),
-                        soldTo: buyerUid,
-                        orderId: orderId,
+                    const listingRef = db.collection("listings").doc(listingId);
+                    await db.runTransaction(async (tx) => {
+                        const latestSnap = await tx.get(listingRef);
+                        const latest = latestSnap.data();
+                        if (!latestSnap.exists || !latest)
+                            return;
+                        const listingUpdates = {
+                            sold: true,
+                            soldAt: admin.firestore.FieldValue.serverTimestamp(),
+                            soldTo: buyerUid,
+                            orderId: orderId,
+                            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                        };
+                        if (latest.type === "Buy It Now") {
+                            const quantity = Number(latest.quantity ?? 1);
+                            const nextQuantity = Math.max(0, quantity - 1);
+                            listingUpdates.quantity = nextQuantity;
+                            if (nextQuantity === 0) {
+                                listingUpdates.status = "Sold";
+                                listingUpdates.visibility = "Invisible";
+                            }
+                        }
+                        if (latest.type === "Auction") {
+                            listingUpdates.status = "Sold";
+                            listingUpdates.paymentStatus = "PAID";
+                            listingUpdates.winnerUid = buyerUid;
+                            listingUpdates.winningBid = Number(latest.winningBid ?? latest.currentBid ?? latest.price ?? 0);
+                        }
+                        tx.update(listingRef, listingUpdates);
                     });
                 }
                 // Notify seller of new order

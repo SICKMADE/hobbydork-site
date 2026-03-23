@@ -10,6 +10,8 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebas
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import Image from 'next/image';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 export default function Navbar() {
   const router = useRouter();
@@ -20,11 +22,9 @@ export default function Navbar() {
   const { user } = useUser();
   const db = useFirestore();
   
-  // Hide search bar on /browse page since it has its own
   const safePathname = pathname || '';
   const showSearch = !(safePathname.startsWith('/browse') || safePathname.startsWith('/listings'));
 
-  // Fetch unread notifications count
   const notificationsQuery = useMemoFirebase(() => 
     user && db ? query(
       collection(db, 'users', user.uid, 'notifications'),
@@ -53,46 +53,49 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-background/80 dark:bg-[#202020] backdrop-blur-xl border-b sticky top-0 z-50 flex flex-col shadow-sm">
+    <nav className="bg-background/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b sticky top-0 z-50 flex flex-col shadow-sm">
       <div className="container mx-auto px-4 w-full">
-        {/* Main Navbar Row */}
-        <div className="flex items-center justify-between gap-2 md:gap-4 lg:gap-12 h-16 md:h-24">
-          {/* Logo */}
-          <div className="flex items-center gap-4 lg:gap-8 shrink-0">
-            <Link href="/" className="shrink-0">
+        <div className="flex items-center justify-between gap-2 md:gap-4 lg:gap-8 h-20 md:h-24"> {/* Increased height */}
+          {/* Logo (left) and Search bar (center) */}
+          <div className="flex items-center gap-4 lg:gap-6 flex-1 min-w-0 ml-40">
+            <Link href="/" className="shrink-0" title="hobbydork home">
               <Image 
                 src="/hobbydork-main.png" 
                 alt="hobbydork" 
-                width={220} 
-                height={50} 
-                className="h-10 md:h-14 w-auto" 
+                width={180} 
+                height={48} 
+                className="h-10 md:h-14 w-auto" // Increased logo height 
                 priority 
               />
             </Link>
+            {showSearch && (
+              <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-xl relative">
+                <Label htmlFor="desktop-nav-search" className="sr-only">Search catalog</Label>
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 w-3.5 h-3.5 z-10" />
+                <Input 
+                  id="desktop-nav-search"
+                  name="q"
+                  placeholder="Search catalog..." 
+                  value={searchValue}
+                  title="Search marketplace assets"
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  className={cn(
+                    "pl-10 rounded-full h-10 text-xs shadow-sm transition-all font-medium", // Pro-Scale: Height 10, text-xs
+                    "bg-white text-zinc-950 border-2 border-zinc-200 focus-visible:ring-2 focus-visible:ring-accent focus-visible:border-accent"
+                  )}
+                />
+              </form>
+            )}
           </div>
 
-          {/* Desktop Search Bar */}
-          {showSearch && (
-            <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-2xl relative">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground dark:text-zinc-500 w-5 h-5 z-10" />
-              <Input 
-                placeholder="Search listings..." 
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                className="pl-14 bg-card text-foreground dark:bg-white dark:text-zinc-900 dark:border-accent dark:border-4 border-border focus-visible:ring-2 focus-visible:ring-accent rounded-full h-14 text-base shadow-lg"
-              />
-            </form>
-          )}
-
-          {/* Desktop Actions (right side) */}
-          <div className="hidden md:flex items-center gap-2 lg:gap-4 shrink-0">
-            {/* Notification Bell */}
+          {/* Notification/Cart/Sign In icons and Logo on the right */}
+          <div className="hidden md:flex items-center gap-2 lg:gap-3 shrink-0">
             {user && (
-              <Button asChild variant="ghost" size="icon" className="rounded-full relative w-12 h-12" title="Notifications">
+              <Button asChild variant="ghost" size="icon" className="rounded-full relative w-9 h-9" title="View notifications">
                 <Link href="/notifications">
-                  <Bell className="w-6 h-6" />
+                  <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black rounded-full w-5 h-5 flex items-center justify-center">
+                    <span className="absolute -top-0.5 -right-0.5 bg-accent text-white text-[8px] font-black rounded-full w-3.5 h-3.5 flex items-center justify-center">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -101,25 +104,24 @@ export default function Navbar() {
             )}
 
             {!user && (
-              <Button asChild className="bg-accent text-accent-foreground dark:bg-zinc-900 dark:text-accent font-black px-6 h-12 rounded-full flex items-center gap-2">
-                <Link href="/login"><LogIn className="w-4 h-4" /> Sign In</Link>
+              <Button asChild title="Sign in to your account" className="bg-primary text-primary-foreground font-black px-4 h-9 rounded-full flex items-center justify-center text-[9px] uppercase tracking-widest shadow-md">
+                <Link href="/login"><LogIn className="w-3.5 h-3.5 mr-1.5" /> Sign In</Link>
               </Button>
             )}
 
-            <Button variant="default" size="icon" className="rounded-full bg-primary hover:bg-primary/90 w-12 h-12 shadow-lg">
-              <ShoppingBag className="w-6 h-6" />
+            <Button variant="default" size="icon" title="View your cart" className="rounded-full bg-primary hover:bg-primary/90 w-9 h-9 shadow-md">
+              <ShoppingBag className="w-4 h-4" />
             </Button>
+            {/* Logo removed from right, restored to left */}
           </div>
 
-          {/* Mobile Actions (right side) */}
           <div className="md:hidden flex items-center gap-2 shrink-0">
-            {/* Mobile Notification Bell */}
             {user && (
-              <Button asChild variant="ghost" size="icon" className="rounded-full relative w-10 h-10" title="Notifications">
+              <Button asChild variant="ghost" size="icon" className="rounded-full relative w-8 h-8" title="Notifications">
                 <Link href="/notifications">
-                  <Bell className="w-5 h-5" />
+                  <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-black rounded-full w-4 h-4 flex items-center justify-center">
+                    <span className="absolute -top-0.5 -right-0.5 bg-accent text-white text-[7px] font-black rounded-full w-3 h-3 flex items-center justify-center">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -127,33 +129,40 @@ export default function Navbar() {
               </Button>
             )}
 
-            {/* Mobile Search Toggle */}
             {showSearch && (
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="rounded-full w-10 h-10"
+                title="Toggle search"
+                aria-label="Open search bar"
+                className="rounded-full w-8 h-8"
                 onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
               >
-                <Search className="w-5 h-5" />
+                <Search className="w-4 h-4" />
               </Button>
             )}
 
-            {/* Mobile Sidebar Trigger */}
             <SidebarTrigger />
           </div>
         </div>
 
-        {/* Mobile Search Bar (Expandable) */}
         {showSearch && isMobileSearchOpen && (
-          <div className="md:hidden pb-4 animate-in slide-in-from-top duration-300">
+          <div className="md:hidden pb-2 animate-in slide-in-from-top duration-300">
             <form onSubmit={handleSearch} className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground dark:text-zinc-500 w-5 h-5 z-10" />
+              <Label htmlFor="mobile-nav-search" className="sr-only">Search items</Label>
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 w-3.5 h-3.5 z-10" />
               <Input 
-                placeholder="Search listings..." 
+                id="mobile-nav-search"
+                name="q"
+                placeholder="Search catalog..." 
                 value={searchValue}
+                title="Search listings"
+                aria-label="Search listings"
                 onChange={(e) => setSearchValue(e.target.value)}
-                className="pl-12 bg-card text-foreground dark:bg-white dark:text-zinc-900 dark:border-accent dark:border-2 border-border rounded-full h-12 text-base shadow-lg"
+                className={cn(
+                  "pl-9 rounded-full h-9 text-xs shadow-sm",
+                  "bg-white text-zinc-950 border-2 border-zinc-200"
+                )}
                 autoFocus
               />
             </form>

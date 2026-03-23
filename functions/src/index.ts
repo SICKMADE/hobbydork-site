@@ -4,7 +4,6 @@ import Stripe from "stripe";
 import { defineSecret } from "firebase-functions/params";
 export { getStripePayouts } from "./getStripePayouts";
 export { createBlindBidAuction, submitBlindBid } from "./blindBidder";
-export { setBlindBidAuctionImage } from "./blindBidder";
 export { stripeWebhook } from "./stripeWebhook";
 export { shippoWebhook } from "./shippoWebhook";
 export { dailySellerEnforcement } from "./dailySellerEnforcement";
@@ -226,7 +225,7 @@ export const createStripeOnboarding = onCall({ secrets: [stripeSecretParam] }, a
   const link = await stripe.accountLinks.create({
     account: accountId,
     refresh_url: `${appBaseUrl}/onboarding/terms`,
-    return_url: `${appBaseUrl}/seller/onboarding?step=5`,
+    return_url: `${appBaseUrl}/seller/onboarding?step=6`,
     type: "account_onboarding",
   });
   return { url: link.url };
@@ -237,28 +236,42 @@ export const createStripeOnboarding = onCall({ secrets: [stripeSecretParam] }, a
 export const finalizeSeller = onCall({ secrets: [stripeSecretParam] }, async (request) => {
   const stripe = getStripeInstance();
   const uid = requireAuth(request);
+  // Validate Firestore path inputs
+  if (!uid || typeof uid !== "string" || uid.includes("..") || uid.includes("/")) {
+    console.error("Invalid UID for Firestore path", { uid });
+    throw new HttpsError("invalid-argument", "Invalid UID for Firestore path");
+  }
   const userRef = db.collection("users").doc(uid);
   const snap = await userRef.get();
   const user = snap.data();
   if (!user?.stripeAccountId) {
+    console.error("Stripe not connected", { uid, user });
     throw new HttpsError("failed-precondition", "Stripe not connected");
   }
   const account = await stripe.accounts.retrieve(user.stripeAccountId);
   if (!account.details_submitted || !account.charges_enabled) {
+    console.error("Stripe onboarding incomplete", { uid, stripeAccountId: user.stripeAccountId, account });
     throw new HttpsError("failed-precondition", "Stripe onboarding incomplete");
   }
-  const displayName = user.ownerDisplayName || user.displayName || "";
-  const storeId = displayName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  const username = user.username;
+  if (!username || typeof username !== "string" || username.includes("..") || username.includes("/")) {
+    console.error("Invalid username for Firestore path", { username });
+    throw new HttpsError("failed-precondition", "Username (handle) missing or invalid");
+  }
+  // Ensure user is marked as verified and seller for Firestore rules
+  await userRef.update({
+    emailVerified: true,
+    status: "ACTIVE",
+    isSeller: true,
+  });
+  const storeId = username;
   const storeRef = db.collection("storefronts").doc(storeId);
   const storeSnap = await storeRef.get();
   if (!storeSnap.exists) {
     await storeRef.set({
       id: storeId,
       ownerUid: uid,
-      displayName,
+      displayName: username,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       avatar: user.photoURL || "/hobbydork-head.png",
       status: "ACTIVE",
@@ -275,10 +288,11 @@ export const finalizeSeller = onCall({ secrets: [stripeSecretParam] }, async (re
   await db.collection("sellerApprovals").add({
     uid,
     email: user.email,
-    displayName,
+    displayName: username,
     approvedAt: admin.firestore.FieldValue.serverTimestamp(),
     stripeAccountId: user.stripeAccountId,
   });
+  console.log("finalizeSeller success", { uid, storeId });
   return { ok: true, storeId };
 });
 
@@ -493,11 +507,17 @@ export const cancelLateOrder = onCall({ secrets: [stripeSecretParam] }, async (r
 
 export const processRefund = onCall({ secrets: [stripeSecretParam] }, async (request) => {
   try {
+    // Log the incoming request for debugging
+    console.log("processRefund request", {
+      auth: request.auth,
+      data: request.data
+    });
     const uid = requireAuth(request);
-    const { orderId } = request.data;
+    const { orderId } = request.data || {};
 
-    if (!orderId) {
-      throw new HttpsError("invalid-argument", "Order ID required");
+    if (!orderId || typeof orderId !== "string" || orderId.includes("..") || orderId.includes("/")) {
+      console.error("Invalid or missing orderId", { orderId });
+      throw new HttpsError("invalid-argument", "Valid orderId required");
     }
 
     const orderRef = db.collection("orders").doc(orderId);
@@ -505,23 +525,26 @@ export const processRefund = onCall({ secrets: [stripeSecretParam] }, async (req
     const order = orderSnap.data();
 
     if (!order) {
+      console.error("Order not found", { orderId });
       throw new HttpsError("not-found", "Order not found");
     }
 
     // Only seller can process refund
     if (order.sellerUid !== uid) {
+      console.error("Permission denied: not seller", { orderId, sellerUid: order.sellerUid, uid });
       throw new HttpsError("permission-denied", "Only seller can process refund");
     }
 
     // Check if order is in Return Shipped status
     if (order.status !== "Return Shipped") {
+      console.error("Order not in Return Shipped status", { orderId, status: order.status });
       throw new HttpsError("failed-precondition", "Order must be in Return Shipped status");
     }
 
     // Get the payment intent ID from Stripe metadata
     const stripe = getStripeInstance();
-    
     if (!order.stripePaymentIntentId) {
+      console.error("No payment intent for order", { orderId });
       throw new HttpsError("failed-precondition", "No payment intent found for this order");
     }
 
@@ -529,8 +552,9 @@ export const processRefund = onCall({ secrets: [stripeSecretParam] }, async (req
     const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId, {
       expand: ['charges']
     }) as any; // Cast to any to access expanded charges
-    
+
     if (!paymentIntent.charges || !paymentIntent.charges.data || paymentIntent.charges.data.length === 0) {
+      console.error("No charge found for payment intent", { orderId, paymentIntent });
       throw new HttpsError("failed-precondition", "No charge found for this payment intent");
     }
 
@@ -548,6 +572,7 @@ export const processRefund = onCall({ secrets: [stripeSecretParam] }, async (req
     });
 
     if (refund.status !== "succeeded") {
+      console.error("Refund processing failed", { orderId, refund });
       throw new HttpsError("internal", "Refund processing failed");
     }
 
@@ -573,8 +598,10 @@ export const processRefund = onCall({ secrets: [stripeSecretParam] }, async (req
       timestamp: new Date().toISOString()
     });
 
+    console.log("processRefund success", { orderId, refundId: refund.id });
     return { ok: true, refundId: refund.id };
   } catch (error) {
+    console.error("processRefund error", error);
     await logError(error instanceof Error ? error : String(error), { function: "processRefund" });
     throw error;
   }
@@ -584,17 +611,24 @@ export const processRefund = onCall({ secrets: [stripeSecretParam] }, async (req
 
 export const approveWithdrawal = onCall({ secrets: [stripeSecretParam] }, async (request) => {
   try {
+    // Log the incoming request for debugging
+    console.log("approveWithdrawal request", {
+      auth: request.auth,
+      data: request.data
+    });
     const uid = requireAuth(request);
-    const { payoutRequestId } = request.data;
+    const { payoutRequestId } = request.data || {};
 
-    if (!payoutRequestId) {
-      throw new HttpsError("invalid-argument", "Payout request ID required");
+    if (!payoutRequestId || typeof payoutRequestId !== "string" || payoutRequestId.includes("..") || payoutRequestId.includes("/")) {
+      console.error("Invalid or missing payoutRequestId", { payoutRequestId });
+      throw new HttpsError("invalid-argument", "Valid payoutRequestId required");
     }
 
     // Verify user is admin
     const adminSnap = await db.collection("users").doc(uid).get();
     const admin = adminSnap.data();
     if (!admin || (admin.role !== "ADMIN" && admin.role !== "MODERATOR")) {
+      console.error("Permission denied: not admin/moderator", { uid, role: admin?.role });
       throw new HttpsError("permission-denied", "Only admins can approve withdrawals");
     }
 
@@ -603,10 +637,12 @@ export const approveWithdrawal = onCall({ secrets: [stripeSecretParam] }, async 
     const payout = payoutSnap.data();
 
     if (!payout) {
+      console.error("Payout request not found", { payoutRequestId });
       throw new HttpsError("not-found", "Payout request not found");
     }
 
     if (payout.status !== "PENDING") {
+      console.error("Payout request not pending", { payoutRequestId, status: payout.status });
       throw new HttpsError("failed-precondition", "Only PENDING requests can be approved");
     }
 
@@ -662,8 +698,10 @@ export const approveWithdrawal = onCall({ secrets: [stripeSecretParam] }, async 
       timestamp: new Date().toISOString()
     });
 
+    console.log("approveWithdrawal success", { payoutRequestId, transferId: transfer.id });
     return { ok: true, transferId: transfer.id };
   } catch (error) {
+    console.error("approveWithdrawal error", error);
     await logError(error instanceof Error ? error : String(error), { function: "approveWithdrawal" });
     throw error;
   }
@@ -738,9 +776,19 @@ export const denyWithdrawal = onCall(async (request) => {
 
 export const calculateSellerTier = onCall(async (request) => {
   try {
+    // Log the incoming request for debugging
+    console.log("calculateSellerTier request", {
+      auth: request.auth,
+      data: request.data
+    });
     const uid = requireAuth(request);
     const { sellerId } = request.data || {};
     const targetSellerId = sellerId || uid;
+
+    if (!targetSellerId || typeof targetSellerId !== "string" || targetSellerId.includes("..") || targetSellerId.includes("/")) {
+      console.error("Invalid or missing sellerId", { sellerId, targetSellerId });
+      throw new HttpsError("invalid-argument", "Valid sellerId required");
+    }
 
     // Fetch all orders for this seller
     const ordersSnap = await db
@@ -821,6 +869,7 @@ export const calculateSellerTier = onCall(async (request) => {
       timestamp: new Date().toISOString()
     });
 
+    console.log("calculateSellerTier success", { targetSellerId, tier });
     return { 
       ok: true, 
       tier,
@@ -831,6 +880,7 @@ export const calculateSellerTier = onCall(async (request) => {
       }
     };
   } catch (error) {
+    console.error("calculateSellerTier error", error);
     await logError(error instanceof Error ? error : String(error), { function: "calculateSellerTier" });
     throw error;
   }

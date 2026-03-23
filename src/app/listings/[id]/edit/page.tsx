@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Navbar from '@/components/Navbar';
@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CATEGORIES } from '@/lib/mock-data';
 import { cn, filterProfanity } from '@/lib/utils';
 import Image from 'next/image';
-import { ArrowLeft, Loader2, X, Truck, Calculator } from 'lucide-react';
+import { ArrowLeft, Loader2, X, Truck, Calculator, Sparkles, ShieldCheck, Zap, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 
@@ -62,14 +62,12 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     if (!listing || !user) return;
 
-    // Check if user is the seller using the synchronized listingSellerId field
     if (listing.listingSellerId !== user.uid) {
       toast({ variant: 'destructive', title: 'Access Denied', description: 'You can only edit your own listings.' });
       router.push(`/listings/${id}`);
       return;
     }
 
-    // Populate form with existing data
     setTitle(listing.title || '');
     setDescription(listing.description || '');
     setPrice(String(listing.price || ''));
@@ -127,25 +125,15 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
   };
 
   const handlePhotoUpload = async (file: File) => {
-    // Validate file format
     const allowedFormats = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedFormats.includes(file.type)) {
-      toast({ 
-        variant: 'destructive', 
-        title: "Invalid Format", 
-        description: "Only JPEG, PNG, and WebP images are allowed."
-      });
+      toast({ variant: 'destructive', title: "Invalid Format" });
       return;
     }
 
-    // Validate file size (5MB max)
     const MAX_SIZE = 5 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
-      toast({ 
-        variant: 'destructive', 
-        title: "File Too Large", 
-        description: `Maximum file size is 5MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`
-      });
+      toast({ variant: 'destructive', title: "File Too Large" });
       return;
     }
 
@@ -153,28 +141,23 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
       const optimizedImage = await compressImageForUpload(file);
       setPhoto(optimizedImage);
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Image Processing Failed',
-        description: 'Could not process this image. Please try another photo.',
-      });
+      toast({ variant: 'destructive', title: 'Processing Failed' });
     }
   };
 
   const calculateShipping = async () => {
     if (!weight || !length || !width || !height) {
-      toast({ variant: 'destructive', title: 'Missing Info', description: 'Please enter all dimensions.' });
+      toast({ variant: 'destructive', title: 'Missing Info' });
       return;
     }
 
     setIsCalculatingShipping(true);
     try {
-      // Placeholder for actual shipping calculation
       const rate = parseFloat(weight) * 2 + (parseFloat(length) + parseFloat(width) + parseFloat(height)) * 0.1;
       setCalculatedShippingCost(Math.round(rate * 100) / 100);
-      toast({ title: 'Calculated', description: `Shipping cost: $${Math.round(rate * 100) / 100}` });
+      toast({ title: 'Calculated' });
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Calculation Failed', description: getFriendlyErrorMessage(error) });
+      toast({ variant: 'destructive', title: 'Calculation Failed' });
     } finally {
       setIsCalculatingShipping(false);
     }
@@ -190,7 +173,6 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
       const sanitizedTitle = filterProfanity(title);
       const sanitizedDescription = filterProfanity(description);
 
-      // Upload new image if photo was changed (and is a data URL)
       let imageUrl = photo;
       if (photo && photo.startsWith('data:')) {
         imageUrl = await uploadPhotoToStorage(photo);
@@ -216,342 +198,171 @@ export default function EditListing({ params }: { params: Promise<{ id: string }
       };
 
       await updateDoc(listingRef, updateData);
-      toast({ title: 'Updated!', description: 'Your listing has been updated successfully.' });
+      toast({ title: 'Updated!' });
       router.push(`/listings/${id}`);
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: getFriendlyErrorMessage(error)
-      });
+      toast({ variant: 'destructive', title: 'Update Failed', description: getFriendlyErrorMessage(error) });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-accent" />
-      </div>
-    );
-  }
-
-  if (!listing) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main className="container mx-auto px-4 py-12 max-w-2xl text-center">
-          <p className="text-muted-foreground font-black uppercase tracking-widest">Listing not found</p>
-          <Button asChild className="mt-6">
-            <Link href="/">Back to Home</Link>
-          </Button>
-        </main>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-12 max-w-3xl">
-        <div className="flex items-center gap-4 mb-8">
-          <Button asChild variant="ghost" size="lg" className="rounded-xl">
-            <Link href={`/listings/${id}`}><ArrowLeft className="w-5 h-5 mr-2" /> Back</Link>
-          </Button>
-          <h1 className="text-3xl font-headline font-black uppercase tracking-tighter">Edit Listing</h1>
+      <main className="container mx-auto px-4 py-12 max-w-5xl">
+        <div className="flex items-center justify-between mb-12">
+          <div className="flex items-center gap-4">
+            <Button asChild variant="ghost" size="lg" className="rounded-xl border-2">
+              <Link href={`/listings/${id}`}><ArrowLeft className="w-5 h-5 mr-2" /> Back</Link>
+            </Button>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase">
+                <Zap className="w-3 h-3" /> Editor Protocol
+              </div>
+              <h1 className="text-3xl md:text-5xl font-headline font-black uppercase italic tracking-tighter text-primary leading-none">Modify Asset</h1>
+            </div>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Photo Section */}
-          <section className="bg-zinc-50 p-8 rounded-2xl border-2 border-dashed space-y-6">
-            <Label className="text-xs font-black uppercase tracking-widest">Item Photo</Label>
-            {photo && (
-              <div className="relative aspect-video rounded-xl overflow-hidden border-2">
-                <Image src={photo} alt="Preview" fill className="object-cover" />
-                <button
-                  type="button"
-                  aria-label="Remove selected photo"
-                  title="Remove selected photo"
-                  onClick={() => setPhoto('')}
-                  className="absolute top-4 right-4 bg-zinc-950/50 text-white rounded-full p-2 backdrop-blur-md opacity-0 hover:opacity-100 transition-opacity z-10"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.currentTarget.files?.[0];
-                if (file) {
-                  handlePhotoUpload(file);
-                }
-              }}
-              className="h-12 border-2 rounded-xl cursor-pointer"
-            />
-            <p className="text-xs text-muted-foreground font-medium">Upload a new photo or leave empty to keep current</p>
-          </section>
-
-          {/* Basic Info Section */}
-          <section className="bg-zinc-50 p-8 rounded-2xl border-2 border-dashed space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="title" className="text-xs font-black uppercase tracking-widest">Title</Label>
-              <Input
-                id="title"
-                placeholder="Item name..."
-                className="h-12 rounded-xl border-2 font-medium"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="category" className="text-xs font-black uppercase tracking-widest">Category</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="h-12 rounded-xl border-2 font-bold" />
-                  <SelectContent>
-                    {CATEGORIES.map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="condition" className="text-xs font-black uppercase tracking-widest">Condition</Label>
-                <Select
-                  value={condition}
-                  onValueChange={(val) => setCondition(val as 'New' | 'Like New' | 'Used')}
-                >
-                  <SelectTrigger className="h-12 rounded-xl border-2 font-bold" />
-                  <SelectContent>
-                    <SelectItem value="New">New</SelectItem>
-                    <SelectItem value="Like New">Like New</SelectItem>
-                    <SelectItem value="Used">Used</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest">Tags</Label>
-              <div className="flex gap-2 mb-3 flex-wrap">
-                {tags.map(tag => (
-                  <div
-                    key={tag}
-                    className="bg-accent/10 text-accent text-[10px] font-black uppercase px-3 py-1 rounded-full flex items-center gap-1"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      aria-label={`Remove tag ${tag}`}
-                      title={`Remove tag ${tag}`}
-                      onClick={() => setTags(tags.filter(t => t !== tag))}
-                      className="hover:text-accent/70"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add tag (press Enter)..."
-                  className="h-12 rounded-xl border-2"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      if (newTag.trim() && !tags.includes(newTag.trim())) {
-                        setTags([...tags, newTag.trim()]);
-                        setNewTag('');
-                      }
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (newTag.trim() && !tags.includes(newTag.trim())) {
-                      setTags([...tags, newTag.trim()]);
-                      setNewTag('');
-                    }
-                  }}
-                  className="h-12 px-4 rounded-xl font-bold uppercase text-[10px]"
-                >
-                  Add
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-xs font-black uppercase tracking-widest">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Tell buyers about the condition..."
-                className="min-h-[120px] rounded-xl border-2 font-medium"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest">Visibility</Label>
-              <RadioGroup value={visibility} onValueChange={(val) => setVisibility(val as 'Visible' | 'Invisible')}>
-                <div className={cn("flex flex-col gap-2 p-4 rounded-xl border-2 transition-all cursor-pointer", visibility === 'Visible' ? "bg-white border-accent shadow-lg" : "bg-transparent border-zinc-200")}>
-                  <RadioGroupItem value="Visible" id="vis-visible" className="sr-only" />
-                  <Label htmlFor="vis-visible" className="cursor-pointer flex flex-col gap-1">
-                    <span className="font-black uppercase tracking-widest text-xs">Visible</span>
-                    <span className="text-[9px] text-muted-foreground font-medium">Show in browse & shop</span>
-                  </Label>
-                </div>
-                <div className={cn("flex flex-col gap-2 p-4 rounded-xl border-2 transition-all cursor-pointer", visibility === 'Invisible' ? "bg-white border-accent shadow-lg" : "bg-transparent border-zinc-200")}>
-                  <RadioGroupItem value="Invisible" id="vis-invisible" className="sr-only" />
-                  <Label htmlFor="vis-invisible" className="cursor-pointer flex flex-col gap-1">
-                    <span className="font-black uppercase tracking-widest text-xs">Invisible</span>
-                    <span className="text-[9px] text-muted-foreground font-medium">Only you can see</span>
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-          </section>
-
-          {/* Pricing Section */}
-          <section className="bg-zinc-50 p-8 rounded-2xl border-2 border-dashed space-y-6">
-            <h3 className="text-xl font-black uppercase tracking-tighter">Price</h3>
-            <div className="space-y-2">
-              <Label htmlFor="price" className="text-xs font-black uppercase tracking-widest">
-                {type === 'auction' ? 'Starting Bid' : 'Buy It Now Price'}
-              </Label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-black">$</span>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  className="h-12 pl-8 rounded-xl border-2 font-bold text-lg"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            {type === 'bin' && (
-              <div className="space-y-2">
-                <Label htmlFor="quantity" className="text-xs font-black uppercase tracking-widest">Quantity Available</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="1"
-                  placeholder="1"
-                  className="h-12 rounded-xl border-2 font-bold"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground font-medium">How many items are you selling?</p>
-              </div>
-            )}
-
-            <Alert className="border-2 bg-accent/5 border-accent/20">
-              <AlertTitle className="font-black text-accent uppercase text-[10px]">Note</AlertTitle>
-              <AlertDescription className="text-xs font-medium mt-2">
-                Listing type (Auction vs Buy It Now) cannot be changed after creation.
-              </AlertDescription>
-            </Alert>
-          </section>
-
-          {/* Shipping Section */}
-          <section className="bg-zinc-50 p-8 rounded-2xl border-2 border-dashed space-y-8">
-            <div className="flex items-center gap-3">
-              <div className="bg-accent/10 p-3 rounded-xl"><Truck className="w-6 h-6 text-accent" /></div>
-              <div>
-                <h3 className="text-xl font-black uppercase tracking-tighter">Shipping</h3>
-                <p className="text-xs text-muted-foreground font-bold">Update delivery options.</p>
-              </div>
-            </div>
-            <RadioGroup value={shippingType} onValueChange={(val) => setShippingType(val as 'Free' | 'Paid')}>
-              <div className={cn("flex flex-col gap-2 p-6 rounded-xl border-2 transition-all cursor-pointer", shippingType === 'Free' ? "bg-white border-accent shadow-lg" : "bg-transparent border-zinc-200")}>
-                <RadioGroupItem value="Free" id="ship-free" className="sr-only" />
-                <Label htmlFor="ship-free" className="cursor-pointer font-black uppercase tracking-widest text-xs">Free Shipping</Label>
-              </div>
-              <div className={cn("flex flex-col gap-2 p-6 rounded-xl border-2 transition-all cursor-pointer", shippingType === 'Paid' ? "bg-white border-accent shadow-lg" : "bg-transparent border-zinc-200")}>
-                <RadioGroupItem value="Paid" id="ship-paid" className="sr-only" />
-                <Label htmlFor="ship-paid" className="cursor-pointer font-black uppercase tracking-widest text-xs">Paid Shipping</Label>
-              </div>
-            </RadioGroup>
-
-            {shippingType === 'Paid' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest">Weight (lbs)</Label>
-                    <Input
-                      type="number"
-                      className="h-12 rounded-xl border-2"
-                      value={weight}
-                      onChange={(e) => setWeight(e.target.value)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest">Dimensions (L×W×H)</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="L"
-                        type="number"
-                        className="h-12 border-2 rounded-xl"
-                        value={length}
-                        onChange={(e) => setLength(e.target.value)}
-                      />
-                      <Input
-                        placeholder="W"
-                        type="number"
-                        className="h-12 border-2 rounded-xl"
-                        value={width}
-                        onChange={(e) => setWidth(e.target.value)}
-                      />
-                      <Input
-                        placeholder="H"
-                        type="number"
-                        className="h-12 border-2 rounded-xl"
-                        value={height}
-                        onChange={(e) => setHeight(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  onClick={calculateShipping}
-                  disabled={isCalculatingShipping}
-                  className="w-full bg-zinc-950 text-white font-black rounded-xl h-12"
-                >
-                  {isCalculatingShipping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calculator className="w-4 h-4 mr-2" />}
-                  Calculate Shipping Rate
-                </Button>
-                {calculatedShippingCost && (
-                  <div className="p-4 bg-accent/5 rounded-xl border border-accent/20">
-                    <p className="text-xs font-bold text-accent">Estimated Shipping: ${calculatedShippingCost.toFixed(2)}</p>
+        <form onSubmit={handleSubmit} className="grid gap-10 lg:grid-cols-[1fr_350px]">
+          <div className="space-y-12">
+            {/* Visuals */}
+            <section className="space-y-6">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Asset Imagery</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {photo && (
+                  <div className="relative aspect-video rounded-[2rem] overflow-hidden border-2 border-zinc-200 dark:border-zinc-800 bg-zinc-900 group shadow-2xl">
+                    <Image src={photo} alt="Preview" fill className="object-cover" />
+                      <button type="button" onClick={() => setPhoto('')} className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all" title="Remove photo"><X className="w-4 h-4" /></button>
                   </div>
                 )}
+                <label htmlFor="photo-picker" className="aspect-video border-4 border-dashed border-zinc-200 dark:border-zinc-800 rounded-[2rem] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group">
+                  <Plus className="w-8 h-8 text-zinc-400 group-hover:text-accent" />
+                  <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Replace Visual</span>
+                  <input id="photo-picker" type="file" accept="image/*" className="hidden" onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) handlePhotoUpload(f);
+                  }} />
+                </label>
               </div>
-            )}
-          </section>
+            </section>
 
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black h-16 text-lg rounded-2xl shadow-xl transition-all active:scale-95 uppercase italic tracking-tighter"
-          >
-            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save Changes'}
-          </Button>
+            {/* Manifest */}
+            <section className="space-y-8 bg-muted/40 dark:bg-card/60 p-8 rounded-[2rem] border border-border/50">
+              <div className="space-y-2">
+                <Label htmlFor="title" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Asset Title</Label>
+                <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required className="h-14 rounded-xl border-2 border-zinc-200 bg-white font-bold text-lg text-zinc-950 focus-visible:ring-accent shadow-sm" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Category</Label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger className="h-14 rounded-xl border-2 border-zinc-200 bg-white font-black text-zinc-950 shadow-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent className="border-zinc-200">{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Condition</Label>
+                  <Select value={condition} onValueChange={v => setCondition(v as any)}>
+                    <SelectTrigger className="h-14 rounded-xl border-2 border-zinc-200 bg-white font-black text-zinc-950 shadow-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent className="border-zinc-200"><SelectItem value="New">NEW</SelectItem><SelectItem value="Like New">LIKE NEW</SelectItem><SelectItem value="Used">USED</SelectItem></SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Visibility Protocol</Label>
+                <RadioGroup value={visibility} onValueChange={v => setVisibility(v as any)} className="grid grid-cols-2 gap-4">
+                  <Label htmlFor="vis-v" className={cn("h-14 rounded-xl border-2 flex items-center justify-center cursor-pointer font-black text-[10px] uppercase transition-all", visibility === 'Visible' ? "bg-accent text-white border-accent shadow-lg shadow-accent/20 scale-[1.02]" : "bg-zinc-200/50 dark:bg-zinc-800/50 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-600")}>
+                    <RadioGroupItem value="Visible" id="vis-v" className="sr-only" /> Visible
+                  </Label>
+                  <Label htmlFor="vis-i" className={cn("h-14 rounded-xl border-2 flex items-center justify-center cursor-pointer font-black text-[10px] uppercase transition-all", visibility === 'Invisible' ? "bg-accent text-white border-accent shadow-lg shadow-accent/20 scale-[1.02]" : "bg-zinc-200/50 dark:bg-zinc-800/50 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-600")}>
+                    <RadioGroupItem value="Invisible" id="vis-i" className="sr-only" /> Invisible
+                  </Label>
+                </RadioGroup>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="desc" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Description Manifest</Label>
+                <Textarea id="desc" value={description} onChange={e => setDescription(e.target.value)} className="min-h-[150px] rounded-xl border-2 border-zinc-200 bg-white font-medium text-base text-zinc-950 focus-visible:ring-accent shadow-sm" />
+              </div>
+            </section>
+
+            {/* Pricing */}
+            <section className="space-y-8 bg-muted/40 dark:bg-card/60 p-8 rounded-[2rem] border border-border/50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Format</Label>
+                  <RadioGroup value={type} onValueChange={setType} className="flex gap-3">
+                    <Label htmlFor="type-bin-radio" className={cn("flex-1 h-14 rounded-xl border-2 flex items-center justify-center cursor-pointer font-black text-[10px] uppercase transition-all", type === 'bin' ? "bg-accent text-white border-accent shadow-lg shadow-accent/20 scale-[1.02]" : "bg-zinc-200/50 dark:bg-zinc-800/50 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-600")}>
+                      <RadioGroupItem value="bin" id="type-bin-radio" className="sr-only" /> Buy It Now
+                    </Label>
+                    <Label htmlFor="type-auc-radio" className={cn("flex-1 h-14 rounded-xl border-2 flex items-center justify-center cursor-pointer font-black text-[10px] uppercase transition-all", type === 'auction' ? "bg-accent text-white border-accent shadow-lg shadow-accent/20 scale-[1.02]" : "bg-zinc-200/50 dark:bg-zinc-800/50 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-600")}>
+                      <RadioGroupItem value="auction" id="type-auc-radio" className="sr-only" /> Auction
+                    </Label>
+                  </RadioGroup>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Asset Value</Label>
+                  <div className="relative">
+                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-accent font-black text-lg">$</span>
+                    <Input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} required className="h-14 pl-10 rounded-xl border-2 border-zinc-200 bg-white font-black text-xl text-zinc-950 focus-visible:ring-accent shadow-sm" />
+                  </div>
+                </div>
+              </div>
+              {type === 'bin' && (
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Stock Protocol</Label>
+                  <Input type="number" min="1" value={quantity} onChange={e => setQuantity(e.target.value)} className="h-14 rounded-xl border-2 border-zinc-200 bg-white font-black text-zinc-950 shadow-sm" />
+                </div>
+              )}
+            </section>
+
+            {/* Shipping */}
+            <section className="space-y-8 bg-muted/40 dark:bg-card/60 p-8 rounded-[2rem] border border-border/50">
+              <div className="flex items-center gap-4">
+                <div className="bg-accent/10 p-3 rounded-2xl"><Truck className="w-6 h-6 text-accent" /></div>
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-tighter italic leading-none">Shipping Protocol</h3>
+                  <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mt-1">Delivery Configuration</p>
+                </div>
+              </div>
+              <RadioGroup value={shippingType} onValueChange={v => setShippingType(v as any)} className="grid grid-cols-2 gap-4">
+                <Label htmlFor="ship-free-radio" className={cn("h-14 rounded-xl border-2 flex items-center justify-center cursor-pointer font-black text-[10px] uppercase transition-all", shippingType === 'Free' ? "bg-accent text-white border-accent shadow-lg shadow-accent/20 scale-[1.02]" : "bg-zinc-200/50 dark:bg-zinc-800/50 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-600")}>
+                  <RadioGroupItem value="Free" id="ship-free-radio" className="sr-only" /> Free Shipping
+                </Label>
+                <Label htmlFor="ship-paid-radio" className={cn("h-14 rounded-xl border-2 flex items-center justify-center cursor-pointer font-black text-[10px] uppercase transition-all", shippingType === 'Paid' ? "bg-accent text-white border-accent shadow-lg shadow-accent/20 scale-[1.02]" : "bg-zinc-200/50 dark:bg-zinc-800/50 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-600")}>
+                  <RadioGroupItem value="Paid" id="ship-paid-radio" className="sr-only" /> Flat Rate Shipping
+                </Label>
+              </RadioGroup>
+            </section>
+
+            <Button type="submit" disabled={isSubmitting} className="w-full h-24 bg-white text-zinc-950 hover:bg-zinc-100 font-black text-3xl rounded-[2rem] shadow-2xl uppercase italic tracking-tighter transition-all active:scale-95 group">
+              {isSubmitting ? <Loader2 className="animate-spin" /> : (
+                <div className="flex items-center justify-center gap-4">
+                  Update Catalog
+                  <ArrowRight className="w-8 h-8 group-hover:translate-x-2 transition-transform" />
+                </div>
+              )}
+            </Button>
+          </div>
+
+          <aside className="space-y-6">
+            <div className="bg-muted/40 dark:bg-card/60 text-foreground dark:text-white p-8 rounded-[2.5rem] shadow-2xl border border-border dark:border-white/5 sticky top-24">
+              <h3 className="font-headline font-black text-xl mb-8 uppercase italic tracking-tighter flex items-center gap-2 text-accent border-b border-border dark:border-white/5 pb-4"><Sparkles className="w-5 h-5" /> Manifest Protocol</h3>
+              <ul className="space-y-10">
+                <li className="space-y-3">
+                  <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase tracking-widest"><Truck className="w-4 h-4" /> 48-Hour Protocol</div>
+                  <p className="text-[11px] font-bold text-muted-foreground dark:text-zinc-500 leading-relaxed uppercase tracking-tight">Updating inventory counts or price maintains your discovery engine rank.</p>
+                </li>
+                <li className="space-y-3">
+                  <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase tracking-widest"><ShieldCheck className="w-4 h-4" /> Policy Check</div>
+                  <p className="text-[11px] font-bold text-muted-foreground dark:text-zinc-500 leading-relaxed uppercase tracking-tight">Ensure description edits remain 100% accurate to current condition.</p>
+                </li>
+              </ul>
+            </div>
+          </aside>
         </form>
       </main>
     </div>

@@ -1,6 +1,6 @@
-
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
+import { Heart } from 'lucide-react';
 
 export default function FeesPage() {
   return (
@@ -10,13 +10,46 @@ export default function FeesPage() {
         <h1 className="text-4xl font-black uppercase tracking-tight text-primary">Fee Structure</h1>
 
         <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-black uppercase">Seller Platform Fees</h2>
-          <ul className="text-sm text-muted-foreground space-y-2">
-            <li>Tier 1: 8% platform fee per completed order</li>
-            <li>Tier 2: 6% platform fee per completed order</li>
-            <li>Tier 3: 4% platform fee per completed order</li>
+          <h2 className="text-lg font-black uppercase flex items-center gap-2">
+            Dealer Health Protocols (Tiers)
+          </h2>
+          <ul className="text-sm text-muted-foreground space-y-4">
+            <li className="flex items-center gap-3">
+              <div className="flex shrink-0">
+                <Heart className="w-4 h-4 text-red-600 fill-red-600" />
+              </div>
+              <div>
+                <span className="font-black text-primary uppercase">1 HEART STATUS (Base):</span> 
+                <span className="ml-2">8% platform fee per completed order. Default node status.</span>
+              </div>
+            </li>
+            <li className="flex items-center gap-3">
+              <div className="flex shrink-0">
+                <Heart className="w-4 h-4 text-red-600 fill-red-600" />
+                <Heart className="w-4 h-4 text-red-600 fill-red-600" />
+              </div>
+              <div>
+                <span className="font-black text-primary uppercase">2 HEARTS STATUS (Veteran):</span> 
+                <span className="ml-2">6% platform fee per completed order. Earned through consistent volume.</span>
+              </div>
+            </li>
+            <li className="flex items-center gap-3">
+              <div className="flex shrink-0">
+                <Heart className="w-4 h-4 text-red-600 fill-red-600" />
+                <Heart className="w-4 h-4 text-red-600 fill-red-600" />
+                <Heart className="w-4 h-4 text-red-600 fill-red-600" />
+              </div>
+              <div>
+                <span className="font-black text-primary uppercase">3 HEARTS STATUS (Legendary):</span> 
+                <span className="ml-2">4% platform fee per completed order. The absolute tier for elite dealers.</span>
+              </div>
+            </li>
           </ul>
-          <p className="text-xs text-muted-foreground">Tier placement depends on seller performance factors, including shipping compliance. Late-shipment behavior can trigger tier downgrades and higher effective costs.</p>
+          <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+            <p className="text-xs text-red-900 font-bold italic">
+              DAMAGE PENALTY: Any violation of the 2-day shipping standard results in an immediate loss of hearts, resetting your node to 1 Heart status and increasing platform fees.
+            </p>
+          </div>
         </Card>
 
         <Card className="p-6 space-y-4">
@@ -33,15 +66,6 @@ export default function FeesPage() {
             <li>Late-shipment cancellations trigger full buyer refund eligibility</li>
             <li>Associated fees may not be recoverable from payment processor</li>
             <li>Repeated chargebacks can result in enforcement action</li>
-          </ul>
-        </Card>
-
-        <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-black uppercase">Listing Type Notes</h2>
-          <ul className="text-sm text-muted-foreground space-y-2">
-            <li>Fixed-price sales settle at listed Buy It Now price.</li>
-            <li>Auction sales settle at winning bid amount after checkout.</li>
-            <li>Applicable platform and processing fees apply to both listing types.</li>
           </ul>
         </Card>
 

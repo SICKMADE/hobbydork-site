@@ -26,6 +26,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { filterProfanity } from '@/lib/utils';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 export default function CreateGiveaway() {
   const { toast } = useToast();
@@ -43,6 +44,7 @@ export default function CreateGiveaway() {
   
   const [photo, setPhoto] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -76,32 +78,46 @@ export default function CreateGiveaway() {
     return () => clearTimeout(timer);
   }, [title, description, prizeValue, endsAt, isDraftLoaded]);
 
-  const startCamera = async () => {
-    setShowCamera(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Camera Access Denied' });
-    }
-  };
+  useEffect(() => {
+    if (!showCamera) return;
+
+    const getCameraPermission = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({video: { facingMode: 'environment' }});
+        setHasCameraPermission(true);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Camera Access Denied',
+          description: 'Please enable camera permissions in your browser settings to use this app.',
+        });
+      }
+    };
+
+    getCameraPermission();
+
+    return () => {
+      if (videoRef.current?.srcObject) {
+        (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [showCamera, toast]);
 
   const capturePhoto = () => {
-    if (videoRef.current) {
+    if (videoRef.current && hasCameraPermission) {
       const canvas = document.createElement('canvas');
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
       canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
       setPhoto(canvas.toDataURL('image/jpeg'));
-      stopCamera();
+      setShowCamera(false);
     }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
-    }
-    setShowCamera(false);
   };
 
   const uploadPhotoToStorage = async (dataUri: string): Promise<string> => {
@@ -130,7 +146,6 @@ export default function CreateGiveaway() {
       const sanitizedDescription = filterProfanity(description);
       const imageUrl = await uploadPhotoToStorage(photo);
 
-      // ALIGNED SCHEMA: 'seller' and 'sellerId' are consistently the user's UID
       const dropData = {
         title: sanitizedTitle,
         description: sanitizedDescription,
@@ -150,12 +165,12 @@ export default function CreateGiveaway() {
       toast({ title: 'Live Drop Launched!' });
       router.push('/dashboard');
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Launch Failed', description: getFriendlyErrorMessage(error) || 'Could not launch the drop. Please try again.' });
+      toast({ variant: 'destructive', title: 'Launch Failed', description: getFriendlyErrorMessage(error) });
       setIsSubmitting(false);
     }
   };
 
-  if (authLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
+  if (authLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
 
   return (
     <div className="min-h-screen bg-background">
@@ -165,7 +180,7 @@ export default function CreateGiveaway() {
         
         <header className="mb-10 flex justify-between items-end">
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase mb-2"><Zap className="w-3 h-3" /> Seller Tool</div>
+            <div className="flex items-center gap-2 text-primary font-black tracking-widest text-[10px] uppercase mb-2"><Zap className="w-3 h-3" /> Seller Tool</div>
             <h1 className="text-4xl font-headline font-black italic uppercase tracking-tighter text-primary leading-none">Launch Live Drop</h1>
           </div>
           {lastSaved && (
@@ -178,27 +193,33 @@ export default function CreateGiveaway() {
 
         <form onSubmit={handleSubmit} className="grid gap-12 lg:grid-cols-[1fr_350px]">
           <div className="space-y-12">
-            <section className="space-y-4">
+            <section className="bg-zinc-900/30 p-8 rounded-2xl border-2 border-dashed border-white/5 space-y-4">
               <Label className="text-xs font-black uppercase tracking-widest text-primary">Prize Photo</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {photo ? (
                   <div className="relative aspect-video rounded-[2rem] overflow-hidden border-4 border-zinc-100 shadow-2xl group">
                     <Image src={photo} alt="Prize" fill className="object-cover" />
-                    <button type="button" onClick={() => setPhoto(null)} className="absolute top-4 right-4 bg-zinc-950/50 text-white rounded-full p-2 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10" title="Remove photo"><X className="w-4 h-4" /></button>
+                    <button type="button" aria-label="Remove photo" title="Remove photo" onClick={() => setPhoto(null)} className="absolute top-4 right-4 bg-zinc-950/50 text-white rounded-full p-2 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10"><X className="w-4 h-4" /></button>
                   </div>
                 ) : showCamera ? (
-                  <div className="relative aspect-video rounded-[2rem] overflow-hidden bg-black border-4 border-accent shadow-2xl">
+                  <div className="relative aspect-video rounded-[2rem] overflow-hidden bg-black border-4 border-primary shadow-2xl">
                     <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                    {hasCameraPermission === false && (
+                      <Alert variant="destructive" className="absolute top-4 left-4 right-4 z-20">
+                        <AlertTitle>Camera Access Required</AlertTitle>
+                        <AlertDescription>Please allow camera access to use this feature.</AlertDescription>
+                      </Alert>
+                    )}
                     <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-4 px-6">
-                      <Button type="button" onClick={capturePhoto} className="bg-white text-zinc-950 rounded-full h-14 px-8 font-black uppercase tracking-widest">Snap Photo</Button>
-                      <Button type="button" variant="outline" onClick={stopCamera} className="bg-white/10 text-white border-white/20 backdrop-blur-md rounded-full h-14 w-14 p-0"><X className="w-6 h-6" /></Button>
+                      <Button type="button" onClick={capturePhoto} disabled={!hasCameraPermission} className="bg-white text-zinc-950 rounded-full h-14 px-8 font-black uppercase tracking-widest">Snap Photo</Button>
+                      <Button type="button" variant="outline" onClick={() => setShowCamera(false)} className="bg-white/10 text-white border-white/20 backdrop-blur-md rounded-full h-14 w-14 p-0"><X className="w-6 h-6" /></Button>
                     </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    <label className="aspect-video border-4 border-dashed rounded-[2rem] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent transition-all group">
+                    <label htmlFor="prize-photo-upload" className="aspect-video border-4 border-dashed rounded-[2rem] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary transition-all group">
                       <Camera className="w-10 h-10 text-muted-foreground" /><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Upload</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={e => {
+                      <input id="prize-photo-upload" type="file" accept="image/*" className="hidden" onChange={e => {
                         const file = e.target.files?.[0];
                         if (file) {
                           const reader = new FileReader();
@@ -207,7 +228,7 @@ export default function CreateGiveaway() {
                         }
                       }} />
                     </label>
-                    <button type="button" onClick={startCamera} className="aspect-video border-4 border-dashed rounded-[2rem] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent transition-all group">
+                    <button type="button" onClick={() => setShowCamera(true)} className="aspect-video border-4 border-dashed rounded-[2rem] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary transition-all group">
                       <Monitor className="w-10 h-10 text-muted-foreground" /><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Live Cam</span>
                     </button>
                   </div>
@@ -215,38 +236,38 @@ export default function CreateGiveaway() {
               </div>
             </section>
 
-            <section className="space-y-6">
+            <section className="space-y-6 bg-zinc-900/30 p-8 rounded-2xl border-2 border-dashed border-white/5">
               <div className="space-y-2">
-                <Label htmlFor="title" className="text-xs font-black uppercase tracking-widest">Prize Title</Label>
-                <Input placeholder="e.g. 1977 Star Wars Series 1 Wax Pack" className="h-14 rounded-2xl border-2 font-bold" value={title} onChange={e => setTitle(e.target.value)} required />
+                <Label htmlFor="prize-title" className="text-xs font-black uppercase tracking-widest text-muted-foreground">Prize Title</Label>
+                <Input id="prize-title" placeholder="e.g. 1977 Star Wars Series 1 Wax Pack" className="h-14 rounded-2xl border-2 border-zinc-200 bg-white font-bold text-zinc-950 focus-visible:ring-primary shadow-sm placeholder:text-zinc-400" value={title} onChange={e => setTitle(e.target.value)} required />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest">Estimated Value ($)</Label>
-                  <Input type="number" placeholder="0.00" className="h-14 rounded-2xl border-2 text-xl font-black" value={prizeValue} onChange={e => setPrizeValue(e.target.value)} required />
+                  <Label htmlFor="prize-value" className="text-xs font-black uppercase tracking-widest text-muted-foreground">Estimated Value ($)</Label>
+                  <Input id="prize-value" type="number" placeholder="0.00" className="h-14 rounded-2xl border-2 border-zinc-200 bg-white text-xl font-black text-zinc-950 focus-visible:ring-primary shadow-sm" value={prizeValue} onChange={e => setPrizeValue(e.target.value)} required />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest">End Date & Time</Label>
-                  <Input type="datetime-local" className="h-14 rounded-2xl border-2 font-bold" value={endsAt} onChange={e => setEndsAt(e.target.value)} required />
+                  <Label htmlFor="prize-ends-at" className="text-xs font-black uppercase tracking-widest text-muted-foreground">End Date & Time</Label>
+                  <Input id="prize-ends-at" type="datetime-local" className="h-14 rounded-2xl border-2 border-zinc-200 bg-white font-bold text-zinc-950 focus-visible:ring-primary shadow-sm" value={endsAt} onChange={e => setEndsAt(e.target.value)} required />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest">Description</Label>
-                <Textarea placeholder="Why is this a must-have?" className="min-h-[150px] rounded-2xl border-2 font-medium" value={description} onChange={e => setDescription(e.target.value)} required />
+                <Label htmlFor="prize-description" className="text-xs font-black uppercase tracking-widest text-muted-foreground">Description</Label>
+                <Textarea id="prize-description" placeholder="Why is this a must-have?" className="min-h-[150px] rounded-2xl border-2 border-zinc-200 bg-white text-zinc-950 font-medium focus-visible:ring-primary shadow-sm placeholder:text-zinc-400" value={description} onChange={e => setDescription(e.target.value)} required />
               </div>
             </section>
 
-            <Button type="submit" disabled={isSubmitting} className="w-full bg-accent text-accent-foreground font-black h-20 text-2xl rounded-2xl shadow-xl shadow-accent/20 uppercase italic tracking-tighter">
+            <Button type="submit" disabled={isSubmitting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-black h-20 text-2xl rounded-2xl shadow-xl uppercase italic tracking-tighter">
               {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : "Launch Live Drop"}
             </Button>
           </div>
 
           <aside className="space-y-6">
             <div className="bg-zinc-950 text-white p-8 rounded-[2.5rem] shadow-2xl sticky top-24">
-              <h3 className="font-headline font-black text-xl mb-6 uppercase italic tracking-tighter flex items-center gap-2"><Gift className="w-5 h-5 text-accent" /> Drop Policy</h3>
+              <h3 className="font-headline font-black text-xl mb-6 uppercase italic tracking-tighter flex items-center gap-2"><Gift className="w-5 h-5 text-primary" /> Drop Policy</h3>
               <ul className="space-y-8">
                 <li className="space-y-2">
-                  <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase">
+                  <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase">
                     <ShieldCheck className="w-3 h-3" /> Fair Play
                   </div>
                   <p className="text-[11px] font-bold leading-relaxed text-white/60">

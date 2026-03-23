@@ -1,1 +1,1 @@
-STRIPE_SECRET: "sk_test_your_secret_here"
+# STRIPE_SECRET should be managed securely outside of version control.

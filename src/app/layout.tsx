@@ -5,48 +5,14 @@ import { FirebaseClientProvider } from "@/firebase"
 import { ThemeHandler } from "@/components/ThemeHandler"
 import { MainLayoutWrapper } from "@/components/MainLayoutWrapper"
 import { GoogleAnalytics } from "@/lib/analytics"
+import { SidebarProvider } from "@/components/ui/sidebar"
 
 export const metadata: Metadata = {
   title: {
-    default: 'hobbydork | Built for Collectors',
+    default: 'hobbydork | The Social Marketplace for Collectors',
     template: '%s | hobbydork'
   },
-  description: 'The community-driven destination for serious collectors. Trade, track, and talk shop with the most passionate collectors on the planet.',
-  keywords: ['collectibles', 'trading cards', 'vintage watches', 'auctions', 'rare toys', 'collector community', 'hobby shop'],
-  authors: [{ name: 'hobbydork' }],
-  creator: 'hobbydork',
-  publisher: 'hobbydork',
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: 'https://hobbydork.com',
-    siteName: 'hobbydork',
-    title: 'hobbydork | Built for Collectors',
-    description: 'A safe, transparent social marketplace for high-end collectibles.',
-    images: [
-      {
-        url: '/hobbydork-main.png',
-        width: 1200,
-        height: 630,
-        alt: 'hobbydork - Where Collectors Connect',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'hobbydork | Built for Collectors',
-    description: 'A safe, transparent social marketplace for high-end collectibles.',
-    images: ['/hobbydork-main.png'],
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  description: 'Trade, track, and talk shop with serious collectors. Built for cards, comics, and rare hobby assets.',
 };
 
 export default function RootLayout({
@@ -55,19 +21,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@700;900&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Space+Grotesk:wght@300..700&family=Orbitron:wght@400..900&family=Big+Shoulders+Stencil+Display:wght@100..900&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased min-h-screen overflow-x-hidden">
+      <body className="antialiased min-h-screen">
         <GoogleAnalytics />
         <ThemeHandler />
         <FirebaseClientProvider>
-          <MainLayoutWrapper>
-            {children}
-          </MainLayoutWrapper>
+          <SidebarProvider defaultOpen={true}>
+            <MainLayoutWrapper>
+              {children}
+            </MainLayoutWrapper>
+          </SidebarProvider>
         </FirebaseClientProvider>
         <Toaster />
       </body>

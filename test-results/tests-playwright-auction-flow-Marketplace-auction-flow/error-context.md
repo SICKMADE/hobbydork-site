@@ -1,0 +1,153 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e7]:
+      - link "hobbydork" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - img "hobbydork" [ref=e10]
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - generic [ref=e13]: Marketplace
+          - list [ref=e14]:
+            - listitem [ref=e15]:
+              - link "Explore" [ref=e16] [cursor=pointer]:
+                - /url: /
+                - img [ref=e17]
+                - generic [ref=e20]: Explore
+            - listitem [ref=e21]:
+              - link "Catalog" [ref=e22] [cursor=pointer]:
+                - /url: /listings
+                - img [ref=e23]
+                - generic [ref=e26]: Catalog
+            - listitem [ref=e27]:
+              - link "ISO24" [ref=e28] [cursor=pointer]:
+                - /url: /iso24
+                - img [ref=e29]
+                - generic [ref=e32]: ISO24
+            - listitem [ref=e33]:
+              - link "Trust Board" [ref=e34] [cursor=pointer]:
+                - /url: /trust-board
+                - img [ref=e35]
+                - generic [ref=e41]: Trust Board
+            - listitem [ref=e42]:
+              - link "Viral Bounty NEW" [ref=e43] [cursor=pointer]:
+                - /url: /viral-bounty
+                - img [ref=e44]
+                - generic [ref=e46]: Viral Bounty
+                - generic [ref=e47]: NEW
+            - listitem [ref=e48]:
+              - link "Marketplace Store" [ref=e49] [cursor=pointer]:
+                - /url: /hobbydork-store
+                - img [ref=e50]
+                - generic [ref=e52]: Marketplace Store
+        - generic [ref=e53]:
+          - generic [ref=e54]: Tools
+          - list [ref=e55]:
+            - listitem [ref=e56]:
+              - link "AI Price Check" [ref=e57] [cursor=pointer]:
+                - /url: /tools/price-check
+                - img [ref=e58]
+                - generic [ref=e60]: AI Price Check
+        - generic [ref=e61]:
+          - generic [ref=e62]: Selling
+          - list [ref=e63]:
+            - listitem [ref=e64]:
+              - link "Sign in to start selling" [ref=e65] [cursor=pointer]:
+                - /url: /login
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - link "About Us" [ref=e68] [cursor=pointer]:
+            - /url: /creed
+            - img [ref=e69]
+            - generic [ref=e71]: About Us
+          - link "Help Center" [ref=e72] [cursor=pointer]:
+            - /url: /help
+            - img [ref=e73]
+            - generic [ref=e76]: Help Center
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - img [ref=e79]
+            - generic [ref=e85]: Light
+          - switch [ref=e86] [cursor=pointer]
+    - main [ref=e87]:
+      - generic [ref=e91]:
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - link "hobbydork" [ref=e94] [cursor=pointer]:
+              - /url: /
+              - img "hobbydork" [ref=e95]
+            - paragraph [ref=e96]: The definitive social marketplace for serious collectors. Built on trust, speed, and community protocols.
+            - generic [ref=e97]:
+              - generic "Security Protocol" [ref=e98]:
+                - img [ref=e99]
+              - generic "Verified Network" [ref=e101]:
+                - img [ref=e102]
+          - generic [ref=e105]:
+            - heading "Navigation" [level=4] [ref=e106]:
+              - img [ref=e107]
+              - text: Navigation
+            - list [ref=e112]:
+              - listitem [ref=e113]:
+                - link "Global Catalog" [ref=e114] [cursor=pointer]:
+                  - /url: /listings
+              - listitem [ref=e115]:
+                - link "ISO24 Requests" [ref=e116] [cursor=pointer]:
+                  - /url: /iso24
+              - listitem [ref=e117]:
+                - link "Trust Board" [ref=e118] [cursor=pointer]:
+                  - /url: /trust-board
+              - listitem [ref=e119]:
+                - link "Marketplace Store" [ref=e120] [cursor=pointer]:
+                  - /url: /hobbydork-store
+          - generic [ref=e121]:
+            - heading "Legal & Policy" [level=4] [ref=e122]:
+              - img [ref=e123]
+              - text: Legal & Policy
+            - list [ref=e127]:
+              - listitem [ref=e128]:
+                - link "Terms of Service" [ref=e129] [cursor=pointer]:
+                  - /url: /terms
+              - listitem [ref=e130]:
+                - link "Privacy Policy" [ref=e131] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=e132]:
+                - link "Seller Agreement" [ref=e133] [cursor=pointer]:
+                  - /url: /seller-agreement
+              - listitem [ref=e134]:
+                - link "Fee Structure" [ref=e135] [cursor=pointer]:
+                  - /url: /fees
+          - generic [ref=e136]:
+            - heading "Support" [level=4] [ref=e137]:
+              - img [ref=e138]
+              - text: Support
+            - list [ref=e145]:
+              - listitem [ref=e146]:
+                - link "Help Center" [ref=e147] [cursor=pointer]:
+                  - /url: /help
+              - listitem [ref=e148]:
+                - link "Report Violation" [ref=e149] [cursor=pointer]:
+                  - /url: /report-issue
+              - listitem [ref=e150]:
+                - link "About Us" [ref=e151] [cursor=pointer]:
+                  - /url: /creed
+            - generic [ref=e152]:
+              - paragraph [ref=e153]:
+                - img [ref=e154]
+                - text: System Status
+              - generic [ref=e157]:
+                - img [ref=e158]
+                - text: NODE_ACTIVE
+        - generic [ref=e160]:
+          - generic [ref=e161]: © 2026 hobbydork. Built for Collectors. Nevada, USA.
+          - generic [ref=e162]:
+            - generic [ref=e163]: VISA
+            - generic [ref=e164]: STRIPE
+            - generic [ref=e165]: AMEX
+  - region "Notifications (F8)":
+    - list
+  - button "Open Next.js Dev Tools" [ref=e171] [cursor=pointer]:
+    - img [ref=e172]
+  - alert [ref=e175]
+```

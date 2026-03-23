@@ -1,3 +1,4 @@
+
 import { Timestamp } from "firebase/firestore";
 
 export type UserStatus = 'ACTIVE' | 'LIMITED' | 'SUSPENDED';
@@ -7,6 +8,8 @@ export type User = {
     email: string;
     displayName: string | null;
     avatar?: string;
+    photoURL?: string;
+    username?: string;
     status: UserStatus;
     createdAt: Timestamp;
     updatedAt: Timestamp;
@@ -20,6 +23,7 @@ export type User = {
     stripeTermsAgreed: boolean;
     blockedUsers: string[];
     stripeAccountId?: string | null;
+    ownedPremiumProducts?: string[];
     shippingAddress?: {
         name?: string;
         address1?: string;
@@ -30,12 +34,30 @@ export type User = {
         country?: string;
     };
     sellerStatus?: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
-    sellerTier?: "BRONZE" | "SILVER" | "GOLD";
+    sellerTier?: "1_HEART" | "2_HEARTS" | "3_HEARTS";
     onTimeShippingRate?: number;
     completedOrders?: number;
     lateShipmentsLast30d?: number;
     lateShipmentsLast60d?: number;
     lastTierChange?: Timestamp;
+};
+
+export type PlatformBounty = {
+    id: string;
+    title: string;
+    description: string;
+    imageUrl: string;
+    status: 'LIVE' | 'ENDED';
+    endsAt: Timestamp;
+    entryCount?: number;
+};
+
+export type BountyEntry = {
+    id: string;
+    uid: string;
+    bountyId: string;
+    platform: string;
+    timestamp: Timestamp;
 };
 
 export type Store = {

@@ -1,3 +1,4 @@
+
 "use client";
 import { CATEGORIES, isListingExpired } from '@/lib/mock-data';
 
@@ -22,13 +23,16 @@ import {
   ArrowUpDown,
   ChevronDown,
   ShieldCheck,
-  X
+  X,
+  LayoutGrid,
+  Zap
 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
 import type { Listing, Category } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
+import Link from 'next/link';
 
 function ListingsContent() {
   const searchParams = useSearchParams();
@@ -348,15 +352,24 @@ function ListingsContent() {
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground">Syncing Catalog...</p>
             </div>
           ) : filteredListings.length === 0 ? (
-            <div className="py-24 text-center bg-muted/20 rounded-[2.5rem] border-2 border-dashed border-foreground space-y-6 text-foreground">
+            <div className="py-20 md:py-32 text-center border-4 border-dashed rounded-[2.5rem] border-muted bg-muted/10 space-y-8 p-8">
               <div className="w-16 h-16 bg-card rounded-3xl flex items-center justify-center mx-auto border-2 border-foreground shadow-sm">
                 <SearchIcon className="w-8 h-8 text-foreground" />
               </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-headline font-black uppercase tracking-tight text-foreground">No Assets Located</h3>
-                <p className="text-foreground text-xs font-black italic max-sm mx-auto">Adjust your parameters to find your next grail.</p>
+              <div className="space-y-4 max-w-md mx-auto">
+                <div className="space-y-2">
+                  <h3 className="text-xl font-headline font-black uppercase tracking-tight text-foreground">No Assets Located</h3>
+                  <p className="text-muted-foreground text-xs font-bold uppercase tracking-tight leading-relaxed">
+                    Can't find your grail? Post a search request in the ISO24 feed and let the dealer network come to you.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                  <Button asChild className="bg-accent text-white hover:bg-accent/90 font-black h-14 px-8 rounded-xl shadow-xl uppercase text-[10px] tracking-[0.2em] gap-2">
+                    <Link href="/iso24/create"><Zap className="w-4 h-4" /> Start Active Hunt</Link>
+                  </Button>
+                  <Button onClick={clearFilters} variant="outline" className="rounded-xl border-2 border-foreground font-black uppercase text-[10px] tracking-widest px-8 h-14">Purge Search</Button>
+                </div>
               </div>
-              <Button onClick={clearFilters} variant="outline" className="rounded-xl border-2 border-foreground font-black uppercase text-[10px] tracking-widest px-8 h-11 text-foreground">Reset discovery</Button>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">

@@ -1,0 +1,5 @@
+.progressBar {
+  transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 100%;
+  background-color: var(--color-primary, #f00);
+}
