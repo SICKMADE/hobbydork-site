@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Disclosure } from '@/components/ui/Disclosure';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -27,6 +28,7 @@ import {
   Sparkles,
   ShoppingBag,
   Zap,
+  Gift,
 } from 'lucide-react';
 
 import {
@@ -59,9 +61,7 @@ const navItems = [
   { title: 'hobbydork store', url: '/hobbydork-store', icon: Crown },
 ];
 
-const toolsItems = [
-  { title: 'AI Price Check', url: '/tools/price-check', icon: Sparkles },
-];
+const toolsItems = [];
 
 const authItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
@@ -192,18 +192,7 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
-        <SidebarGroup className="py-1">
-          <SidebarGroupLabel className="text-[10px] uppercase font-black tracking-widest opacity-50">Tools</SidebarGroupLabel>
-          <SidebarMenu>
-            {toolsItems.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild isActive={pathname === item.url} className="h-9" onClick={handleNavClick}>
-                  <Link href={item.url}><item.icon className="w-4 h-4" /><span className="text-[11px] font-bold uppercase tracking-tight">{item.title}</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
+        {/* Tools section temporarily removed */}
 
         {user && (
           <SidebarGroup className="py-1">
@@ -241,10 +230,10 @@ export function AppSidebar() {
               isSeller ? (
                 <>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === `/shop/${username}`} className="h-9" onClick={handleNavClick}>
-                      <Link href={username ? `/shop/${username}` : "/dashboard"}>
+                    <SidebarMenuButton asChild isActive={pathname === `/storefronts/${username}`} className="h-9" onClick={handleNavClick}>
+                      <Link href={username ? `/storefronts/${username}` : "/dashboard"}>
                         <Store className="w-4 h-4" />
-                        <span className="text-[11px] font-bold uppercase tracking-tight">My Shop</span>
+                        <span className="text-[11px] font-bold uppercase tracking-tight">My Storefront</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -257,10 +246,18 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
+                    <SidebarMenuButton asChild className="h-9" isActive={pathname === '/giveaways/create'} onClick={handleNavClick}>
+                      <Link href="/giveaways/create">
+                        <Gift className="w-4 h-4" />
+                        <span className="text-[11px] font-bold uppercase tracking-tight">Create Giveaway</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname === '/seller/settings'} className="h-9" onClick={handleNavClick}>
                       <Link href="/seller/settings">
                         <Palette className="w-4 h-4" />
-                        <span className="text-[11px] font-bold uppercase tracking-tight">Shop Settings</span>
+                        <span className="text-[11px] font-bold uppercase tracking-tight">Storefront Settings</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -286,27 +283,55 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t space-y-3">
-        {user && (
-          <SidebarMenuButton asChild isActive={pathname === '/settings'} className="h-9" onClick={handleNavClick}>
-            <Link href="/settings"><Settings className="w-4 h-4" /><span className="text-[11px] font-bold uppercase tracking-tight">Settings</span></Link>
-          </SidebarMenuButton>
-        )}
-        
-        <div className="flex flex-col gap-0.5">
-          <SidebarMenuButton asChild isActive={pathname === '/creed'} className="h-8" onClick={handleNavClick}>
-            <Link href="/creed"><Info className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase tracking-tight">About Us</span></Link>
-          </SidebarMenuButton>
-          <SidebarMenuButton asChild isActive={pathname === '/help'} className="h-8" onClick={handleNavClick}>
-            <Link href="/help"><HelpCircle className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase tracking-tight">Help Center</span></Link>
-          </SidebarMenuButton>
+        {/* Collapsed on mobile, expanded on desktop */}
+        <div className="block md:hidden">
+          <Disclosure>
+            {({ open }) => (
+              <>
+                <button className="flex items-center gap-2 w-full text-left text-[11px] font-bold uppercase tracking-tight py-2 px-2 rounded hover:bg-muted transition-colors" aria-expanded={open ? "true" : "false"}>
+                  <Settings className="w-4 h-4" />
+                  More
+                  <span className="ml-auto">{open ? '−' : '+'}</span>
+                </button>
+                <Disclosure.Panel>
+                  <div className="flex flex-col gap-0.5 mt-1">
+                    {user && (
+                      <SidebarMenuButton asChild isActive={pathname === '/settings'} className="h-9" onClick={handleNavClick}>
+                        <Link href="/settings"><Settings className="w-4 h-4" /><span className="text-[11px] font-bold uppercase tracking-tight">Settings</span></Link>
+                      </SidebarMenuButton>
+                    )}
+                    <SidebarMenuButton asChild isActive={pathname === '/creed'} className="h-8" onClick={handleNavClick}>
+                      <Link href="/creed"><Info className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase tracking-tight">About Us</span></Link>
+                    </SidebarMenuButton>
+                    <SidebarMenuButton asChild isActive={pathname === '/help'} className="h-8" onClick={handleNavClick}>
+                      <Link href="/help"><HelpCircle className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase tracking-tight">Help Center</span></Link>
+                    </SidebarMenuButton>
+                  </div>
+                </Disclosure.Panel>
+              </>
+            )}
+          </Disclosure>
         </div>
-        
+        <div className="hidden md:block">
+          {user && (
+            <SidebarMenuButton asChild isActive={pathname === '/settings'} className="h-9" onClick={handleNavClick}>
+              <Link href="/settings"><Settings className="w-4 h-4" /><span className="text-[11px] font-bold uppercase tracking-tight">Settings</span></Link>
+            </SidebarMenuButton>
+          )}
+          <div className="flex flex-col gap-0.5">
+            <SidebarMenuButton asChild isActive={pathname === '/creed'} className="h-8" onClick={handleNavClick}>
+              <Link href="/creed"><Info className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase tracking-tight">About Us</span></Link>
+            </SidebarMenuButton>
+            <SidebarMenuButton asChild isActive={pathname === '/help'} className="h-8" onClick={handleNavClick}>
+              <Link href="/help"><HelpCircle className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase tracking-tight">Help Center</span></Link>
+            </SidebarMenuButton>
+          </div>
+        </div>
         {user && (
           <SidebarMenuButton onClick={handleSignOut} className="bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 !text-red-700 dark:!text-red-400 border border-red-200 dark:border-red-900/50 font-black rounded-lg h-10">
             <LogOut className="w-4 h-4" /><span className="text-[10px] uppercase tracking-widest">Sign Out</span>
           </SidebarMenuButton>
         )}
-        
         <div className="flex items-center justify-between px-2 py-1.5 bg-muted/50 rounded-lg">
           <div className="flex items-center gap-2">
             {mounted && isDark ? <Moon className="w-3.5 h-3.5 text-accent" /> : <Sun className="w-3.5 h-3.5 text-yellow-500" />}

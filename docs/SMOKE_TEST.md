@@ -204,8 +204,8 @@ Trigger common user errors:
 3. View the same storefront as another user or logged out
 
 ### Expected Results
-- [ ] **Owner view:** Invisible listings visible in shop tab
-- [ ] **Public view:** Invisible listings hidden from shop and browse
+- [ ] **Owner view:** Invisible listings visible in storefront tab
+- [ ] **Public view:** Invisible listings hidden from storefront and browse
 - [ ] Browse page never shows invisible listings
 - [ ] Direct link to invisible listing returns 404 for non-owners
 

@@ -176,7 +176,7 @@
     },
     "Storefront": {
       "title": "Storefront",
-      "description": "Public appearance settings for a dealer's shop.",
+      "description": "Public appearance settings for a dealer's storefront.",
       "type": "object",
       "properties": {
         "username": { "type": "string" },
@@ -188,11 +188,11 @@
     },
     "Follower": {
       "title": "Follower",
-      "description": "A relationship between a user and a shop they follow.",
+      "description": "A relationship between a user and a storefront they follow.",
       "type": "object",
       "properties": {
         "userId": { "type": "string" },
-        "shopUsername": { "type": "string" },
+        "storefrontUsername": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" }
       }
     },
@@ -211,7 +211,7 @@
     },
     "Report": {
       "title": "Report",
-      "description": "A flag raised against a user, listing, or shop.",
+      "description": "A flag raised against a user, listing, or storefront.",
       "type": "object",
       "properties": {
         "reportedId": { "type": "string" },
@@ -220,7 +220,7 @@
         "reporterName": { "type": "string" },
         "reason": { "type": "string" },
         "details": { "type": "string" },
-        "type": { "type": "string", "enum": ["User", "Listing", "Shop"] },
+        "type": { "type": "string", "enum": ["User", "Listing", "Storefront"] },
         "status": { "type": "string", "enum": ["Pending", "Resolved"] },
         "timestamp": { "type": "string", "format": "date-time" }
       }
@@ -281,11 +281,11 @@
     },
     "/storefronts/{username}": {
       "schema": "Storefront",
-      "description": "Identity and theme settings for individual shop profiles."
+      "description": "Identity and theme settings for individual storefront profiles."
     },
     "/followers/{followerId}": {
       "schema": "Follower",
-      "description": "List of user-to-shop follows."
+      "description": "List of user-to-storefront follows."
     },
     "/notifications/{notifId}": {
       "schema": "Notification",

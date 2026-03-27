@@ -232,7 +232,7 @@ function ModerationDashboard() {
                             title="View store"
                             aria-label="View store"
                             className="h-9 rounded-lg font-bold text-[10px] uppercase"
-                            onClick={() => window.open(`/shop/${seller.username}`)}
+                            onClick={() => window.open(`/storefronts/${seller.username}`)}
                           >
                             View Storefront
                           </Button>

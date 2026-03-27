@@ -425,7 +425,7 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
                   </div>
                   <div className="space-y-2">
                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Asset Title</p>
-                     <h4 className="text-2xl font-black leading-tight tracking-tight">{order.listingTitle}</h4>
+                     <h4 className="text-2xl font-black leading-tight tracking-tight max-w-[90vw] truncate md:max-w-none">{order.listingTitle}</h4>
                      <p className="text-sm font-bold text-accent">${order.price?.toLocaleString()}</p>
                   </div>
                   <Separator className="bg-white/10" />
@@ -433,7 +433,7 @@ export default function OrderTracking({ params }: { params: Promise<{ id: string
                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{isBuyer ? 'Seller' : 'Buyer'}</p>
                      <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-black">{(isBuyer ? order.sellerName : order.buyerName)?.[0] || '?'}</div>
-                        <p className="text-sm font-black uppercase tracking-tight">@{isBuyer ? order.sellerName : order.buyerName}</p>
+                        <p className="text-sm font-black uppercase tracking-tight max-w-[50vw] truncate md:max-w-none">@{isBuyer ? order.sellerName : order.buyerName}</p>
                      </div>
                   </div>
                </CardContent>

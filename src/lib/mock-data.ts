@@ -174,7 +174,7 @@ export const PREMIUM_PRODUCTS: PremiumProduct[] = [
   {
     id: 'p3',
     name: 'Urban Theme',
-    description: 'Give your shop a gritty, industrial billboard look for that street-collector vibe.',
+    description: 'Give your storefront a gritty, industrial billboard look for that street-collector vibe.',
     price: 9.99,
     category: 'Utility'
   },

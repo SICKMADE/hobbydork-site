@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,7 +18,10 @@ import {
   Gift,
   Clock,
   ShieldCheck,
-  Search
+  Search,
+  Target,
+  ChevronRight,
+  Activity
 } from 'lucide-react';
 import Image from 'next/image';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -76,12 +78,12 @@ export default function ViralBountyPage() {
 
   const handleShare = async (platform: string) => {
     if (!user || !activeBounty || !db) {
-      toast({ variant: 'destructive', title: "Action Denied", description: "Sign in to participate in the protocol." });
+      toast({ variant: 'destructive', title: "Action Denied", description: "Sign in to join the giveaway." });
       return;
     }
 
     const shareUrl = "https://hobbydork.com";
-    const shareText = `Check out hobbydork, the definitive social marketplace for collectors! Join me in the lobby. 🚀 #hobbydork #collectors #${activeBounty.title.replace(/\s+/g, '')}`;
+    const shareText = `Check out hobbydork, the best marketplace for collectors! Join me in the community. 🚀 #hobbydork #collectors #${activeBounty.title.replace(/\s+/g, '')}`;
 
     let url = "";
     if (platform === 'twitter') {
@@ -90,7 +92,7 @@ export default function ViralBountyPage() {
       url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
     } else if (platform === 'instagram') {
       navigator.clipboard.writeText(shareUrl);
-      toast({ title: "Link Copied for Instagram!", description: "Paste it in your bio or stories to enter!" });
+      toast({ title: "Link Copied!", description: "Paste it in your Instagram bio or story to enter!" });
     } else {
       navigator.clipboard.writeText(shareUrl);
       toast({ title: "Link Copied!", description: "Share it with your friends to enter." });
@@ -113,12 +115,11 @@ export default function ViralBountyPage() {
 
       addDoc(collection(db, 'platformBountyEntries'), entryData)
         .then(() => {
-          // Entry count is handled by backend trigger onPlatformBountyEntryCreated
           setHasEntered(true);
-          toast({ title: "Ticket Secured!", description: "You have been entered into the Big Bounty draw." });
+          toast({ title: "Entry Confirmed!", description: "You have been entered into the giveaway." });
         })
         .catch(() => {
-          toast({ variant: 'destructive', title: "Entry Failed", description: "Protocol sync error. Please try again." });
+          toast({ variant: 'destructive', title: "Entry Failed", description: "Something went wrong. Please try again." });
         })
         .finally(() => {
           setIsSharing(false);
@@ -127,10 +128,10 @@ export default function ViralBountyPage() {
   };
 
   const steps = [
-    "Share hobbydork.com URL",
-    "Secure your entry ticket",
-    "Wait for the live draw",
-    "Score the grail prize"
+    "Share our URL",
+    "Get your entry",
+    "Wait for the draw",
+    "Win the prize"
   ];
 
   const bountyPlaceholder = PlaceHolderImages.find(img => img.id === 'default-listing')?.imageUrl || '/defaultbroken.jpg';
@@ -139,7 +140,7 @@ export default function ViralBountyPage() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-12 h-12 animate-spin text-accent" />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Syncing Bounty Protocol</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Loading Giveaway...</p>
       </div>
     );
   }
@@ -147,99 +148,111 @@ export default function ViralBountyPage() {
   return (
     <div className="min-h-screen bg-background pb-20">
       <Navbar />
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
-        <header className="text-center mb-12 space-y-4">
-          <div className="inline-flex items-center gap-2 bg-accent/10 px-4 py-1.5 rounded-full border border-accent/20 mb-4 animate-in fade-in zoom-in duration-700">
-            <Zap className="w-4 h-4 text-accent animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Viral Protocol Active</span>
+      <main className="container mx-auto px-4 max-w-6xl">
+        
+        {/* COMPACT HEADER - MATCHES BROWSE SIZE */}
+        <header className="py-0 mb-12">
+          <div className="max-w-5xl mx-auto bounty-header-bg rounded-b-2xl p-6 md:p-10 shadow-2xl text-white relative overflow-hidden border-b-2 border-accent/20">
+            <div className="relative z-10">
+                <div className="flex items-center gap-3">
+                    <div className="bg-accent/10 p-2 rounded-lg border border-accent/20">
+                        <Trophy className="w-5 h-5 text-accent" />
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-accent">Platform Prize Drop</p>
+                </div>
+                <h1 className="text-3xl md:text-6xl font-headline font-black tracking-tighter uppercase leading-[0.9] mt-4">
+                    The Big <span className="text-accent">Bounty</span>
+                </h1>
+                <p className="text-zinc-400 text-sm md:text-base font-medium mt-2">Win high-value collectibles just for sharing the platform with friends.</p>
+            </div>
           </div>
-          <h1 className="text-4xl md:text-7xl font-headline font-black uppercase italic tracking-tighter leading-none text-primary">
-            THE <span className="text-accent">BIG BOUNTY.</span>
-          </h1>
-          <p className="text-muted-foreground text-sm md:text-lg font-medium max-w-2xl mx-auto leading-relaxed">
-            Grow the community, score the grails. Share hobbydork.com to earn your digital entry ticket for our platform drops.
-          </p>
         </header>
 
-        <div className="mb-12 bg-muted/40 dark:bg-card/60 border-2 border-dashed border-border rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden shadow-sm">
-          <div className="flex flex-col md:flex-row items-stretch">
+        {/* SIMPLE STEPS BAR */}
+        <div className="max-w-5xl mx-auto px-4 mb-12">
+          <div className="bg-zinc-950 border-2 border-zinc-900 rounded-2xl overflow-hidden shadow-xl flex flex-col md:flex-row items-stretch">
             {steps.map((step, i) => (
-              <div key={i} className="flex-1 flex items-center p-6 gap-4 relative">
-                <div className="w-8 h-8 rounded-lg bg-accent text-white flex items-center justify-center font-black text-xs shrink-0 shadow-lg shadow-accent/20">
+              <div key={i} className="flex-1 flex items-center p-6 gap-4 relative group">
+                <div className="w-12 h-12 rounded-full bg-white border-4 border-accent shadow-[0_0_16px_4px_rgba(0,255,65,0.25)] flex items-center justify-center font-arcade text-2xl text-accent neon-glow select-none">
                   {i + 1}
                 </div>
-                <p className="text-[10px] md:text-xs font-black uppercase tracking-widest text-primary leading-tight">
+                <p className="text-xs font-black uppercase tracking-tight text-white">
                   {step}
                 </p>
                 {i < steps.length - 1 && (
-                  <>
-                    <div className="hidden md:block absolute right-0 top-6 bottom-6 w-[1px] bg-border/50" />
-                    <div className="md:hidden absolute bottom-0 left-6 right-6 h-[1px] bg-border/50" />
-                  </>
+                  <div className="hidden md:block absolute right-0 top-6 bottom-6 w-[1px] bg-white/10" />
                 )}
               </div>
             ))}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8">
+        <div className="max-w-5xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-10">
           {!activeBounty ? (
-            <div className="col-span-full py-32 text-center bg-muted/20 rounded-[3rem] border-4 border-dashed space-y-6">
+            <div className="col-span-full py-32 text-center bg-muted/20 rounded-[3rem] border-4 border-dashed border-zinc-200 space-y-4">
               <Search className="w-16 h-16 text-zinc-300 mx-auto" />
-              <div className="space-y-2">
-                <h3 className="text-2xl font-black uppercase italic">Protocol Idle</h3>
-                <p className="text-muted-foreground font-medium italic">No active platform drops located. Check back soon for the next Big Bounty.</p>
+              <div className="space-y-1">
+                <h3 className="text-2xl font-headline font-black uppercase italic">Checking for Prizes...</h3>
+                <p className="text-muted-foreground font-medium">We'll have a new giveaway for you very soon.</p>
               </div>
             </div>
           ) : (
             <>
-              <div className="space-y-8">
-                <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-card transition-all hover:scale-[1.01]">
-                  <div className="relative aspect-video w-full bg-zinc-900">
+              <div className="space-y-10">
+                <Card className="border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-card">
+                  <div className="relative aspect-video w-full bg-zinc-900 border-b-4 border-zinc-950">
                     <Image 
                       src={activeBounty.imageUrl || bountyPlaceholder} 
                       alt={activeBounty.title} 
                       fill 
-                      className="object-cover opacity-80"
-                      data-ai-hint="collectible card"
+                      className="object-cover opacity-90"
+                      priority
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 via-transparent to-transparent" />
-                    <div className="absolute bottom-6 md:bottom-8 left-6 md:left-8 right-6 md:right-8">
-                      <div className="space-y-2">
-                        <Badge className="bg-accent text-white border-none px-3 py-1 font-black uppercase text-[10px] tracking-widest shadow-xl">
-                          PLATFORM DROP
-                        </Badge>
-                        <h2 className="text-2xl md:text-4xl font-headline font-black text-white leading-tight uppercase italic">
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-transparent to-transparent" />
+                    
+                    <div className="absolute top-6 left-6">
+                      <Badge className="bg-red-600 text-white border-none px-4 py-1.5 font-black uppercase text-[10px] tracking-widest shadow-xl">
+                        Featured Prize
+                      </Badge>
+                    </div>
+
+                    <div className="absolute bottom-8 left-8 right-8">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-accent font-black uppercase text-[9px] tracking-widest mb-1">
+                          <Target className="w-3.5 h-3.5" /> High Value Asset
+                        </div>
+                        <h2 className="text-3xl md:text-5xl font-headline font-black text-white leading-none uppercase italic tracking-tighter">
                           {activeBounty.title}
                         </h2>
                       </div>
                     </div>
                   </div>
-                  <CardContent className="p-6 md:p-10 space-y-8">
+                  
+                  <CardContent className="p-8 md:p-12 space-y-10">
                     <div className="space-y-4">
-                      <h3 className="text-lg md:text-xl font-black uppercase tracking-tight italic flex items-center gap-3">
-                        <Trophy className="w-6 h-6 text-accent" /> Mission Brief
+                      <h3 className="text-lg md:text-xl font-headline font-black uppercase flex items-center gap-3 text-primary">
+                        <Trophy className="w-6 h-6 text-accent" /> Prize Details
                       </h3>
-                      <p className="text-muted-foreground font-medium leading-relaxed text-base md:text-lg italic">
+                      <p className="text-muted-foreground font-medium leading-relaxed text-base md:text-lg italic border-l-4 border-accent/20 pl-6">
                         "{activeBounty.description}"
                       </p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="p-6 rounded-2xl bg-muted/50 border-2 border-dashed border-border flex flex-col items-center text-center gap-3">
+                      <div className="p-6 rounded-2xl bg-zinc-50 border-2 border-zinc-100 flex items-center gap-4 shadow-sm">
                         <Clock className="w-8 h-8 text-zinc-400" />
-                        <div>
-                          <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Draw Date</p>
+                        <div className="space-y-0.5">
+                          <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Draw Date</p>
                           <p className="text-lg font-black uppercase">
                             {activeBounty.endsAt?.toDate ? activeBounty.endsAt.toDate().toLocaleDateString() : 'TBD'}
                           </p>
                         </div>
                       </div>
-                      <div className="p-6 rounded-2xl bg-accent/5 border-2 border-dashed border-accent/20 flex flex-col items-center text-center gap-3">
+                      <div className="p-6 rounded-2xl bg-accent/5 border-2 border-accent/10 flex items-center gap-4 shadow-sm">
                         <Gift className="w-8 h-8 text-accent" />
-                        <div>
-                          <p className="text-[10px] font-black uppercase text-accent tracking-widest">Prize Status</p>
-                          <p className="text-lg font-black uppercase">Secured</p>
+                        <div className="space-y-0.5">
+                          <p className="text-[9px] font-black uppercase text-accent tracking-widest">Draw Status</p>
+                          <p className="text-lg font-black uppercase text-accent">Active</p>
                         </div>
                       </div>
                     </div>
@@ -247,84 +260,99 @@ export default function ViralBountyPage() {
                 </Card>
               </div>
 
-              <aside>
-                <Card className="border-none shadow-2xl rounded-[2.5rem] bg-muted/40 dark:bg-card/60 p-6 md:p-10 overflow-hidden h-full">
-                  {isCheckingEntry ? (
-                    <div className="py-20 text-center space-y-4">
-                      <Loader2 className="w-10 h-10 animate-spin text-accent mx-auto" />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Checking Vault Status</p>
-                    </div>
-                  ) : hasEntered ? (
-                    <div className="py-10 text-center space-y-8 animate-in zoom-in duration-500 h-full flex flex-col justify-center">
-                      <div className="relative inline-block">
-                        <div className="absolute inset-0 bg-green-500 blur-2xl opacity-20 animate-pulse" />
-                        <div className="relative w-20 h-20 bg-green-500 rounded-2xl flex items-center justify-center mx-auto shadow-2xl">
-                          <CheckCircle2 className="w-10 h-10 text-white" />
+              <aside className="space-y-6">
+                <Card className="border-none shadow-2xl rounded-[2.5rem] bg-zinc-950 text-white p-8 md:p-10 overflow-hidden relative flex flex-col min-h-[500px]">
+                  <div className="absolute inset-0 hardware-grid-overlay opacity-[0.05]" />
+                  
+                  <div className="relative z-10 flex-1 flex flex-col">
+                    {isCheckingEntry ? (
+                      <div className="flex-1 flex flex-col items-center justify-center space-y-4">
+                        <Loader2 className="w-12 h-12 animate-spin text-accent" />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Checking entry...</p>
+                      </div>
+                    ) : hasEntered ? (
+                      <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8 animate-in zoom-in duration-500">
+                        <div className="relative">
+                          <div className="absolute inset-0 bg-green-500 blur-[40px] opacity-20" />
+                          <div className="relative w-24 h-24 bg-green-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-xl">
+                            <CheckCircle2 className="w-12 h-12 text-white" />
+                          </div>
                         </div>
-                      </div>
-                      <div className="space-y-2">
-                        <h3 className="text-2xl md:text-3xl font-headline font-black uppercase italic leading-none">Ticket Secured</h3>
-                        <p className="text-zinc-400 font-medium italic">You are in the draw for the {activeBounty.title}.</p>
-                      </div>
-                      <div className="pt-6 border-t border-zinc-200 dark:border-white/10 mt-auto">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mb-4">Sharing earns respect</p>
-                        <div className="flex justify-center gap-4">
-                          <Button variant="outline" size="icon" className="rounded-full border-zinc-200 dark:border-white/10 bg-white/5 hover:bg-white/10" title="Share on X" onClick={() => handleShare('twitter')}>
-                            <Twitter className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="icon" className="rounded-full border-zinc-200 dark:border-white/10 bg-white/5 hover:bg-white/10" title="Share on Facebook" onClick={() => handleShare('facebook')}>
-                            <Facebook className="w-4 h-4" />
-                          </Button>
+                        <div className="space-y-2">
+                          <h3 className="text-2xl md:text-3xl font-headline font-black uppercase italic">Entry Secured</h3>
+                          <p className="text-zinc-400 font-bold uppercase text-[9px]">ID: HB_{user?.uid.substring(0,8).toUpperCase()}</p>
                         </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-8 h-full flex flex-col">
-                      <div className="space-y-2">
-                        <h3 className="text-2xl md:text-3xl font-headline font-black uppercase italic tracking-tighter leading-none">Enter the Bounty</h3>
-                        <p className="text-muted-foreground font-medium">Claim your ticket by sharing the lobby URL.</p>
-                      </div>
-
-                      <div className="space-y-3">
-                        <Button 
-                          onClick={() => handleShare('twitter')} 
-                          disabled={isSharing}
-                          className="w-full h-14 md:h-16 bg-zinc-950 hover:bg-zinc-900 text-white rounded-2xl font-black gap-3 shadow-xl transition-all active:scale-95 border border-white/10"
-                        >
-                          <Twitter className="w-5 h-5" /> Share on X
-                        </Button>
-                        <Button 
-                          onClick={() => handleShare('instagram')} 
-                          disabled={isSharing}
-                          className="w-full h-14 md:h-16 bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white rounded-2xl font-black gap-3 shadow-xl transition-all active:scale-95"
-                        >
-                          <Instagram className="w-5 h-5" /> Share on Instagram
-                        </Button>
-                        <Button 
-                          onClick={() => handleShare('facebook')} 
-                          disabled={isSharing}
-                          className="w-full h-14 md:h-16 bg-[#1877F2] hover:bg-[#1877F2]/90 text-white rounded-2xl font-black gap-3 shadow-xl transition-all active:scale-95"
-                        >
-                          <Facebook className="w-5 h-5" /> Share on Facebook
-                        </Button>
-                        <Button 
-                          onClick={() => handleShare('copy')} 
-                          disabled={isSharing}
-                          variant="outline"
-                          className="w-full h-14 md:h-16 rounded-2xl border-zinc-200 dark:border-white/10 bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 font-black gap-3 transition-all active:scale-95"
-                        >
-                          <LinkIcon className="w-5 h-5" /> Copy Link
-                        </Button>
-                      </div>
-
-                      <div className="pt-6 border-t border-zinc-200 dark:border-white/10 flex gap-4 items-start mt-auto">
-                        <ShieldCheck className="w-5 h-5 text-accent shrink-0 mt-0.5" />
-                        <p className="text-[10px] font-bold text-zinc-500 leading-relaxed uppercase tracking-tight">
-                          Platform drops are verified and fulfilled by hobbydork. No purchase necessary. Void where prohibited.
+                        <p className="text-xs text-zinc-300 font-medium italic leading-relaxed bg-white/5 p-4 rounded-xl border border-white/10">
+                          You're in! We'll notify the winner through the platform messages once the draw is complete. Good luck!
                         </p>
+                        <div className="pt-6 border-t border-white/10 w-full space-y-4">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Share Again</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button variant="outline" className="h-10 rounded-lg border-white/10 bg-white/5 text-white font-black uppercase text-[9px]" onClick={() => handleShare('twitter')}>
+                              <Twitter className="w-3.5 h-3.5 mr-1.5" /> Twitter
+                            </Button>
+                            <Button variant="outline" className="h-10 rounded-lg border-white/10 bg-white/5 text-white font-black uppercase text-[9px]" onClick={() => handleShare('facebook')}>
+                              <Facebook className="w-3.5 h-3.5 mr-1.5" /> Facebook
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="space-y-8 flex-1 flex flex-col">
+                        <div className="space-y-2">
+                          <h3 className="text-3xl md:text-4xl font-headline font-black uppercase italic tracking-tighter">Enter to Win</h3>
+                          <p className="text-zinc-400 font-medium italic text-base leading-snug">Share hobbydork with your collector friends to get your entry.</p>
+                        </div>
+
+                        <div className="space-y-3 pt-4">
+                          <Button 
+                            onClick={() => handleShare('twitter')} 
+                            disabled={isSharing}
+                            className="w-full h-16 bg-white text-black hover:bg-zinc-200 font-black rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-between px-6"
+                          >
+                            <span className="flex items-center gap-3 text-sm font-black uppercase tracking-tight"><Twitter className="w-5 h-5 text-[#1DA1F2]" /> Post on Twitter</span>
+                            <ChevronRight className="w-5 h-5 opacity-30" />
+                          </Button>
+                          
+                          <Button 
+                            onClick={() => handleShare('instagram')} 
+                            disabled={isSharing}
+                            className="w-full h-16 bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white font-black rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-between px-6"
+                          >
+                            <span className="flex items-center gap-3 text-sm font-black uppercase tracking-tight"><Instagram className="w-5 h-5" /> Share on IG</span>
+                            <ChevronRight className="w-5 h-5 opacity-30" />
+                          </Button>
+
+                          <Button 
+                            onClick={() => handleShare('facebook')} 
+                            disabled={isSharing}
+                            className="w-full h-16 bg-[#1877F2] text-white hover:bg-[#1877F2]/90 font-black rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-between px-6"
+                          >
+                            <span className="flex items-center gap-3 text-sm font-black uppercase tracking-tight"><Facebook className="w-5 h-5" /> Share on FB</span>
+                            <ChevronRight className="w-5 h-5 opacity-30" />
+                          </Button>
+
+                          <Button 
+                            onClick={() => handleShare('copy')} 
+                            disabled={isSharing}
+                            className="w-full h-16 bg-zinc-900 border border-white/5 text-white hover:bg-zinc-800 font-black rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-between px-6"
+                          >
+                            <span className="flex items-center gap-3 text-sm font-black uppercase tracking-tight"><LinkIcon className="w-5 h-5 text-accent" /> Copy Link</span>
+                            <ChevronRight className="w-5 h-5 opacity-30" />
+                          </Button>
+                        </div>
+
+                        <div className="pt-8 border-t border-white/5 flex gap-4 items-start mt-auto">
+                          <div className="bg-accent/20 p-2 rounded-lg shrink-0">
+                            <ShieldCheck className="w-5 h-5 text-accent" />
+                          </div>
+                          <p className="text-[9px] font-black text-zinc-500 leading-relaxed uppercase tracking-widest">
+                            Winners are chosen randomly. You don't need to buy anything to win. All draws are managed by hobbydork.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </Card>
               </aside>
             </>

@@ -45,7 +45,31 @@ const HERO_SLIDES = [
     title: "UNLOCK", 
     highlight: "THE VAULT",
     sub: "COLLECTOR REWARDS",
-    intel: "Locate the 4-digit PIN hidden within the site archives to unlock exclusive platform rewards.",
+    intel: (
+      ({ navigate }: { navigate?: (url: string) => void }) => (
+        <>
+          Find the 4-digit PIN&mdash;it's hidden somewhere on this site. For more details,{' '}
+          <span
+            className="underline text-accent hover:text-accent/80 cursor-pointer"
+            onClick={e => {
+              e.preventDefault();
+              if (navigate) navigate('/help#vault-pin');
+            }}
+            tabIndex={0}
+            role="button"
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                if (navigate) navigate('/help#vault-pin');
+              }
+            }}
+            aria-label="See the Help Center for more details about the Vault Pin Challenge"
+          >
+            see the Help Center
+          </span>.
+        </>
+      )
+    ),
     tag: "PLATFORM GAME // VAULT",
   },
   { 
@@ -55,7 +79,7 @@ const HERO_SLIDES = [
     title: "COLLECTOR", 
     highlight: "CHAT",
     sub: "COMMUNITY HUB",
-    intel: "Join the live lobby to talk shop, negotiate trades, and connect with dealers in real-time.",
+    intel: "Join the live lobby to talk storefronts, negotiate trades, and connect with dealers in real-time.",
     tag: "COMMUNITY // LIVE_CHAT",
   },
   { 
@@ -98,7 +122,7 @@ function HeroHUD() {
   const slide = HERO_SLIDES[index];
 
   return (
-    <div className="w-full h-[500px] md:h-[350px] relative overflow-hidden bg-zinc-950 border-b-2 border-red-600/40 group w-full px-4">
+    <div className="w-full h-[320px] md:h-[350px] relative overflow-hidden bg-zinc-950 border-b-2 border-green-500/40 group w-full px-2 md:px-4">
       <Link href={slide.href} className="block w-full h-full relative">
         <div className="absolute inset-0 z-10 pointer-events-none">
           <div className="absolute inset-0 hardware-grid-overlay opacity-[0.08]" />
@@ -106,10 +130,10 @@ function HeroHUD() {
           <div className="absolute inset-0 animate-scanline opacity-30 bg-gradient-to-b from-transparent via-red-600/10 to-transparent h-20 w-full" />
           
           <div className="absolute inset-4 border border-white/5">
-            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-red-600/60" />
-            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-red-600/60" />
-            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-red-600/60" />
-            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-red-600/60" />
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-green-500/60" />
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-green-500/60" />
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-green-500/60" />
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-green-500/60" />
           </div>
 
           {isTransitioning && (
@@ -123,7 +147,7 @@ function HeroHUD() {
 
         <div className="relative h-full w-full flex flex-col md:flex-row z-20 transition-all duration-500">
           <div className={cn(
-            "w-full md:w-[60%] h-[60%] md:h-full flex flex-col justify-center px-6 md:px-16 transition-all duration-500 order-2 md:order-1",
+            "w-full md:w-[60%] h-auto md:h-full flex flex-col justify-center px-2 sm:px-4 md:px-16 transition-all duration-500 order-2 md:order-1",
             isTransitioning ? "opacity-0 -translate-x-10 blur-xl" : "opacity-100 translate-x-0 blur-none"
           )}>
             <div className="relative shrink-0">
@@ -143,25 +167,29 @@ function HeroHUD() {
                   <span className="text-[7px] md:text-[8px] font-black uppercase text-red-600 tracking-widest">VAULT INFORMATION</span>
                 </div>
                 <p className="text-white text-xs md:text-sm font-bold uppercase tracking-tight italic opacity-90 relative z-10">
-                  {slide.intel}
+                  {typeof slide.intel === 'function'
+                    ? slide.intel({ navigate: (href) => window.location.assign(href) })
+                    : slide.intel}
                 </p>
               </div>
             </div>
           </div>
 
           <div className={cn(
-            "w-full md:w-[40%] h-[40%] md:h-full relative transition-all duration-700 order-1 md:order-2",
+            "w-full md:w-[40%] h-[180px] md:h-full relative transition-all duration-700 order-1 md:order-2 flex items-center justify-center md:block mt-4 md:mt-0",
             isTransitioning ? "scale-125 blur-3xl opacity-30 grayscale contrast-200" : "scale-100 blur-none opacity-100"
           )}>
-            <Image 
-              src={slide.image} 
-              alt="" 
-              fill 
-              className="object-cover brightness-[0.9] md:contrast-125 grayscale-[0.1] transition-all duration-1000" 
-              priority 
-            />
-            <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-zinc-950 via-transparent to-transparent" />
-            <div className="hidden md:block absolute inset-0 border-l border-white/10" />
+            <div className="relative w-full h-full max-w-xs mx-auto md:max-w-none md:w-full md:h-full">
+              <Image 
+                src={slide.image} 
+                alt="" 
+                fill 
+                className="object-cover rounded-xl md:rounded-none brightness-[0.9] md:contrast-125 grayscale-[0.1] transition-all duration-1000" 
+                priority 
+              />
+              <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-zinc-950 via-transparent to-transparent" />
+              <div className="hidden md:block absolute inset-0 border-l border-white/10" />
+            </div>
           </div>
         </div>
 
@@ -265,42 +293,51 @@ function VaultTerminal() {
       <section id="vault-section" className="container mx-auto px-4 py-6 md:py-12">
         <div 
           onClick={() => setIsOpen(true)}
-          className="bg-zinc-950 border-2 border-red-600/40 rounded-2xl md:rounded-[2rem] p-4 md:p-8 relative overflow-hidden group cursor-pointer hover:border-red-600 transition-all shadow-[0_0_50px_rgba(220,38,38,0.1)] active:scale-[0.99]"
+          className="vault-safe-bg border-2 border-green-500/40 rounded-2xl md:rounded-[2rem] p-4 md:p-8 relative overflow-visible group cursor-pointer hover:border-green-500 transition-all shadow-[0_0_50px_rgba(34,197,94,0.1)] active:scale-[0.99]"
         >
+          {/* Decorative bolts for safe look */}
           <div className="absolute inset-0 opacity-[0.05] hardware-grid-overlay" />
           <div className="absolute inset-0 binary-leak opacity-10" />
           <div className="absolute inset-0 animate-noise opacity-[0.03]" />
-          <div className="absolute inset-0 animate-scanline bg-gradient-to-b from-transparent via-red-600/10 to-transparent h-1/4 w-full" />
+          <div className="absolute inset-0 animate-scanline bg-gradient-to-b from-transparent via-green-500/10 to-transparent h-1/4 w-full" />
           
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-12">
             <div className="flex items-center gap-4 md:gap-8 flex-1">
-              <div className="bg-red-600 text-white p-3 md:p-5 rounded-xl md:rounded-2xl shadow-[0_0_30px_rgba(220,38,38,0.4)] transition-all group-hover:scale-110 group-hover:rotate-2 duration-500 shrink-0">
+              <div className="bg-black text-green-400 p-3 md:p-5 rounded-xl md:rounded-2xl border border-green-500 unlock-green-glow transition-all group-hover:scale-110 group-hover:rotate-2 duration-500 shrink-0 text-green-400">
                 <Lock className="w-6 md:w-10 h-6 md:h-10" />
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl md:text-4xl font-headline font-black text-white tracking-tighter uppercase leading-none italic animate-glitch-tactical">
-                    OPEN <span className="text-red-600">THE VAULT</span>
+                    OPEN <span className="text-green-500">THE VAULT</span>
                   </h2>
-                  <Link href="/creed" className="hidden sm:flex items-center gap-1.5 bg-red-600/10 border border-red-600/30 px-2 py-0.5 rounded text-[7px] font-black text-red-600 uppercase tracking-widest animate-pulse hover:bg-red-600 hover:text-white transition-colors">
+                  <Link href="/creed" className="hidden sm:flex items-center gap-1.5 bg-green-500/10 border border-green-500/30 px-2 py-0.5 rounded text-[7px] font-black text-green-500 uppercase tracking-widest animate-pulse hover:bg-green-500 hover:text-white transition-colors">
                     what is this
                   </Link>
                 </div>
                 <p className="text-zinc-500 text-[9px] md:text-xs font-bold uppercase tracking-widest italic leading-tight max-w-md">
-                  Find the 4-digit PIN hidden in our mission pages to unlock platform rewards and bounty entries.
+                  Find the 4-digit PIN&mdash;it's hidden somewhere on this site. For more details,{' '}
+                  <Link href="/help#vault-pin" className="underline text-accent hover:text-accent/80">see the Help Center</Link>.
                 </p>
               </div>
             </div>
             
             <div className="flex items-center gap-4 w-full md:w-auto shrink-0 border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-12">
               <div className="flex-1 md:flex-none">
-                <p className="text-[7px] font-black text-red-600/60 uppercase tracking-[0.3em] mb-1">ENTER_PIN</p>
-                <div className="bg-black border-2 border-white/5 rounded-lg h-12 md:h-14 px-6 flex items-center justify-center font-mono text-xl tracking-[0.4em] text-red-600/30 shadow-inner">
+                <p className="text-[7px] font-black text-green-500/60 uppercase tracking-[0.3em] mb-1">ENTER_PIN</p>
+                <div className="bg-black border-2 border-white/5 rounded-lg h-12 md:h-14 px-6 flex items-center justify-center font-mono text-xl tracking-[0.4em] text-green-500/30 shadow-inner">
                   ****
                 </div>
               </div>
-              <Button className="bg-white text-black hover:bg-zinc-200 font-black uppercase text-[10px] tracking-widest h-12 md:h-14 px-8 rounded-lg shadow-2xl transition-all group-hover:translate-x-1">
-                UNLOCK <ChevronRight className="w-4 h-4 ml-1 text-red-600" />
+              <Button className="relative bg-black text-green-400 hover:bg-zinc-900 font-black uppercase text-[10px] tracking-widest h-12 md:h-14 px-8 rounded-lg shadow-2xl transition-all group-hover:translate-x-1 overflow-hidden border border-green-500">
+                {/* Green glow */}
+                <span className="absolute inset-0 rounded-lg pointer-events-none animate-pulse unlock-green-glow" />
+                {/* Animated green scan line */}
+                <span className="absolute left-0 top-0 w-full h-1 bg-gradient-to-b from-transparent via-[#39FF14] to-transparent unlock-scanline" />
+                {/* scanline keyframes and classes moved to globals.css */}
+                <span className="relative z-10 flex items-center">
+                  UNLOCK <ChevronRight className="w-4 h-4 ml-1 text-green-400" />
+                </span>
               </Button>
             </div>
           </div>

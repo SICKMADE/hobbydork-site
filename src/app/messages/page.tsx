@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MessageSquare, Search, Loader2, Mail, PlusCircle, UserPlus, Send, Lock } from 'lucide-react';
+import { MessageSquare, Search, Loader2, Mail, PlusCircle, UserPlus, Send, Lock, Activity, ShieldCheck } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { query, collection, orderBy, limit, where, doc, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import Link from 'next/link';
@@ -36,14 +36,12 @@ function MessagesInboxContent() {
   const isVerificationComplete = !authLoading && !profileLoading;
   const isActive = profile?.status === 'ACTIVE';
 
-  // Handle incoming seller param from listings/ISO
   useEffect(() => {
     const handleSellerParam = async () => {
       if (!sellerParam || !user || !db || creatingConversation) return;
       
       const targetHandle = sellerParam.toLowerCase();
 
-      // Prevent messaging self
       if (targetHandle === profile?.username?.toLowerCase()) {
         toast({ title: "Note", description: "You cannot message yourself." });
         router.replace('/messages');
@@ -63,7 +61,6 @@ function MessagesInboxContent() {
         const sellerUid = usersSnap.docs[0].id;
         const sellerData = usersSnap.docs[0].data();
         
-        // Find existing conversation
         const existingConvs = await getDocs(query(
           collection(db, 'conversations'), 
           where('participantUids', 'array-contains', user.uid)
@@ -80,7 +77,6 @@ function MessagesInboxContent() {
         if (existingConvId) {
           router.push(`/messages/${existingConvId}`);
         } else {
-          // Create new conversation
           const convData = {
             participantUids: [user.uid, sellerUid],
             participantNames: {
@@ -152,9 +148,9 @@ function MessagesInboxContent() {
         <Navbar />
         <Card className="p-12 text-center space-y-6 max-w-md rounded-[2.5rem] border-2 border-dashed">
           <Lock className="w-12 h-12 text-zinc-300 mx-auto" />
-          <h2 className="text-2xl font-headline font-black uppercase italic">Access Restricted</h2>
-          <p className="text-muted-foreground font-medium">Verify your identity and activate your profile to use the secure messaging system.</p>
-          <Button asChild title="Go to verification screen" className="bg-accent text-white font-black uppercase h-14 rounded-xl px-10 shadow-xl">
+          <h2 className="text-2xl font-headline font-black uppercase italic">Access Required</h2>
+          <p className="text-muted-foreground font-medium">Please verify your email to use the messaging system.</p>
+          <Button asChild title="Go to verification screen" className="bg-red-600 text-white font-black uppercase h-14 rounded-xl px-10 shadow-xl">
             <Link href="/verify-email">Verify Identity</Link>
           </Button>
         </Card>
@@ -165,75 +161,86 @@ function MessagesInboxContent() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="flex-1 container mx-auto px-4 py-4 md:py-8 max-w-5xl flex flex-col min-h-0">
-        <header className="mb-6 flex items-end justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase">
-              <Mail className="w-3 h-3" /> Secure Inbox
+      
+      {/* SKINNY HUD HEADER */}
+      <header className="py-0 mb-6">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto bg-zinc-950 rounded-b-2xl p-4 md:p-6 shadow-2xl text-white flex items-center justify-between relative overflow-hidden">
+            <div className="absolute inset-0 hardware-grid-overlay opacity-[0.05]" />
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 text-accent font-bold uppercase text-[10px] tracking-widest mb-1">
+                <ShieldCheck className="w-3.5 h-3.5" /> Secure Channel
+              </div>
+              <h1 className="text-xl md:text-3xl font-headline font-black tracking-tighter uppercase italic leading-none">
+                Private Inbox
+              </h1>
             </div>
-            <h1 className="text-2xl md:text-4xl font-headline font-black uppercase italic tracking-tighter">Messages</h1>
-          </div>
-          
-          <Dialog open={isComposeOpen} onOpenChange={setIsComposeOpen}>
-            <DialogTrigger asChild>
-              <Button title="Compose new message" className="bg-accent text-white hover:bg-accent/90 font-black uppercase text-[10px] tracking-widest h-10 px-6 rounded-full shadow-lg gap-2">
-                <PlusCircle className="w-4 h-4" /> New Message
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl">
-              <div className="bg-zinc-950 p-8 text-white">
-                <DialogHeader>
-                  <div className="bg-accent/20 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
-                    <UserPlus className="w-6 h-6 text-accent" />
-                  </div>
-                  <DialogTitle className="text-2xl font-headline font-black uppercase italic tracking-tight">Direct Message</DialogTitle>
-                  <DialogDescription className="text-zinc-400 font-medium pt-1">
-                    Enter a username to start a private negotiation.
-                  </DialogDescription>
-                </DialogHeader>
-              </div>
-              <div className="p-8 space-y-6 bg-card">
-                <form onSubmit={handleStartCompose} className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-black">@</span>
-                      <Input 
-                        placeholder="username" 
-                        value={composeUsername}
-                        onChange={(e) => setComposeUsername(e.target.value)}
-                        className="pl-9 h-14 rounded-xl border-2 font-bold text-lg bg-white text-black placeholder:text-zinc-400 focus-visible:ring-accent shadow-sm"
-                        autoFocus
-                        aria-label="Target username"
-                      />
-                    </div>
-                  </div>
-                  <Button 
-                    type="submit" 
-                    title="Search for user and start chat"
-                    disabled={!composeUsername.trim() || isSearchingUser}
-                    className="w-full h-14 bg-zinc-950 text-white hover:bg-zinc-800 font-black rounded-xl shadow-xl transition-all gap-2"
-                  >
-                    {isSearchingUser ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                    Initiate Protocol
+            
+            <div className="relative z-10 flex items-center gap-4">
+               <Dialog open={isComposeOpen} onOpenChange={setIsComposeOpen}>
+                <DialogTrigger asChild>
+                  <Button title="Start new message" className="bg-accent hover:bg-accent/90 text-white font-black uppercase text-[9px] tracking-widest h-9 px-5 rounded-full shadow-lg gap-2">
+                    <PlusCircle className="w-3.5 h-3.5" /> New Conversation
                   </Button>
-                </form>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </header>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl">
+                  <div className="bg-zinc-950 p-8 text-white">
+                    <DialogHeader>
+                      <div className="bg-accent/20 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
+                        <UserPlus className="w-6 h-6 text-accent" />
+                      </div>
+                      <DialogTitle className="text-2xl font-headline font-black uppercase italic tracking-tight">New Conversation</DialogTitle>
+                      <DialogDescription className="text-zinc-400 font-medium pt-1 italic">
+                        Enter a handle to start a private chat.
+                      </DialogDescription>
+                    </DialogHeader>
+                  </div>
+                  <div className="p-8 space-y-6 bg-card">
+                    <form onSubmit={handleStartCompose} className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-black">@</span>
+                          <Input 
+                            placeholder="username" 
+                            value={composeUsername}
+                            onChange={(e) => setComposeUsername(e.target.value)}
+                            className="pl-9 h-14 rounded-xl border-2 font-bold text-lg bg-white text-black placeholder:text-zinc-400 focus-visible:ring-accent shadow-sm"
+                            autoFocus
+                            aria-label="Username"
+                          />
+                        </div>
+                      </div>
+                      <Button 
+                        type="submit" 
+                        title="Start Message"
+                        disabled={!composeUsername.trim() || isSearchingUser}
+                        className="w-full h-14 bg-zinc-950 text-white hover:bg-zinc-800 font-black rounded-xl shadow-xl transition-all gap-2"
+                      >
+                        {isSearchingUser ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                        Start Message
+                      </Button>
+                    </form>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+        </div>
+      </header>
 
+      <main className="flex-1 container mx-auto px-4 max-w-5xl flex flex-col min-h-0 mb-8">
         <Card className="flex-1 border-none shadow-2xl bg-card overflow-hidden rounded-[1.5rem] md:rounded-[2rem] min-h-0">
           <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] lg:grid-cols-[350px_1fr] h-[calc(100vh-16rem)] md:h-[650px]">
             <div className="border-r flex flex-col min-h-0 bg-card">
               <div className="p-4 border-b">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10 w-4 h-4" />
                   <Input 
-                    placeholder="Search inbox..." 
+                    placeholder="Search conversations..." 
                     className="pl-9 rounded-full h-10 text-xs border-2 bg-white text-black placeholder:text-zinc-400 focus-visible:ring-accent"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    aria-label="Search conversations"
+                    aria-label="Search"
                   />
                 </div>
               </div>
@@ -245,8 +252,8 @@ function MessagesInboxContent() {
                     <div className="p-12 text-center space-y-4">
                       <MessageSquare className="w-10 h-10 text-zinc-200 mx-auto" />
                       <div className="space-y-1">
-                        <p className="font-black text-zinc-400 uppercase text-[10px] tracking-widest leading-tight">No active protocols</p>
-                        <p className="text-[9px] text-zinc-300 font-bold uppercase">Click "New Message" to start</p>
+                        <p className="font-black text-zinc-400 uppercase text-[10px] tracking-widest leading-tight">No messages yet</p>
+                        <p className="text-[9px] text-zinc-300 font-bold uppercase">Start a conversation above</p>
                       </div>
                     </div>
                   ) : conversations
@@ -277,7 +284,7 @@ function MessagesInboxContent() {
                                   {chat.lastTimestamp?.toDate ? new Date(chat.lastTimestamp.toDate()).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}
                                 </span>
                               </div>
-                              <p className="text-xs text-muted-foreground truncate font-medium">{chat.lastMessage || 'Open communication window...'}</p>
+                              <p className="text-xs text-muted-foreground truncate font-medium">{chat.lastMessage || 'Start typing...'}</p>
                             </div>
                           </Link>
                         );
@@ -294,18 +301,18 @@ function MessagesInboxContent() {
                 </div>
               </div>
               <div className="space-y-2 max-w-xs">
-                <h3 className="text-2xl font-headline font-black uppercase italic tracking-tight">Select a Protocol</h3>
+                <h3 className="text-2xl font-headline font-black uppercase italic tracking-tight">Select a Message</h3>
                 <p className="text-muted-foreground text-sm font-medium leading-relaxed italic">
-                  All marketplace communication is end-to-end encrypted and monitored for community safety protocols.
+                  Continue your private conversation with other collectors.
                 </p>
               </div>
               <Button 
                 variant="outline" 
                 title="Compose new message"
                 onClick={() => setIsComposeOpen(true)}
-                className="rounded-xl border-2 border-border font-black uppercase text-[10px] tracking-widest px-8"
+                className="rounded-xl border-2 border-zinc-200 font-black uppercase text-[10px] tracking-widest px-8 h-12"
               >
-                Compose New Message
+                New Message
               </Button>
             </div>
           </div>

@@ -9,6 +9,7 @@ if (!getApps().length) {
   app = initializeApp({
     projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   });
 } else {
   app = getApps()[0];

@@ -29,7 +29,7 @@ export function TierBadge({ tier, className }: { tier?: SellerTier, className?: 
               className={cn(
                 "w-3.5 h-3.5 transition-all duration-500",
                 isActive 
-                  ? "text-red-600 fill-red-600 animate-pulse" 
+                  ? "text-red-600 fill-red-600 dark:fill-red-500 dark:text-red-500 animate-pulse" 
                   : "text-zinc-300 dark:text-zinc-700 fill-zinc-200 dark:fill-zinc-800"
               )} 
               style={{ 

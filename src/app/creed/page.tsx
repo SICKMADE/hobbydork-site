@@ -22,25 +22,26 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main className="container mx-auto px-4 py-20 max-w-6xl">
-        <header className="max-w-4xl mx-auto text-center space-y-8 mb-32">
-          <Badge variant="outline" className="px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest">
+
+      <main className="container mx-auto px-2 sm:px-4 py-10 sm:py-16 max-w-6xl">
+        <header className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8 mb-16 sm:mb-32">
+          <Badge variant="outline" className="px-4 py-1.5 sm:px-6 sm:py-2 rounded-full font-black text-xs sm:text-sm uppercase tracking-widest">
             About Us
           </Badge>
-          <h1 className="text-3xl sm:text-5xl md:text-8xl font-headline font-black tracking-tighter uppercase leading-none">
+          <h1 className="text-2xl xs:text-3xl sm:text-5xl md:text-7xl font-headline font-black tracking-tighter uppercase leading-tight sm:leading-none">
             Built for <span className="text-accent">Collectors.</span>
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground font-medium leading-relaxed max-w-3xl mx-auto italic">
+          <p className="text-base xs:text-lg md:text-2xl text-muted-foreground font-medium leading-relaxed max-w-3xl mx-auto italic">
             "A safe, transparent marketplace designed to fix the issues of modern auction sites."
           </p>
         </header>
 
-        <section className="grid lg:grid-cols-2 gap-20 items-center mb-40">
-          <div className="space-y-10">
-            <h2 className="text-4xl font-headline font-black uppercase tracking-tight border-l-8 border-accent pl-8">
+        <section className="grid gap-10 sm:gap-20 lg:grid-cols-2 items-center mb-24 sm:mb-40">
+          <div className="space-y-6 sm:space-y-10">
+            <h2 className="text-2xl sm:text-4xl font-headline font-black uppercase tracking-tight border-l-4 sm:border-l-8 border-accent pl-4 sm:pl-8">
               Our Mission
             </h2>
-            <div className="space-y-6 text-muted-foreground text-lg leading-relaxed font-medium">
+            <div className="space-y-4 text-muted-foreground text-base sm:text-lg leading-relaxed font-medium">
               <p>
                 hobbydork started with a simple idea: collectors deserve a platform that prioritizes authenticity, fast shipping, and community trust over corporate profits.
               </p>
@@ -52,7 +53,7 @@ export default function AboutPage() {
               </p>
             </div>
           </div>
-          <div className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border bg-zinc-950 flex items-center justify-center">
+          <div className="relative aspect-[4/5] rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl sm:shadow-2xl border bg-zinc-950 flex items-center justify-center">
             <Image
               src={imgSrc}
               alt="Hobbydork Community"
@@ -64,12 +65,12 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <section className="space-y-20 mb-40">
-          <div className="text-center space-y-4">
-            <h2 className="text-4xl font-headline font-black uppercase tracking-tighter">Core Values</h2>
-            <div className="w-24 h-2 bg-accent mx-auto rounded-full" />
+        <section className="space-y-12 sm:space-y-20 mb-24 sm:mb-40">
+          <div className="text-center space-y-2 sm:space-y-4">
+            <h2 className="text-2xl sm:text-4xl font-headline font-black uppercase tracking-tighter">Core Values</h2>
+            <div className="w-16 sm:w-24 h-2 bg-accent mx-auto rounded-full" />
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-10">
             {[
               { 
                 icon: Clock, 
@@ -92,14 +93,14 @@ export default function AboutPage() {
                 desc: "ISO24 request feed, live community chat, giveaways, auctions, and Trust Board leaderboards. We're building connections, not just transactions." 
               },
             ].map((p, i) => (
-              <Card key={i} className="p-10 rounded-2xl hover:shadow-xl transition-all group">
-                <CardContent className="p-0 space-y-8">
-                  <div className="w-16 h-16 bg-accent/10 text-accent rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <p.icon className="w-8 h-8" />
+              <Card key={i} className="p-5 sm:p-8 md:p-10 rounded-xl sm:rounded-2xl hover:shadow-xl transition-all group">
+                <CardContent className="p-0 space-y-4 sm:space-y-8">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-accent/10 text-accent rounded-lg sm:rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <p.icon className="w-7 h-7 sm:w-8 sm:h-8" />
                   </div>
-                  <div className="space-y-4">
-                    <h3 className="text-2xl font-headline font-black uppercase text-primary">{p.title}</h3>
-                    <p className="text-muted-foreground font-medium leading-relaxed">{p.desc}</p>
+                  <div className="space-y-2 sm:space-y-4">
+                    <h3 className="text-lg sm:text-2xl font-headline font-black uppercase text-primary">{p.title}</h3>
+                    <p className="text-muted-foreground font-medium leading-relaxed text-sm sm:text-base">{p.desc}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -107,13 +108,13 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <section className="mb-40 space-y-16">
-          <div className="text-center space-y-4">
-            <h2 className="text-4xl font-headline font-black uppercase tracking-tighter">The hobbydork Advantage</h2>
-            <div className="w-24 h-2 bg-accent mx-auto rounded-full" />
+        <section className="mb-24 sm:mb-40 space-y-8 sm:space-y-16">
+          <div className="text-center space-y-2 sm:space-y-4">
+            <h2 className="text-2xl sm:text-4xl font-headline font-black uppercase tracking-tighter">The hobbydork Advantage</h2>
+            <div className="w-16 sm:w-24 h-2 bg-accent mx-auto rounded-full" />
           </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            <Card className="p-8 border-2">
+          <div className="grid sm:grid-cols-2 gap-4 sm:gap-8">
+            <Card className="p-5 sm:p-8 border-2">
               <CardContent className="p-0 space-y-4">
                 <div className="flex items-center gap-3">
                   <DollarSign className="w-6 h-6 text-accent" />
@@ -123,7 +124,7 @@ export default function AboutPage() {
               </CardContent>
             </Card>
 
-            <Card className="p-8 border-2">
+            <Card className="p-5 sm:p-8 border-2">
               <CardContent className="p-0 space-y-4">
                 <div className="flex items-center gap-3">
                   <Users className="w-6 h-6 text-accent" />
@@ -132,7 +133,7 @@ export default function AboutPage() {
                 <p className="text-muted-foreground">Every store on Hobbydork has its own social feed. Sellers can post updates, showcase new arrivals, and share behind-the-scenes content.</p>
               </CardContent>
             </Card>
-            <Card className="p-8 border-2">
+            <Card className="p-5 sm:p-8 border-2">
               <CardContent className="p-0 space-y-4">
                 <div className="flex items-center gap-3">
                   <Gavel className="w-6 h-6 text-accent" />
@@ -142,7 +143,7 @@ export default function AboutPage() {
               </CardContent>
             </Card>
 
-            <Card className="p-8 border-2">
+            <Card className="p-5 sm:p-8 border-2">
               <CardContent className="p-0 space-y-4">
                 <div className="flex items-center gap-3">
                   <MessageSquare className="w-6 h-6 text-accent" />
@@ -154,18 +155,18 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <section className="bg-primary dark:bg-zinc-900 rounded-[2rem] p-12 md:p-24 text-center space-y-10 relative overflow-hidden">
-          <h2 className="text-4xl md:text-7xl font-headline font-black uppercase tracking-tighter leading-none">
+        <section className="bg-primary dark:bg-zinc-900 rounded-xl sm:rounded-2xl p-4 xs:p-6 sm:p-8 md:p-12 text-center space-y-4 sm:space-y-6 relative overflow-hidden">
+          <h2 className="text-base xs:text-lg sm:text-2xl md:text-4xl font-headline font-black uppercase tracking-tighter leading-tight sm:leading-none">
             <span className="text-white">If social media had a baby with a marketplace, you’d get Hobbydork.</span>
           </h2>
-          <div className="flex flex-col md:flex-row gap-6 justify-center">
-            <Button asChild size="lg" className="bg-accent text-white hover:bg-accent/90 h-20 px-12 text-2xl font-black rounded-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tighter">
-              <Link href="/login">Join the Community <ArrowRight className="ml-3 w-6 h-6" /></Link>
+          <div className="flex flex-col md:flex-row gap-2 sm:gap-4 justify-center">
+            <Button asChild size="lg" className="bg-accent text-white hover:bg-accent/90 h-10 sm:h-14 px-4 sm:px-8 text-base sm:text-lg font-black rounded-md sm:rounded-lg shadow-md sm:shadow-xl active:scale-95 transition-all uppercase tracking-tighter">
+              <Link href="/login">Join the Community <ArrowRight className="ml-1 sm:ml-2 w-4 sm:w-5 h-4 sm:h-5" /></Link>
             </Button>
           </div>
         </section>
 
-        <footer className="mt-32 pt-12 border-t border-border/50 flex flex-col items-center gap-4">
+        <footer className="mt-16 sm:mt-32 pt-8 sm:pt-12 border-t border-border/50 flex flex-col items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-2 text-muted-foreground/20 font-black uppercase text-[10px] tracking-[0.5em]">
             <Terminal className="w-3 h-3" /> PROTOCOL_ID: <span className="text-accent/30">2323</span>
           </div>

@@ -1,3 +1,88 @@
+/* Decorative bolts for vault safe card */
+.vault-bolt {
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  background: linear-gradient(135deg, #d1d5db 60%, #4b5563 100%);
+  border-radius: 9999px;
+  border: 2px solid #27272a;
+  box-shadow: 0 2px 6px #0008;
+  z-index: 10;
+}
+.bolt-tl { top: -12px; left: -12px; }
+.bolt-tr { top: -12px; right: -12px; }
+.bolt-bl { bottom: -12px; left: -12px; }
+.bolt-br { bottom: -12px; right: -12px; }
+/* Vault card background styled like a safe */
+.vault-safe-bg {
+  background: linear-gradient(135deg, #23272b 60%, #353a40 100%);
+  background-blend-mode: overlay;
+  box-shadow: 0 2px 24px 0 #10181f inset, 0 0 0 2px #3fffa0 inset;
+  position: relative;
+}
+/* Optional: subtle metallic texture overlay */
+.vault-safe-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.12;
+  background-image: repeating-linear-gradient(135deg, #fff2 0 2px, transparent 2px 8px);
+  z-index: 1;
+}
+/* Red glow for lock icon */
+.lock-red-glow {
+  filter: drop-shadow(0 0 8px #ff1a1a) drop-shadow(0 0 16px #ff1a1a) drop-shadow(0 0 32px #ff1a1a);
+}
+/* Green glow for unlock button */
+.unlock-green-glow {
+  box-shadow: 0 0 32px 8px rgba(16,255,16,0.25), 0 0 80px 0px rgba(16,255,16,0.10);
+}
+
+/* Animated green scan line for unlock button (vertical) */
+.unlock-scanline {
+  opacity: 0.7;
+  animation: scanline-vertical 1.2s linear infinite;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  top: 0;
+}
+
+@keyframes scanline-vertical {
+  0% { top: 0%; opacity: 0.7; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0.7; }
+}
+/* Arcade Windows Theme background pattern for 8-BIT ARCADE THEME (80x120) */
+.arcade-windows-bg-80 {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='120' viewBox='0 0 80 120'%3E%3Crect width='80' height='120' fill='%230a0a1a'/%3E%3Crect x='10' y='10' width='25' height='40' fill='%231a1a3a'/%3E%3Crect x='45' y='10' width='25' height='40' fill='%231a1a3a'/%3E%3Crect x='10' y='65' width='25' height='40' fill='%231a1a3a'/%3E%3Crect x='45' y='65' width='25' height='40' fill='%231a1a3a'/%3E%3Crect x='12' y='12' width='4' height='4' fill='%232a2a5a'/%3E%3C/svg%3E");
+  background-size: 80px 120px;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+/* Arcade Logo Pattern for 8-BIT ARCADE THEME header */
+.arcade-logo-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='40' viewBox='0 0 240 40'%3E%3Ctext x='10' y='25' font-family='monospace' font-weight='900' font-size='12' fill='%23f00' opacity='0.2' letter-spacing='2'%3EHOBBYDORK%3C/text%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+/* Void Shard Theme background pattern */
+.void-shard-bg {
+  background-color: #313131;
+  background-image:
+    radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.1) 0%, transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 80% 85%, rgba(139, 92, 246, 0.05) 0%, transparent 35%);
+}
+/* Arcade Windows Theme background pattern */
+.arcade-windows-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='30' viewBox='0 0 20 30'%3E%3Crect width='20' height='30' fill='%230a0a1a'/%3E%3Crect x='2' y='2' width='6' height='10' fill='%231a1a3a'/%3E%3Crect x='11' y='2' width='6' height='10' fill='%231a1a3a'/%3E%3C/svg%3E");
+  background-size: 20px 30px;
+}
 /* ISO24 clock glow for :24 digital clock (moved from inline style) */
 .iso24-clock-glow {
   font-family: 'DigitalLCD', monospace;
@@ -7,6 +92,12 @@
 .iso24-grid-bg {
   background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px);
   background-size: 50px 50px;
+}
+
+.dark-grey-grid-bg {
+  background-color: #262626; /* Dark grey */
+  background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 30px 30px;
 }
 
 /* Custom Font Implementation for Digital Segmented Stencil */
@@ -34,6 +125,22 @@
   85% { transform: translate(0); clip-path: inset(0 0 0 0); }
 }
 
+/* ISO24 SEARCH GLITCH EFFECT */
+@keyframes glitch-text {
+  0%,100% { transform: none; text-shadow: none; }
+  2% { transform: skewX(8deg) scaleY(0.95); }
+  4% { transform: skewX(-4deg) scaleY(1.05); }
+  6% { transform: skewX(3deg) scaleY(0.98); }
+  8% { transform: skewX(-2deg) scaleY(1.02); }
+  10% { transform: none; }
+  12% { text-shadow: 2px 0 #ff0000, -2px 0 #00ffff; }
+  14% { text-shadow: -2px 0 #ff0000, 2px 0 #00ffff; }
+  16% { text-shadow: none; }
+}
+
+.animate-glitch-text {
+  animation: glitch-text 1.2s infinite steps(1, end);
+}
 @keyframes rgb-split-tactical {
   0%, 80%, 100% { text-shadow: none; }
   81% { text-shadow: 6px 0 #ff0000, -6px 0 #00ffff; }
@@ -102,6 +209,22 @@
   animation: glitch-tactical 5s infinite;
 }
 
+/* ISO24 :24 alarm clock glowing throb */
+@keyframes iso24-clock-throb {
+  0%, 100% {
+    filter: brightness(1.2) drop-shadow(0 0 20px rgba(220,38,38,0.8)) drop-shadow(0 0 40px rgba(220,38,38,0.4));
+    opacity: 1;
+  }
+  50% {
+    filter: brightness(1.5) drop-shadow(0 0 40px rgba(220,38,38,1)) drop-shadow(0 0 80px rgba(220,38,38,0.6));
+    opacity: 0.95;
+  }
+}
+
+.iso24-clock-throb {
+  animation: iso24-clock-throb 2s ease-in-out infinite;
+}
+
 .animate-rgb-tactical {
   animation: rgb-split-tactical 5s infinite;
 }
@@ -142,6 +265,27 @@
   -webkit-user-select: none;
   user-select: none;
   white-space: pre;
+}
+
+.trust-board-header-bg {
+  background-color: #1a1a1a;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.04) 0,
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px,
+    transparent 10px
+  );
+}
+
+.bounty-header-bg {
+  background-color: #1a1a1a;
+  background-image:
+    radial-gradient(at 20% 20%, rgba(220, 38, 38, 0.2) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(220, 38, 38, 0.15) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(220, 38, 38, 0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, rgba(220, 38, 38, 0.2) 0px, transparent 50%),
+    radial-gradient(at 0% 0%, rgba(220, 38, 38, 0.15) 0px, transparent 50%);
 }
 
 @tailwind base;
@@ -236,4 +380,74 @@
 .comic-dots {
   background-image: radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
   background-size: 16px 16px;
+}
+
+.pinstripe-header-bg {
+  background-color: #111113;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.04) 0,
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px,
+    transparent 10px
+  );
+}
+
+/* Urban theme wall background */
+.urban-wall-bg {
+  background-image: url('/wall.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+/* 8-BIT Arcade Windows Pattern */
+.arcade-windows-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='60' viewBox='0 0 40 60'%3E%3Crect width='40' height='60' fill='%230a0a1a'/%3E%3Crect x='5' y='5' width='12' height='20' fill='%231a1a3a'/%3E%3Crect x='22' y='5' width='12' height='20' fill='%231a1a3a'/%3E%3C/svg%3E");
+  background-size: 40px 60px;
+}
+
+/* Void Shard theme background gradients */
+.void-shard-bg {
+  background-image:
+    radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.1) 0%, transparent 40%);
+}
+
+/* Store Settings Void Shard theme background gradients */
+.store-void-shard-bg {
+  background-image:
+    radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.1) 0%, transparent 40%);
+}
+
+/* Video Game Step Number Style */
+.font-arcade {
+  font-family: 'Press Start 2P', 'VT323', 'monospace', 'Digital', 'Arial', sans-serif;
+  letter-spacing: 0.05em;
+}
+.neon-glow {
+  text-shadow:
+    0 0 8px #39ff14,
+    0 0 16px #39ff14,
+    0 0 24px #39ff14,
+    0 0 32px #39ff14;
+  filter: brightness(1.2);
+}
+
+.dashboard-header-bg {
+  background-color: #f4f4f5;
+  background-image:
+    linear-gradient(to right, rgba(24,24,27,0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(24,24,27,0.10) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: center;
+}
+
+.dark .dashboard-header-bg {
+  background-color: #18181b;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.10) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: center;
 }

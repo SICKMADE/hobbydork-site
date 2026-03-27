@@ -143,9 +143,9 @@ export default function GiveawayDetail({ params }: { params: Promise<{ id: strin
     <>
       <Navbar />
       <main className="container mx-auto px-4 py-8 max-w-7xl">
-        <Link href={`/shop/${giveaway.sellerName || giveaway.seller}`} title="Back to dealer shop" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 font-black uppercase tracking-widest">
+        <Link href={`/storefronts/${giveaway.sellerName || giveaway.seller}`} title="Back to dealer storefront" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 font-black uppercase tracking-widest">
           <ArrowLeft className="w-4 h-4" />
-          Back to {giveaway.sellerName || giveaway.seller}'s shop
+          Back to {giveaway.sellerName || giveaway.seller}'s storefront
         </Link>
 
         <div className="grid lg:grid-cols-[1.3fr_1fr] gap-12 md:gap-16">

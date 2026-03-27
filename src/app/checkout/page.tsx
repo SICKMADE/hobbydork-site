@@ -142,7 +142,7 @@ function CheckoutContent() {
                 </div>
                 <div className="flex-1 space-y-1">
                   <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Asset</p>
-                  <h3 className="text-xl font-black">{listing.title}</h3>
+                  <h3 className="text-xl font-black max-w-full overflow-hidden text-ellipsis whitespace-nowrap sm:whitespace-normal">{listing.title}</h3>
                 </div>
                 <p className="text-xl font-black">${(itemAmountCents / 100).toLocaleString()}</p>
               </div>

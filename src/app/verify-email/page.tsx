@@ -4,11 +4,11 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useAuth } from '@/firebase';
 import { db } from '@/firebase/client';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { sendEmailVerification, reload } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Mail, Loader2, RefreshCw, Terminal, ShieldCheck } from 'lucide-react';
+import { Mail, Loader2, Terminal } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import Navbar from '@/components/Navbar';
@@ -34,9 +34,9 @@ export default function VerifyEmailPage() {
     setIsResending(true);
     try {
       await sendEmailVerification(user);
-      toast({ title: "Protocol Initiated", description: "Verification link dispatched to your inbox." });
+      toast({ title: "Email Sent", description: "Check your inbox for the verification link." });
     } catch (error: any) {
-      toast({ variant: 'destructive', title: "Transmission Fault", description: getFriendlyErrorMessage(error) });
+      toast({ variant: 'destructive', title: "Error", description: getFriendlyErrorMessage(error) });
     } finally {
       setIsResending(false);
     }
@@ -46,93 +46,65 @@ export default function VerifyEmailPage() {
     if (!user || !auth) return;
     setIsChecking(true);
     try {
-      // Force refresh of the auth token/status to catch verification link clicks in other tabs
       await reload(user);
       const refreshedUser = auth.currentUser;
       if (refreshedUser?.emailVerified) {
-        // Update Firestore user doc to reflect verified status
-        if (refreshedUser.uid) {
-          try {
-            await updateDoc(doc(db, 'users', refreshedUser.uid), { emailVerified: true });
-          } catch (e) {
-            // Optionally log or toast error, but don't block navigation
-          }
-        }
-        toast({ title: "Identity Confirmed" });
-        router.replace('/dashboard');
-      } else {
-        toast({ 
-          variant: 'destructive',
-          title: "Verification Pending", 
-          description: "Authorize your identity via the link in your inbox." 
+        // FORCE DATABASE SYNC - Update explicit fields
+        await updateDoc(doc(db, 'users', refreshedUser.uid), { 
+          emailVerified: true,
+          status: 'ACTIVE',
+          updatedAt: serverTimestamp()
         });
+        toast({ title: "Identity Confirmed", description: "Uplink established. Redirecting to hub..." });
+        router.replace('/onboarding');
+      } else {
+        toast({ variant: 'destructive', title: "Identity Pending", description: "Please click the link in your email first." });
       }
     } catch (error: any) {
-      toast({ variant: 'destructive', title: "Check Failed", description: getFriendlyErrorMessage(error) });
+      toast({ variant: 'destructive', title: "Sync Failed", description: getFriendlyErrorMessage(error) });
     } finally {
       setIsChecking(false);
     }
   };
 
-  if (authLoading) return <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-    <Loader2 className="w-10 h-10 animate-spin text-accent" />
-    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-4">Syncing Node...</p>
-  </div>;
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-accent w-10 h-10" /></div>;
 
   return (
     <div className="min-h-screen bg-background">
-      <Suspense fallback={null}>
-        <Navbar />
-      </Suspense>
+      <Navbar />
       <main className="container mx-auto px-4 py-20 flex justify-center">
-        <div className="max-w-md w-full space-y-8 animate-in fade-in zoom-in duration-500">
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-3xl mb-4 border-2 border-primary/20">
-              <Mail className="w-10 h-10 text-accent" />
+        <div className="max-w-md w-full space-y-10 animate-in fade-in zoom-in duration-700">
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-accent/10 rounded-[2.5rem] mb-4 border-2 border-accent/20 shadow-xl">
+              <Mail className="w-12 h-12 text-accent animate-pulse" />
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black italic tracking-tighter uppercase leading-none text-primary dark:text-white">
-              Verify Email
-            </h1>
-            <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-widest">Awaiting Identity Confirmation</p>
+            <h1 className="text-4xl md:text-5xl font-headline font-black uppercase italic tracking-tighter">Verify Identity</h1>
+            <p className="text-muted-foreground font-black uppercase text-[10px] tracking-[0.4em]">Protocol: EMAIL_VERIFICATION_V2.4</p>
           </div>
 
-          <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-card">
-            <CardHeader className="bg-zinc-900 dark:bg-zinc-900 text-white p-6 sm:p-8 border-b border-white/5 transition-colors">
-              <div className="flex justify-between items-start mb-4">
-                <Terminal className="w-5 h-5 text-accent opacity-50" />
-                <ShieldCheck className="w-5 h-5 text-accent" />
+          <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-card">
+            <CardHeader className="bg-zinc-950 text-white p-10">
+              <CardTitle className="text-2xl font-headline font-black uppercase italic tracking-tight">Identity Sync</CardTitle>
+              <div className="flex items-center gap-2 mt-2">
+                <Terminal className="w-3 h-3 text-accent" />
+                <CardDescription className="text-white/60 font-mono font-bold text-xs truncate">{user?.email}</CardDescription>
               </div>
-              <CardTitle className="text-lg sm:text-xl font-black italic uppercase tracking-tight">Identity Uplink</CardTitle>
-              <CardDescription className="text-white/70 dark:text-muted-foreground font-bold text-xs truncate">Target: {user?.email}</CardDescription>
             </CardHeader>
-            <CardContent className="p-6 sm:p-8 space-y-6">
-              <p className="text-sm text-muted-foreground leading-relaxed font-medium italic">
-                Authorized network access requires a verified email node. Check your inbox to complete the handshake.
-              </p>
-              
-              <div className="space-y-3 pt-4">
-                <Button 
-                  onClick={handleCheckStatus} 
-                  disabled={isChecking}
-                  className="w-full h-16 bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all"
-                >
-                  {isChecking ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <RefreshCw className="w-5 h-5 mr-2" />}
-                  Check Status
+            <CardContent className="p-10 space-y-8">
+              <p className="text-base text-muted-foreground leading-relaxed font-medium italic">We have dispatched a secure authorization link to your address. Click the link to Establishing a stable connection to the collector network.</p>
+              <div className="space-y-4 pt-4">
+                <Button onClick={handleCheckStatus} disabled={isChecking} className="w-full h-20 bg-primary text-white font-black text-xl rounded-2xl shadow-2xl active:scale-95 transition-all">
+                  {isChecking ? <Loader2 className="w-8 h-8 animate-spin" /> : "Establish Connection"}
                 </Button>
-                
-                <Button 
-                  variant="outline" 
-                  onClick={handleResend} 
-                  disabled={isResending || isChecking}
-                  className="w-full h-14 rounded-2xl border-2 font-black uppercase text-[10px] tracking-widest text-primary dark:text-white"
-                >
-                  {isResending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : "Resend Link"}
+                <Button variant="outline" onClick={handleResend} disabled={isResending || isChecking} className="w-full h-14 rounded-2xl border-4 font-black uppercase text-[10px] tracking-widest hover:bg-zinc-50">
+                  {isResending ? <Loader2 className="animate-spin w-4 h-4" /> : "Request New Link"}
                 </Button>
               </div>
             </CardContent>
           </Card>
+          
           <div className="text-center">
-            <p className="text-[10px] font-black uppercase text-zinc-400 tracking-[0.3em]">hobbydork secure access node</p>
+            <p className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.3em]">HobbyDork Identity Node • Secure Access Only</p>
           </div>
         </div>
       </main>

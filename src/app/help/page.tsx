@@ -34,6 +34,22 @@ export default function HelpPage() {
         </header>
 
         <div className="grid gap-12">
+          {/* VAULT PIN CHALLENGE */}
+          <section id="vault-pin" className="space-y-6">
+            <h2 className="text-2xl font-headline font-black uppercase flex items-center gap-3 italic text-accent">
+              <Shield className="w-6 h-6 text-accent" /> The Vault Pin Challenge
+            </h2>
+            <Card className="border-none shadow-xl rounded-[2rem] bg-card overflow-hidden">
+              <CardContent className="p-6 space-y-4">
+                <p className="text-muted-foreground leading-relaxed text-sm">
+                  Unlock exclusive platform rewards by finding the secret 4-digit PIN hidden somewhere on the site. The code could be anywhere&mdash;in a banner, a page, or a hidden message. Once you find it, follow the instructions on the Vault page to enter the code and claim your reward.
+                </p>
+                <p className="text-muted-foreground leading-relaxed text-sm">
+                  Need a hint? Explore the site carefully and pay attention to details. For questions or help, contact support via the Help Center.
+                </p>
+              </CardContent>
+            </Card>
+          </section>
                     {/* FEE STRUCTURE */}
                     <section className="space-y-6">
                       <h2 className="text-2xl font-headline font-black uppercase flex items-center gap-3 italic text-primary">
@@ -151,7 +167,7 @@ export default function HelpPage() {
                       <div className="bg-zinc-950 text-white p-4 rounded-xl border-l-4 border-accent mb-4">
                         <p className="font-bold italic">Your network handle (@username) is your store name. Users cannot choose a separate store name; it is permanently locked to your identity upon registration.</p>
                       </div>
-                      <p>This protocol ensures absolute transparency and trust within the collector network. Your URL, handle, and shop name are one unified node.</p>
+                      <p>This protocol ensures absolute transparency and trust within the collector network. Your URL, handle, and storefront name are one unified node.</p>
                     </AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="becoming-seller" className="border-b">

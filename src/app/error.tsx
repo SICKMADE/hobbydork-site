@@ -27,7 +27,7 @@ export default function GlobalError({
       <div className="max-w-md w-full space-y-8 text-center animate-in fade-in zoom-in duration-500">
         <div className="inline-flex items-center justify-center w-32 h-32 rounded-3xl mb-4 overflow-hidden border-2 border-dashed border-red-600/20">
           <Image 
-            src={errorImage?.imageUrl || "https://picsum.photos/seed/fail/600/600"} 
+            src={"/fail.jpg"} 
             alt="System Fault" 
             data-ai-hint={errorImage?.imageHint || "static glitch"}
             width={128}

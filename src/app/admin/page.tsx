@@ -3,9 +3,11 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
+import { compressImageForUpload } from '@/hooks/usePhotoUpload';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { app } from '@/firebase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ShieldAlert, 
@@ -121,15 +123,21 @@ function AdminPanelContent({ isStaff, currentUser }: { isStaff: boolean, current
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setBountyFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setBountyPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    setBountyFile(file);
+    try {
+      const fittedImage = await compressImageForUpload(file);
+      setBountyPreview(fittedImage);
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Image Processing Failed',
+        description: 'Could not process this image. Please try another photo.'
+      });
+      setBountyPreview(null);
     }
   };
 
@@ -153,7 +161,7 @@ function AdminPanelContent({ isStaff, currentUser }: { isStaff: boolean, current
 
       // Handle file upload if present
       if (bountyFile) {
-        const storage = getStorage();
+        const storage = getStorage(app);
         const fileName = `platformBounties/${Date.now()}_${bountyFile.name}`;
         const storageRef = ref(storage, fileName);
         await uploadBytes(storageRef, bountyFile);

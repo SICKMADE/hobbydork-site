@@ -58,13 +58,13 @@
     {
       "id": "creed-hero",
       "description": "The Collector Creed",
-      "imageUrl": "https://picsum.photos/seed/creed/800/1000",
+      "imageUrl": "/creed.jpg",
       "imageHint": "vintage cards"
     },
     {
       "id": "error-fail",
       "description": "System Failure",
-      "imageUrl": "https://picsum.photos/seed/fail/600/600",
+      "imageUrl": "/fail.jpg",
       "imageHint": "static glitch"
     },
     {

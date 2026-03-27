@@ -22,13 +22,16 @@ import Image from 'next/image';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useFirebaseApp } from '@/firebase/provider';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { filterProfanity } from '@/lib/utils';
+import { compressImageForUpload } from '@/hooks/usePhotoUpload';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 export default function CreateGiveaway() {
+  const app = useFirebaseApp();
   const { toast } = useToast();
   const router = useRouter();
   const db = useFirestore();
@@ -121,7 +124,7 @@ export default function CreateGiveaway() {
   };
 
   const uploadPhotoToStorage = async (dataUri: string): Promise<string> => {
-    const storage = getStorage();
+    const storage = getStorage(app);
     const fileName = `giveawayImages/${user!.uid}/${Date.now()}.jpg`;
     const storageRef = ref(storage, fileName);
     const response = await fetch(dataUri);
@@ -219,12 +222,19 @@ export default function CreateGiveaway() {
                   <div className="grid grid-cols-2 gap-4">
                     <label htmlFor="prize-photo-upload" className="aspect-video border-4 border-dashed rounded-[2rem] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary transition-all group">
                       <Camera className="w-10 h-10 text-muted-foreground" /><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Upload</span>
-                      <input id="prize-photo-upload" type="file" accept="image/*" className="hidden" onChange={e => {
+                      <input id="prize-photo-upload" type="file" accept="image/*" className="hidden" onChange={async e => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => setPhoto(reader.result as string);
-                          reader.readAsDataURL(file);
+                          try {
+                            const fittedImage = await compressImageForUpload(file);
+                            setPhoto(fittedImage);
+                          } catch (err) {
+                            toast({
+                              variant: 'destructive',
+                              title: 'Image Processing Failed',
+                              description: 'Could not process this image. Please try another photo.'
+                            });
+                          }
                         }
                       }} />
                     </label>

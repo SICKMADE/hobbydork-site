@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import Navbar from '@/components/Navbar';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +24,9 @@ import {
   Ghost,
   Terminal,
   Gamepad2,
-  Brush
+  Brush,
+  ArrowLeft,
+  Settings
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -37,44 +38,53 @@ import {
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 
 /**
- * ThemePreview Component
+ * ThemePreview Component - Shows a visual representation of store themes
  */
 function ThemePreview({ themeName }: { themeName: string }) {
-  const isNeonSyndicate = themeName === 'Neon Syndicate Theme';
-  const isComicBook = themeName === 'Comic Book Theme';
-  const isUrban = themeName === 'Urban Theme';
-  const isGameTheme = themeName === 'NES ORIGINAL THEME';
-  const isGlitchProtocol = themeName === 'Glitch Protocol Theme';
-  const isVoidShard = themeName === 'Void Shard Theme';
-  const isHacked = themeName === 'HACKED THEME';
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isNeonSyndicate = themeName.toLowerCase().includes('neon');
+  const isComicBook = themeName.toLowerCase().includes('comic');
+  const isUrban = themeName.toLowerCase().includes('urban');
+  const is8BitTheme = themeName.toLowerCase().includes('8-bit');
+  const isGlitchProtocol = themeName.toLowerCase().includes('glitch');
+  const isVoidShard = themeName.toLowerCase().includes('void');
+  const isHacked = themeName.toLowerCase().includes('hacked');
+
+  const arcadeWindowsPattern = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='60' viewBox='0 0 40 60'%3E%3Crect width='40' height='60' fill='%230a0a1a'/%3E%3Crect x='5' y='5' width='12' height='20' fill='%231a1a3a'/%3E%3Crect x='22' y='5' width='12' height='20' fill='%231a1a3a'/%3E%3C/svg%3E";
 
   return (
-    <div className={cn(
-      "w-full aspect-[16/10] rounded-xl shadow-inner flex items-center justify-center p-4 transition-all duration-500 overflow-hidden relative border",
-      isNeonSyndicate ? 'bg-zinc-950 border-cyan-500/30' : 
-      isComicBook ? 'bg-white border-[4px] border-black rounded-none comic-dots' : 
-      isUrban ? "bg-[url('/brick-wall.png')] bg-repeat bg-[size:100px] border-2 border-slate-300" : 
-      isGameTheme ? 'bg-[#cccccc] border-black border-4' :
-      isGlitchProtocol ? 'bg-zinc-950 border-2 border-white/10' :
-      isVoidShard ? 'bg-zinc-950 border-2 border-violet-500/30 overflow-hidden' :
-      isHacked ? 'bg-black border-2 border-[#00FF41] shadow-[0_0_20px_rgba(0,255,65,0.1)]' :
-      'bg-zinc-50 border-zinc-100'
-    )}>
-       {isGameTheme && (
-         <div className="absolute top-2 left-2 flex gap-1 opacity-40">
-           <div className="w-1.5 h-1.5 rounded-full bg-red-600" />
-           <div className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
-         </div>
+    <div
+      className={cn(
+        "w-full aspect-[16/10] rounded-xl shadow-inner flex items-center justify-center p-4 transition-all duration-500 overflow-hidden relative border",
+        isNeonSyndicate ? 'bg-zinc-950 border-cyan-500/30' :
+        isComicBook ? 'bg-white border-[4px] border-black rounded-none comic-dots' :
+        isUrban ? "bg-white border-2 border-zinc-200 urban-wall-bg" :
+        is8BitTheme ? 'bg-[#0a0a1a] border-none shadow-[4px_4px_0_0_#000,0_4px_0_0_#000,-4px_0_0_0_#000,0_-4px_0_0_#000]' :
+        isGlitchProtocol ? 'bg-zinc-800 border-2 border-red-600' :
+        isVoidShard ? 'bg-[#313131] border-2 border-violet-500/30 overflow-hidden shadow-[0_0_20px_rgba(139,92,246,0.2)]' :
+        isHacked ? 'bg-black border-2 border-[#00FF41] shadow-[0_0_20px_rgba(0,255,65,0.1)]' :
+        'bg-zinc-50 border-zinc-100',
+        isUrban && 'urban-wall-bg'
+      )}
+    >
+       {is8BitTheme && (
+         <div className="absolute inset-0 opacity-10 pointer-events-none arcade-windows-bg" />
        )}
-       {isGlitchProtocol && (
-         <>
-           <div className="absolute inset-0 hardware-grid-overlay opacity-10" />
-           <div className="absolute inset-0 animate-noise opacity-5" />
-         </>
+       {(isGlitchProtocol || isVoidShard) && (
+         <div className="absolute inset-0 hardware-grid-overlay opacity-10" />
        )}
-       {isHacked && (
+       {isVoidShard && (
+         <div className="absolute inset-0 pointer-events-none void-shard-bg" />
+       )}
+       {isHacked && mounted && (
          <div className="absolute inset-0 opacity-[0.05] pointer-events-none select-none font-mono text-[6px] overflow-hidden leading-none text-[#00FF41]">
            {Array.from({ length: 20 }).map((_, i) => (
              <div key={i} className="animate-binary-scroll">{Math.random().toString(2).substring(2, 50)}</div>
@@ -85,10 +95,11 @@ function ThemePreview({ themeName }: { themeName: string }) {
           <div className={cn("h-4 rounded w-3/4", 
             isNeonSyndicate ? 'bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,1)]' : 
             isComicBook ? 'bg-yellow-400 border-2 border-black' : 
-            isGameTheme ? 'bg-red-600 shadow-[0_4px_0_0_#a00000] rounded-full w-8 h-8 mx-auto' : 
-            isGlitchProtocol ? 'bg-white animate-rgb' : 
-            isVoidShard ? 'bg-violet-500 shadow-[0_0_20px_rgba(139,92,246,0.6)] animate-void' :
+            is8BitTheme ? 'bg-pink-600 shadow-[4px_4px_0_0_#000]' : 
+            isGlitchProtocol ? 'bg-red-600 shadow-[0_0_15px_red]' : 
+            isVoidShard ? 'bg-violet-500 shadow-[0_0_20px_rgba(139,92,246,0.6)]' :
             isHacked ? 'bg-[#00FF41] shadow-[0_0_15px_#00FF41]' :
+            isUrban ? 'bg-white border-2 border-zinc-200 shadow-xl' :
             'bg-primary'
           )} />
           
@@ -97,19 +108,26 @@ function ThemePreview({ themeName }: { themeName: string }) {
                <div key={i} className={cn(
                  "h-16 rounded overflow-hidden flex flex-col", 
                  isComicBook ? "bg-white border-2 border-black shadow-[4px_4px_0px_#000]" : 
-                 isGameTheme ? "bg-[#707070] border-2 border-black rounded-none shadow-[4px_4px_0_0_#000]" : 
-                 isUrban ? "bg-black border-t border-r-2 border-b-2 border-l border-white outline outline-1 outline-white outline-offset-2" : 
+                 is8BitTheme ? "bg-[#0a0a1a] border-2 border-white/10 shadow-[2px_2px_0_0_#000]" : 
+                 isUrban ? "bg-white border-zinc-200 border-2 shadow-lg relative" : 
                  isNeonSyndicate ? "bg-zinc-900 border border-cyan-500/20" : 
-                 isGlitchProtocol ? "bg-black border border-white/5" : 
+                 isGlitchProtocol ? "bg-zinc-800 border border-red-600/40" : 
+                 isVoidShard ? "bg-zinc-900 border border-violet-500/20 shadow-[0_0_10px_rgba(139,92,246,0.1)]" :
                  isHacked ? "bg-black border border-[#00FF41]/30 rounded-none" :
                  'bg-white border'
                )}>
+                 {isUrban && (
+                   <>
+                     <div className="absolute top-0.5 left-0.5 w-0.5 h-0.5 rounded-full bg-zinc-400" />
+                     <div className="absolute top-0.5 right-0.5 w-0.5 h-0.5 rounded-full bg-zinc-400" />
+                   </>
+                 )}
                  <div className="h-8 w-full relative bg-muted/20 flex items-center justify-center">
                     <Package className="w-4 h-4 opacity-10" />
                  </div>
                  <div className="p-1 space-y-1">
                    <div className={cn("h-1 w-2/3 rounded", isHacked ? "bg-[#00FF41]/20" : "bg-muted-foreground/20")} />
-                   <div className={cn("h-1 w-1/3 rounded", isHacked ? "bg-[#00FF41]" : "bg-accent")} />
+                   <div className={cn("h-1 w-1/3 rounded", isHacked ? "bg-[#00FF41]" : is8BitTheme ? "bg-cyan-400" : isVoidShard ? "bg-violet-400" : isUrban ? "bg-black" : "bg-accent")} />
                  </div>
                </div>
              ))}
@@ -130,7 +148,7 @@ export default function HobbydorkStore() {
 
   const handleOpenCheckout = (product: PremiumProduct) => {
     if (!user) {
-      toast({ variant: 'destructive', title: "Auth Required", description: "Sign in to upgrade your business." });
+      toast({ variant: 'destructive', title: "Sign in Required", description: "Please sign in to buy upgrades for your shop." });
       return;
     }
     setSelectedProduct(product);
@@ -142,7 +160,7 @@ export default function HobbydorkStore() {
     if (!selectedProduct || !user) return;
     
     if (selectedProduct.id === 'p10' && !contactInfo.trim()) {
-      toast({ variant: 'destructive', title: "Info Required", description: "Please provide contact info so we can start your design." });
+      toast({ variant: 'destructive', title: "Information Required", description: "Please provide contact info so our design team can reach you." });
       return;
     }
 
@@ -169,7 +187,7 @@ export default function HobbydorkStore() {
         throw new Error('Checkout failed');
       }
     } catch (error) {
-      toast({ variant: 'destructive', title: "Stripe Error" });
+      toast({ variant: 'destructive', title: "Payment Error", description: "There was a problem starting your purchase." });
       setIsProcessing(false);
     }
   };
@@ -180,9 +198,9 @@ export default function HobbydorkStore() {
     if (productName.includes('Comic')) return <BookOpen className="w-6 h-6 text-orange-500" />;
     if (productName.includes('Neon Syndicate')) return <Monitor className="w-6 h-6 text-cyan-400" />;
     if (productName.includes('Urban')) return <Building2 className="w-6 h-6 text-blue-500" />;
-    if (productName.includes('NES ORIGINAL')) return <Gamepad2 className="w-6 h-6 text-red-600" />;
+    if (productName.includes('8-BIT')) return <Gamepad2 className="w-6 h-6 text-pink-500" />;
     if (productName.includes('Glitch Protocol')) return <Radio className="w-6 h-6 text-white animate-pulse" />;
-    if (productName.includes('Void Shard')) return <Ghost className="w-6 h-6 text-violet-400 animate-void" />;
+    if (productName.includes('Void Shard')) return <Ghost className="w-6 h-6 text-violet-400" />;
     if (productName.includes('HACKED')) return <Terminal className="w-6 h-6 text-[#00FF41]" />;
     if (productName.includes('Verified')) return <ShieldCheck className="w-6 h-6 text-green-500" />;
     return category === 'Spotlight' ? <Zap className="w-6 h-6 text-yellow-500" /> : <Sparkles className="w-6 h-6 text-accent" />;
@@ -190,34 +208,40 @@ export default function HobbydorkStore() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Navbar />
-      <main className="container mx-auto px-4 py-12">
-        <header className="max-w-2xl mx-auto text-center mb-16 space-y-4">
-          <div className="flex justify-center mb-6">
-            <div className="bg-card border border-border p-4 rounded-2xl shadow-xl">
-              <Crown className="w-10 h-10 text-accent" />
+      <header className="py-0 mb-4">
+        <div 
+          className="max-w-3xl mx-auto rounded-b-2xl p-4 md:p-6 shadow-2xl text-white relative overflow-hidden dark-grey-grid-bg"
+        >
+          <div className="text-center space-y-2 relative z-10">
+            <div className="flex justify-center mb-2">
+                <Image 
+                  src="/hobbydorkstore.jpg" 
+                  alt="Hobbydork Store" 
+                  width={520} 
+                  height={520} 
+                  className="rounded-full border-4 border-white/10 shadow-2xl"
+                />
             </div>
+            <p className="text-white/80 text-base md:text-lg font-medium font-headline font-black">
+              Premium Upgrades for your Storefront
+            </p>
           </div>
-          <div className="flex flex-col items-center gap-6">
-            <Image 
-              src="/hobbydork-main.png" 
-              alt="hobbydork logo" 
-              width={360} 
-              height={90} 
-              className="h-16 md:h-24 w-auto" 
-              priority 
-            />
-            <span className="text-2xl md:text-4xl font-headline font-black tracking-tight text-primary uppercase">Store</span>
-          </div>
-          <p className="text-lg text-muted-foreground leading-relaxed font-medium mt-4">
-            Upgrade your business. Stand out from the crowd and build a brand collectors trust.
+        </div>
+      </header>
+      
+      <main className="container mx-auto px-4 py-8">
+        <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
+          <h2 className="text-2xl font-headline font-black uppercase italic tracking-tight">The hobbydork Store</h2>
+          <p className="text-base md:text-lg text-muted-foreground leading-relaxed font-medium">
+            Boost your visibility and stand out from the crowd. These upgrades help you build a professional brand that collectors trust.
           </p>
-        </header>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {PREMIUM_PRODUCTS.map((product) => {
             const isSpotlight = product.id === 'p1';
             const isCustom = product.id === 'p10';
+            const isTheme = product.name.toLowerCase().includes('theme');
             return (
               <Card 
                 key={product.id} 
@@ -248,7 +272,7 @@ export default function HobbydorkStore() {
                     {product.description}
                   </p>
                   
-                  {product.name.includes('Theme') && !isCustom && (
+                  {isTheme && !isCustom && (
                     <ThemePreview themeName={product.name} />
                   )}
 
@@ -256,8 +280,8 @@ export default function HobbydorkStore() {
                     <div className="bg-pink-50 dark:bg-pink-900/10 p-4 rounded-xl border border-pink-200">
                        <ul className="text-[10px] font-black uppercase tracking-widest space-y-2 text-pink-700">
                           <li className="flex items-center gap-2">Unique 1-of-1 Architecture</li>
-                          <li className="flex items-center gap-2">Custom CSS Hooks</li>
-                          <li className="flex items-center gap-2">Personal Design Consultation</li>
+                          <li className="flex items-center gap-2">Custom Styling</li>
+                          <li className="flex items-center gap-2">Personal Consultation</li>
                        </ul>
                     </div>
                   )}
@@ -265,9 +289,9 @@ export default function HobbydorkStore() {
                   {isSpotlight && (
                     <div className="bg-yellow-50 dark:bg-yellow-900/10 p-4 rounded-xl border border-yellow-200">
                        <ul className="text-[10px] font-black uppercase tracking-widest space-y-2 text-yellow-700">
-                          <li className="flex items-center gap-2">Home Page Top Banner</li>
-                          <li className="flex items-center gap-2">Global Search Priority</li>
-                          <li className="flex items-center gap-2">500k+ Weekly Impressions</li>
+                          <li className="flex items-center gap-2">Home Page Banner</li>
+                          <li className="flex items-center gap-2">Search Priority</li>
+                          <li className="flex items-center gap-2">Maximum Exposure</li>
                        </ul>
                     </div>
                   )}
@@ -276,7 +300,7 @@ export default function HobbydorkStore() {
                   <div className="flex justify-between items-center w-full">
                     <span className="text-2xl font-black">${product.price}</span>
                     <span className="text-[10px] font-bold text-muted-foreground uppercase">
-                      {isSpotlight ? 'Per Week' : isCustom ? 'One-time commission' : 'One-time'}
+                      {isSpotlight ? 'Per Week' : isCustom ? 'One-time' : 'One-time'}
                     </span>
                   </div>
                   <Button 
@@ -287,7 +311,7 @@ export default function HobbydorkStore() {
                       isCustom ? "bg-pink-600 hover:bg-pink-700 text-white" : "bg-primary text-primary-foreground"
                     )}
                   >
-                    Purchase Now <ArrowRight className="w-4 h-4" />
+                    Buy Now <ArrowRight className="w-4 h-4" />
                   </Button>
                 </CardFooter>
               </Card>
@@ -298,7 +322,7 @@ export default function HobbydorkStore() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl">
-          <DialogTitle className="sr-only">Stripe Checkout</DialogTitle>
+          <DialogTitle className="sr-only">Checkout</DialogTitle>
           <div className="bg-card text-foreground">
             <div className="bg-primary p-8 text-primary-foreground">
               <div className="flex justify-between items-start mb-6">
@@ -307,7 +331,7 @@ export default function HobbydorkStore() {
                 </div>
                 <Lock className="w-4 h-4 opacity-40" />
               </div>
-              <h2 className="text-3xl font-headline font-black italic mb-2 tracking-tight">Stripe Checkout</h2>
+              <h2 className="text-3xl font-headline font-black italic mb-2 tracking-tight">Checkout</h2>
             </div>
             <div className="p-8 space-y-8">
               <div className="flex justify-between items-center p-4 bg-muted/30 rounded-2xl border border-dashed border-muted-foreground/20">
@@ -323,16 +347,16 @@ export default function HobbydorkStore() {
 
               {selectedProduct?.id === 'p10' && (
                 <div className="space-y-3">
-                  <Label htmlFor="contact-info" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Commission Contact Info</Label>
+                  <Label htmlFor="contact-info" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Contact Info</Label>
                   <Input 
                     id="contact-info"
-                    placeholder="Email, Discord, or Phone"
+                    placeholder="Email or Discord handle"
                     value={contactInfo}
                     onChange={(e) => setContactInfo(e.target.value)}
                     className="h-12 border-2 rounded-xl focus-visible:ring-pink-500"
                     required
                   />
-                  <p className="text-[9px] text-muted-foreground font-medium italic">Our design team will contact you at this handle within 24 hours.</p>
+                  <p className="text-[9px] text-muted-foreground font-medium italic">Our design team will contact you within 24 hours.</p>
                 </div>
               )}
 

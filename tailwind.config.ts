@@ -1,6 +1,12 @@
 import type {Config} from 'tailwindcss';
 
 export default {
+  safelist: [
+    'data-[state=checked]:bg-primary',
+    'data-[state=unchecked]:bg-input',
+    'data-[state=checked]:translate-x-5',
+    'data-[state=unchecked]:translate-x-0',
+  ],
   darkMode: ['class'],
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',

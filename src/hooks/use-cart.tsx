@@ -67,7 +67,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         try {
             // Rule: Cart can only contain items from one store
             if (storeId && storeId !== listing.storeId) {
-                throw new Error('You can only add items from one store at a time. Please finish or clear your current cart before shopping from another store.');
+                throw new Error('You can only add items from one storefront at a time. Please finish or clear your current cart before shopping from another storefront.');
             }
 
             // If cart is empty, set the storeId
@@ -151,7 +151,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             setStoreId(null);
             toast({
                 title: "Cart Cleared",
-                description: "Your shopping cart is now empty.",
+                description: "Your cart is now empty.",
             });
         } catch (err) {
             toast({

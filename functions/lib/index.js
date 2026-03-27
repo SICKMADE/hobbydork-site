@@ -256,7 +256,8 @@ exports.createStripeOnboarding = (0, https_1.onCall)({ secrets: [stripeSecretPar
             updatedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
     }
-    const appBaseUrl = request.data?.appBaseUrl || "https://hobbydork.com";
+    // Always use production base URL for onboarding
+    const appBaseUrl = "https://hobbydork.com";
     const link = await stripe.accountLinks.create({
         account: accountId,
         refresh_url: `${appBaseUrl}/onboarding/terms`,

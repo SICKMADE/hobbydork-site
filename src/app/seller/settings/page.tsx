@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -26,7 +27,8 @@ import {
   Crown,
   FileText,
   Terminal,
-  Gamepad2
+  Gamepad2,
+  Package
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -46,11 +48,11 @@ const THEME_OPTIONS: ThemeOption[] = [
   { id: 'default', name: 'Default', className: 'bg-zinc-100' },
   { id: 'p2', name: 'Neon Syndicate Theme', className: 'bg-zinc-950' },
   { id: 'p4', name: 'Comic Book Theme', className: 'bg-white comic-dots' },
-  { id: 'p5', name: 'NES ORIGINAL THEME', className: 'bg-[#cccccc]' },
-  { id: 'p7', name: 'Glitch Protocol Theme', className: 'bg-zinc-950' },
-  { id: 'p8', name: 'Void Shard Theme', className: 'bg-zinc-950' },
+  { id: 'p5', name: '8-BIT ARCADE THEME', className: 'bg-[#0a0a1a]' },
+  { id: 'p7', name: 'Glitch Protocol Theme', className: 'bg-zinc-800' },
+  { id: 'p8', name: 'Void Shard Theme', className: 'bg-[#313131]' },
   { id: 'p9', name: 'HACKED THEME', className: 'bg-black' },
-  { id: 'p3', name: 'Urban Theme', className: "bg-[url('/brick-wall.png')] bg-repeat bg-[size:150px]" },
+  { id: 'p3', name: 'Urban Theme', className: "bg-white" },
 ];
 
 export default function StoreSettings() {
@@ -59,6 +61,11 @@ export default function StoreSettings() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const [isSaving, setIsSaving] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [formData, setFormData] = useState({
     tagline: '',
@@ -168,6 +175,8 @@ export default function StoreSettings() {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-accent" /></div>;
   }
 
+  const arcadeWindowsPattern = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='30' viewBox='0 0 20 30'%3E%3Crect width='20' height='30' fill='%230a0a1a'/%3E%3Crect x='2' y='2' width='6' height='10' fill='%231a1a3a'/%3E%3Crect x='11' y='2' width='6' height='10' fill='%231a1a3a'/%3E%3C/svg%3E";
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <Navbar />
@@ -180,7 +189,7 @@ export default function StoreSettings() {
           <div className="flex items-center gap-2 text-accent font-black tracking-widest text-[10px] uppercase">
             <Store className="w-3 h-3" /> Storefront Management
           </div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black uppercase italic tracking-tighter text-primary">Shop Customization</h1>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-black uppercase italic tracking-tighter text-primary">Storefront Customization</h1>
           <p className="text-muted-foreground font-medium">Build your brand identity and apply premium themes.</p>
         </header>
 
@@ -195,11 +204,11 @@ export default function StoreSettings() {
             <TabsContent value="visuals" className="space-y-12">
               <section className="space-y-6">
                 <h2 className="text-xl font-headline font-black uppercase flex items-center gap-3">
-                  <ImageIcon className="w-5 h-5 text-accent" /> Shop Banner
+                  <ImageIcon className="w-5 h-5 text-accent" /> Storefront Banner
                 </h2>
                 <div className="grid gap-6">
                   <Card className="border-none shadow-xl rounded-[2rem] overflow-hidden group relative">
-                    <div className="relative h-48 w-full bg-muted dark:bg-zinc-900 overflow-hidden">
+                    <div className="relative h-80 w-full bg-muted dark:bg-zinc-900 overflow-hidden">
                       <Image 
                         src={formData.bannerUrl || '/hobbydork-banner-default.jpg'} 
                         alt="Banner Preview" 
@@ -208,7 +217,7 @@ export default function StoreSettings() {
                       />
                       <div className="absolute inset-0 bg-zinc-950/20 group-hover:bg-zinc-950/40 dark:bg-black/40 dark:group-hover:bg-black/60 transition-colors flex flex-col items-center justify-center gap-3 z-10 backdrop-blur-[2px]">
                         <label htmlFor="store-banner-file" className="flex flex-col items-center justify-center gap-2 cursor-pointer bg-white/90 hover:bg-white dark:bg-white/10 dark:hover:bg-white/20 backdrop-blur-md px-8 py-4 rounded-2xl border border-zinc-200 dark:border-white/20 transition-all text-zinc-950 dark:text-white group/btn shadow-xl active:scale-95">
-                          <ImageIcon className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
+                          <ImageIcon className="w-5 h-5 group/btn:scale-110 transition-transform" />
                           <span className="text-[10px] font-black uppercase tracking-widest">Change Store Banner</span>
                           <input id="store-banner-file" type="file" accept="image/*" className="hidden" onChange={(e) => handleFilePicker(e, 'bannerUrl')} />
                         </label>
@@ -233,14 +242,16 @@ export default function StoreSettings() {
             <TabsContent value="appearance" className="space-y-12">
               <section className="space-y-6">
                 <h2 className="text-xl font-headline font-black uppercase flex items-center gap-3">
-                  <Layout className="w-5 h-5 text-accent" /> Shop Appearance
+                  <Layout className="w-5 h-5 text-accent" /> Storefront Appearance
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {THEME_OPTIONS.map((theme) => {
                     const isActive = formData.selectedTheme === theme.name;
                     const owned = isThemeOwned(theme.id);
-                    const isGameTheme = theme.name === 'NES ORIGINAL THEME';
+                    const isUrban = theme.name === 'Urban Theme';
+                    const is8BitTheme = theme.name === '8-BIT ARCADE THEME';
                     const isHacked = theme.name === 'HACKED THEME';
+                    const isVoidShard = theme.name === 'Void Shard Theme';
                     return (
                       <Card 
                         key={theme.id} 
@@ -260,18 +271,37 @@ export default function StoreSettings() {
                           </div>
                         )}
                         <div className={cn(
-                          "h-32 w-full flex items-center justify-center p-4",
-                          theme.className
+                          "h-32 w-full flex items-center justify-center p-4 relative overflow-hidden",
+                          theme.className,
+                          isUrban && "bg-[url('/wall.jpg')] bg-cover bg-center"
                         )}>
+                          {isUrban && <div className="absolute inset-0 bg-black/20" />}
+                          {is8BitTheme && (
+                             <div className="absolute inset-0 opacity-10 pointer-events-none arcade-windows-bg" />
+                          )}
+                          {isVoidShard && (
+                            <>
+                              <div className="absolute inset-0 hardware-grid-overlay opacity-10" />
+                              <div className="absolute inset-0 pointer-events-none store-void-shard-bg" />
+                            </>
+                          )}
+                          {isHacked && mounted && (
+                            <div className="absolute inset-0 opacity-[0.05] pointer-events-none select-none font-mono text-[6px] overflow-hidden leading-none text-[#00FF41]">
+                              {Array.from({ length: 10 }).map((_, i) => (
+                                <div key={i} className="animate-binary-scroll">{Math.random().toString(2).substring(2, 50)}</div>
+                              ))}
+                            </div>
+                          )}
                           <div className={cn(
-                            "w-full h-4 rounded transition-all duration-500",
-                            theme.name === 'Neon Syndicate Theme' ? 'bg-cyan-400 shadow-[0_0_10px_cyan]' : 
-                            theme.name === 'Comic Book Theme' ? 'bg-yellow-400 border-2 border-black' : 
-                            theme.name === 'NES ORIGINAL THEME' ? 'bg-red-600 shadow-[0_4px_0_0_#a00000] rounded-full w-8 h-8' : 
-                            theme.name === 'Glitch Protocol Theme' ? 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)] animate-rgb' : 
-                            theme.name === 'Void Shard Theme' ? 'bg-violet-500 shadow-[0_0_20px_rgba(139,92,246,0.8)] animate-void' :
-                            isHacked ? 'bg-[#00FF41] shadow-[0_0_15px_#00FF41]' :
-                            'bg-primary'
+                            "w-full h-4 transition-all duration-500 relative z-10",
+                            theme.name === 'Neon Syndicate Theme' ? 'bg-cyan-400 shadow-[0_0_10px_cyan] rounded' : 
+                            theme.name === 'Comic Book Theme' ? 'bg-yellow-400 border-2 border-black rounded-none' : 
+                            is8BitTheme ? 'bg-pink-500 shadow-[4px_4px_0_0_#000] rounded-none' : 
+                            theme.name === 'Glitch Protocol Theme' ? 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)] animate-rgb rounded-none' : 
+                            theme.name === 'Void Shard Theme' ? 'bg-violet-500 shadow-[0_0_20px_rgba(139,92,246,0.8)] animate-void rounded-none' :
+                            isHacked ? 'bg-[#00FF41] shadow-[0_0_15px_#00FF41] rounded-none' :
+                            isUrban ? 'bg-zinc-950 border-2 border-white/20' :
+                            'bg-primary rounded'
                           )} />
                         </div>
                         <CardContent className="p-4 flex justify-between items-center bg-white dark:bg-zinc-900 text-zinc-950 dark:text-white">
@@ -291,7 +321,7 @@ export default function StoreSettings() {
             <TabsContent value="details" className="space-y-12">
               <section className="space-y-6">
                 <h2 className="text-xl font-headline font-black uppercase flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-accent" /> Shop Details
+                  <FileText className="w-5 h-5 text-accent" /> Storefront Details
                 </h2>
                 <Card className="border-none shadow-xl rounded-[2rem] overflow-hidden bg-card">
                   <CardContent className="p-8 space-y-6">
@@ -315,7 +345,8 @@ export default function StoreSettings() {
                         id="store-tagline"
                         value={formData.tagline} 
                         onChange={(e) => setFormData({...formData, tagline: e.target.value})}
-                        className="h-14 rounded-xl border-2 font-bold text-lg"
+                        className="h-14 rounded-xl border-2 font-bold text-lg max-w-full overflow-hidden text-ellipsis whitespace-nowrap sm:whitespace-normal"
+                        maxLength={80}
                       />
                     </div>
                     <div className="space-y-2">
@@ -326,12 +357,13 @@ export default function StoreSettings() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="store-description" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">About the Shop</Label>
+                      <Label htmlFor="store-description" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">About the Storefront</Label>
                       <Textarea 
                         id="store-description"
                         value={formData.description} 
                         onChange={(e) => setFormData({...formData, description: e.target.value})}
-                        className="min-h-[150px] rounded-xl border-2 font-medium"
+                        className="min-h-[150px] rounded-xl border-2 font-medium max-w-full overflow-hidden text-ellipsis"
+                        maxLength={300}
                       />
                     </div>
                   </CardContent>
@@ -345,11 +377,11 @@ export default function StoreSettings() {
 
           <aside className="space-y-6">
             <div className="bg-muted/40 dark:bg-card/60 text-foreground dark:text-white p-8 rounded-[2.5rem] shadow-2xl border border-border dark:border-white/5 sticky top-24">
-              <h3 className="font-headline font-black text-xl mb-8 uppercase italic tracking-tighter flex items-center gap-2 text-accent border-b border-border dark:border-white/5 pb-4"><Sparkles className="w-5 h-5" /> Shop Tips</h3>
+              <h3 className="font-headline font-black text-xl mb-8 uppercase italic tracking-tighter flex items-center gap-2 text-accent border-b border-border dark:border-white/5 pb-4"><Sparkles className="w-5 h-5" /> Storefront Tips</h3>
               <ul className="space-y-8">
                 <li className="space-y-2">
                   <p className="text-[10px] font-black uppercase text-muted-foreground dark:text-white/40 tracking-widest">Level Up</p>
-                  <p className="text-xs font-bold leading-relaxed">The NES ORIGINAL THEME turns your shop into a retro arcade. Use it to build a nostalgic, high-energy brand for collectors.</p>
+                  <p className="text-xs font-bold leading-relaxed">The 8-BIT ARCADE THEME turns your storefront into a retro arcade. Use it to build a nostalgic, high-energy brand for collectors.</p>
                 </li>
               </ul>
             </div>

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { app } from '@/firebase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { CATEGORIES } from '@/lib/mock-data';
@@ -30,8 +31,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
 import { cn, filterProfanity } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -169,7 +170,10 @@ export default function CreateListing() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db || !title || !price || !category) return;
+    if (authLoading || !user || !user.uid || !db || !title || !price || !category) {
+      toast({ variant: 'destructive', title: 'Please wait', description: 'User authentication is still loading or missing.' });
+      return;
+    }
 
     if (!user.emailVerified || !profile?.isSeller || profile?.status !== 'ACTIVE') {
       toast({ 
@@ -181,23 +185,10 @@ export default function CreateListing() {
     }
 
     setIsSubmitting(true);
-
     try {
       const sanitizedTitle = filterProfanity(title);
       const sanitizedDescription = filterProfanity(description);
-      
-      const storage = getStorage();
-      const imageUrls: string[] = [];
-
-      for (let i = 0; i < photos.length; i++) {
-        const fileName = `listings/${user.uid}/${Date.now()}_${i}.jpg`;
-        const storageRef = ref(storage, fileName);
-        const res = await fetch(photos[i]);
-        const blob = await res.blob();
-        await uploadBytes(storageRef, blob);
-        imageUrls.push(await getDownloadURL(storageRef));
-      }
-
+      // 1. Create Firestore doc first (without images)
       const listingData = {
         title: sanitizedTitle,
         description: sanitizedDescription,
@@ -206,9 +197,10 @@ export default function CreateListing() {
         condition,
         type: type === 'bin' ? 'Buy It Now' : 'Auction',
         sellerName: profile?.username || 'Collector',
-        listingSellerId: user.uid,
-        imageUrl: imageUrls[0] || '',
-        imageUrls,
+        sellerId: user.uid,
+        listingSellerId: user.uid, // Add this field for store page compatibility
+        imageUrl: '',
+        imageUrls: [],
         status: 'Active',
         visibility,
         tags,
@@ -224,8 +216,36 @@ export default function CreateListing() {
         expiresAt: type === 'bin' ? new Date(Date.now() + 1000 * 60 * 60 * 24 * 30) : null,
         endsAt: type === 'auction' ? new Date(Date.now() + 1000 * 60 * 60 * 24 * 7) : null,
       };
-
-      await addDoc(collection(db, 'listings'), listingData);
+      const docRef = await addDoc(collection(db, 'listings'), listingData);
+      const docId = docRef.id;
+      // 2. Upload images to listingImages/{user.uid}/{docId}/{fileName}
+      const storage = getStorage(app);
+      const imageUrls: string[] = [];
+      for (let i = 0; i < photos.length; i++) {
+        const fileName = `listingImages/${user.uid}/${docId}/image_${i}.jpg`;
+        const storageRef = ref(storage, fileName);
+        const res = await fetch(photos[i]);
+        const blob = await res.blob();
+        // Use uploadBytesResumable for reliability
+        await new Promise<void>((resolve, reject) => {
+          const uploadTask = uploadBytesResumable(storageRef, blob);
+          uploadTask.on('state_changed', null, reject, async () => {
+            try {
+              const url = await getDownloadURL(uploadTask.snapshot.ref);
+              imageUrls.push(url);
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          });
+        });
+      }
+      // 3. Update Firestore doc with image URLs
+      await updateDoc(doc(db, 'listings', docId), {
+        imageUrls,
+        imageUrl: imageUrls[0] || '',
+        updatedAt: serverTimestamp(),
+      });
       localStorage.removeItem('hobbydork_listing_draft');
       toast({ title: "Item Listed!" });
       router.push('/dashboard');
@@ -240,7 +260,7 @@ export default function CreateListing() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="bg-zinc-950 border-b border-white/5 py-3">
+      <div className="bg-zinc-950 py-3">
         <div className="container mx-auto px-4 flex items-center gap-3">
           <ShieldAlert className="w-5 h-5 text-accent shrink-0" />
           <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Mandatory 2-Day Shipping Required</p>
@@ -255,7 +275,7 @@ export default function CreateListing() {
             <h1 className="text-3xl md:text-5xl font-headline font-black uppercase italic tracking-tighter text-primary leading-none">New Listing</h1>
           </div>
           {lastSaved && (
-            <div className="flex items-center gap-2 text-[9px] font-black uppercase text-muted-foreground bg-muted border px-3 py-1.5 rounded-full mb-2">
+            <div className="flex items-center gap-2 text-[9px] font-black uppercase text-muted-foreground bg-muted px-3 py-1.5 rounded-full mb-2">
               <CheckCircle2 className="w-3 h-3 text-green-500" />
               Saved {lastSaved}
             </div>
@@ -269,9 +289,29 @@ export default function CreateListing() {
               <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Photos & Visuals</Label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {photos.map((p, i) => (
-                  <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border-2 border-zinc-200 dark:border-zinc-800 group shadow-lg bg-zinc-900">
-                    <Image src={p} alt="Preview" fill className="object-cover" />
-                    <button type="button" title="Remove photo" aria-label="Remove photo" onClick={() => removePhoto(i)} className="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 backdrop-blur-md"><X className="w-4 h-4" /></button>
+                  <div
+                    key={i}
+                    className={
+                      cn(
+                        "relative aspect-square rounded-2xl overflow-hidden border-2 border-accent bg-white/80 dark:bg-zinc-900/80 shadow-lg group flex items-center justify-center transition-all duration-200 hover:scale-[1.04] hover:border-primary hover:shadow-2xl"
+                      )
+                    }
+                  >
+                    <Image 
+                      src={p} 
+                      alt="Preview" 
+                      fill 
+                      style={{ background: 'transparent', filter: 'none', objectFit: 'contain' }} // Show full image, no crop, no grayscale
+                    />
+                    <button
+                      type="button"
+                      title="Remove photo"
+                      aria-label="Remove photo"
+                      onClick={() => removePhoto(i)}
+                      className="absolute top-2 right-2 bg-black/80 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 backdrop-blur-md shadow-lg"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 ))}
                 <label htmlFor="listing-photo-upload" className="aspect-square border-4 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group" title="Upload photos">
@@ -413,7 +453,7 @@ export default function CreateListing() {
 
           <aside className="space-y-6">
             <div className="bg-muted/40 dark:bg-card/60 text-foreground dark:text-white p-8 rounded-[2.5rem] shadow-2xl border border-border dark:border-white/5 sticky top-24">
-              <h3 className="font-headline font-black text-xl mb-8 uppercase italic tracking-tighter flex items-center gap-2 text-accent border-b border-border dark:border-white/5 pb-4"><Sparkles className="w-5 h-5" /> Manifest Policy</h3>
+              <h3 className="font-headline font-black text-xl mb-8 uppercase italic tracking-tighter flex items-center gap-2 text-accent pb-4"><Sparkles className="w-5 h-5" /> Manifest Policy</h3>
               <ul className="space-y-10">
                 <li className="space-y-3">
                   <div className="flex items-center gap-2 text-accent font-black text-[10px] uppercase tracking-widest"><Truck className="w-4 h-4" /> 48-Hour Protocol</div>

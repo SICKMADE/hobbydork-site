@@ -1,4 +1,3 @@
-
 /**
  * HobbyDork Firestore Security Rules
  *
@@ -18,8 +17,8 @@
  * 1. Authorization Independence: Critical ownership data (e.g., sellerId) is denormalized 
  *    onto sub-resources like photos and bids to avoid expensive get() calls.
  * 2. Drafting vs. Publishing: Drafts are kept in user-specific subcollections (`/users/{userId}/draft_listings`)
-      for strict path-based isolation. Once a draft is published to the top-level `/listings` collection, they follow 
- *    public-read/owner-write rules.
+   for strict path-based isolation. Once a draft is published to the top-level `/listings` collection, they follow 
+ *    public-read/owner-write rules. Storefronts are the public-facing seller pages (formerly called shops).
  * 3. Relational Integrity: On creation, rules enforce that the user's ID is correctly 
  *    stamped onto the document, and these fields are made immutable during updates.
  * 4. Admin Access: Administrative privileges are determined by the existence of a 
@@ -29,245 +28,342 @@
 rules_version = '2';
 
 service cloud.firestore {
-      // --- ADMIN HELPER ---
-      function isAdmin() {
-        return exists(/databases/$(database)/documents/roles_admin/$(uid()));
-      }
-      // --- COLLECTION GROUP RULES ---
-      match /{path=**}/posts/{postId} {
-        allow read: if true;
-        allow create: if isVerified();
-      }
-      // --- DRAFT LISTINGS ---
-      match /users/{userId}/draft_listings/{draftId} {
-        allow read, write: if isSignedIn() && uid() == userId;
-      }
-      // --- PURCHASES & TRANSACTIONS ---
-      match /purchases/{purchaseId} {
-        allow read, write: if isSignedIn() && (resource.data.buyerUid == uid() || resource.data.sellerUid == uid());
-      }
-      match /transactions/{transactionId} {
-        allow read, write: if isSignedIn() && (resource.data.buyerUid == uid() || resource.data.sellerUid == uid());
-      }
-      // --- CATEGORIES & TAGS ---
-      match /categories/{catId} {
-        allow read: if true;
-        allow write: if isAdmin();
-      }
-      match /tags/{tagId} {
-        allow read: if true;
-        allow write: if isAdmin();
-      }
+
+  // ---------------- HELPERS ----------------
+  function isSignedIn() {
+    return request.auth != null;
+  }
+
+  function uid() {
+    return request.auth.uid;
+  }
+
+  function userData() {
+    return get(/databases/(default)/documents/users/$(uid())).data;
+  }
+
+  function userExists() {
+    return isSignedIn() && userData() != null;
+  }
+
+  function userIsActive() {
+    return userExists() && userData().status == "ACTIVE";
+  }
+
+  function userIsAdmin() {
+    return userExists() && userData().role == "ADMIN";
+  }
+
+  function userIsStaff() {
+    return userExists() && (userData().role == "ADMIN" || userData().role == "MODERATOR");
+  }
+
+  function userIsSeller() {
+    return userExists() && userData().isSeller == true;
+  }
+
+  function isVerified() {
+    let data = userData();
+    return userExists()
+      && data.status == "ACTIVE"
+      && data.emailVerified == true;
+  }
+
+  function isAdminDoc() {
+    // Allow admin access if user has role 'ADMIN' or has a /roles_admin/{uid} doc
+    return userIsAdmin() || exists(/databases/(default)/documents/roles_admin/$(uid()));
+  }
+
+  function isConversationParticipant(conversationId) {
+    let convo = get(/databases/(default)/documents/conversations/$(conversationId)).data;
+    return convo.participantUids.hasAny([uid()]);
+  }
+
+  // ---------------- ROOT ----------------
   match /databases/{database}/documents {
-    // --- USERNAMES ---
-    match /usernames/{username} {
-      allow create: if isSignedIn();
-      allow get: if true;
-      allow update, delete: if false;
-    }
 
-    // ------------- Helpers -------------
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function uid() {
-      return request.auth.uid;
-    }
-
-    // Direct check to avoid recursion in users/{userId} match
-    function isStaffByDoc() {
-      let role = get(/databases/$(database)/documents/users/$(uid())).data.role;
-      return role == "ADMIN" || role == "MODERATOR";
-    }
-
-    function userData() {
-      return get(/databases/$(database)/documents/users/$(uid())).data;
-    }
-
-    function userIsActive() {
-      let data = userData();
-      return isSignedIn() && data != null && data.status == "ACTIVE";
-    }
-
-    function userIsAdmin() {
-      let data = userData();
-      return isSignedIn() && data != null && data.role == "ADMIN";
-    }
-
-    function userIsStaff() {
-      let data = userData();
-      return isSignedIn() && data != null && (data.role == "ADMIN" || data.role == "MODERATOR");
-    }
-
-    function isVerified() {
-      let data = userData();
-      return isSignedIn() && data != null && data.emailVerified == true && data.status == "ACTIVE";
-    }
-
-    function userIsSeller() {
-      let data = userData();
-      return isSignedIn() && data != null && data.isSeller == true;
-    }
-
-    function isConversationParticipant(conversationId) {
-      let conversation = get(/databases/$(database)/documents/conversations/$(conversationId)).data;
-      return isSignedIn() && (
-        conversation.participantUids.hasAny([uid()]) ||
-        conversation.participants.hasAny([uid()])
-      );
-    }
-
-    // ------------- users -------------
-
+    // -------- USERS --------
     match /users/{userId} {
-      // Allow anyone to list and read user profiles
-      allow get: if true;
-      allow list: if true;
+      allow get, list: if true;
       allow create: if isSignedIn() && uid() == userId;
       allow update: if isSignedIn() && uid() == userId;
-      // Allow displayName to be set or changed at any time by the user
-      // No restriction on displayName field for update
       allow delete: if userIsAdmin();
 
       match /notifications/{id} {
-        allow read, write: if isSignedIn() && uid() == userId;
+        allow read, write: if uid() == userId;
       }
-      match /watchlist/{listingId} {
-        allow read, write: if isSignedIn() && uid() == userId;
+
+      match /watchlist/{id} {
+        allow read, write: if uid() == userId;
       }
-      match /favoriteStores/{storeId} {
-        allow read, write: if isSignedIn() && uid() == userId;
+
+      match /favoriteStores/{id} {
+        allow read, write: if uid() == userId;
       }
+
       match /storefronts/{storeId} {
-        allow read, write: if isSignedIn() && uid() == userId;
+        allow read, write: if uid() == userId;
+      }
+
+      match /draft_listings/{draftId} {
+        allow read, write: if uid() == userId;
+      }
+
+      match /feeTransactions/{feeId} {
+        allow get, list: if uid() == userId;
+        allow create: if uid() == userId;
+        allow update, delete: if isAdminDoc();
+      }
+
+      match /themePurchases/{purchaseId} {
+        allow get, list: if uid() == userId;
+        allow create: if uid() == userId;
+        allow update: if uid() == userId;
+        allow delete: if isAdminDoc();
       }
     }
 
-    // ------------- giveaways -------------
-    match /giveaways/{giveawayId} {
+    // -------- USERNAMES --------
+    match /usernames/{username} {
+      allow get: if true;
+      allow create: if isSignedIn();
+    }
+
+    // -------- FOLLOWERS --------
+    match /followers/{id} {
       allow get, list: if true;
-      allow create: if userIsSeller() && userIsActive() && isVerified() && request.resource.data.sellerId == uid();
-      allow update: if (userIsSeller() && isVerified() && resource.data.sellerId == uid()) || userIsStaff();
-      allow delete: if (userIsSeller() && isVerified() && resource.data.sellerId == uid()) || userIsStaff();
-
-      match /giveawayEntries/{entryId} {
-        allow get: if uid() == resource.data.userId || uid() == resource.data.sellerId || userIsStaff();
-        allow list: if userIsStaff() || uid() == resource.data.sellerId || (get(/databases/$(database)/documents/giveaways/$(giveawayId)).data.status == 'picking');
-        allow create: if isSignedIn() && isVerified() && request.resource.data.userId == uid() && userIsActive() && request.resource.data.isFollowing == true && !exists(/databases/$(database)/documents/giveaways/$(giveawayId)/giveawayEntries/$(uid()));
-        allow update, delete: if userIsStaff();
-      }
     }
 
-    // ------------- storefronts -------------
-    match /storefronts/{storeId} {
-      allow get, list: if true;
-      allow create: if isVerified();
-      allow update: if isVerified() || (isSignedIn() && userIsSeller() && resource.data.ownerUid == uid());
-      allow delete: if isVerified();
-      
-      match /reviews/{reviewId} {
-        allow get, list, create, update, delete: if isVerified();
-      }
-    }
-
-    // ------------- listings -------------
+    // -------- LISTINGS --------
     match /listings/{listingId} {
       allow get, list: if true;
-      
-      allow create: if userIsSeller() && userIsActive() && isVerified() && 
-        request.resource.data.sellerId == uid() &&
-        // Validate required fields
-        request.resource.data.title != null && request.resource.data.title is string &&
-        request.resource.data.price != null && request.resource.data.price >= 0 &&
-        request.resource.data.category != null && request.resource.data.category is string &&
-        // Validate optional but important fields
-        (!('condition' in request.resource.data) || 
-          request.resource.data.condition in ['New', 'Like New', 'Used']) &&
-        (!('visibility' in request.resource.data) || 
-          request.resource.data.visibility in ['Visible', 'Invisible']) &&
-        // Validate shipping fields if present
-        (!('weight' in request.resource.data) || request.resource.data.weight == null || request.resource.data.weight >= 0) &&
-        (!('length' in request.resource.data) || request.resource.data.length == null || request.resource.data.length >= 0) &&
-        (!('width' in request.resource.data) || request.resource.data.width == null || request.resource.data.width >= 0) &&
-        (!('height' in request.resource.data) || request.resource.data.height == null || request.resource.data.height >= 0) &&
-        (!('shippingCost' in request.resource.data) || request.resource.data.shippingCost == null || request.resource.data.shippingCost >= 0) &&
-        // Validate quantity if present (for Buy It Now listings)
-        (!('quantity' in request.resource.data) || request.resource.data.quantity == null || (request.resource.data.quantity is number && request.resource.data.quantity >= 1));
-      
-      allow update: if (
-        userIsSeller() && resource.data.sellerId == uid() && request.resource.data.sellerId == resource.data.sellerId
-      ) &&
-        (!('condition' in request.resource.data) || 
-          request.resource.data.condition in ['New', 'Like New', 'Used']) &&
-        (!('visibility' in request.resource.data) || 
-          request.resource.data.visibility in ['Visible', 'Invisible']) &&
-        (!('weight' in request.resource.data) || request.resource.data.weight == null || request.resource.data.weight >= 0) &&
-        (!('length' in request.resource.data) || request.resource.data.length == null || request.resource.data.length >= 0) &&
-        (!('width' in request.resource.data) || request.resource.data.width == null || request.resource.data.width >= 0) &&
-        (!('height' in request.resource.data) || request.resource.data.height == null || request.resource.data.height >= 0) &&
-        (!('shippingCost' in request.resource.data) || request.resource.data.shippingCost == null || request.resource.data.shippingCost >= 0) &&
-        (!('quantity' in request.resource.data) || request.resource.data.quantity == null || (request.resource.data.quantity is number && request.resource.data.quantity >= 1));
-      
-      allow delete: if (userIsSeller() && resource.data.sellerId == uid()) || userIsStaff();
+
+      allow create: if userIsSeller() && isVerified()
+        && request.resource.data.sellerId == uid()
+        && request.resource.data.title is string
+        && request.resource.data.price is number
+        && request.resource.data.price >= 0;
+
+      // --- COLLECTION GROUP RULE FOR POSTS ---
+      match /{path=**}/posts/{postId} {
+        allow get, list: if true;
+      // -------- STORE --------
+      match /store/{storeId} {
+        allow get, list: if true;
+        allow create: if isSignedIn() && request.resource.data.ownerUid == uid();
+        allow update, delete: if resource.data.ownerUid == uid();
+      }
+        allow create: if isVerified();
+        allow update, delete: if isVerified() && resource.data.ownerUid == uid();
+      }
+      allow update: if userIsSeller()
+        && resource.data.sellerId == uid()
+        && request.resource.data.sellerId == resource.data.sellerId;
+
+      allow delete: if resource.data.sellerId == uid() || userIsStaff();
+
+      match /bids/{bidId} {
+        allow get, list: if true;
+        allow create: if isSignedIn();
+        allow update, delete: if isAdminDoc();
+      }
     }
 
-    // ------------- orders -------------
+    // -------- STOREFRONTS --------
+    match /storefronts/{storeId} {
+      allow get, list: if true;
+
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == uid();
+
+      allow update, delete: if isSignedIn()
+        && resource.data.ownerUid == uid();
+      
+        // --- POSTS SUBCOLLECTION ---
+        match /posts/{postId} {
+          allow get, list: if true;
+          allow create: if isVerified() && request.resource.data.ownerUid == uid();
+          allow update, delete: if isVerified() && resource.data.ownerUid == uid();
+        }
+        // --- FEEDS SUBCOLLECTION ---
+        match /feeds/{feedId} {
+          allow get, list: if true;
+        }
+    }
+
+    // -------- FEEDS --------
+    match /storefronts/{storeId}/feeds/{feedId} {
+      allow get, list: if true;
+
+      allow create: if isVerified()
+        && request.resource.data.authorUid == uid();
+
+      allow update, delete: if resource.data.authorUid == uid();
+
+      match /comments/{commentId} {
+        allow get, list: if true;
+        allow create: if isVerified()
+          && request.resource.data.authorUid == uid();
+        allow update, delete: if resource.data.authorUid == uid();
+      }
+
+      match /likes/{likeId} {
+        allow get, list: if true;
+        allow create: if isSignedIn()
+          && request.resource.data.userUid == uid();
+        allow delete: if resource.data.userUid == uid();
+      }
+    }
+
+    // -------- GIVEAWAYS --------
+    match /giveaways/{giveawayId} {
+      allow get, list: if true;
+
+      allow create: if userIsSeller() && isVerified()
+        && request.resource.data.sellerId == uid();
+
+      allow update, delete: if resource.data.sellerId == uid() || userIsStaff();
+
+      match /giveawayEntries/{entryId} {
+        allow create: if isVerified()
+          && request.resource.data.userId == uid();
+
+        allow get: if uid() == resource.data.userId
+          || uid() == resource.data.sellerId
+          || userIsStaff();
+      }
+    }
+
+    // -------- PLATFORM BOUNTIES --------
+    match /platformBounties/{bountyId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdminDoc();
+    }
+
+    match /platformBountyEntries/{entryId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isVerified();
+    }
+
+    // -------- SELLER APPLICATIONS --------
+    match /sellerApplications/{id} {
+      allow get, list, update, delete: if isAdminDoc();
+      allow create: if isSignedIn() && request.resource.data.ownerUid == uid();
+    }
+
+    // -------- PAYOUT REQUESTS --------
+    match /payoutRequests/{id} {
+      allow get, list: if isAdminDoc() || resource.data.ownerUid == uid();
+      allow create: if isVerified()
+        && request.resource.data.ownerUid == uid();
+      allow update, delete: if isAdminDoc();
+    }
+
+    // -------- CUSTOM THEMES --------
+    match /customThemeRequests/{id} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerUid == uid();
+      allow update, delete: if isAdminDoc();
+    }
+
+    // -------- ORDERS --------
     match /orders/{orderId} {
-      allow get, list: if userIsActive() && (userIsStaff() || resource.data.buyerUid == uid() || resource.data.sellerUid == uid());
-      allow create: if userIsActive() && request.resource.data.buyerUid == uid() && request.resource.data.shippingAddress != null;
-      
-      // Restrict updates to safe fields only - status changes must go through callables
-      allow update: if userIsStaff() || (
-        isSignedIn() && 
-        (resource.data.buyerUid == uid() || resource.data.sellerUid == uid()) &&
-        // Only allow updating safe fields - prevent status/price/payment manipulation
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['feedback', 'notes', 'buyerNotes', 'sellerNotes', 'carrierDeliveryDate', 'lastTrackingCheck', 'updatedAt'])
-      );
-      
-      allow delete: if userIsAdmin();
+      allow create: if userIsActive()
+        && request.resource.data.buyerUid == uid();
+
+      allow get, list: if userIsActive()
+        && (resource.data.buyerUid == uid()
+        || resource.data.sellerUid == uid()
+        || userIsStaff());
+
+      allow update: if userIsStaff()
+        || (isSignedIn()
+        && (resource.data.buyerUid == uid()
+        || resource.data.sellerUid == uid()));
     }
 
-    // ISO24 posts
-    match /iso24Posts/{isoId} {
+    // -------- TRANSACTIONS --------
+    match /transactions/{id} {
+      allow read, write: if isSignedIn()
+        && (resource.data.buyerUid == uid()
+        || resource.data.sellerUid == uid());
+    }
+
+    match /purchases/{id} {
+      allow read, write: if isSignedIn()
+        && (resource.data.buyerUid == uid()
+        || resource.data.sellerUid == uid());
+    }
+
+
+    // -------- ISO POSTS --------
+    match /iso24Posts/{id} {
       allow get, list: if true;
       allow create, update, delete: if isVerified();
     }
 
-    // Community chat
-    match /communityMessages/{messageId} {
+    // -------- COMMUNITY --------
+    match /communityMessages/{id} {
       allow get, list: if userIsActive();
-      allow create: if isSignedIn() && isVerified() && (userIsActive() || userIsAdmin());
-      allow update, delete: if userIsActive() && isVerified() && userIsStaff();
+      allow create: if isVerified();
     }
 
-    // Conversations and messages
+    // -------- CONVERSATIONS --------
     match /conversations/{conversationId} {
-      allow create: if userIsActive() && request.resource.data.participantUids.hasAny([uid()]);
-      allow get, list, update: if userIsActive() && (isConversationParticipant(conversationId) || userIsStaff());
-      allow delete: if userIsAdmin();
+      allow create: if userIsActive();
+
+      allow get, list: if userIsActive()
+        && (isConversationParticipant(conversationId) || userIsStaff());
 
       match /messages/{messageId} {
-        allow get, list: if userIsActive() && (isConversationParticipant(conversationId) || userIsStaff());
-        allow create: if userIsActive() && isConversationParticipant(conversationId);
-        allow update, delete: if userIsActive() && (isConversationParticipant(conversationId) || userIsStaff());
+        allow get, list, create: if isVerified()
+          && isConversationParticipant(conversationId);
       }
     }
 
-    // Reports
-    match /reports/{reportId} {
-      allow create: if userIsActive() && request.resource.data.reporterUid == uid();
-      allow get, list: if userIsActive() && (userIsStaff() || resource.data.reporterUid == uid());
-      allow update: if userIsActive() && userIsStaff();
+    // -------- REPORTS --------
+    match /reports/{id} {
+      allow create: if userIsActive()
+        && request.resource.data.reporterUid == uid();
+
+      allow get, list: if userIsStaff()
+        || resource.data.reporterUid == uid();
+
+      allow update: if userIsStaff();
       allow delete: if userIsAdmin();
     }
 
-    // Fallback
-      match /{document=**} {
-        // Restrict fallback reads to public collections only
-        allow read: if false;
-        allow write: if false;
-      }
+    // -------- LOGS --------
+    match /auditLogs/{id} {
+      allow read, write: if isAdminDoc();
+    }
+
+    match /errorLogs/{id} {
+      allow create: if true;
+      allow read, update, delete: if isAdminDoc();
+    }
+
+    // -------- REVIEWS --------
+    match /reviews/{reviewId} {
+      allow get, list: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource.data.authorUid == uid();
+    }
+
+    // -------- GLOBAL --------
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if isAdminDoc();
+    }
+
+    match /tags/{id} {
+      allow read: if true;
+      allow write: if isAdminDoc();
+    }
+
+    // -------- LOCK EVERYTHING ELSE --------
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }

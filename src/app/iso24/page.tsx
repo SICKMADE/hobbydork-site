@@ -4,69 +4,26 @@ import { useState, useMemo, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   PlusCircle, 
-  MessageCircle, 
   Clock, 
   Loader2, 
-  Search as SearchIcon, 
-  CheckCircle2,
-  ShieldAlert,
-  Scan,
+  Scan, 
   ChevronRight,
   Activity,
-  Terminal,
   Radio,
-  Zap,
-  Cpu
+  Target
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit, doc, updateDoc } from 'firebase/firestore';
-import { CATEGORIES } from '@/lib/mock-data';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-
-// Import tactical font protocols
 import '../digital-time.css';
-import '../iso24-header.css';
-import '../iso24-title.css';
-
-function CountdownTimer({ postedAt }: { postedAt: any }) {
-  const [timeLeft, setTimeLeft] = useState('');
-
-  useEffect(() => {
-    const calculateTime = () => {
-      const postedTime = postedAt?.toDate ? postedAt.toDate().getTime() : new Date(postedAt).getTime();
-      const expiresAt = postedTime + 24 * 60 * 60 * 1000;
-      const now = Date.now();
-      const diff = expiresAt - now;
-
-      if (diff <= 0) {
-        setTimeLeft('EXPIRED');
-      } else {
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const secs = Math.floor((diff % (1000 * 60)) / 1000);
-        setTimeLeft(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
-      }
-    };
-
-    calculateTime();
-    const timer = setInterval(calculateTime, 1000);
-    return () => clearInterval(timer);
-  }, [postedAt]);
-
-  return <span className="font-mono text-accent animate-pulse">{timeLeft}</span>;
-}
 
 export default function ISO24Feed() {
   const router = useRouter();
-  const { toast } = useToast();
   const db = useFirestore();
   const { user } = useUser();
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -83,240 +40,102 @@ export default function ISO24Feed() {
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
     return isoItems.filter(item => {
       const postedAtTime = item.postedAt?.toDate ? item.postedAt.toDate().getTime() : new Date(item.postedAt).getTime();
-      const isRecent = postedAtTime > oneDayAgo && item.status !== 'Found';
-      const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
-      return isRecent && matchesCategory;
+      return postedAtTime > oneDayAgo && item.status !== 'Found' && (selectedCategory === 'All' || item.category === selectedCategory);
     });
   }, [isoItems, selectedCategory]);
-
-  const handleMarkFound = async (id: string) => {
-    if (!db) return;
-    try {
-      await updateDoc(doc(db, 'iso24Posts', id), { status: 'Found' });
-      toast({ title: "Hunt Concluded", description: "Glad you found your grail!" });
-    } catch (e) {
-      toast({ variant: 'destructive', title: "Update Failed" });
-    }
-  };
-
-  const handleContactCollector = (item: any) => {
-    if (!user) {
-      toast({ variant: 'destructive', title: 'Auth Required' });
-      router.push('/login');
-      return;
-    }
-    router.push(`/messages?seller=${item.userName}`);
-  };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-4 md:py-6 max-w-6xl">
-        
-        {/* MASSIVE TACTICAL BANNER (RESTORED AUTHORITY) */}
-        <div className="w-full flex justify-center mb-12">
-          <div className="w-full max-w-6xl rounded-none border-4 border-zinc-900 bg-zinc-950 py-16 md:py-24 px-6 md:px-12 relative overflow-hidden group shadow-[0_30px_60px_rgba(0,0,0,0.6)]">
-            
-            {/* Layer 1: Tactical Grid Background */}
-              <div className="absolute inset-0 opacity-[0.1] pointer-events-none iso24-grid-bg" />
-            
-            {/* Layer 2: Signal Noise interference */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.03] z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] animate-noise" />
+      
+      {/* ISO24 HUD BANNER - COMPACT ALARM CLOCK */}
+      <header className="py-0 mb-4">
+        <div className="max-w-5xl mx-auto bg-zinc-950 rounded-b-2xl py-6 md:py-10 px-4 md:px-8 relative overflow-hidden shadow-2xl group border-b-2 border-red-600/20">
+          <div className="absolute inset-0 opacity-[0.08] hardware-grid-overlay pointer-events-none" />
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-0 bottom-0 left-1/4 w-[1px] bg-red-600/20 animate-pulse" />
+            <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-white/5" />
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-red-600 shadow-[0_0_20px_red] animate-scanline opacity-50" />
+          </div>
 
-            {/* Layer 3: Moving Scanlines */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <div className="absolute top-0 bottom-0 left-1/3 w-[1px] bg-red-600/10 animate-[scanline-h_10s_linear_infinite]" />
-              <div className="absolute left-0 right-0 top-1/4 h-[1px] bg-white/5 animate-[scanline-v_5s_linear_infinite]" />
+          {/* Corner Brackets */}
+          <div className="absolute top-6 left-6 w-12 h-12 border-t-2 border-l-2 border-red-600/40 pointer-events-none" />
+          <div className="absolute top-6 right-6 w-12 h-12 border-t-2 border-r-2 border-red-600/40 pointer-events-none" />
+          <div className="absolute bottom-6 left-6 w-12 h-12 border-b-2 border-l-2 border-red-600/40 pointer-events-none" />
+          <div className="absolute bottom-6 right-6 w-12 h-12 border-b-2 border-r-2 border-red-600/40 pointer-events-none" />
+
+          {/* HUD MAIN CONTENT - ALL IN A LINE */}
+          <div className="relative z-10 flex flex-row items-center justify-center gap-x-2 sm:gap-x-4 md:gap-x-6 w-full flex-wrap md:flex-nowrap">
+            <h2 className="text-white text-lg sm:text-2xl md:text-5xl font-headline font-black uppercase italic tracking-tighter opacity-90 leading-none">IN</h2>
+            <h2 className="text-red-600 text-xl sm:text-3xl md:text-8xl font-headline font-black uppercase italic tracking-tighter drop-shadow-[0_0_25px_rgba(220,38,38,0.5)] leading-none">SEARCH</h2>
+            <h2 className="text-white text-lg sm:text-2xl md:text-5xl font-headline font-black uppercase italic tracking-tighter opacity-90 leading-none">OF</h2>
+            
+            <div className="digital-time text-red-600 text-4xl sm:text-6xl md:text-8xl font-black leading-none tracking-tighter iso24-clock-throb shrink-0">
+              :24
             </div>
+          </div>
 
-            {/* Corner Mechanical Brackets */}
-            <div className="absolute top-3 left-3 w-14 h-14 border-t-4 border-l-4 border-red-600/40 pointer-events-none animate-pulse" />
-            <div className="absolute top-3 right-3 w-14 h-14 border-t-4 border-r-4 border-red-600/40 pointer-events-none animate-pulse" />
-            <div className="absolute bottom-3 left-3 w-14 h-14 border-b-4 border-l-4 border-red-600/40 pointer-events-none animate-pulse" />
-            <div className="absolute bottom-3 right-3 w-14 h-14 border-b-4 border-r-4 border-red-600/40 pointer-events-none animate-pulse" />
-
-            {/* UNIFIED SINGLE-LINE SIGNATURE (MASSIVE SCALE & GLOW) */}
-            <div className="relative z-10 flex flex-row flex-nowrap items-center justify-center gap-x-4 md:gap-x-8 lg:gap-x-12 w-full select-none overflow-hidden whitespace-nowrap">
-              
-              {/* WORD: IN */}
-              <h2 className="text-white text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-headline font-black uppercase italic tracking-tighter leading-none drop-shadow-[0_0_20px_rgba(0,0,0,0.9)]">
-                IN
-              </h2>
-
-              {/* WORD: SEARCH (GLITCHING) */}
-              <div className="relative">
-                <h2 className="text-red-600 text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-headline font-black uppercase italic tracking-tighter leading-none animate-glitch-text absolute inset-0 opacity-50 translate-x-1">
-                  SEARCH
-                </h2>
-                <h2 className="text-red-600 text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-headline font-black uppercase italic tracking-tighter leading-none relative z-10 drop-shadow-[0_0_30px_rgba(220,38,38,0.7)]">
-                  SEARCH
-                </h2>
-              </div>
-
-              {/* WORD: OF */}
-              <h2 className="text-white text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-headline font-black uppercase italic tracking-tighter leading-none drop-shadow-[0_0_20px_rgba(0,0,0,0.9)]">
-                OF
-              </h2>
-
-              {/* CLOCK: : 24 (GARGANTUAN SCALE WITH DIGITAL GLOW) */}
-              <div 
-                className="text-red-600 text-6xl sm:text-8xl md:text-9xl lg:text-[11rem] leading-none tracking-tighter iso24-clock-glow"
-              >
-                : 24
+          <div className="absolute bottom-0 left-0 right-0 h-10 bg-black/90 border-t border-red-600/20 px-8 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Radio className="w-3 h-3 text-red-600 animate-pulse" />
+                <span className="text-[8px] font-black text-red-600 uppercase tracking-widest">LIVE_FEED</span>
               </div>
             </div>
-
-            {/* Bottom Status Ribbon */}
-            <div className="absolute bottom-0 left-0 right-0 h-8 bg-black/90 backdrop-blur-xl border-t border-red-600/20 z-30 px-10 flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <Radio className="w-3 h-3 text-red-600 animate-pulse" />
-                  <span className="text-[8px] font-black text-red-600 uppercase tracking-[0.25em]">HD_ISO_BROADCAST_v4.5</span>
-                </div>
-                <div className="hidden sm:block h-3 w-[1px] bg-white/10" />
-                <div className="hidden sm:flex items-center gap-2">
-                  <Activity className="w-3 h-3 text-zinc-600" />
-                  <span className="text-[7px] font-mono text-zinc-600 tracking-tighter uppercase">SIGNAL_STABLE</span>
-                </div>
-              </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <button title="System Intel" className="text-[8px] font-black text-white/30 uppercase tracking-widest hover:text-red-600 transition-colors flex items-center gap-1 group/intel">
-                    PROTOCOL_INTEL <ChevronRight className="w-3 h-3 text-red-600 group-hover/intel:translate-x-1 transition-transform" />
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="rounded-none bg-zinc-950 text-white border-zinc-800 p-8 shadow-[0_0_80px_rgba(220,38,38,0.25)]">
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-red-600 text-white p-3 rounded-none shadow-xl">
-                        <Scan className="w-6 h-6" />
-                      </div>
-                      <DialogHeader>
-                        <DialogTitle className="text-2xl font-headline font-black uppercase italic tracking-tight">ISO24 Protocol</DialogTitle>
-                      </DialogHeader>
-                    </div>
-                    <div className="space-y-4 text-zinc-400 font-medium leading-relaxed italic text-base border-l-4 border-red-600 pl-6">
-                      <p>
-                        <strong className="text-white">ISO24</strong> is a live 24-hour frequency where collectors broadcast their most urgent needs.
-                      </p>
-                      <p>
-                        Posts are purged automatically after the transmission cycle ends.
-                      </p>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+            <div className="flex items-center gap-3">
+              <Activity className="w-3 h-3 text-green-500 animate-pulse" />
+              <span className="text-[8px] font-black text-white/30 uppercase tracking-widest">SECURE_NODE_ACTIVE</span>
             </div>
           </div>
         </div>
+      </header>
 
-        {/* Action Header */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
-          <div className="flex flex-col items-center md:items-start gap-1">
-            <div className="flex items-center gap-2 text-red-600 font-black tracking-widest text-[9px] uppercase">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping" />
-              TRANSMISSION_NODE: ACTIVE
-            </div>
-            <h2 className="text-xl md:text-3xl font-headline font-black uppercase italic tracking-tight text-primary leading-none">ACTIVE TRANSMISSIONS</h2>
+      <main className="container mx-auto px-4 max-w-6xl">
+        <div className="flex flex-col md:flex-row justify-between items-end gap-8 mb-16">
+          <div className="space-y-2 text-left">
+            <h2 className="text-4xl md:text-6xl font-headline font-black uppercase italic tracking-tighter leading-none text-primary">Active Hunts</h2>
+            <p className="text-muted-foreground font-black uppercase text-[10px] tracking-[0.3em] ml-1">Live collector search requests</p>
           </div>
-          <Button asChild className="bg-zinc-900 text-white hover:bg-zinc-800 font-black h-12 px-8 rounded-none shadow-xl uppercase text-[10px] tracking-widest gap-2 transition-all active:scale-95 group/btn shrink-0">
-            <Link href="/iso24/create">
-              <Zap className="w-3.5 h-3.5 group-hover/btn:scale-125 transition-transform" />
-              CREATE ISO POST
-            </Link>
+          <Button asChild className="bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 h-16 px-10 rounded-2xl font-black uppercase text-xs tracking-widest gap-3 shadow-xl active:scale-95 transition-all border-2 border-zinc-800 dark:border-white">
+            <Link href="/iso24/create"><PlusCircle className="w-5 h-5" /> Post Your Search</Link>
           </Button>
         </div>
 
-        {/* Security Warning */}
-        
-        <div className="mb-8 bg-red-600/5 border-2 border-red-600/20 p-4 rounded-none flex items-start gap-4">
-          <div className="bg-red-600/10 p-1.5 rounded-none">
-            <ShieldAlert className="w-4 h-4 text-red-600 shrink-0" />
-          </div>
-          <div className="space-y-0.5">
-            <p className="text-[8px] font-black uppercase text-red-600 tracking-[0.2em] leading-none mb-1">Critical Directive</p>
-            <p className="text-xs font-bold text-primary leading-tight">
-              OFF-SITE TRANSACTIONS PROHIBITED: To maintain protection protocols, all trades must utilize the hobbydork atomic checkout.
-            </p>
-          </div>
-        </div>
-
-        {/* Categories (Tactical Strip) */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-4 mb-8 border-b border-muted">
-          <Button 
-            variant={selectedCategory === 'All' ? 'default' : 'outline'}
-            onClick={() => setSelectedCategory('All')}
-            className={cn(
-              "rounded-none h-9 px-5 text-[8px] font-black uppercase tracking-widest shrink-0 transition-all",
-              selectedCategory === 'All'
-                ? "bg-primary text-white border-primary dark:bg-zinc-800 dark:text-white"
-                : "border-2"
-            )}
-          >
-            Global Scanner
-          </Button>
-          {CATEGORIES.map(cat => (
-            <Button 
-              key={cat} 
-              variant={selectedCategory === cat ? 'default' : 'outline'}
-              onClick={() => setSelectedCategory(cat)}
-              className={cn(
-                "rounded-none h-9 px-5 text-[8px] font-black uppercase tracking-widest shrink-0 transition-all",
-                selectedCategory === cat
-                  ? "bg-primary text-white border-primary dark:bg-zinc-800 dark:text-white"
-                  : "border-2"
-              )}
-            >
-              {cat}
-            </Button>
-          ))}
-        </div>
-
-        {/* Feed Grid */}
-        <div className="grid gap-4 md:gap-6">
+        <div className="grid gap-8">
           {loading ? (
-            <div className="py-24 text-center"><Loader2 className="animate-spin w-10 h-10 mx-auto text-accent" /></div>
+            <div className="py-24 text-center space-y-4">
+              <Loader2 className="animate-spin w-12 h-12 mx-auto text-accent" />
+              <p className="font-black uppercase tracking-[0.3em] text-[10px] text-muted-foreground">Scanning Uplink...</p>
+            </div>
           ) : activeHunts.length === 0 ? (
-            <Card className="p-20 text-center border-8 border-dashed rounded-none bg-muted/10">
-              <SearchIcon className="w-12 h-12 text-zinc-300 mx-auto mb-4 opacity-20" />
-              <p className="font-black uppercase text-xs text-zinc-400 tracking-[0.3em]">NO ACTIVE ISO POSTS DETECTED - CHECK BACK SOON.</p>
+            <Card className="p-24 text-center border-4 border-dashed rounded-[3rem] bg-zinc-50/50">
+              <div className="w-20 h-20 bg-muted rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+                <Target className="w-10 h-10 text-zinc-300" />
+              </div>
+              <p className="font-black uppercase text-sm text-zinc-400 tracking-[0.3em] italic">No active searches in the network.</p>
             </Card>
           ) : activeHunts.map(item => (
-            <Card key={item.id} className="p-6 md:p-8 group shadow-lg hover:shadow-2xl transition-all border-none bg-card rounded-none relative overflow-hidden">
-              <div className="flex flex-col md:flex-row justify-between gap-6">
-                <div className="flex-1 space-y-4">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Badge variant="outline" className="border-accent text-accent uppercase font-black text-[8px] tracking-[0.15em] px-2.5 py-0.5 bg-accent/5 rounded-none">{item.category}</Badge>
-                    <div className="flex items-center gap-2 text-[9px] font-black uppercase text-accent bg-accent/5 px-2.5 py-0.5 rounded-none border border-accent/10">
-                      <Clock className="w-3 h-3" /> 
-                      PURGE_IN: 
-                      <CountdownTimer postedAt={item.postedAt} />
-                    </div>
+            <Card key={item.id} className="p-8 md:p-12 rounded-[3rem] shadow-xl border-none bg-card hover:scale-[1.005] transition-all duration-500 ring-1 ring-black/5 group overflow-hidden relative text-left">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 -mr-16 -mt-16 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex flex-col md:flex-row justify-between gap-10 relative z-10">
+                <div className="flex-1 space-y-6">
+                  <div className="flex items-center gap-4">
+                    <Badge className="bg-accent text-white uppercase text-[9px] font-black px-4 py-1.5 tracking-widest italic shadow-lg">{item.category}</Badge>
+                    <span className="text-[9px] font-black text-red-600 uppercase flex items-center gap-1.5"><Clock className="w-4 h-4" /> EXPIRES SOON</span>
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="text-xl md:text-3xl font-headline font-black uppercase italic tracking-tight leading-none text-primary">{item.title}</h3>
-                    <p className="text-muted-foreground font-medium leading-relaxed max-w-2xl italic text-sm md:text-base">"{item.description}"</p>
-                  </div>
-                  <div className="flex items-center gap-4 pt-2 border-t border-muted w-fit pr-8">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-none bg-zinc-100 flex items-center justify-center font-black text-[8px] border">@</div>
-                      <span className="text-[10px] font-black uppercase text-primary">@{item.userName}</span>
+                  <h3 className="text-3xl md:text-5xl font-headline font-black uppercase italic tracking-tight leading-none group-hover:text-accent transition-colors max-w-full overflow-hidden text-ellipsis whitespace-nowrap sm:whitespace-normal">{item.title}</h3>
+                  <p className="text-muted-foreground font-medium italic text-xl md:text-2xl leading-relaxed max-w-3xl border-l-[6px] border-zinc-100 dark:border-zinc-800 pl-8 max-w-full overflow-hidden text-ellipsis whitespace-nowrap sm:whitespace-normal">"{item.description}"</p>
+                  <div className="pt-8 border-t border-dashed flex flex-wrap items-center gap-8 text-[11px] font-black uppercase tracking-widest">
+                    <div className="flex items-center gap-3 bg-muted/50 px-5 py-1.5 rounded-full border">
+                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-[10px] shadow-lg">{(item.userName || 'C')?.[0]}</div>
+                      <span className="text-primary font-black max-w-[100px] overflow-hidden text-ellipsis whitespace-nowrap">@{item.userName}</span>
                     </div>
-                    <div className="h-3 w-[1px] bg-muted" />
-                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Target Budget: <span className="text-primary font-black text-xs">${item.budget?.toLocaleString()}</span></span>
+                    <span className="text-accent bg-accent/5 px-5 py-2.5 rounded-xl border-2 border-dashed border-accent/20 text-lg italic font-black">Budget: ${item.budget?.toLocaleString()}</span>
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 justify-center shrink-0 w-full md:w-auto">
-                  {user?.uid === item.uid ? (
-                    <Button onClick={() => handleMarkFound(item.id)} className="bg-green-600 hover:bg-green-700 text-white font-black uppercase text-[10px] h-12 px-8 rounded-none shadow-xl w-full">
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-2" /> Mark as Found
-                    </Button>
-                  ) : (
-                    <Button onClick={() => handleContactCollector(item)} className="bg-primary text-primary-foreground font-black uppercase text-[10px] h-12 px-8 rounded-none shadow-xl w-full gap-2 active:scale-95 transition-all">
-                      <MessageSquare className="w-3.5 h-3.5" /> Open Comms Channel
-                    </Button>
-                  )}
-                </div>
+                <Button onClick={() => router.push(`/messages?seller=${item.userName}`)} className="h-20 px-12 rounded-2xl bg-zinc-950 text-white font-black uppercase text-xs tracking-widest shadow-2xl shrink-0 active:scale-95 group-hover:bg-accent transition-all">
+                  Contact Collector <ChevronRight className="w-5 h-5 ml-2" />
+                </Button>
               </div>
             </Card>
           ))}

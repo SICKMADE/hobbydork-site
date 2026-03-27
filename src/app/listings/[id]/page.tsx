@@ -37,6 +37,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn, getRandomAvatar, filterProfanity } from '@/lib/utils';
+import { TierBadge } from '@/components/TierBadge';
 import { getFriendlyErrorMessage } from '@/lib/friendlyError';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
@@ -233,12 +234,12 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-12">
           <div className="space-y-4">
-            <div className="relative aspect-[4/3] rounded-[2.5rem] overflow-hidden bg-muted/20 border-4 border-white shadow-2xl">
+            <div className="relative aspect-[4/3] rounded-[2.5rem] overflow-hidden bg-muted/20 border-4 border-white dark:border-zinc-800 shadow-2xl">
               <Image 
                 src={imgSrc} 
                 alt={listing.title} 
                 fill 
-                className="object-cover" 
+                className="object-contain" 
                 onError={() => setImgSrc('/defaultbroken.jpg')}
               />
             </div>
@@ -257,9 +258,12 @@ export default function ListingDetail({ params }: { params: Promise<{ id: string
               </div>
               <h1 className="text-3xl md:text-5xl font-headline font-black leading-[0.9] uppercase text-primary tracking-tighter">{listing.title}</h1>
               <div className="flex flex-wrap items-center gap-6 text-xs">
-                <Link href={`/shop/${listing.sellerName || listing.seller}`} className="flex items-center gap-2">
+                <Link href={`/storefronts/${listing.sellerName || listing.seller}`} className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0"><Store className="w-4 h-4 text-white" /></div>
                   <span className="text-primary font-black uppercase tracking-tight">@{listing.sellerName || listing.seller}</span>
+                  {listing.sellerTier && (
+                    <span className="ml-2"><TierBadge tier={listing.sellerTier} /></span>
+                  )}
                 </Link>
                 <span className="text-primary flex items-center gap-1 font-black uppercase tracking-widest"><ShieldCheck className="w-4 h-4" /> Verified</span>
                 <span className="text-muted-foreground font-bold uppercase tracking-widest border-l pl-6">Condition: {listing.condition}</span>

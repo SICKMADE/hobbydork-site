@@ -7,6 +7,7 @@ if (!getApps().length) {
   app = initializeApp({
     projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   });
 } else {
   app = getApps()[0];
@@ -23,7 +24,7 @@ export async function GET() {
     // Static pages
     const staticPages = [
       { url: baseUrl, priority: 1.0, changefreq: 'daily', lastmod: new Date().toISOString() },
-      { url: `${baseUrl}/shop`, priority: 0.9, changefreq: 'daily', lastmod: new Date().toISOString() },
+      { url: `${baseUrl}/storefronts`, priority: 0.9, changefreq: 'daily', lastmod: new Date().toISOString() },
       { url: `${baseUrl}/dashboard`, priority: 0.8, changefreq: 'weekly', lastmod: new Date().toISOString() },
       { url: `${baseUrl}/giveaways`, priority: 0.8, changefreq: 'daily', lastmod: new Date().toISOString() },
       { url: `${baseUrl}/help`, priority: 0.7, changefreq: 'monthly', lastmod: new Date().toISOString() },

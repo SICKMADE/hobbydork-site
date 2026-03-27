@@ -12,7 +12,7 @@
   letter-spacing: 0.08em;
   color: #ff3b3b;
   font-weight: normal;
-  font-size: 1.15em;
+  /* font-size removed to allow Tailwind to control size */
   display: inline-block;
   text-shadow:
     0 0 6px #ff3b3b,

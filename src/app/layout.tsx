@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     default: 'hobbydork | The Social Marketplace for Collectors',
     template: '%s | hobbydork'
   },
-  description: 'Trade, track, and talk shop with serious collectors. Built for cards, comics, and rare hobby assets.',
+  description: 'Trade, track, and talk storefronts with serious collectors. Built for cards, comics, and rare hobby assets.',
 };
 
 export default function RootLayout({

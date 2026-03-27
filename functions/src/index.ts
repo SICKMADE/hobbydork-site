@@ -221,7 +221,8 @@ export const createStripeOnboarding = onCall({ secrets: [stripeSecretParam] }, a
       { merge: true }
     );
   }
-  const appBaseUrl = request.data?.appBaseUrl || "https://hobbydork.com";
+  // Always use production base URL for onboarding
+  const appBaseUrl = "https://hobbydork.com";
   const link = await stripe.accountLinks.create({
     account: accountId,
     refresh_url: `${appBaseUrl}/onboarding/terms`,

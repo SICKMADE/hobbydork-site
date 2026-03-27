@@ -56,8 +56,8 @@ export default function StoreSpotlight({ store }: StoreSpotlightProps) {
   }, [store, sellerProfile?.photoURL]);
 
   return (
-    <Card className="overflow-hidden border-none shadow-2xl bg-card group h-full flex flex-col hover:scale-[1.02] transition-all duration-500 ring-1 ring-white/5">
-      <div className="relative h-28 md:h-36 overflow-hidden bg-slate-900 shrink-0">
+    <Card className="overflow-hidden border-none shadow-2xl bg-card group h-full flex flex-col hover:scale-[1.02] transition-all duration-500 ring-1 ring-white/5 max-w-xs mx-auto md:max-w-none">
+      <div className="relative h-20 sm:h-24 md:h-36 overflow-hidden bg-slate-900 shrink-0">
         <Image 
           src={bannerSrc} 
           alt="" 
@@ -66,13 +66,13 @@ export default function StoreSpotlight({ store }: StoreSpotlightProps) {
           className="object-cover transition-transform duration-1000 group-hover:scale-110 brightness-[0.8] contrast-125"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 to-transparent" />
-        <Badge className="absolute top-3 left-3 bg-accent text-white border-none font-black uppercase text-[7px] tracking-[0.2em] px-2 py-1 shadow-2xl animate-pulse">
+        <Badge className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-accent text-white border-none font-black uppercase text-[6px] sm:text-[7px] tracking-[0.2em] px-1.5 py-0.5 sm:px-2 sm:py-1 shadow-2xl animate-pulse">
           SPOTLIGHT_NODE
         </Badge>
       </div>
       
-      <CardContent className="px-4 pb-6 pt-0 flex-1 flex flex-col items-center text-center -mt-12 md:-mt-16 relative z-10">
-        <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-[2rem] overflow-hidden border-4 border-white dark:border-zinc-800 shadow-2xl bg-zinc-100 mb-4 transition-transform group-hover:rotate-2">
+      <CardContent className="px-2 sm:px-4 pb-4 sm:pb-6 pt-0 flex-1 flex flex-col items-center text-center -mt-8 sm:-mt-12 md:-mt-16 relative z-10">
+        <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-32 md:h-32 rounded-2xl md:rounded-[2rem] overflow-hidden border-4 border-white dark:border-zinc-800 shadow-2xl bg-zinc-100 mb-3 sm:mb-4 transition-transform group-hover:rotate-2">
           <Image 
             src={avatarSrc} 
             alt={username} 
@@ -104,7 +104,7 @@ export default function StoreSpotlight({ store }: StoreSpotlightProps) {
         </p>
 
         <Button asChild variant="outline" className="w-full mt-auto h-12 rounded-xl border-4 font-black text-[10px] uppercase tracking-widest hover:bg-primary hover:text-white transition-all gap-3 group/btn shadow-lg">
-          <Link href={`/shop/${username}`}>
+          <Link href={`/storefronts/${username}`}>
             Enter Storefront <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
           </Link>
         </Button>

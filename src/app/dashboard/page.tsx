@@ -29,7 +29,9 @@ import {
   Ticket,
   Palette,
   Heart,
-  Eye
+  Eye,
+  PlusCircle,
+  Gift
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -88,7 +90,6 @@ export default function Dashboard() {
 
   const isSeller = !!profile?.isSeller;
   const username = profile?.username || 'Collector';
-  const shopUrl = `https://hobbydork.com/shop/${username}`;
 
   // Derived Stats
   const lifetimeEarnings = useMemo(() => {
@@ -167,105 +168,46 @@ export default function Dashboard() {
       <Navbar />
       <main className="container mx-auto px-4 py-6 md:py-10 max-w-7xl space-y-8 animate-in fade-in duration-500">
         
-        {/* Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-border/50">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1.5 text-accent font-black tracking-widest text-[8px] uppercase bg-accent/5 px-2 py-0.5 rounded-full border border-accent/10">
-                <Terminal className="w-2.5 h-2.5" /> USER_ID: {user.uid.substring(0, 8).toUpperCase()}
+        {/* Header Section with Grid Background */}
+        <header className="mb-8 rounded-b-2xl overflow-hidden shadow-xl border-b-2 border-border/50 dashboard-header-bg">
+          <div className="p-8 md:p-12 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5 text-accent font-black tracking-widest text-[8px] uppercase bg-accent/5 px-2 py-0.5 rounded-full border border-accent/10">
+                  <Terminal className="w-2.5 h-2.5" /> USER_ID: {user.uid.substring(0, 8).toUpperCase()}
+                </div>
+                <Badge variant="outline" className="rounded-full border-accent text-accent font-black uppercase text-[7px] tracking-widest px-2 h-5">
+                  ROLE: {isSeller ? 'SELLER' : 'COLLECTOR'}
+                </Badge>
               </div>
-              <Badge variant="outline" className="rounded-full border-accent text-accent font-black uppercase text-[7px] tracking-widest px-2 h-5">
-                ROLE: {isSeller ? 'SELLER' : 'COLLECTOR'}
-              </Badge>
+              <div className="space-y-0.5">
+                <h1 className="text-2xl md:text-4xl font-headline font-black uppercase tracking-tighter italic leading-none">Collector Dashboard</h1>
+                <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Signed in as: <span className="text-primary">@{username}</span></p>
+              </div>
             </div>
-            <div className="space-y-0.5">
-              <h1 className="text-2xl md:text-4xl font-headline font-black uppercase tracking-tighter italic leading-none">Collector Dashboard</h1>
-              <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Signed in as: <span className="text-primary">@{username}</span></p>
-            </div>
+            {isSeller && (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <Button asChild variant="outline" className="h-9 px-4 rounded-lg font-black uppercase text-[8px] tracking-widest border-2 flex-1 sm:flex-initial">
+                    <Link href={`/storefronts/${username}`}>View My Storefront</Link>
+                  </Button>
+                  <Button asChild variant="outline" className="h-9 px-4 rounded-lg font-black uppercase text-[8px] tracking-widest gap-1.5 flex-1 sm:flex-initial border-2">
+                    <Link href="/listings/create"><PlusCircle className="w-3 h-3" />New Listing</Link>
+                  </Button>
+                  <Button asChild className="h-9 px-4 rounded-lg font-black uppercase text-[8px] tracking-widest gap-1.5 flex-1 sm:flex-initial bg-accent text-white shadow-lg">
+                    <Link href="/giveaways/create"><Gift className="w-3 h-3" />Create Giveaway</Link>
+                  </Button>
+                  <Button asChild className="h-9 px-4 rounded-lg font-black uppercase text-[8px] tracking-widest gap-1.5 flex-1 sm:flex-initial bg-primary text-primary-foreground">
+                    <Link href="/seller/settings"><Palette className="w-3.5 h-3.5" />Settings</Link>
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-          
-          {isSeller && (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <div className="flex items-center gap-2 bg-muted/50 dark:bg-zinc-900/50 px-3 py-1.5 rounded-xl border border-border shadow-inner">
-                <code className="text-[9px] font-mono font-bold text-muted-foreground truncate max-w-[140px]">{shopUrl}</code>
-                <button 
-                  title="Copy shop URL"
-                  onClick={() => {navigator.clipboard.writeText(shopUrl); toast({title: 'URL Copied!'})}} 
-                  className="p-1 hover:bg-primary/10 rounded transition-colors shrink-0"
-                >
-                  <Copy className="w-2.5 h-2.5" />
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button asChild variant="outline" className="h-9 px-4 rounded-lg font-black uppercase text-[8px] tracking-widest border-2 flex-1 sm:flex-initial">
-                  <Link href={`/shop/${username}`}>View My Shop</Link>
-                </Button>
-                <Button asChild className="h-9 px-4 rounded-lg font-black uppercase text-[8px] tracking-widest gap-1.5 flex-1 sm:flex-initial bg-primary text-primary-foreground">
-                  <Link href="/seller/settings"><Palette className="w-3.5 h-3.5" />Settings</Link>
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
+        </header>
 
         {/* Action Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {!isSeller ? (
-            <Card className="relative overflow-hidden bg-zinc-950 border-2 border-zinc-800 rounded-[1.5rem] p-6 shadow-xl group transition-all hover:scale-[1.005]">
-              <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-                <div className="flex items-center gap-4 text-center sm:text-left">
-                  <div className="bg-zinc-900 border border-red-600/50 text-red-600 p-3 rounded-2xl">
-                    <Lock className="w-6 h-6" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-headline font-black uppercase italic text-white leading-none">Become a Seller</h3>
-                    <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-tight">Complete your profile to start listing items in the marketplace.</p>
-                  </div>
-                </div>
-                <Button asChild className="h-10 px-6 bg-white text-zinc-950 hover:bg-zinc-200 font-black uppercase rounded-xl shadow-lg w-full sm:w-auto text-[9px] gap-1.5 shrink-0">
-                  <Link href="/seller/onboarding">Start Selling <ChevronRight className="w-3.5 h-3.5" /></Link>
-                </Button>
-              </div>
-            </Card>
-          ) : (
-            <Card className="relative overflow-hidden bg-zinc-950 border-2 border-zinc-800 rounded-[1.5rem] p-6 shadow-xl group transition-all hover:scale-[1.005]">
-              <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-                <div className="flex items-center gap-4 text-center sm:text-left">
-                  <div className="bg-accent text-white p-3 rounded-2xl shadow-lg">
-                    <Zap className="w-6 h-6" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-headline font-black uppercase italic text-white leading-none">Active Bounties</h3>
-                    <div className="flex items-center justify-center sm:justify-start gap-2">
-                      <span className="text-[8px] font-black uppercase text-zinc-500">Tickets:</span>
-                      <span className="text-sm font-mono font-black text-accent">{String(bountyEntries?.length || 0).padStart(3, '0')}</span>
-                    </div>
-                  </div>
-                </div>
-                <Button asChild className="h-10 px-6 bg-accent text-white hover:bg-accent/90 font-black uppercase rounded-xl shadow-lg w-full sm:w-auto text-[9px] gap-1.5 border border-white/10 shrink-0">
-                  <Link href="/viral-bounty">Join Drops <ChevronRight className="w-3.5 h-3.5" /></Link>
-                </Button>
-              </div>
-            </Card>
-          )}
-
-          <Card className="relative overflow-hidden bg-card border-2 border-zinc-100 dark:border-white/5 rounded-[1.5rem] p-6 shadow-lg group transition-all hover:border-accent/20">
-            <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-4 text-center sm:text-left">
-                <div className="bg-muted p-3 rounded-2xl border border-border">
-                  <BarChart3 className="w-6 h-6 text-primary" />
-                </div>
-                <div className="space-y-0.5">
-                  <h3 className="text-lg font-headline font-black uppercase italic text-primary dark:text-white leading-none">AI Price Check</h3>
-                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight">On-demand market valuation tool.</p>
-                </div>
-              </div>
-              <Button asChild variant="outline" className="h-10 px-6 border-2 rounded-xl font-black uppercase text-[9px] w-full sm:w-auto shrink-0">
-                <Link href="/tools/price-check">Run Analysis</Link>
-              </Button>
-            </div>
-          </Card>
-        </div>
+        {/* Action Grid - Active Bounties and AI Price Check shortcuts removed as requested */}
 
         {/* Tab Modules */}
         <Tabs defaultValue="orders" className="w-full">
@@ -357,7 +299,7 @@ export default function Dashboard() {
                       id: item.listingId || item.id,
                       title: item.title,
                       price: item.price,
-                      imageUrl: item.imageUrl || '',
+                      imageUrl: item.imageUrl || null,
                       seller: 'Dealer',
                       category: 'Collectible',
                       status: 'Active',

@@ -277,7 +277,9 @@ function ListingsContent() {
         </div>
 
         {isFilterOpen && (
-          <div className="bg-transparent border-t animate-in slide-in-from-top-2 duration-300">
+          <div className={cn(
+            "bg-transparent animate-in slide-in-from-top-2 duration-300 border-t"
+          )}>
             <div className="container mx-auto px-4 py-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2">
@@ -310,7 +312,9 @@ function ListingsContent() {
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-foreground/10 flex items-center justify-between">
+              <div className={cn(
+                "mt-4 pt-3 flex items-center justify-between border-t border-foreground/10"
+              )}>
                 <Button 
                   onClick={() => updateFilters({ 
                     type: listingType,
@@ -333,7 +337,9 @@ function ListingsContent() {
       </div>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6 pb-2 border-b border-muted">
+        <div className={cn(
+          "flex items-center justify-between mb-6 pb-2 border-b border-muted"
+        )}>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
             <p className="text-[9px] font-black uppercase tracking-[0.25em] text-foreground">

@@ -44,7 +44,7 @@ export default function OnboardingSuccess() {
         // 5. Call backend to finalize seller onboarding
         const finalizeSeller = httpsCallable(functions, "finalizeSeller");
         await finalizeSeller({});
-        toast({ title: "Onboarding Complete!", description: "Your shop is now live." });
+        toast({ title: "Onboarding Complete!", description: "Your storefront is now live." });
         router.replace("/dashboard");
       } catch (err) {
         toast({ variant: "destructive", title: "Onboarding failed" });
@@ -60,7 +60,7 @@ export default function OnboardingSuccess() {
         <div className="flex flex-col items-center gap-6">
           <Loader2 className="w-12 h-12 animate-spin text-accent" />
           <h1 className="text-2xl font-black">Finalizing your onboarding...</h1>
-          <p className="text-muted-foreground">Please wait while we set up your shop.</p>
+          <p className="text-muted-foreground">Please wait while we set up your storefront.</p>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-6">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { compressImageForUpload } from '@/hooks/usePhotoUpload';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -29,7 +30,7 @@ export default function PriceCheckPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<EstimatePriceOutput | null>(null);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
@@ -40,9 +41,16 @@ export default function PriceCheckPage() {
         });
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => setPhoto(reader.result as string);
-      reader.readAsDataURL(file);
+      try {
+        const fittedImage = await compressImageForUpload(file);
+        setPhoto(fittedImage);
+      } catch (err) {
+        toast({
+          variant: 'destructive',
+          title: 'Image Processing Failed',
+          description: 'Could not process this image. Please try another photo.'
+        });
+      }
     }
   };
 
@@ -106,7 +114,7 @@ export default function PriceCheckPage() {
                   <Label className="text-sm font-black uppercase tracking-widest">Upload Item Photo</Label>
                   {photo ? (
                     <div className="relative aspect-video rounded-2xl overflow-hidden border-2 border-zinc-100 group">
-                      <Image src={photo} alt="Preview" fill className="object-cover" />
+                      <Image src={photo} alt="Preview" fill className="object-contain" />
                       <button 
                         onClick={() => setPhoto(null)}
                         aria-label="Remove photo"

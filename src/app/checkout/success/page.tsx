@@ -123,7 +123,7 @@ function SuccessContent() {
         </h1>
         <p className="text-xl text-muted-foreground font-medium max-w-md mx-auto leading-relaxed">
           {isPremiumProduct 
-            ? 'Your premium shop upgrade is now active. Check your Store Customization settings to apply your changes.' 
+            ? 'Your premium storefront upgrade is now active. Check your Storefront Customization settings to apply your changes.'
             : 'Your payment was processed successfully. The item is now being prepared for fulfillment.'}
         </p>
       </div>
