@@ -212,8 +212,22 @@ function ListingsContent() {
 
       <div className="sticky top-[64px] md:top-[96px] z-40 bg-background/95 backdrop-blur-md border-b">
         <div className="container mx-auto px-4 py-2 flex flex-col gap-2">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
-            {['All', ...CATEGORIES].map(cat => (
+          {/* Mobile: Category dropdown */}
+          <div className="block sm:hidden w-full pb-1">
+            <Select value={initialCategory} onValueChange={cat => updateFilters({ category: cat })}>
+              <SelectTrigger className="w-full h-9 rounded-xl border-2 border-foreground bg-transparent text-[9px] font-black uppercase tracking-widest px-3 shadow-none text-foreground">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {["All", ...CATEGORIES].map(cat => (
+                  <SelectItem key={cat} value={cat} className="text-[9px] font-black uppercase text-foreground">{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Desktop: Horizontal category tabs */}
+          <div className="hidden sm:flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
+            {["All", ...CATEGORIES].map(cat => (
               <button 
                 key={cat}
                 onClick={() => updateFilters({ category: cat })}

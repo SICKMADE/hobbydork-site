@@ -122,7 +122,7 @@ function HeroHUD() {
   const slide = HERO_SLIDES[index];
 
   return (
-    <div className="w-full h-[320px] md:h-[350px] relative overflow-hidden bg-zinc-950 border-b-2 border-green-500/40 group w-full px-2 md:px-4">
+    <div className="w-full h-[320px] md:h-[350px] relative overflow-hidden bg-zinc-950 border-b-2 border-red-600/40 group w-full px-2 md:px-4">
       <Link href={slide.href} className="block w-full h-full relative">
         <div className="absolute inset-0 z-10 pointer-events-none">
           <div className="absolute inset-0 hardware-grid-overlay opacity-[0.08]" />
@@ -130,10 +130,10 @@ function HeroHUD() {
           <div className="absolute inset-0 animate-scanline opacity-30 bg-gradient-to-b from-transparent via-red-600/10 to-transparent h-20 w-full" />
           
           <div className="absolute inset-4 border border-white/5">
-            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-green-500/60" />
-            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-green-500/60" />
-            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-green-500/60" />
-            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-green-500/60" />
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-red-600/60" />
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-red-600/60" />
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-red-600/60" />
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-red-600/60" />
           </div>
 
           {isTransitioning && (
@@ -193,7 +193,7 @@ function HeroHUD() {
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 h-10 bg-black/95 backdrop-blur-3xl border-t border-white/10 z-30 px-6 md:px-8 flex items-center justify-between">
+        <div className="md:absolute md:bottom-0 left-0 right-0 h-10 bg-black/95 backdrop-blur-3xl border-t border-white/10 z-30 px-6 md:px-8 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_red]" />

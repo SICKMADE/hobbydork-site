@@ -305,8 +305,8 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
       </div>
 
       <section className={cn(
-        "container mx-auto px-4 max-w-6xl relative z-20 pb-6",
-        "-mt-12 md:-mt-24"
+        "container mx-auto px-2 sm:px-4 max-w-6xl relative z-20 pb-4 sm:pb-6",
+        "mt-0 md:-mt-24"
       )}>
         {storeData.vacationMode && (
           <div className="mb-4 animate-in slide-in-from-top duration-500">
@@ -530,7 +530,7 @@ export default function ShopPage({ params }: { params: Promise<{ username: strin
                   )}>Product Catalog</h2>
                 </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 gap-y-12 md:gap-x-4 md:gap-24">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-2 gap-y-6 md:gap-x-3 md:gap-y-12">
                 {activeListings && activeListings.length > 0 ? (
                   activeListings.map((l) => <ListingCard key={l.id} listing={l} theme={appliedTheme} />)
                 ) : (

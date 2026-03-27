@@ -50,7 +50,7 @@ export default function ISO24Feed() {
       
       {/* ISO24 HUD BANNER - COMPACT ALARM CLOCK */}
       <header className="py-0 mb-4">
-        <div className="max-w-5xl mx-auto bg-zinc-950 rounded-b-2xl py-6 md:py-10 px-4 md:px-8 relative overflow-hidden shadow-2xl group border-b-2 border-red-600/20">
+        <div className="max-w-5xl mx-auto bg-zinc-950 rounded-b-2xl py-6 md:py-10 px-2 sm:px-4 md:px-8 relative overflow-hidden shadow-2xl group border-b-2 border-red-600/20">
           <div className="absolute inset-0 opacity-[0.08] hardware-grid-overlay pointer-events-none" />
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute top-0 bottom-0 left-1/4 w-[1px] bg-red-600/20 animate-pulse" />
@@ -65,12 +65,11 @@ export default function ISO24Feed() {
           <div className="absolute bottom-6 right-6 w-12 h-12 border-b-2 border-r-2 border-red-600/40 pointer-events-none" />
 
           {/* HUD MAIN CONTENT - ALL IN A LINE */}
-          <div className="relative z-10 flex flex-row items-center justify-center gap-x-2 sm:gap-x-4 md:gap-x-6 w-full flex-wrap md:flex-nowrap">
-            <h2 className="text-white text-lg sm:text-2xl md:text-5xl font-headline font-black uppercase italic tracking-tighter opacity-90 leading-none">IN</h2>
-            <h2 className="text-red-600 text-xl sm:text-3xl md:text-8xl font-headline font-black uppercase italic tracking-tighter drop-shadow-[0_0_25px_rgba(220,38,38,0.5)] leading-none">SEARCH</h2>
-            <h2 className="text-white text-lg sm:text-2xl md:text-5xl font-headline font-black uppercase italic tracking-tighter opacity-90 leading-none">OF</h2>
-            
-            <div className="digital-time text-red-600 text-4xl sm:text-6xl md:text-8xl font-black leading-none tracking-tighter iso24-clock-throb shrink-0">
+          <div className="relative z-10 flex flex-row items-center justify-center gap-x-1 sm:gap-x-3 md:gap-x-6 w-full flex-wrap md:flex-nowrap">
+            <h2 className="text-white text-xl sm:text-2xl md:text-5xl font-headline font-black uppercase italic tracking-tighter opacity-90 leading-none">IN</h2>
+            <h2 className="text-red-600 text-2xl sm:text-3xl md:text-8xl font-headline font-black uppercase italic tracking-tighter drop-shadow-[0_0_25px_rgba(220,38,38,0.5)] leading-none">SEARCH</h2>
+            <h2 className="text-white text-xl sm:text-2xl md:text-5xl font-headline font-black uppercase italic tracking-tighter opacity-90 leading-none">OF</h2>
+            <div className="digital-time text-red-600 text-3xl sm:text-5xl md:text-8xl font-black leading-none tracking-tighter iso24-clock-throb shrink-0">
               :24
             </div>
           </div>
@@ -90,14 +89,14 @@ export default function ISO24Feed() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 max-w-6xl">
-        <div className="flex flex-col md:flex-row justify-between items-end gap-8 mb-16">
-          <div className="space-y-2 text-left">
-            <h2 className="text-4xl md:text-6xl font-headline font-black uppercase italic tracking-tighter leading-none text-primary">Active Hunts</h2>
-            <p className="text-muted-foreground font-black uppercase text-[10px] tracking-[0.3em] ml-1">Live collector search requests</p>
+      <main className="container mx-auto px-2 sm:px-4 max-w-6xl">
+        <div className="flex flex-col md:flex-row justify-between items-end gap-4 md:gap-8 mb-8 md:mb-16">
+          <div className="space-y-1 md:space-y-2 text-left">
+            <h2 className="text-2xl sm:text-4xl md:text-6xl font-headline font-black uppercase italic tracking-tighter leading-none text-primary">Active Hunts</h2>
+            <p className="text-muted-foreground font-black uppercase text-[9px] sm:text-[10px] tracking-[0.2em] ml-1">Live collector search requests</p>
           </div>
-          <Button asChild className="bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 h-16 px-10 rounded-2xl font-black uppercase text-xs tracking-widest gap-3 shadow-xl active:scale-95 transition-all border-2 border-zinc-800 dark:border-white">
-            <Link href="/iso24/create"><PlusCircle className="w-5 h-5" /> Post Your Search</Link>
+          <Button asChild className="bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 h-12 sm:h-14 md:h-16 px-6 sm:px-8 md:px-10 rounded-xl md:rounded-2xl font-black uppercase text-xs tracking-widest gap-2 sm:gap-3 shadow-xl active:scale-95 transition-all border-2 border-zinc-800 dark:border-white">
+            <Link href="/iso24/create"><PlusCircle className="w-4 h-4 sm:w-5 sm:h-5" /> Post Your Search</Link>
           </Button>
         </div>
 

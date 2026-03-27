@@ -149,8 +149,8 @@ function BrowseContent() {
       <Navbar />
       
       <header className="py-0">
-        <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto bg-[#333333] rounded-b-2xl p-6 md:p-10 shadow-2xl text-white space-y-6 px-8 mx-8">
+        <div className="container mx-auto px-2 sm:px-4">
+          <div className="max-w-5xl mx-auto bg-[#333333] rounded-b-2xl p-4 sm:p-6 md:p-10 shadow-2xl text-white space-y-6 sm:px-8 mx-0 sm:mx-8">
             <div className="text-center">
               <h1 className="text-3xl md:text-6xl font-headline font-black tracking-tighter uppercase leading-[0.9] text-white">
                 Scan the <span className="text-accent italic">Grails.</span>
@@ -204,9 +204,23 @@ function BrowseContent() {
       </header>
 
       <div className="sticky top-[64px] md:top-[96px] z-40 bg-background/95 backdrop-blur-md border-b">
-        <div className="container mx-auto px-4 py-2 flex flex-col gap-2">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
-            {['All', ...CATEGORIES].map(cat => (
+        <div className="w-full px-0 py-2 flex flex-col gap-2">
+          {/* Mobile: Category dropdown */}
+          <div className="block sm:hidden w-full pb-1">
+            <Select value={initialCategory} onValueChange={cat => updateFilters({ category: cat })}>
+              <SelectTrigger className="w-full h-9 rounded-xl border-2 border-foreground bg-transparent text-[9px] font-black uppercase tracking-widest px-3 shadow-none text-foreground">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {["All", ...CATEGORIES].map(cat => (
+                  <SelectItem key={cat} value={cat} className="text-[9px] font-black uppercase text-foreground">{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Desktop: Horizontal category tabs */}
+          <div className="hidden sm:flex items-center gap-2 overflow-x-auto scrollbar-hide px-0 pb-1 w-full sm:overflow-x-visible sm:px-0">
+            {["All", ...CATEGORIES].map(cat => (
               <button 
                 key={cat}
                 onClick={() => updateFilters({ category: cat })}
@@ -325,7 +339,7 @@ function BrowseContent() {
         )}
       </div>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
         <div className="flex items-center justify-between mb-6 pb-2 border-b border-muted">
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />

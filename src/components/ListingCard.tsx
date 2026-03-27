@@ -92,7 +92,7 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
   return (
     <Link href={`/listings/${listing.id}`} title={`View ${listing.title}`} className="block h-full group">
       <Card className={cn(
-        "transition-all duration-500 border-none h-full flex flex-col p-1 relative",
+        "transition-all duration-500 border-none h-full flex flex-col p-1 relative max-w-[170px] md:max-w-[200px] mx-auto md:mx-0",
         isComicBook && "bg-white dark:bg-zinc-900 border-[4px] border-black rounded-none shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#fff] text-black dark:text-white group-hover:translate-y-[-6px] group-hover:shadow-[12px_12px_0px_0px_#000]",
         isNeonSyndicate && "bg-zinc-900 border-2 border-cyan-500/40 rounded-none text-white shadow-[0_0_25px_rgba(34,211,238,0.2)] group-hover:border-cyan-400 group-hover:shadow-[0_0_40px_rgba(34,211,238,0.4)] overflow-hidden",
         isUrban && "bg-white border-[4px] border-zinc-200 rounded-none text-black shadow-2xl group-hover:translate-y-[-4px]",
@@ -105,7 +105,7 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
       )}>
         {isUrban && <SignRivets />}
         <div className={cn(
-          "relative aspect-[3/4] overflow-hidden bg-zinc-100 dark:bg-zinc-900 rounded-lg",
+          "relative aspect-[3/4] overflow-hidden bg-zinc-100 dark:bg-zinc-900 rounded-lg max-h-[210px] md:max-h-[260px]",
           (isUrban || is8BitTheme || isGlitchProtocol || isVoidShard || isHacked || isComicBook) && "rounded-none border-b-4",
           isComicBook && "border-black",
           isUrban && "border-zinc-200",
@@ -138,7 +138,7 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
             is8BitTheme ? "bg-[#00f0ff] text-black rounded-none shadow-[2px_2px_0_0_#000]" :
             isGlitchProtocol ? "bg-white text-red-600 rounded-none animate-pulse" :
             isComicBook ? "bg-yellow-400 text-black border-2 border-black rounded-none shadow-[3px_3px_0px_#000]" :
-            "bg-primary text-zinc-900 dark:text-zinc-200"
+            "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 border border-zinc-200 dark:border-zinc-700"
           )}>
             {listing.category}
           </Badge>
@@ -157,12 +157,12 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
           )}
         </div>
         
-        <CardContent className="p-4 flex-1 flex flex-col relative z-10 overflow-hidden text-center">
+        <CardContent className="p-2 md:p-3 flex-1 flex flex-col relative z-10 overflow-hidden text-center">
           {is8BitTheme && (
             <div className="text-[7px] font-black text-[#ff2e88] uppercase tracking-widest mb-1">LVL_01 // ASSET</div>
           )}
           <h3 className={cn(
-            "font-headline font-black line-clamp-1 leading-tight uppercase text-sm md:text-base mb-2",
+            "font-headline font-black line-clamp-1 leading-tight uppercase text-xs md:text-sm mb-1 md:mb-2",
             isUrban && "font-black tracking-tight text-xl leading-[0.9] text-black",
             is8BitTheme && "text-white tracking-[0.05em] drop-shadow-[2px_2px_0_0_#000]",
             isHacked && "font-mono text-[#00FF41] tracking-tighter",
@@ -174,7 +174,7 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
             {listing.title}
           </h3>
           
-          <div className="flex items-center justify-center gap-1 mb-4">
+          <div className="flex items-center justify-center gap-1 mb-2 md:mb-4">
             <span className={cn(
               "text-[10px] md:text-xs font-black uppercase text-muted-foreground truncate",
               isUrban && "text-zinc-600 font-black tracking-widest",
@@ -187,7 +187,7 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
           </div>
 
           <div className={cn(
-            "mt-auto flex flex-col gap-4 border-t border-solid pt-4",
+            "mt-auto flex flex-col gap-2 border-t border-solid pt-2 md:gap-4 md:pt-4",
             isHacked ? "border-[#00FF41]/20" : 
             isGlitchProtocol ? "border-red-600/40" :
             isNeonSyndicate ? "border-cyan-500/20" :
@@ -201,7 +201,7 @@ export default function ListingCard({ listing, theme }: ListingCardProps) {
                   {is8BitTheme ? 'SCORE' : 'VALUE'}
                 </p>
                 <p className={cn(
-                  "text-lg md:text-2xl font-black", 
+                  "text-base md:text-xl font-black", 
                   isUrban && "text-black font-black text-2xl md:text-3xl leading-none border-l-[8px] border-red-600 pl-2 mt-1",
                   is8BitTheme && "text-white bg-black px-3 py-1 text-xl md:text-2xl tracking-tighter border-2 border-white/10",
                   isHacked && "text-[#00FF41] font-mono text-xl md:text-2xl",

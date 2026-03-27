@@ -1,5 +1,40 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+// Collapsible sidebar group for mobile (no external hook)
+interface CollapsibleSidebarGroupProps {
+  label: React.ReactNode;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}
+function CollapsibleSidebarGroup({ label, children, defaultOpen = false }: CollapsibleSidebarGroupProps) {
+  const [isMobile, setIsMobile] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.matchMedia('(max-width: 767px)').matches);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  useEffect(() => { setOpen(!isMobile); }, [isMobile]);
+  return (
+    <div className="py-1">
+      <button
+        className="w-full flex items-center justify-between text-[10px] uppercase font-black tracking-widest opacity-50 px-2 py-1 focus:outline-none"
+        onClick={() => isMobile && setOpen((v) => !v)}
+        type="button"
+        aria-expanded={open ? "true" : "false"}
+      >
+        {label}
+        {isMobile && (
+          <span className="ml-2 text-xs">{open ? '−' : '+'}</span>
+        )}
+      </button>
+      <div className={open ? '' : 'hidden'}>{children}</div>
+    </div>
+  );
+}
+
 import * as React from 'react';
 import { Disclosure } from '@/components/ui/Disclosure';
 import Link from 'next/link';
@@ -195,8 +230,7 @@ export function AppSidebar() {
         {/* Tools section temporarily removed */}
 
         {user && (
-          <SidebarGroup className="py-1">
-            <SidebarGroupLabel className="text-[10px] uppercase font-black tracking-widest opacity-50">Account</SidebarGroupLabel>
+          <CollapsibleSidebarGroup label={<SidebarGroupLabel className="text-[10px] uppercase font-black tracking-widest opacity-50">Account</SidebarGroupLabel>}>
             <SidebarMenu>
               {authItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
@@ -218,13 +252,12 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
-          </SidebarGroup>
+          </CollapsibleSidebarGroup>
         )}
 
         <SidebarSeparator className="my-2" />
 
-        <SidebarGroup className="py-1">
-          <SidebarGroupLabel className="text-[10px] uppercase font-black tracking-widest opacity-50">Selling</SidebarGroupLabel>
+        <CollapsibleSidebarGroup label={<SidebarGroupLabel className="text-[10px] uppercase font-black tracking-widest opacity-50">Selling</SidebarGroupLabel>}>
           <SidebarMenu>
             {user ? (
               isSeller ? (
@@ -279,7 +312,7 @@ export function AppSidebar() {
               </SidebarMenuItem>
             )}
           </SidebarMenu>
-        </SidebarGroup>
+        </CollapsibleSidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t space-y-3">
@@ -288,7 +321,7 @@ export function AppSidebar() {
           <Disclosure>
             {({ open }) => (
               <>
-                <button className="flex items-center gap-2 w-full text-left text-[11px] font-bold uppercase tracking-tight py-2 px-2 rounded hover:bg-muted transition-colors" aria-expanded={open ? "true" : "false"}>
+                <button className="flex items-center gap-2 w-full text-left text-[11px] font-bold uppercase tracking-tight py-2 px-2 rounded hover:bg-muted transition-colors" aria-expanded={open ? "true" : "false"}> 
                   <Settings className="w-4 h-4" />
                   More
                   <span className="ml-auto">{open ? '−' : '+'}</span>

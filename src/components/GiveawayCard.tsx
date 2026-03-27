@@ -53,7 +53,7 @@ export default function GiveawayCard({ giveaway, theme }: GiveawayCardProps) {
   return (
     <Link href={`/giveaways/${giveaway.id}`} className="group block w-full">
       <Card className={cn(
-        "transition-all duration-500 relative flex flex-col md:flex-row items-center gap-4 md:gap-8 p-4 md:p-6 shadow-2xl group-hover:translate-y-[-2px]",
+        "transition-all duration-500 relative flex flex-col md:flex-row items-center gap-3 md:gap-6 p-2 md:p-4 shadow-2xl group-hover:translate-y-[-2px] max-w-[340px] md:max-w-[500px] mx-auto md:mx-0",
         isComicBook && "bg-white dark:bg-zinc-900 border-[4px] border-black rounded-none shadow-[10px_10px_0px_#000] dark:shadow-[10px_10px_0px_#fff] text-black dark:text-white overflow-hidden",
         isNeonSyndicate && "bg-zinc-900 border border-cyan-500/30 rounded-none text-white shadow-[0_0_40px_rgba(34,211,238,0.1)] overflow-hidden",
         isUrban && "bg-white border-[4px] border-zinc-200 rounded-none text-black shadow-2xl",
@@ -66,7 +66,7 @@ export default function GiveawayCard({ giveaway, theme }: GiveawayCardProps) {
         {isUrban && <SignRivets />}
         {/* Left Side: Asset Module */}
         <div className={cn(
-          "relative w-24 h-24 md:w-32 md:h-32 shrink-0 overflow-hidden bg-zinc-950 flex items-center justify-center rounded-2xl md:rounded-[2rem] shadow-xl z-10",
+          "relative w-20 h-20 md:w-28 md:h-28 shrink-0 overflow-hidden bg-zinc-950 flex items-center justify-center rounded-2xl md:rounded-[2rem] shadow-xl z-10",
           isComicBook && "border-4 border-black rounded-none",
           isUrban && "border-[6px] border-zinc-100 rounded-none",
           is8BitTheme && "border-4 border-black shadow-[4px_4px_0_0_#000] rounded-none",
@@ -96,7 +96,7 @@ export default function GiveawayCard({ giveaway, theme }: GiveawayCardProps) {
         </div>
 
         {/* Middle: Data Manifest */}
-        <div className="flex-1 space-y-2 md:space-y-3 text-center md:text-left min-w-0">
+        <div className="flex-1 space-y-1 md:space-y-2 text-center md:text-left min-w-0">
           <div className="flex flex-col md:flex-row items-center gap-3 mb-1">
             <Badge className={cn(
               "text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 border-none shadow-lg italic",
@@ -125,7 +125,7 @@ export default function GiveawayCard({ giveaway, theme }: GiveawayCardProps) {
           
           <div className="space-y-1">
             <h3 className={cn(
-              "text-2xl md:text-4xl font-headline font-black uppercase italic tracking-tighter leading-none truncate",
+              "text-lg md:text-2xl font-headline font-black uppercase italic tracking-tighter leading-none truncate",
               isHacked ? "text-[#00FF41] font-mono" : 
               isNeonSyndicate ? "text-white drop-shadow-[0_0_15px_cyan]" :
               isGlitchProtocol ? "text-red-600" :
@@ -136,7 +136,7 @@ export default function GiveawayCard({ giveaway, theme }: GiveawayCardProps) {
               {giveaway.title}
             </h3>
             <p className={cn(
-              "text-sm md:text-base font-medium italic line-clamp-1 opacity-80",
+              "text-xs md:text-sm font-medium italic line-clamp-1 opacity-80",
               isHacked ? "text-[#00FF41]/80 font-mono" : 
               isGlitchProtocol ? "text-white/70 font-mono" :
               is8BitTheme ? "text-zinc-300 font-bold" :
@@ -151,9 +151,9 @@ export default function GiveawayCard({ giveaway, theme }: GiveawayCardProps) {
         </div>
 
         {/* Right Side: Command Module */}
-        <div className="w-full md:w-auto flex flex-col items-center md:items-end gap-4 shrink-0 pt-4 md:pt-0 relative z-10">
+        <div className="w-full md:w-auto flex flex-col items-center md:items-end gap-2 md:gap-4 shrink-0 pt-2 md:pt-0 relative z-10">
           <Button className={cn(
-            "h-14 md:h-16 px-10 md:px-12 font-black uppercase text-xs md:text-sm tracking-[0.3em] shadow-2xl w-full md:w-auto transition-all active:scale-95 group/btn",
+            "h-10 md:h-12 px-6 md:px-8 font-black uppercase text-xs md:text-sm tracking-[0.2em] shadow-2xl w-full md:w-auto transition-all active:scale-95 group/btn",
             isComicBook ? "bg-yellow-400 text-black border-[3px] border-black rounded-none shadow-[6px_6px_0px_#000] hover:translate-y-[-2px]" :
             isNeonSyndicate ? "bg-cyan-400 text-black hover:bg-cyan-300 rounded-none italic" :
             isUrban ? "bg-black text-white rounded-none border-none shadow-xl hover:translate-y-[-2px]" :

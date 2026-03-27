@@ -166,11 +166,11 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background text-foreground pb-20">
       <Navbar />
-      <main className="container mx-auto px-4 py-6 md:py-10 max-w-7xl space-y-8 animate-in fade-in duration-500">
+      <main className="container mx-auto px-2 sm:px-4 py-4 md:py-10 max-w-7xl space-y-6 md:space-y-8 animate-in fade-in duration-500">
         
         {/* Header Section with Grid Background */}
-        <header className="mb-8 rounded-b-2xl overflow-hidden shadow-xl border-b-2 border-border/50 dashboard-header-bg">
-          <div className="p-8 md:p-12 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <header className="mb-6 md:mb-8 rounded-b-2xl overflow-hidden shadow-xl border-b-2 border-border/50 dashboard-header-bg">
+          <div className="p-4 sm:p-8 md:p-12 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-1.5 text-accent font-black tracking-widest text-[8px] uppercase bg-accent/5 px-2 py-0.5 rounded-full border border-accent/10">
@@ -211,7 +211,7 @@ export default function Dashboard() {
 
         {/* Tab Modules */}
         <Tabs defaultValue="orders" className="w-full">
-          <TabsList className="bg-muted p-1 h-12 rounded-xl px-1.5 mb-8 flex-nowrap overflow-x-auto justify-start md:justify-center scrollbar-hide flex border border-border/50">
+          <TabsList className="bg-muted p-1 h-12 rounded-xl px-1.5 mb-8 flex-nowrap overflow-x-auto scrollbar-hide flex border border-border/50 md:overflow-x-visible md:justify-center">
             <TabsTrigger value="orders" className="rounded-lg px-6 h-full font-black uppercase text-[9px] tracking-widest">My Orders</TabsTrigger>
             <TabsTrigger value="watchlist" className="rounded-lg px-6 h-full font-black uppercase text-[9px] tracking-widest">Watchlist</TabsTrigger>
             {isSeller && <TabsTrigger value="stats" className="rounded-lg px-6 h-full font-black uppercase text-[9px] tracking-widest">Seller Stats</TabsTrigger>}
